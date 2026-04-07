@@ -15,14 +15,18 @@
 /* Wrapper that runs the idle "floating" bob. Lives between the .card (lift +
    fan rotation) and the .tiltInner (3D hover tilt) so all three transforms
    compose without overwriting each other. Per-card animation-delay is set
-   inline so cards drift out of phase. */
+   inline so cards drift out of phase.
+
+   The drop-shadow traces the actual alpha silhouette of the rune (not the
+   card's bounding box). 0 blur keeps it solid/pixel-art crisp. */
 .floatWrap {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     animation: rune-float 3.6s ease-in-out infinite;
-    will-change: transform;
+    will-change: transform, filter;
+    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
 }
 
 @keyframes rune-float {

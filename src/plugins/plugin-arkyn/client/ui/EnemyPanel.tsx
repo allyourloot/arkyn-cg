@@ -6,7 +6,14 @@ import {
 } from "../arkynStore";
 import { ELEMENT_COLORS } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
+import frameUrl from "/assets/ui/frame.png?url";
+import innerFrameUrl from "/assets/ui/inner-frame.png?url";
 import styles from "./EnemyPanel.module.css";
+
+const panelStyleVars = {
+    "--panel-bg": `url(${frameUrl})`,
+    "--section-bg": `url(${innerFrameUrl})`,
+} as React.CSSProperties;
 
 export default function EnemyPanel() {
     const name = useEnemyName();
@@ -19,22 +26,22 @@ export default function EnemyPanel() {
     const elementColor = ELEMENT_COLORS[element] ?? "#aaa";
 
     return (
-        <div className={styles.panel}>
+        <div className={styles.panel} style={panelStyleVars}>
             <span className={styles.heading}>Enemy</span>
 
-            {/* Enemy portrait placeholder */}
-            <div className={styles.portrait} style={{ borderColor: elementColor }}>
-                <span className={styles.portraitGlyph}>
-                    {element === "earth" ? "🗿" : element === "fire" ? "🔥" : element === "ice" ? "❄️" : "👹"}
-                </span>
+            {/* Header section: portrait + name */}
+            <div className={styles.section}>
+                <div className={styles.portrait} style={{ borderColor: elementColor }}>
+                    <span className={styles.portraitGlyph}>
+                        {element === "earth" ? "🗿" : element === "fire" ? "🔥" : element === "ice" ? "❄️" : "👹"}
+                    </span>
+                </div>
+                <span className={styles.name}>{name}</span>
             </div>
 
-            {/* Enemy name */}
-            <span className={styles.name}>{name}</span>
-
-            {/* Resistances */}
+            {/* Resistances section */}
             {resistances.length > 0 && (
-                <div className={styles.affinityBlock}>
+                <div className={styles.section}>
                     <span className={styles.affinityLabel}>Resists</span>
                     <div className={styles.affinityRow}>
                         {resistances.map(r => {
@@ -53,9 +60,9 @@ export default function EnemyPanel() {
                 </div>
             )}
 
-            {/* Weaknesses */}
+            {/* Weaknesses section */}
             {weaknesses.length > 0 && (
-                <div className={styles.affinityBlock}>
+                <div className={styles.section}>
                     <span className={styles.affinityLabel}>Weak to</span>
                     <div className={styles.affinityRow}>
                         {weaknesses.map(w => {

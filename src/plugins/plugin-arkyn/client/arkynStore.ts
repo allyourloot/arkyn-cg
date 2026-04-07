@@ -5,7 +5,9 @@ import {
     ARKYN_DISCARD,
     ARKYN_READY,
     ARKYN_JOIN,
+    resolveSpell,
 } from "../shared";
+import { playSelectRune, playPlaceRune } from "./sfx";
 
 type Listener = () => void;
 
@@ -130,11 +132,15 @@ export function toggleRuneSelection(index: number) {
     const rune = hand[index];
     if (!rune) return;
 
+    let didChange = false;
     if (selectedRuneIds.includes(rune.id)) {
         selectedRuneIds = selectedRuneIds.filter(id => id !== rune.id);
+        didChange = true;
     } else if (selectedRuneIds.length < MAX_PLAY) {
         selectedRuneIds = [...selectedRuneIds, rune.id];
+        didChange = true;
     }
+    if (didChange) playSelectRune();
     recomputeSelectedIndices();
     notify();
 }
@@ -256,7 +262,23 @@ function selectedIdsToServerIndices(): number[] {
     return out;
 }
 
+// Counts only the runes that actually contribute to the resolved spell.
+// For a single-element spell that's the runes matching `spell.element`;
+// for a combo spell that's every rune (since combos require all elements
+// to be one of the two combo elements).
+function countContributingRunes(castRunes: RuneClientData[]): number {
+    if (castRunes.length === 0) return 0;
+    const spell = resolveSpell(castRunes.map(r => ({ element: r.element })));
+    if (!spell) return 0;
+    if (spell.isCombo && spell.comboElements) {
+        const combo = spell.comboElements as readonly string[];
+        return castRunes.filter(r => combo.includes(r.element)).length;
+    }
+    return castRunes.filter(r => r.element === spell.element).length;
+}
+
 const FLY_DURATION_MS = 500;
+const PLACE_SFX_STAGGER_MS = 100;
 
 export function castSpell() {
     if (selectedRuneIds.length === 0 || isAnimating()) return;
@@ -319,6 +341,16 @@ export function castSpell() {
         dissolvingRunes = castRunes;
         dissolveStartTime = performance.now();
         notify();
+
+        // Play the "place rune" SFX once for each rune that actually
+        // contributes to the resolved spell. Non-matching runes still fly
+        // and dissolve visually but stay silent. Stagger so the sounds
+        // layer instead of stacking into one thud.
+        const contributing = countContributingRunes(castRunes);
+        for (let i = 0; i < contributing; i++) {
+            if (i === 0) playPlaceRune();
+            else setTimeout(playPlaceRune, i * PLACE_SFX_STAGGER_MS);
+        }
 
         // Phase 3: wait for the LAST staggered dissolve to finish, then clear.
         const totalDissolveMs =

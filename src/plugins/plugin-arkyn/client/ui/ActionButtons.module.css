@@ -7,47 +7,47 @@
 
 .button {
     pointer-events: auto;
-    padding: clamp(6px, 0.8vw, 8px) clamp(20px, 3vw, 32px);
+    /* 9-slice border-image keeps the corners crisp at any button size.
+       The `fill` keyword draws the center slice, so no separate
+       background-image is needed. */
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    border-image: var(--btn-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
+    background-color: transparent;
+    image-rendering: pixelated;
+    padding: 10px 18px;
     font-size: clamp(20px, 2.4vw, 28px);
     font-family: 'Jersey 10', system-ui, monospace;
     font-weight: normal;
     letter-spacing: 3px;
     text-transform: uppercase;
-    border-width: 3px;
-    border-style: solid;
-    border-radius: 4px;
-    transition: all 0.15s ease;
+    color: #fff;
+    cursor: pointer;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.7);
+    transition: transform 0.1s ease;
     line-height: 1;
 }
 
-.cast {
-    border-color: #c59a4a;
-    background-color: rgba(161, 120, 40, 0.6);
-    color: #ffd700;
-    cursor: pointer;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+.button:not(:disabled):hover {
+    border-image: var(--btn-bg-hover) 10 10 10 10 fill / 10px 10px 10px 10px;
 }
 
-.cast:hover {
-    background-color: rgba(193, 145, 50, 0.8);
+.button:not(:disabled):active {
+    transform: translateY(2px);
+}
+
+.cast {
+    color: #f4ffe8;
 }
 
 .discard {
-    border-color: #8b3a3a;
-    background-color: rgba(139, 58, 58, 0.6);
-    color: #ff6b6b;
-    cursor: pointer;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
-}
-
-.discard:hover {
-    background-color: rgba(170, 70, 70, 0.8);
+    color: #fff4d8;
 }
 
 .button:disabled {
-    border-color: #555;
-    background-color: rgba(40, 40, 40, 0.6);
-    color: #666;
+    border-image: var(--btn-bg-disabled) 10 10 10 10 fill / 10px 10px 10px 10px;
     cursor: not-allowed;
-    text-shadow: none;
+    color: #c8c8c8;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
 }

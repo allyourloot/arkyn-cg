@@ -8,7 +8,14 @@ import { resolveSpell } from "../../shared/resolveSpell";
 import { TIER_MULTIPLIERS } from "../../shared/spellTable";
 import { ELEMENT_COLORS, TIER_LABELS } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
+import frameUrl from "/assets/ui/frame.png?url";
+import innerFrameUrl from "/assets/ui/inner-frame.png?url";
 import styles from "./SpellPreview.module.css";
+
+const panelStyleVars = {
+    "--panel-bg": `url(${frameUrl})`,
+    "--section-bg": `url(${innerFrameUrl})`,
+} as React.CSSProperties;
 
 export default function SpellPreview() {
     const hand = useHand();
@@ -33,11 +40,13 @@ export default function SpellPreview() {
 
     if (!spell) {
         return (
-            <div className={styles.panel}>
+            <div className={styles.panel} style={panelStyleVars}>
                 <span className={styles.heading}>Spell Preview</span>
-                <span className={styles.empty}>
-                    Select runes to preview spell
-                </span>
+                <div className={styles.section}>
+                    <span className={styles.empty}>
+                        Select runes to preview spell
+                    </span>
+                </div>
             </div>
         );
     }
@@ -53,61 +62,64 @@ export default function SpellPreview() {
     const damagePrefix = isLive ? "~" : "";
 
     return (
-        <div className={styles.panel}>
+        <div className={styles.panel} style={panelStyleVars}>
             <span className={styles.heading}>
                 {isLive ? "Spell Preview" : "Last Cast"}
             </span>
 
-            {/* Spell icon */}
-            <div
-                className={styles.icon}
-                style={{ borderColor: elementColor, borderWidth: 2, borderStyle: "solid" }}
-            >
-                {runeUrl && (
-                    <img
-                        src={runeUrl}
-                        alt={spell.element}
-                        className={styles.iconImg}
-                    />
-                )}
+            {/* Header section: icon + spell name + tier + damage */}
+            <div className={styles.section}>
+                <div
+                    className={styles.icon}
+                    style={{ borderColor: elementColor, borderWidth: 2, borderStyle: "solid" }}
+                >
+                    {runeUrl && (
+                        <img
+                            src={runeUrl}
+                            alt={spell.element}
+                            className={styles.iconImg}
+                        />
+                    )}
+                </div>
+
+                <span className={styles.spellName} style={{ color: elementColor }}>
+                    {spell.spellName}
+                </span>
+
+                <span className={styles.tier}>
+                    Tier {TIER_LABELS[spell.tier] ?? spell.tier}
+                    {spell.isCombo && " (Combo)"}
+                </span>
+
+                <span className={styles.damage}>
+                    {damagePrefix}{displayDamage} DMG
+                </span>
             </div>
 
-            {/* Spell name */}
-            <span className={styles.spellName} style={{ color: elementColor }}>
-                {spell.spellName}
-            </span>
+            {/* Description section */}
+            <div className={styles.section}>
+                <span className={styles.description}>
+                    {spell.description}
+                </span>
+            </div>
 
-            {/* Tier */}
-            <span className={styles.tier}>
-                Tier {TIER_LABELS[spell.tier] ?? spell.tier}
-                {spell.isCombo && " (Combo)"}
-            </span>
-
-            {/* Damage */}
-            <span className={styles.damage}>
-                {damagePrefix}{displayDamage} DMG
-            </span>
-
-            {/* Description */}
-            <span className={styles.description}>
-                {spell.description}
-            </span>
-
-            {/* Combo elements */}
+            {/* Combo elements section */}
             {spell.isCombo && spell.comboElements && (
-                <div className={styles.comboRow}>
-                    {spell.comboElements.map(el => {
-                        const color = ELEMENT_COLORS[el] ?? "#aaa";
-                        return (
-                            <span
-                                key={el}
-                                className={styles.comboChip}
-                                style={{ color, border: `1px solid ${color}` }}
-                            >
-                                {el}
-                            </span>
-                        );
-                    })}
+                <div className={styles.section}>
+                    <div className={styles.comboRow}>
+                        {spell.comboElements.map(el => {
+                            const color = ELEMENT_COLORS[el] ?? "#aaa";
+                            return (
+                                <span
+                                    key={el}
+                                    className={styles.comboChip}
+                                    style={{ color, border: `1px solid ${color}` }}
+                                >
+                                    {el}
+                                </span>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
         </div>

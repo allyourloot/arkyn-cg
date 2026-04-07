@@ -1,39 +1,48 @@
 .panel {
     pointer-events: none;
     position: relative;
+    box-sizing: border-box;
     width: clamp(160px, 19vw, 320px);
     height: 80vh;
     max-height: calc(100vh - 90px);
     align-self: center;
     flex-shrink: 0;
-    background-color: #2a1340;
-    background-image: linear-gradient(
-        180deg,
-        #3d1f5c 0%, #3d1f5c 8.33%,
-        #381a56 8.33%, #381a56 16.66%,
-        #341850 16.66%, #341850 25%,
-        #30164a 25%, #30164a 33.33%,
-        #2c1444 33.33%, #2c1444 41.66%,
-        #28123e 41.66%, #28123e 50%,
-        #241038 50%, #241038 58.33%,
-        #200e32 58.33%, #200e32 66.66%,
-        #1c0c2c 66.66%, #1c0c2c 75%,
-        #180a26 75%, #180a26 83.33%,
-        #140820 83.33%, #140820 91.66%,
-        #10061a 91.66%, #10061a 100%
-    );
-    border: clamp(4px, 0.55vw, 6px) solid #0a0414;
-    border-radius: 4px;
-    box-shadow:
-        inset 0 0 0 3px #5a3a7a,
-        inset 0 0 0 6px #1a0a29,
-        0 6px 0 0 rgba(0, 0, 0, 0.55);
-    padding: clamp(22px, 3vw, 32px) clamp(8px, 1.4vw, 16px) clamp(14px, 2.2vw, 24px);
+    /* 9-slice frame: 10px corner slices, rendered at 10px on screen so the
+       pixel art stays crisp at any panel size. */
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    border-image: var(--panel-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
+    /* Slight padding so inner sections sit just inside the frame edge.
+       Top is a bit larger so the floating "ENEMY" badge has clearance. */
+    padding: 14px 4px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    font-family: 'Jersey 10', system-ui, monospace;
+    image-rendering: pixelated;
+}
+
+/* Inner content sections — each one is a 9-sliced inner-frame container that
+   spans the panel's full inner width. Sections lay out their children in a
+   centered column. */
+.section {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    flex-shrink: 0;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 6px;
+    border-image: var(--section-bg) 6 6 6 6 fill / 6px 6px 6px 6px;
+    padding: 10px 6px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(8px, 1.4vw, 16px);
-    font-family: 'Jersey 10', system-ui, monospace;
+    gap: clamp(6px, 1vw, 12px);
     image-rendering: pixelated;
 }
 
@@ -87,13 +96,6 @@
     text-align: center;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
     line-height: 1;
-}
-
-.affinityBlock {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
 }
 
 .affinityLabel {

@@ -5,7 +5,7 @@ export default function BackgroundMusic() {
     useEffect(() => {
         const audio = new Audio(riverWalkUrl);
         audio.loop = true;
-        audio.volume = 0.35;
+        audio.volume = 0.2;
 
         const tryPlay = () => {
             audio.play().catch(() => {
