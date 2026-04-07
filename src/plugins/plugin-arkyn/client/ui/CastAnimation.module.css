@@ -1,0 +1,25 @@
+.layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 300;
+}
+
+.flyer {
+    position: absolute;
+    width: 96px;
+    height: 96px;
+    transition:
+        left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        top 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        transform 0.4s ease;
+    filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.6));
+}
+
+.runeImg {
+    position: absolute;
+    inset: 0;
+    width: 96px;
+    height: 96px;
+    image-rendering: pixelated;
+}

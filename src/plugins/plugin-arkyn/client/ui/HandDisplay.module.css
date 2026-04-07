@@ -1,0 +1,24 @@
+.hand {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 0 20px;
+    touch-action: none;
+}
+
+.cardSlot {
+    transition: opacity 0.1s ease, transform 0.18s ease;
+}
+
+.cardSlot:not(:first-child) {
+    margin-left: -8px;
+}
+
+.hidden {
+    opacity: 0;
+}
+
+.dragging {
+    transition: opacity 0.1s ease;
+    cursor: grabbing;
+}

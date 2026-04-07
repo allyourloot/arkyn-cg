@@ -1,0 +1,14 @@
+.wrapper {
+    pointer-events: none;
+    position: absolute;
+    top: 16px;
+    left: 16px;
+}
+
+.label {
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #d4a574;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}

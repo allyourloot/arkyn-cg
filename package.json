@@ -1,0 +1,42 @@
+{
+  "name": "@hytopia.com/neo-template-sandbox-flattened",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "server": "./src/server/index.ts"
+  },
+  "scripts": {
+    "client": "vite --port 8180",
+    "server": "tsx watch --tsconfig tsconfig.server.json src/server.ts",
+    "package": "npm run build:client && npm run build:server && npm run build:package",
+    "build:client": "vite build --outDir dist/assets/__client",
+    "build:server": "tsx ./scripts/build-server.ts",
+    "build:package": "tsx ./scripts/package.ts"
+  },
+  "dependencies": {
+    "@colyseus/schema": "^4.0.19",
+    "@tailwindcss/vite": "^4.2.1",
+    "archiver": "^7.0.1",
+    "colyseus": "^0.17.8",
+    "qrcode": "^1.5.4",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "tailwindcss": "^4.2.1",
+    "three": "^0.183.2",
+    "tsx": "^4.21.0",
+    "vite-plugin-singlefile": "^2.3.2"
+  },
+  "devDependencies": {
+    "@colyseus/sdk": "^0.17.35",
+    "@types/archiver": "^7.0.0",
+    "@types/node": "^25.5.0",
+    "@types/react": "19.2.0",
+    "@types/react-dom": "19.2.0",
+    "@types/three": "^0.183.1",
+    "@vitejs/plugin-react": "^5.2.0",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "esbuild": "^0.27.4",
+    "vite": "^7.3.1"
+  }
+}

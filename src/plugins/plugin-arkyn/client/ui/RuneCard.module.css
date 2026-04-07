@@ -1,0 +1,24 @@
+.card {
+    pointer-events: auto;
+    cursor: pointer;
+    width: 96px;
+    height: 96px;
+    position: relative;
+    transition: transform 0.2s ease, filter 0.2s ease;
+    user-select: none;
+}
+
+.card.selected {
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.7));
+}
+
+.layer {
+    position: absolute;
+    inset: 0;
+    width: 96px;
+    height: 96px;
+    image-rendering: pixelated;
+    -webkit-user-drag: none;
+    user-select: none;
+    pointer-events: none;
+}

@@ -1,0 +1,103 @@
+.panel {
+    pointer-events: none;
+    width: 280px;
+    height: 90vh;
+    align-self: center;
+    flex-shrink: 0;
+    border: 2px solid #5a4a3a;
+    border-radius: 12px;
+    background-color: rgba(20, 15, 10, 0.85);
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.heading {
+    font-size: 16px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #d4a574;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.portrait {
+    width: 140px;
+    height: 140px;
+    border-radius: 8px;
+    border: 3px solid;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 64px;
+}
+
+.portraitGlyph {
+    filter: grayscale(0.3);
+}
+
+.name {
+    font-size: 22px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #e8d4b8;
+    text-align: center;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.elementBadge {
+    font-size: 14px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 6px 14px;
+    border: 2px solid;
+    border-radius: 4px;
+}
+
+.affinityBlock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.affinityLabel {
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #a8988a;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.affinityRow {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.affinityChip {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 2px solid;
+    border-radius: 6px;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+.affinityIcon {
+    width: 32px;
+    height: 32px;
+    image-rendering: pixelated;
+}

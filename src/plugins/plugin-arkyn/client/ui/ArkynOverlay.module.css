@@ -1,0 +1,124 @@
+/* ----- Root layouts ----- */
+
+.root {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    padding: 0 32px;
+    font-family: 'Courier New', monospace;
+}
+
+.waitingRoot {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', monospace;
+    color: #d4a574;
+    font-size: 18px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* ----- Center column ----- */
+
+.centerColumn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    padding: 0 24px;
+}
+
+.centerStage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.lastCast {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.lastCastSpell {
+    font-size: 14px;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.lastCastDamage {
+    font-size: 18px;
+    font-weight: bold;
+    color: #ff4444;
+    text-shadow: 0 0 12px rgba(255, 68, 68, 0.6);
+}
+
+.handStack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 80px;
+}
+
+/* ----- Round-end overlay ----- */
+
+.roundEnd {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.6);
+    gap: 16px;
+    z-index: 200;
+}
+
+.roundEndTitle {
+    font-size: 28px;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 2px 4px rgba(0, 0, 0, 0.8);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+}
+
+.roundEndSubtitle {
+    font-size: 14px;
+    color: #d4a574;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.roundEndButton {
+    pointer-events: auto;
+    margin-top: 12px;
+    padding: 12px 48px;
+    font-size: 16px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    border: 2px solid #c59a4a;
+    border-radius: 8px;
+    background-color: rgba(161, 120, 40, 0.7);
+    color: #ffd700;
+    cursor: pointer;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    transition: all 0.15s ease;
+}
+
+.roundEndButton:hover {
+    background-color: rgba(193, 145, 50, 0.85);
+}
