@@ -6,6 +6,8 @@
     padding: 12px 0;
 }
 
+/* Slots are exactly the same size as the rune cards (96x96) so a played
+   rune slots into the empty circle without any size or position jump. */
 .slot {
     width: 96px;
     height: 96px;
@@ -16,15 +18,16 @@
     position: relative;
 }
 
+/* Empty-state ring is drawn with `box-shadow: inset` instead of `border` so
+   it doesn't change the slot's box size when a rune lands in it. */
 .slot.empty {
-    border: 3px solid #3a3228;
     background-color: rgba(20, 15, 10, 0.5);
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow:
+        inset 0 0 0 3px #3a3228,
+        inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .layer {
-    position: absolute;
-    inset: 0;
     width: 96px;
     height: 96px;
     image-rendering: pixelated;

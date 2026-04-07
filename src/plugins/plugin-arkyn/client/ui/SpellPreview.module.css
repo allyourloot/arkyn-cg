@@ -1,7 +1,7 @@
 .panel {
     pointer-events: none;
-    width: 280px;
-    height: 90vh;
+    width: 320px;
+    height: 80vh;
     align-self: center;
     flex-shrink: 0;
     border: 2px solid #5a4a3a;

@@ -1,4 +1,4 @@
-import { useGamePhase, useLastSpellName, useLastDamage, useLastSpellTier, sendReady } from "../arkynStore";
+import { useGamePhase, useLastSpellName, useLastDamage, sendReady } from "../arkynStore";
 import EnemyHealthBar from "./EnemyHealthBar";
 import SpellPreview from "./SpellPreview";
 import PlayArea from "./PlayArea";
@@ -12,14 +12,12 @@ import DiscardAnimation from "./DiscardAnimation";
 import DrawAnimation from "./DrawAnimation";
 import BackgroundMusic from "./BackgroundMusic";
 import BackgroundShader from "./BackgroundShader";
-import { TIER_LABELS } from "./styles";
 import styles from "./ArkynOverlay.module.css";
 
 export default function ArkynOverlay() {
     const gamePhase = useGamePhase();
     const lastSpellName = useLastSpellName();
     const lastDamage = useLastDamage();
-    const lastSpellTier = useLastSpellTier();
 
     if (gamePhase === "waiting") {
         return (
@@ -53,17 +51,6 @@ export default function ArkynOverlay() {
 
                 <div className={styles.centerStage}>
                     <PlayArea />
-
-                    {lastSpellName && gamePhase === "playing" && (
-                        <div className={styles.lastCast}>
-                            <span className={styles.lastCastSpell}>
-                                {lastSpellName} {TIER_LABELS[lastSpellTier]}
-                            </span>
-                            <span className={styles.lastCastDamage}>
-                                -{lastDamage} HP
-                            </span>
-                        </div>
-                    )}
                 </div>
 
                 <div className={styles.handStack}>

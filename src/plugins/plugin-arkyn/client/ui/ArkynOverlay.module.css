@@ -44,27 +44,6 @@
     gap: 12px;
 }
 
-.lastCast {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-}
-
-.lastCastSpell {
-    font-size: 14px;
-    font-weight: bold;
-    color: #ffd700;
-    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-}
-
-.lastCastDamage {
-    font-size: 18px;
-    font-weight: bold;
-    color: #ff4444;
-    text-shadow: 0 0 12px rgba(255, 68, 68, 0.6);
-}
-
 .handStack {
     display: flex;
     flex-direction: column;

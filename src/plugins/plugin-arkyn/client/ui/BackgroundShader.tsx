@@ -2,6 +2,11 @@ import { useEffect, useRef } from "react";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./BackgroundShader.frag";
 import styles from "./BackgroundShader.module.css";
 
+// Each rendered shader pixel becomes a PIXEL_SIZE x PIXEL_SIZE block on screen
+// after the CSS nearest-neighbor upscale. Larger = chunkier pixels and cheaper
+// fragment shader.
+const PIXEL_SIZE = 3;
+
 function compileShader(
     gl: WebGLRenderingContext,
     type: number,
@@ -74,11 +79,11 @@ export default function BackgroundShader() {
         const uResolution = gl.getUniformLocation(program, "uResolution");
         const uTime = gl.getUniformLocation(program, "uTime");
 
-        // Cap DPR at 2 to keep fragment cost reasonable on dense displays.
+        // Render at 1/PIXEL_SIZE of the viewport size; CSS upscales the
+        // canvas with nearest-neighbor for the chunky pixel-art look.
         const resize = () => {
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            const w = Math.floor(canvas.clientWidth * dpr);
-            const h = Math.floor(canvas.clientHeight * dpr);
+            const w = Math.max(1, Math.floor(canvas.clientWidth / PIXEL_SIZE));
+            const h = Math.max(1, Math.floor(canvas.clientHeight / PIXEL_SIZE));
             if (canvas.width !== w || canvas.height !== h) {
                 canvas.width = w;
                 canvas.height = h;

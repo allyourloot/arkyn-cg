@@ -1,0 +1,9 @@
+.canvas {
+    /* Centered by the parent .slot's flex layout (no absolute positioning). */
+    width: 96px;
+    height: 96px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    pointer-events: none;
+    display: block;
+}

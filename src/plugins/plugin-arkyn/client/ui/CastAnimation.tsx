@@ -31,7 +31,6 @@ export default function CastAnimation() {
 
                 const x = animated ? fr.toX - 48 : fr.fromX - 48;
                 const y = animated ? fr.toY - 48 : fr.fromY - 48;
-                const scale = animated ? 0.85 : 1;
 
                 return (
                     <div
@@ -41,7 +40,6 @@ export default function CastAnimation() {
                             left: x,
                             top: y,
                             transitionDelay: `${i * 60}ms`,
-                            transform: `scale(${scale})`,
                         }}
                     >
                         {baseUrl && (

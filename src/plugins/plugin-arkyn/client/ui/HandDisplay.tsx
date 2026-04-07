@@ -218,6 +218,7 @@ export default function HandDisplay() {
                             // doesn't fire mid-drag. No-op here.
                             onClick={() => { /* handled in pointerup */ }}
                             rotation={rotation}
+                            tiltDisabled={dragInfo !== null}
                         />
                     </div>
                 );

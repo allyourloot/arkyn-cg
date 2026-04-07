@@ -1,34 +1,37 @@
-import { usePlayedRunes } from "../arkynStore";
+import {
+    useDissolvingRunes,
+    useDissolveStartTime,
+    DISSOLVE_DURATION_MS,
+    DISSOLVE_STAGGER_MS,
+} from "../arkynStore";
 import { MAX_PLAY } from "../../shared";
-import { getRuneImageUrl, getBaseRuneImageUrl } from "./runeAssets";
+import DissolveShader from "./DissolveShader";
 import styles from "./PlayArea.module.css";
 
 export default function PlayArea() {
-    const playedRunes = usePlayedRunes();
+    const dissolvingRunes = useDissolvingRunes();
+    const dissolveStartTime = useDissolveStartTime();
 
     return (
         <div className={styles.area}>
             {Array.from({ length: MAX_PLAY }, (_, i) => {
-                const rune = playedRunes[i];
-                const baseUrl = rune ? getBaseRuneImageUrl(rune.rarity) : "";
-                const runeUrl = rune ? getRuneImageUrl(rune.element) : "";
+                const dissolving = dissolvingRunes[i];
 
                 return (
                     <div
                         key={i}
                         data-slot-index={i}
-                        className={`${styles.slot} ${rune ? "" : styles.empty}`}
+                        className={`${styles.slot} ${dissolving ? "" : styles.empty}`}
                     >
-                        {rune ? (
-                            <>
-                                {baseUrl && (
-                                    <img src={baseUrl} alt="" className={styles.layer} />
-                                )}
-                                {runeUrl && (
-                                    <img src={runeUrl} alt={rune.element} className={styles.layer} />
-                                )}
-                            </>
-                        ) : null}
+                        {dissolving && (
+                            <DissolveShader
+                                rune={dissolving}
+                                // Stagger each rune so they dissolve one after
+                                // another for a more dramatic spell impact.
+                                startTime={dissolveStartTime + i * DISSOLVE_STAGGER_MS}
+                                duration={DISSOLVE_DURATION_MS}
+                            />
+                        )}
                     </div>
                 );
             })}

@@ -139,6 +139,32 @@ export function toggleRuneSelection(index: number) {
     notify();
 }
 
+// ----- Play-area dissolve effect -----
+
+// Runes currently dissolving in the play area. Driven entirely by the client
+// cast flow — server's playedRunes is no longer rendered.
+let dissolvingRunes: RuneClientData[] = [];
+let dissolveStartTime = 0;
+
+// The exact runes from the most recent cast. Persists between casts so the
+// SpellPreview panel can re-resolve them and display the last cast result
+// (element / description / combo info that the server doesn't sync).
+let lastCastRunes: RuneClientData[] = [];
+
+export function useLastCastRunes() {
+    return useSyncExternalStore(subscribe, () => lastCastRunes);
+}
+
+export const DISSOLVE_DURATION_MS = 550;
+export const DISSOLVE_STAGGER_MS = 150;
+
+export function useDissolvingRunes() {
+    return useSyncExternalStore(subscribe, () => dissolvingRunes);
+}
+export function useDissolveStartTime() {
+    return useSyncExternalStore(subscribe, () => dissolveStartTime);
+}
+
 // ----- Animation state -----
 export interface FlyingRune {
     rune: RuneClientData;
@@ -226,6 +252,8 @@ function selectedIdsToServerIndices(): number[] {
     return out;
 }
 
+const FLY_DURATION_MS = 500;
+
 export function castSpell() {
     if (selectedRuneIds.length === 0 || isAnimating()) return;
 
@@ -255,6 +283,11 @@ export function castSpell() {
 
     const serverIndices = selectedIdsToServerIndices();
 
+    // Captured ordered list of cast runes for the dissolve animation.
+    const castRunes = sortedSelected
+        .map(idx => hand[idx])
+        .filter((r): r is RuneClientData => r !== undefined);
+
     if (flying.length === 0) {
         // Fallback: no DOM elements found, just send immediately
         sendFn?.(ARKYN_CAST, { selectedIndices: serverIndices });
@@ -268,15 +301,30 @@ export function castSpell() {
     isCastAnimating = true;
     selectedRuneIds = [];
     selectedIndices = [];
+    // Remember the cast runes for the SpellPreview "Last Cast" view.
+    lastCastRunes = castRunes;
     notify();
 
-    // After animation duration, send the actual cast and clear
+    // Phase 1: fly to the play area.
     setTimeout(() => {
         sendFn?.(ARKYN_CAST, { selectedIndices: serverIndices });
         flyingRunes = [];
-        isCastAnimating = false;
+
+        // Phase 2: cards land in the play area and start dissolving sequentially.
+        dissolvingRunes = castRunes;
+        dissolveStartTime = performance.now();
         notify();
-    }, 500);
+
+        // Phase 3: wait for the LAST staggered dissolve to finish, then clear.
+        const totalDissolveMs =
+            (castRunes.length - 1) * DISSOLVE_STAGGER_MS + DISSOLVE_DURATION_MS;
+        setTimeout(() => {
+            dissolvingRunes = [];
+            dissolveStartTime = 0;
+            isCastAnimating = false;
+            notify();
+        }, totalDissolveMs);
+    }, FLY_DURATION_MS);
 }
 
 export function discardRunes() {
