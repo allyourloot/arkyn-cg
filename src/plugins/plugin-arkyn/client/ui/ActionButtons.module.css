@@ -1,22 +1,23 @@
 .bar {
     display: flex;
     justify-content: center;
-    gap: 16px;
-    padding: 12px 0 20px;
+    gap: clamp(8px, 1.4vw, 16px);
+    padding: clamp(8px, 1.2vw, 12px) 0 clamp(12px, 2vw, 20px);
 }
 
 .button {
     pointer-events: auto;
-    padding: 10px 32px;
-    font-size: 14px;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
-    letter-spacing: 2px;
+    padding: clamp(6px, 0.8vw, 8px) clamp(20px, 3vw, 32px);
+    font-size: clamp(20px, 2.4vw, 28px);
+    font-family: 'Jersey 10', system-ui, monospace;
+    font-weight: normal;
+    letter-spacing: 3px;
     text-transform: uppercase;
-    border-width: 2px;
+    border-width: 3px;
     border-style: solid;
-    border-radius: 6px;
+    border-radius: 4px;
     transition: all 0.15s ease;
+    line-height: 1;
 }
 
 .cast {
@@ -24,7 +25,7 @@
     background-color: rgba(161, 120, 40, 0.6);
     color: #ffd700;
     cursor: pointer;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
 }
 
 .cast:hover {
@@ -36,7 +37,7 @@
     background-color: rgba(139, 58, 58, 0.6);
     color: #ff6b6b;
     cursor: pointer;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
 }
 
 .discard:hover {

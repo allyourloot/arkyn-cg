@@ -1,8 +1,8 @@
 .card {
     pointer-events: auto;
     cursor: pointer;
-    width: 96px;
-    height: 96px;
+    width: clamp(56px, 6.2vw, 96px);
+    height: clamp(56px, 6.2vw, 96px);
     position: relative;
     transition: transform 0.2s ease, filter 0.2s ease;
     user-select: none;
@@ -51,8 +51,8 @@
 .layer {
     position: absolute;
     inset: 0;
-    width: 96px;
-    height: 96px;
+    width: 100%;
+    height: 100%;
     image-rendering: pixelated;
     -webkit-user-drag: none;
     user-select: none;

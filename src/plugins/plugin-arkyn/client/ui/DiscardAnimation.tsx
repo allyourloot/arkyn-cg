@@ -28,8 +28,9 @@ export default function DiscardAnimation() {
                 const baseUrl = getBaseRuneImageUrl(dr.rune.rarity);
                 const runeUrl = getRuneImageUrl(dr.rune.element);
 
-                const x = dr.fromX - 48;
-                const y = animated ? dr.fromY + 200 : dr.fromY - 48;
+                const half = dr.size / 2;
+                const x = dr.fromX - half;
+                const y = animated ? dr.fromY + 200 : dr.fromY - half;
 
                 return (
                     <div
@@ -38,6 +39,8 @@ export default function DiscardAnimation() {
                         style={{
                             left: x,
                             top: y,
+                            width: dr.size,
+                            height: dr.size,
                             transitionDelay: `${i * 40}ms`,
                             opacity: animated ? 0 : 1,
                             transform: animated ? "scale(0.4) rotate(15deg)" : "scale(1) rotate(0deg)",

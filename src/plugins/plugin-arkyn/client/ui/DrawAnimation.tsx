@@ -34,8 +34,9 @@ export default function DrawAnimation() {
                 const baseUrl = getBaseRuneImageUrl(dr.rune.rarity);
                 const runeUrl = getRuneImageUrl(dr.rune.element);
 
-                const x = animated ? dr.toX - 48 : originX - 48;
-                const y = animated ? dr.toY - 48 : originY - 48;
+                const half = dr.size / 2;
+                const x = animated ? dr.toX - half : originX - half;
+                const y = animated ? dr.toY - half : originY - half;
                 const scale = animated ? 1 : 0.4;
 
                 return (
@@ -45,6 +46,8 @@ export default function DrawAnimation() {
                         style={{
                             left: x,
                             top: y,
+                            width: dr.size,
+                            height: dr.size,
                             transitionDelay: `${i * 60}ms`,
                             transform: `scale(${scale})`,
                             opacity: animated ? 1 : 0,

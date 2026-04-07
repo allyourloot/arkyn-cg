@@ -1,14 +1,17 @@
 .wrapper {
     pointer-events: none;
     position: absolute;
-    top: 16px;
-    left: 16px;
+    top: clamp(8px, 1.5vw, 16px);
+    left: clamp(8px, 1.5vw, 16px);
+    z-index: 5;
 }
 
 .label {
-    font-size: 12px;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
+    font-size: clamp(18px, 2.2vw, 26px);
+    font-family: 'Jersey 10', system-ui, monospace;
+    font-weight: normal;
     color: #d4a574;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+    letter-spacing: 1px;
 }

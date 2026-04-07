@@ -1,24 +1,26 @@
 .wrapper {
     pointer-events: none;
     position: absolute;
-    bottom: 20px;
-    right: 20px;
+    bottom: clamp(8px, 1.5vw, 20px);
+    right: clamp(8px, 1.5vw, 20px);
     display: flex;
     align-items: center;
     gap: 6px;
+    z-index: 5;
 }
 
 .icon {
-    width: 40px;
-    height: 40px;
+    width: clamp(28px, 3vw, 40px);
+    height: clamp(28px, 3vw, 40px);
     image-rendering: pixelated;
     opacity: 0.8;
 }
 
 .count {
-    font-size: 14px;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
+    font-size: clamp(20px, 2.4vw, 28px);
+    font-family: 'Jersey 10', system-ui, monospace;
+    font-weight: normal;
     color: #d4a574;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
 }

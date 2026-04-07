@@ -1,40 +1,78 @@
 .panel {
     pointer-events: none;
-    width: 320px;
+    position: relative;
+    width: clamp(160px, 19vw, 320px);
     height: 80vh;
+    max-height: calc(100vh - 90px);
     align-self: center;
     flex-shrink: 0;
-    border: 2px solid #5a4a3a;
-    border-radius: 12px;
-    background-color: rgba(20, 15, 10, 0.85);
-    padding: 24px 16px;
+    background-color: #2a1340;
+    background-image: linear-gradient(
+        180deg,
+        #3d1f5c 0%, #3d1f5c 8.33%,
+        #381a56 8.33%, #381a56 16.66%,
+        #341850 16.66%, #341850 25%,
+        #30164a 25%, #30164a 33.33%,
+        #2c1444 33.33%, #2c1444 41.66%,
+        #28123e 41.66%, #28123e 50%,
+        #241038 50%, #241038 58.33%,
+        #200e32 58.33%, #200e32 66.66%,
+        #1c0c2c 66.66%, #1c0c2c 75%,
+        #180a26 75%, #180a26 83.33%,
+        #140820 83.33%, #140820 91.66%,
+        #10061a 91.66%, #10061a 100%
+    );
+    border: clamp(4px, 0.55vw, 6px) solid #0a0414;
+    border-radius: 4px;
+    box-shadow:
+        inset 0 0 0 3px #5a3a7a,
+        inset 0 0 0 6px #1a0a29,
+        0 6px 0 0 rgba(0, 0, 0, 0.55);
+    padding: clamp(22px, 3vw, 32px) clamp(8px, 1.4vw, 16px) clamp(14px, 2.2vw, 24px);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    gap: clamp(8px, 1.4vw, 16px);
+    font-family: 'Jersey 10', system-ui, monospace;
+    image-rendering: pixelated;
 }
 
 .heading {
-    font-size: 16px;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
+    position: absolute;
+    top: clamp(-16px, -1.4vw, -12px);
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #1a0a29;
+    background-image: linear-gradient(180deg, #2c1444 0%, #1a0a29 100%);
+    border: clamp(3px, 0.45vw, 5px) solid #0a0414;
+    border-radius: 3px;
+    box-shadow:
+        inset 0 0 0 2px #5a3a7a,
+        0 3px 0 0 rgba(0, 0, 0, 0.55);
+    padding: clamp(2px, 0.5vw, 5px) clamp(10px, 1.4vw, 16px);
+    font-size: clamp(16px, 1.9vw, 22px);
+    font-family: 'Jersey 10', system-ui, monospace;
+    font-weight: normal;
     color: #d4a574;
     text-transform: uppercase;
     letter-spacing: 3px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+    white-space: nowrap;
+    z-index: 2;
 }
 
 .portrait {
-    width: 140px;
-    height: 140px;
-    border-radius: 8px;
+    width: clamp(96px, 10vw, 140px);
+    height: clamp(96px, 10vw, 140px);
+    border-radius: 3px;
     border: 3px solid;
     background-color: rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 64px;
+    font-size: clamp(44px, 5vw, 64px);
+    image-rendering: pixelated;
 }
 
 .portraitGlyph {
@@ -42,62 +80,41 @@
 }
 
 .name {
-    font-size: 22px;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
+    font-size: clamp(26px, 3vw, 38px);
+    font-family: 'Jersey 10', system-ui, monospace;
+    font-weight: normal;
     color: #e8d4b8;
     text-align: center;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-}
-
-.elementBadge {
-    font-size: 14px;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    padding: 6px 14px;
-    border: 2px solid;
-    border-radius: 4px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
 }
 
 .affinityBlock {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
 }
 
 .affinityLabel {
-    font-size: 13px;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
-    color: #a8988a;
+    font-size: clamp(16px, 1.8vw, 22px);
+    font-family: 'Jersey 10', system-ui, monospace;
+    font-weight: normal;
+    color: #b0a090;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
+    line-height: 1;
 }
 
 .affinityRow {
     display: flex;
-    gap: 8px;
+    gap: clamp(4px, 0.6vw, 8px);
     flex-wrap: wrap;
     justify-content: center;
 }
 
-.affinityChip {
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: rgba(0, 0, 0, 0.4);
-    border: 2px solid;
-    border-radius: 6px;
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
-}
-
 .affinityIcon {
-    width: 32px;
-    height: 32px;
+    width: clamp(28px, 3vw, 40px);
+    height: clamp(28px, 3vw, 40px);
     image-rendering: pixelated;
 }

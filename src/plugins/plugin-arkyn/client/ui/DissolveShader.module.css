@@ -1,7 +1,8 @@
 .canvas {
-    /* Centered by the parent .slot's flex layout (no absolute positioning). */
-    width: 96px;
-    height: 96px;
+    /* Centered by the parent .slot's flex layout (no absolute positioning).
+       Width/height match the rune slot size which scales with viewport. */
+    width: 100%;
+    height: 100%;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     pointer-events: none;

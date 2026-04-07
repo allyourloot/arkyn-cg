@@ -3,25 +3,32 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 16px 0 8px;
+    padding: clamp(8px, 1.5vw, 16px) 0 clamp(4px, 0.8vw, 8px);
     gap: 4px;
+    width: 100%;
+    min-width: 0;
 }
 
 .name {
-    font-size: 12px;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
+    font-size: clamp(18px, 2.2vw, 26px);
+    font-family: 'Jersey 10', system-ui, monospace;
+    font-weight: normal;
     color: #d4a574;
     text-transform: uppercase;
-    letter-spacing: 2px;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .barOuter {
-    width: 50%;
+    width: 100%;
     max-width: 400px;
-    min-width: 200px;
-    height: 24px;
+    min-width: 0;
+    height: clamp(18px, 2vw, 24px);
     border-radius: 4px;
     border: 2px solid #5a4a3a;
     background-color: rgba(20, 15, 10, 0.7);
@@ -41,9 +48,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
+    font-size: clamp(16px, 1.8vw, 22px);
+    font-family: 'Jersey 10', system-ui, monospace;
+    font-weight: normal;
     color: #fff;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
+    line-height: 1;
 }

@@ -2,7 +2,7 @@
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    padding: 0 20px;
+    padding: 0 clamp(8px, 1.5vw, 20px);
     touch-action: none;
 }
 
@@ -11,7 +11,7 @@
 }
 
 .cardSlot:not(:first-child) {
-    margin-left: -8px;
+    margin-left: clamp(-22px, -1.7vw, -6px);
 }
 
 .hidden {

@@ -2,15 +2,15 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 12px;
+    gap: clamp(6px, 1vw, 12px);
     padding: 12px 0;
 }
 
-/* Slots are exactly the same size as the rune cards (96x96) so a played
-   rune slots into the empty circle without any size or position jump. */
+/* Slots are exactly the same size as the rune cards (clamp 56-96px) so a
+   played rune slots into the empty circle without any size or position jump. */
 .slot {
-    width: 96px;
-    height: 96px;
+    width: clamp(56px, 6.2vw, 96px);
+    height: clamp(56px, 6.2vw, 96px);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -28,7 +28,7 @@
 }
 
 .layer {
-    width: 96px;
-    height: 96px;
+    width: 100%;
+    height: 100%;
     image-rendering: pixelated;
 }

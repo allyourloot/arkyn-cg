@@ -29,8 +29,9 @@ export default function CastAnimation() {
                 const baseUrl = getBaseRuneImageUrl(fr.rune.rarity);
                 const runeUrl = getRuneImageUrl(fr.rune.element);
 
-                const x = animated ? fr.toX - 48 : fr.fromX - 48;
-                const y = animated ? fr.toY - 48 : fr.fromY - 48;
+                const half = fr.size / 2;
+                const x = animated ? fr.toX - half : fr.fromX - half;
+                const y = animated ? fr.toY - half : fr.fromY - half;
 
                 return (
                     <div
@@ -39,6 +40,8 @@ export default function CastAnimation() {
                         style={{
                             left: x,
                             top: y,
+                            width: fr.size,
+                            height: fr.size,
                             transitionDelay: `${i * 60}ms`,
                         }}
                     >

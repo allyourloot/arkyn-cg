@@ -32,4 +32,4 @@ export const ELEMENT_BG_COLORS: Record<string, string> = {
 
 export const TIER_LABELS = ["", "I", "II", "III", "IV", "V"];
 
-export const FONT_STACK = "'Press Start 2P', 'Courier New', monospace";
+export const FONT_STACK = "'Jersey 10', system-ui, monospace";

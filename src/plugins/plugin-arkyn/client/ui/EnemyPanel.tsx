@@ -32,30 +32,21 @@ export default function EnemyPanel() {
             {/* Enemy name */}
             <span className={styles.name}>{name}</span>
 
-            {/* Element type */}
-            <span
-                className={styles.elementBadge}
-                style={{ color: elementColor, borderColor: elementColor }}
-            >
-                {element}
-            </span>
-
             {/* Resistances */}
             {resistances.length > 0 && (
                 <div className={styles.affinityBlock}>
                     <span className={styles.affinityLabel}>Resists</span>
                     <div className={styles.affinityRow}>
                         {resistances.map(r => {
-                            const color = ELEMENT_COLORS[r] ?? "#aaa";
                             const url = getRuneImageUrl(r);
+                            if (!url) return null;
                             return (
-                                <div
+                                <img
                                     key={r}
-                                    className={styles.affinityChip}
-                                    style={{ borderColor: color }}
-                                >
-                                    {url && <img src={url} alt={r} className={styles.affinityIcon} />}
-                                </div>
+                                    src={url}
+                                    alt={r}
+                                    className={styles.affinityIcon}
+                                />
                             );
                         })}
                     </div>
@@ -68,16 +59,15 @@ export default function EnemyPanel() {
                     <span className={styles.affinityLabel}>Weak to</span>
                     <div className={styles.affinityRow}>
                         {weaknesses.map(w => {
-                            const color = ELEMENT_COLORS[w] ?? "#aaa";
                             const url = getRuneImageUrl(w);
+                            if (!url) return null;
                             return (
-                                <div
+                                <img
                                     key={w}
-                                    className={styles.affinityChip}
-                                    style={{ borderColor: color }}
-                                >
-                                    {url && <img src={url} alt={w} className={styles.affinityIcon} />}
-                                </div>
+                                    src={url}
+                                    alt={w}
+                                    className={styles.affinityIcon}
+                                />
                             );
                         })}
                     </div>

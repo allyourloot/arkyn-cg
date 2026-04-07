@@ -172,6 +172,7 @@ export interface FlyingRune {
     fromY: number;
     toX: number;
     toY: number;
+    size: number;
     slotIndex: number;
 }
 
@@ -179,6 +180,7 @@ export interface DiscardingRune {
     rune: RuneClientData;
     fromX: number;
     fromY: number;
+    size: number;
 }
 
 let flyingRunes: FlyingRune[] = [];
@@ -197,6 +199,7 @@ export interface DrawingRune {
     rune: RuneClientData;
     toX: number;
     toY: number;
+    size: number;
     handIndex: number;
 }
 
@@ -222,6 +225,7 @@ export function triggerDrawAnimation(newRunes: { rune: RuneClientData; handIndex
                     rune,
                     toX: rect.left + rect.width / 2,
                     toY: rect.top + rect.height / 2,
+                    size: rect.width,
                     handIndex,
                 });
             }
@@ -276,6 +280,7 @@ export function castSpell() {
                 fromY: runeRect.top + runeRect.height / 2,
                 toX: slotRect.left + slotRect.width / 2,
                 toY: slotRect.top + slotRect.height / 2,
+                size: runeRect.width,
                 slotIndex: slotIdx,
             });
         }
@@ -340,6 +345,7 @@ export function discardRunes() {
                 rune: hand[handIdx],
                 fromX: rect.left + rect.width / 2,
                 fromY: rect.top + rect.height / 2,
+                size: rect.width,
             });
         }
     }
