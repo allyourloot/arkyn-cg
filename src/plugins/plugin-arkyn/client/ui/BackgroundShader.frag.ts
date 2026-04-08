@@ -47,7 +47,8 @@ float orbGlow(vec2 p, vec2 center, float radius) {
 void main() {
     // Aspect-corrected coordinates centered on (0,0).
     vec2 p = (gl_FragCoord.xy - 0.5 * uResolution.xy) / min(uResolution.x, uResolution.y);
-    float t = uTime;
+    // Global time scale — lower = slower, more contemplative drift.
+    float t = uTime * 0.5;
 
     // ----- Domain-warped FBM fog -----
     // Sampling fbm at a position that is itself displaced by another fbm

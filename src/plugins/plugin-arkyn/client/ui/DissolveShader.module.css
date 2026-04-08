@@ -1,6 +1,12 @@
 .canvas {
     /* Centered by the parent .slot's flex layout (no absolute positioning).
-       Width/height match the rune slot size which scales with viewport. */
+       Width/height match the rune slot size which scales with viewport.
+       `position: relative; z-index: 1` keeps the rune painted ON TOP of
+       the dimmed/grayscale placeholder image that lives behind it in the
+       same slot — without it, the absolutely-positioned placeholder
+       paints over the static canvas and washes out the rune. */
+    position: relative;
+    z-index: 1;
     width: 100%;
     height: 100%;
     image-rendering: pixelated;

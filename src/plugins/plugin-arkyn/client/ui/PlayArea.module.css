@@ -15,11 +15,37 @@
     align-items: center;
     justify-content: center;
     position: relative;
+    /* Back-out easing gives the lift a slight magical "bounce" overshoot
+       so the player's eye is drawn to the runes that powered the spell.
+       The slot raises as a unit (placeholder + rune together), so visually
+       the entire ghost slot lifts when its rune is being cast. */
+    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Empty-slot placeholder: the "common" base rune art, desaturated and dimmed
-   so it reads as a faded ghost slot rather than a real rune. */
+/* Applied to slots whose runes actually contributed to the resolved spell —
+   they lift up slightly during the brief hold before dissolving so the
+   player can read which played runes were the "valid" ones for the cast. */
+.slot.raised {
+    transform: translateY(-12px);
+}
+
+/* Applied to slots whose played rune did NOT contribute to the resolved
+   spell. The dim filter targets only the dissolving rune canvas (not the
+   placeholder underneath, which has its own ghost styling) so the wasted
+   runes visually recede and the raised "valid" runes pop. */
+.slot.dimmed canvas {
+    filter: grayscale(0.85) brightness(0.55) contrast(0.9);
+    opacity: 0.55;
+    transition: filter 220ms ease, opacity 220ms ease;
+}
+
+/* Static "ghost" placeholder behind every slot. Absolutely positioned so
+   it sits in the slot without affecting the flex layout of the dissolving
+   rune canvas — and stays visible the entire cast (placeholder is what
+   the rune dissolves *into*, never along with). */
 .placeholder {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     image-rendering: pixelated;

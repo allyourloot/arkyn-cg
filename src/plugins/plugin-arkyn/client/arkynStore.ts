@@ -6,6 +6,7 @@ import {
     ARKYN_READY,
     ARKYN_JOIN,
     resolveSpell,
+    calculateDamage,
 } from "../shared";
 import { playSelectRune, playPlaceRune } from "./sfx";
 
@@ -151,6 +152,35 @@ export function toggleRuneSelection(index: number) {
 // cast flow — server's playedRunes is no longer rendered.
 let dissolvingRunes: RuneClientData[] = [];
 let dissolveStartTime = 0;
+// Slot indices (0-based, in display order) of the runes that actually
+// contribute to the resolved spell. PlayArea lifts these slots so the player
+// can see which of their played runes were "valid" for the cast before the
+// dissolve animation tears them apart.
+let raisedSlotIndices: number[] = [];
+// Per-slot floating damage numbers shown above raised runes during the cast
+// hold. The spell element drives the stroke color so every bubble in a cast
+// shares the same outline tint. Indexed BY SLOT INDEX so a non-contributing
+// slot is `null`.
+export interface RuneDamageBubble {
+    amount: number;
+    spellElement: string;
+    /** Monotonically increasing — used as a React key so re-casts re-trigger CSS animation. */
+    seq: number;
+}
+let runeDamageBubbles: (RuneDamageBubble | null)[] = [];
+let bubbleSeqCounter = 0;
+
+// One-shot floating damage hit on the enemy health bar. `seq` increments on
+// every cast so the EnemyHealthBar effect re-fires even when the same damage
+// number is dealt twice in a row. `spellElement` drives the floating
+// number's stroke color to match the cast that produced it.
+export interface EnemyDamageHit {
+    amount: number;
+    spellElement: string;
+    seq: number;
+}
+let enemyDamageHit: EnemyDamageHit = { amount: 0, spellElement: "", seq: 0 };
+let enemyDamageSeqCounter = 0;
 
 // The exact runes from the most recent cast. Persists between casts so the
 // SpellPreview panel can re-resolve them and display the last cast result
@@ -163,12 +193,32 @@ export function useLastCastRunes() {
 
 export const DISSOLVE_DURATION_MS = 550;
 export const DISSOLVE_STAGGER_MS = 150;
+// How long the "valid" runes stay raised in the play area after landing,
+// before the dissolve actually begins. Tuned long enough that the player
+// can read every per-rune floating damage number above the raised runes
+// before the dissolve tears them apart.
+export const RAISE_HOLD_MS = 1100;
+// Duration of the floating per-rune damage bubble's float-up + fade
+// animation, kept in sync with the matching CSS keyframes so the bubble
+// finishes just before the dissolve begins.
+export const RUNE_DAMAGE_BUBBLE_MS = 1000;
+// Duration of the enemy health-bar floating damage / shake animation.
+export const ENEMY_DAMAGE_HIT_MS = 900;
 
 export function useDissolvingRunes() {
     return useSyncExternalStore(subscribe, () => dissolvingRunes);
 }
 export function useDissolveStartTime() {
     return useSyncExternalStore(subscribe, () => dissolveStartTime);
+}
+export function useRaisedSlotIndices() {
+    return useSyncExternalStore(subscribe, () => raisedSlotIndices);
+}
+export function useRuneDamageBubbles() {
+    return useSyncExternalStore(subscribe, () => runeDamageBubbles);
+}
+export function useEnemyDamageHit() {
+    return useSyncExternalStore(subscribe, () => enemyDamageHit);
 }
 
 // ----- Animation state -----
@@ -262,19 +312,31 @@ function selectedIdsToServerIndices(): number[] {
     return out;
 }
 
-// Counts only the runes that actually contribute to the resolved spell.
-// For a single-element spell that's the runes matching `spell.element`;
-// for a combo spell that's every rune (since combos require all elements
-// to be one of the two combo elements).
-function countContributingRunes(castRunes: RuneClientData[]): number {
-    if (castRunes.length === 0) return 0;
+// Returns the slot indices (0-based, in display order) of the runes that
+// actually contribute to the resolved spell. For a single-element spell,
+// that's the FIRST `tier` runes whose element matches the spell — so a
+// Tier 1 Fire spell with [Fire, Water, Lightning] returns just [0], while a
+// Tier 2 Fire spell with [Fire, Fire, Water, Lightning] returns [0, 1].
+// For a combo spell, every rune matching one of the two combo elements
+// contributes (combos require all played runes to be combo-compatible).
+function getContributingRuneIndices(castRunes: RuneClientData[]): number[] {
+    if (castRunes.length === 0) return [];
     const spell = resolveSpell(castRunes.map(r => ({ element: r.element })));
-    if (!spell) return 0;
+    if (!spell) return [];
     if (spell.isCombo && spell.comboElements) {
         const combo = spell.comboElements as readonly string[];
-        return castRunes.filter(r => combo.includes(r.element)).length;
+        const out: number[] = [];
+        for (let i = 0; i < castRunes.length; i++) {
+            if (combo.includes(castRunes[i].element)) out.push(i);
+        }
+        return out;
     }
-    return castRunes.filter(r => r.element === spell.element).length;
+    // Single-element: take the first `tier` runes whose element matches.
+    const out: number[] = [];
+    for (let i = 0; i < castRunes.length && out.length < spell.tier; i++) {
+        if (castRunes[i].element === spell.element) out.push(i);
+    }
+    return out;
 }
 
 const FLY_DURATION_MS = 500;
@@ -332,32 +394,92 @@ export function castSpell() {
     lastCastRunes = castRunes;
     notify();
 
+    // Resolve the spell on the client so we can compute per-rune damage
+    // for the floating bubble UI. Uses the same shared formula as the
+    // server, with the synced enemy resistances/weaknesses, so the numbers
+    // we display always sum to the actual damage that will be applied.
+    const resolvedSpell = resolveSpell(castRunes.map(r => ({ element: r.element })));
+    const totalDamage = resolvedSpell
+        ? calculateDamage(resolvedSpell, enemyResistances, enemyWeaknesses)
+        : 0;
+
     // Phase 1: fly to the play area.
     setTimeout(() => {
         sendFn?.(ARKYN_CAST, { selectedIndices: serverIndices });
         flyingRunes = [];
 
-        // Phase 2: cards land in the play area and start dissolving sequentially.
+        // Phase 2a: cards land in the play area as static runes. We mount
+        // them in DissolveShader immediately but push the dissolve start
+        // time into the future by RAISE_HOLD_MS so they read as fully
+        // intact runes during the raise hold. Meanwhile, the slots whose
+        // runes actually power the resolved spell get lifted via CSS so
+        // the player can see which played runes mattered, and a floating
+        // damage bubble blooms above each contributing rune.
+        const contributingIndices = getContributingRuneIndices(castRunes);
+        const contributing = contributingIndices.length;
+        // Per-rune damage = total / contributing, distributed evenly with
+        // any remainder spread across the first few runes so the displayed
+        // numbers always sum to exactly `totalDamage`.
+        const perRuneBase = contributing > 0 ? Math.floor(totalDamage / contributing) : 0;
+        const perRuneRemainder = contributing > 0 ? totalDamage - perRuneBase * contributing : 0;
+
+        // The spell's primary element drives the outline color of every
+        // bubble in this cast — and the matching enemy floating damage —
+        // so the colorway reads as one cohesive spell impact.
+        const spellElement = resolvedSpell?.element ?? "";
+        const bubbles: (RuneDamageBubble | null)[] = new Array(MAX_PLAY).fill(null);
+        for (let i = 0; i < contributingIndices.length; i++) {
+            const slotIdx = contributingIndices[i];
+            const rune = castRunes[slotIdx];
+            if (!rune) continue;
+            bubbles[slotIdx] = {
+                amount: perRuneBase + (i < perRuneRemainder ? 1 : 0),
+                spellElement,
+                seq: ++bubbleSeqCounter,
+            };
+        }
+
         dissolvingRunes = castRunes;
-        dissolveStartTime = performance.now();
+        dissolveStartTime = performance.now() + RAISE_HOLD_MS;
+        raisedSlotIndices = contributingIndices;
+        runeDamageBubbles = bubbles;
         notify();
 
         // Play the "place rune" SFX once for each rune that actually
         // contributes to the resolved spell. Non-matching runes still fly
         // and dissolve visually but stay silent. Stagger so the sounds
         // layer instead of stacking into one thud.
-        const contributing = countContributingRunes(castRunes);
         for (let i = 0; i < contributing; i++) {
             if (i === 0) playPlaceRune();
             else setTimeout(playPlaceRune, i * PLACE_SFX_STAGGER_MS);
         }
 
-        // Phase 3: wait for the LAST staggered dissolve to finish, then clear.
+        // Phase 2b: when the raise hold ends and the dissolve actually
+        // begins, fire the enemy health-bar damage hit (floating number +
+        // shake). This synchronizes the enemy reaction with the moment
+        // the runes start to be consumed.
+        setTimeout(() => {
+            enemyDamageHit = {
+                amount: totalDamage,
+                spellElement,
+                seq: ++enemyDamageSeqCounter,
+            };
+            notify();
+        }, RAISE_HOLD_MS);
+
+        // Phase 3: wait for the raise hold + LAST staggered dissolve to
+        // finish, then clear. The dissolves are themselves offset by
+        // RAISE_HOLD_MS via dissolveStartTime, so the cleanup must wait
+        // that long extra before tearing everything down.
         const totalDissolveMs =
-            (castRunes.length - 1) * DISSOLVE_STAGGER_MS + DISSOLVE_DURATION_MS;
+            RAISE_HOLD_MS +
+            (castRunes.length - 1) * DISSOLVE_STAGGER_MS +
+            DISSOLVE_DURATION_MS;
         setTimeout(() => {
             dissolvingRunes = [];
             dissolveStartTime = 0;
+            raisedSlotIndices = [];
+            runeDamageBubbles = [];
             isCastAnimating = false;
             notify();
         }, totalDissolveMs);

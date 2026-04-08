@@ -7,11 +7,82 @@
     gap: 4px;
     width: 100%;
     min-width: 0;
+    /* Anchor for the absolutely-positioned floating damage number that
+       blooms out of the bar on a successful spell impact. */
+    position: relative;
+}
+
+/* Shake the entire enemy nameplate + bar when a spell connects. Tight,
+   short, and snappy so it reads as an impact reaction without being
+   disorienting. The shake plays on the wrapper which also anchors the
+   absolutely-positioned floating damage number — and because that span is
+   keyed to the cast seq, it remounts cleanly on each new hit. */
+.shaking {
+    animation: enemyHitShake 360ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes enemyHitShake {
+    0%, 100% { transform: translateX(0); }
+    10% { transform: translateX(-7px); }
+    20% { transform: translateX(7px); }
+    30% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    50% { transform: translateX(-4px); }
+    60% { transform: translateX(4px); }
+    70% { transform: translateX(-2px); }
+    80% { transform: translateX(2px); }
+    90% { transform: translateX(-1px); }
+}
+
+/* Floating damage number that bursts upward out of the enemy health bar
+   on a successful cast. Sits above the bar and drifts up while fading,
+   matching the cast-impact moment when the runes start to dissolve.
+   White fill with an element-colored outline (driven by --stroke-color
+   set inline by the React component) so the number visually matches the
+   spell that produced it. */
+.damageFloat {
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translate(-50%, 0);
+    font-family: 'Sburbits', system-ui, monospace;
+    font-size: clamp(44px, 5.5vw, 72px);
+    font-weight: normal;
+    color: #ffffff;
+    line-height: 1;
+    white-space: nowrap;
+    text-shadow:
+        2px 2px 0 rgba(0, 0, 0, 0.85),
+        0 0 14px rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+    animation: enemyDamageFloat 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes enemyDamageFloat {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, 18px) scale(0.5);
+    }
+    15% {
+        opacity: 1;
+        transform: translate(-50%, -8px) scale(1.25);
+    }
+    28% {
+        transform: translate(-50%, -16px) scale(1);
+    }
+    78% {
+        opacity: 1;
+        transform: translate(-50%, -52px) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -76px) scale(0.92);
+    }
 }
 
 .name {
     font-size: clamp(18px, 2.2vw, 26px);
-    font-family: 'Jersey 10', system-ui, monospace;
+    font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
     color: #d4a574;
     text-transform: uppercase;
@@ -22,6 +93,18 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Positioning anchor for the floating damage number that needs to escape
+   .barOuter (which clips overflow to keep the bar fill inside its border).
+   The anchor matches the bar's max-width so the damage number centers on
+   the bar regardless of screen size. */
+.barAnchor {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    justify-content: center;
 }
 
 .barOuter {
@@ -49,7 +132,7 @@
     align-items: center;
     justify-content: center;
     font-size: clamp(16px, 1.8vw, 22px);
-    font-family: 'Jersey 10', system-ui, monospace;
+    font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
     color: #fff;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);

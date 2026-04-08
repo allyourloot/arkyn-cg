@@ -18,7 +18,7 @@
 
 .count {
     font-size: clamp(20px, 2.4vw, 28px);
-    font-family: 'Jersey 10', system-ui, monospace;
+    font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
     color: #d4a574;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);

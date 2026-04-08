@@ -1,3 +1,13 @@
+/* ----- Fonts ----- */
+
+@font-face {
+    font-family: 'Sburbits';
+    src: url('../../../../../assets/fonts/sburbits.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+}
+
 /* ----- Root layouts ----- */
 
 .root {
@@ -8,7 +18,7 @@
     flex-direction: row;
     align-items: stretch;
     padding: 0 clamp(8px, 2vw, 32px);
-    font-family: 'Jersey 10', system-ui, monospace;
+    font-family: 'Sburbits', system-ui, monospace;
 }
 
 .waitingRoot {
@@ -18,7 +28,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Jersey 10', system-ui, monospace;
+    font-family: 'Sburbits', system-ui, monospace;
     color: #d4a574;
     font-size: 28px;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
@@ -67,7 +77,7 @@
 
 .roundEndTitle {
     font-size: clamp(36px, 5vw, 56px);
-    font-family: 'Jersey 10', system-ui, monospace;
+    font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
     color: #ffd700;
     text-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 3px 3px 0 rgba(0, 0, 0, 0.8);
@@ -78,7 +88,7 @@
 
 .roundEndSubtitle {
     font-size: clamp(18px, 2vw, 24px);
-    font-family: 'Jersey 10', system-ui, monospace;
+    font-family: 'Sburbits', system-ui, monospace;
     color: #d4a574;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
     line-height: 1;
@@ -89,7 +99,7 @@
     margin-top: 12px;
     padding: clamp(8px, 1.2vw, 12px) clamp(28px, 4vw, 48px);
     font-size: clamp(20px, 2.4vw, 28px);
-    font-family: 'Jersey 10', system-ui, monospace;
+    font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
     letter-spacing: 4px;
     text-transform: uppercase;

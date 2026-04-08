@@ -21,7 +21,7 @@
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
-    font-family: 'Jersey 10', system-ui, monospace;
+    font-family: 'Sburbits', system-ui, monospace;
     image-rendering: pixelated;
 }
 
@@ -60,7 +60,7 @@
         0 3px 0 0 rgba(0, 0, 0, 0.55);
     padding: clamp(2px, 0.5vw, 5px) clamp(10px, 1.4vw, 16px);
     font-size: clamp(16px, 1.9vw, 22px);
-    font-family: 'Jersey 10', system-ui, monospace;
+    font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
     color: #d4a574;
     text-transform: uppercase;
@@ -90,7 +90,7 @@
 
 .name {
     font-size: clamp(26px, 3vw, 38px);
-    font-family: 'Jersey 10', system-ui, monospace;
+    font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
     color: #e8d4b8;
     text-align: center;
@@ -100,7 +100,7 @@
 
 .affinityLabel {
     font-size: clamp(16px, 1.8vw, 22px);
-    font-family: 'Jersey 10', system-ui, monospace;
+    font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
     color: #b0a090;
     text-transform: uppercase;
