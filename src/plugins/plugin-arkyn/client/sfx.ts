@@ -5,6 +5,7 @@ import damageUrl from "/assets/audio/sfx/damage.mp3?url";
 import castUrl from "/assets/audio/sfx/cast.mp3?url";
 import discardUrl from "/assets/audio/sfx/discard.mp3?url";
 import dissolveUrl from "/assets/audio/sfx/dissolve.ogg?url";
+import criticalUrl from "/assets/audio/sfx/critical.ogg?url";
 
 // Preload one Audio per sfx so the browser caches the buffer. Each play
 // clones the node so rapid plays can overlap without cutting each
@@ -33,6 +34,7 @@ export const playCount = makeSfx(countUrl, 0.9);
 export const playDamage = makeSfx(damageUrl, 0.9);
 export const playCast = makeSfx(castUrl, 0.9);
 export const playDissolve = makeSfx(dissolveUrl, 0.9);
+export const playCritical = makeSfx(criticalUrl, 0.9);
 
 // Discard SFX with built-in pitch randomization. Plays one shot of
 // `discard.mp3` at a slightly randomized playback rate so a multi-rune

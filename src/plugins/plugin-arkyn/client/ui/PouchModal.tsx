@@ -16,6 +16,24 @@ const modalStyleVars = createPanelStyleVars();
 // dimmed so the player can see the entire deck composition at a glance.
 type SlotState = "pouch" | "drawn" | "spent";
 
+// Three-letter element abbreviations shown in the side column. Order matches
+// ELEMENT_TYPES so we can index by element name directly.
+const ELEMENT_LABELS: Record<string, string> = {
+    air: "AIR",
+    arcane: "ARC",
+    death: "DTH",
+    earth: "EAR",
+    fire: "FIR",
+    holy: "HOL",
+    ice: "ICE",
+    lightning: "LIG",
+    poison: "PSN",
+    psy: "PSY",
+    shadow: "SHD",
+    steel: "STL",
+    water: "WAT",
+};
+
 export default function PouchModal({ onClose }: PouchModalProps) {
     const pouchContents = usePouchContents();
     const hand = useHand();
@@ -67,27 +85,49 @@ export default function PouchModal({ onClose }: PouchModalProps) {
                     </button>
                 </div>
 
-                <div className={styles.grid}>
-                    {ELEMENT_TYPES.flatMap(element => {
-                        const inPouch = pouchByElement.get(element) ?? 0;
-                        const inHand = handByElement.get(element) ?? 0;
-                        const spent = Math.max(0, RUNES_PER_ELEMENT - inPouch - inHand);
+                <div className={styles.body}>
+                    <div className={styles.elementColumn}>
+                        {ELEMENT_TYPES.map(element => {
+                            const remaining =
+                                (pouchByElement.get(element) ?? 0) +
+                                (handByElement.get(element) ?? 0);
+                            const empty = remaining === 0;
+                            return (
+                                <div
+                                    key={element}
+                                    className={`${styles.elementRow} ${empty ? styles.elementRowEmpty : ""}`}
+                                >
+                                    <span className={styles.elementLabel}>
+                                        {ELEMENT_LABELS[element] ?? element.slice(0, 3).toUpperCase()}
+                                    </span>
+                                    <span className={styles.elementCount}>{remaining}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
 
-                        // Build the slot list: pouch first (lit), then drawn,
-                        // then spent — both dimmed.
-                        const slots: SlotState[] = [];
-                        for (let i = 0; i < inPouch; i++) slots.push("pouch");
-                        for (let i = 0; i < inHand; i++) slots.push("drawn");
-                        for (let i = 0; i < spent; i++) slots.push("spent");
+                    <div className={styles.grid}>
+                        {ELEMENT_TYPES.flatMap(element => {
+                            const inPouch = pouchByElement.get(element) ?? 0;
+                            const inHand = handByElement.get(element) ?? 0;
+                            const spent = Math.max(0, RUNES_PER_ELEMENT - inPouch - inHand);
 
-                        return slots.map((state, i) => (
-                            <RuneIcon
-                                key={`${element}-${i}`}
-                                element={element}
-                                state={state}
-                            />
-                        ));
-                    })}
+                            // Build the slot list: pouch first (lit), then drawn,
+                            // then spent — both dimmed.
+                            const slots: SlotState[] = [];
+                            for (let i = 0; i < inPouch; i++) slots.push("pouch");
+                            for (let i = 0; i < inHand; i++) slots.push("drawn");
+                            for (let i = 0; i < spent; i++) slots.push("spent");
+
+                            return slots.map((state, i) => (
+                                <RuneIcon
+                                    key={`${element}-${i}`}
+                                    element={element}
+                                    state={state}
+                                />
+                            ));
+                        })}
+                    </div>
                 </div>
             </div>
         </div>

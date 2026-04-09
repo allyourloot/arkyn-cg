@@ -5,8 +5,15 @@ import { ELEMENT_COLORS } from "./styles";
 import styles from "./RuneDamageBubble.module.css";
 
 interface Props {
-    /** The damage number to display. */
+    /** Final damage number AFTER the elemental modifier (resistance / weakness). */
     amount: number;
+    /**
+     * Pre-modifier damage number. When equal to `amount`, the bubble pops
+     * once normally. When less than `amount` (weakness boost), the bubble
+     * pops with `baseAmount` first, holds briefly, then pops AGAIN to
+     * `amount` with a yellow flash to highlight the weakness bonus.
+     */
+    baseAmount: number;
     /** Element of the resolved spell — drives the stroke (outline) color. */
     spellElement: string;
     /**
@@ -23,39 +30,89 @@ interface Props {
     delayMs: number;
 }
 
-export default function RuneDamageBubble({ amount, spellElement, seq, delayMs }: Props) {
+// Bonus pop color — bright canary yellow, distinct from `lightning`
+// (#fbbf24) and `holy` (#fef08a) so weakness bonuses always read clearly.
+const BONUS_COLOR = "#ffe24a";
+const BASE_COLOR = "#ffffff";
+
+export default function RuneDamageBubble({ amount, baseAmount, spellElement, seq, delayMs }: Props) {
     const bubbleRef = useRef<HTMLSpanElement>(null);
     const strokeColor = ELEMENT_COLORS[spellElement] ?? "#ffffff";
+    // Only the upward (weakness → critical) case triggers the two-pop
+    // sequence. Resisted runes have `amount < baseAmount` and just show
+    // their reduced value directly — no misleading "pop down" animation.
+    const isBonus = amount > baseAmount;
 
-    // GSAP-driven 4-keyframe pop: enter from below + tiny → overshoot
-    // larger → settle → drift up + fade. Replaces the CSS @keyframes
-    // damageBubble animation. The horizontal centering uses GSAP's
-    // `xPercent: -50` (equivalent to CSS translateX(-50%)) so it composes
+    // GSAP-driven pop. Two flavors:
+    //   - Normal: pop in → settle → hold → drift up + fade. Total 750ms.
+    //   - Bonus:  pop in (base value) → settle → hold → SECOND POP (text
+    //             swap to bonus value, color → yellow, scale punch) →
+    //             settle bonus → drift up + fade. Total 750ms.
+    // The horizontal centering uses GSAP's `xPercent: -50` so it composes
     // with the animated y/scale without fighting the matrix.
     useGSAP(() => {
         const el = bubbleRef.current;
         if (!el) return;
-        gsap.set(el, { xPercent: -50, y: 6, scale: 0.55, opacity: 0 });
+        // Reset text + color in case the same DOM node is reused across casts.
+        el.textContent = String(baseAmount);
+        gsap.set(el, { xPercent: -50, y: 6, scale: 0.55, opacity: 0, color: BASE_COLOR });
+
         const tl = gsap.timeline({ delay: delayMs / 1000 });
+
+        // Phase 1: pop in with the base value (130ms)
         tl.to(el, {
             y: -10,
             scale: 1.18,
             opacity: 1,
             duration: 0.13,
             ease: "back.out(2)",
-        })
-            .to(el, {
-                y: -14,
-                scale: 1,
-                duration: 0.07,
+        });
+        // Phase 2: settle (70ms)
+        tl.to(el, {
+            y: -14,
+            scale: 1,
+            duration: 0.07,
+            ease: "power2.out",
+        });
+
+        if (isBonus) {
+            // Phase 3a: hold the base value briefly so the player reads it (80ms)
+            tl.to({}, { duration: 0.08 });
+            // Phase 3b: swap text to the bonus value
+            tl.call(() => {
+                el.textContent = String(amount);
+            });
+            // Phase 3c: bonus pop — bigger overshoot + flash to yellow (130ms)
+            tl.to(el, {
+                scale: 1.38,
+                color: BONUS_COLOR,
+                duration: 0.13,
+                ease: "back.out(2.5)",
+            });
+            // Phase 3d: settle the bonus pop (50ms)
+            tl.to(el, {
+                scale: 1.12,
+                duration: 0.05,
                 ease: "power2.out",
-            })
-            .to(el, {
+            });
+            // Phase 4: drift up + fade (290ms) — total 750ms
+            tl.to(el, {
+                y: -38,
+                opacity: 0,
+                duration: 0.29,
+                ease: "power1.in",
+            });
+        } else {
+            // Non-bonus: brief hold so the number lingers, then drift away.
+            // Total still 750ms (130 + 70 + 150 hold + 400 drift).
+            tl.to({}, { duration: 0.15 });
+            tl.to(el, {
                 y: -38,
                 opacity: 0,
                 duration: 0.4,
                 ease: "power1.in",
             });
+        }
     }, { dependencies: [seq], scope: bubbleRef });
 
     // CSS variable lets the stylesheet apply -webkit-text-stroke without
@@ -70,7 +127,7 @@ export default function RuneDamageBubble({ amount, spellElement, seq, delayMs }:
             className={styles.bubble}
             style={style}
         >
-            {amount}
+            {baseAmount}
         </span>
     );
 }

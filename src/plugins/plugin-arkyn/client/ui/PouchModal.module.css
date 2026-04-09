@@ -94,10 +94,73 @@
     transform: scale(0.94);
 }
 
+/* Body splits the modal into a left-side element summary column and the
+   right-side rune grid. */
+.body {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    align-items: stretch;
+    min-height: 0;
+}
+
+/* Left-side column listing every element with its remaining (pouch + hand)
+   count. Acts as a quick legend so the player can see deck composition
+   without counting individual rune icons. */
+.elementColumn {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    image-rendering: pixelated;
+    color: #e8d4b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: clamp(11px, 1.2vw, 14px);
+    line-height: 1;
+}
+
+.elementRow {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 3px 4px;
+    min-width: 76px;
+    transition: opacity 0.15s ease;
+}
+
+.elementRowEmpty {
+    opacity: 0.32;
+}
+
+.elementLabel {
+    color: #e8d4b8;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+}
+
+.elementCount {
+    color: #ffffff;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+    min-width: 14px;
+    text-align: right;
+}
+
 /* Flat rune grid. Runes overlap horizontally (negative margin) so we can
    pack more per row at a fixed modal width — same trick the hand uses.
    The grid sizes itself to fit the deck so no scrollbar is needed. */
 .grid {
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     display: flex;
     flex-wrap: wrap;

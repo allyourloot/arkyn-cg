@@ -5,7 +5,7 @@ import {
     ARKYN_CAST,
     ARKYN_DISCARD,
     resolveSpell,
-    calculateDamage,
+    calculateRuneDamageBreakdown,
     getContributingRuneIndices,
 } from "../shared";
 import { subscribe, notify, type RuneClientData } from "./arkynStoreCore";
@@ -57,7 +57,16 @@ import {
 // shares the same outline tint. Indexed BY SLOT INDEX so a non-contributing
 // slot is `null`.
 export interface RuneDamageBubble {
+    /** Final per-rune damage AFTER the elemental modifier (resistance / weakness). */
     amount: number;
+    /**
+     * Per-rune damage BEFORE the elemental modifier — i.e. what the number
+     * would be against a neutral target. When `baseAmount === amount`, the
+     * bubble pops once normally. When `baseAmount !== amount`, the bubble
+     * pops with `baseAmount` first, then pops AGAIN to `amount` with a
+     * yellow flash to highlight the weakness bonus damage.
+     */
+    baseAmount: number;
     spellElement: string;
     /** Monotonically increasing — used as a React key so re-casts re-trigger CSS animation. */
     seq: number;
@@ -305,52 +314,61 @@ export function castSpell() {
 
     // Resolve the spell on the client so we can compute per-rune damage
     // for the floating bubble UI. Uses the same shared formula as the
-    // server, with the synced enemy resistances/weaknesses, so the numbers
-    // we display always sum to the actual damage that will be applied.
+    // server — each contributing rune is evaluated against the enemy's
+    // resistances/weaknesses individually, so the displayed bubbles always
+    // sum to the actual damage that will be applied.
     const resolvedSpell = resolveSpell(castRunes.map(r => ({ element: r.element })));
-    const totalDamage = resolvedSpell
-        ? calculateDamage(
+    const contributingIndices = getContributingRuneIndices(castRunes);
+    const contributing = contributingIndices.length;
+    const contributingRuneData = contributingIndices.map(i => ({ element: castRunes[i].element }));
+    const breakdown = resolvedSpell
+        ? calculateRuneDamageBreakdown(
             resolvedSpell,
+            contributingRuneData,
             arkynStoreInternal.getEnemyResistances(),
             arkynStoreInternal.getEnemyWeaknesses(),
         )
-        : 0;
+        : [];
+    let totalDamage = 0;
+    for (const b of breakdown) totalDamage += b.amount;
 
-    // Pre-compute the contributing-rune info up front so the timeline
-    // callbacks can mount the right state without re-deriving anything.
-    const contributingIndices = getContributingRuneIndices(castRunes);
-    const contributing = contributingIndices.length;
-    // Per-rune damage = total / contributing, distributed evenly with any
-    // remainder spread across the first few runes so the displayed numbers
-    // always sum to exactly `totalDamage`.
-    const perRuneBase = contributing > 0 ? Math.floor(totalDamage / contributing) : 0;
-    const perRuneRemainder = contributing > 0 ? totalDamage - perRuneBase * contributing : 0;
     // The spell's primary element drives the outline color of every bubble
     // in this cast — and the matching enemy floating damage — so the
     // colorway reads as one cohesive spell impact.
     const spellElement = resolvedSpell?.element ?? "";
     const bubbles: (RuneDamageBubble | null)[] = new Array(MAX_PLAY).fill(null);
-    // Cumulative damage values per bubble fire — index `i` is the running
-    // total after the i-th contributing rune's bubble has popped. Drives
-    // the live SpellPreview damage counter so it ticks 0 → final in lock-
-    // step with the floating numbers.
-    const cumulativeBubbleAmounts: number[] = [];
-    let cumulativeAcc = 0;
+    // Per-rune breakdown handed to the cast timeline. `base` is the value
+    // the bubble first shows on appearance; `final` is its end value. They
+    // differ only for critical (weakness) runes — the timeline factory
+    // emits an extra "bonus" event at BONUS_POP_OFFSET_S for those, sorted
+    // into the running cumulative timeline so the side counter stays in
+    // sync with whatever bubbles are visible at any moment. `isResisted`
+    // tells the timeline to pitch the count SFX down on the appearance
+    // event so resisted runes audibly read as weak hits.
+    const runeBreakdown: { base: number; final: number; isResisted: boolean }[] = [];
     for (let i = 0; i < contributingIndices.length; i++) {
         const slotIdx = contributingIndices[i];
         const rune = castRunes[slotIdx];
-        if (!rune) continue;
-        const amount = perRuneBase + (i < perRuneRemainder ? 1 : 0);
+        const item = breakdown[i];
+        if (!rune || !item) continue;
+        // Bubble's initial display: full pre-modifier value for criticals
+        // (so they pop 8 → 12 yellow), or the post-modifier value directly
+        // for neutral / resisted runes (no misleading "pop down").
+        const initialDisplay = item.isCritical ? item.baseAmount : item.amount;
         bubbles[slotIdx] = {
-            amount,
+            amount: item.amount,
+            baseAmount: initialDisplay,
             spellElement,
             seq: ++bubbleSeqCounter,
             // Each successive contributing rune's bubble waits its turn
             // so the damage reads like a counter ticking up.
             delayMs: i * BUBBLE_STAGGER_MS,
         };
-        cumulativeAcc += amount;
-        cumulativeBubbleAmounts.push(cumulativeAcc);
+        runeBreakdown.push({
+            base: initialDisplay,
+            final: item.amount,
+            isResisted: item.isResisted,
+        });
     }
 
     // Dynamic raise hold: long enough for the slot raise transition to
@@ -377,7 +395,7 @@ export function castSpell() {
         flyingCount: flying.length,
         contributingCount: contributing,
         castRunesLength: castRunes.length,
-        cumulativeBubbleAmounts,
+        runeBreakdown,
         onStart: () => {
             // Mount the flyers and lock HP. flushSync forces React to
             // commit synchronously inside this callback so CastAnimation's

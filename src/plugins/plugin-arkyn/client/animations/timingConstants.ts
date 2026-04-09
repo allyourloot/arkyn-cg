@@ -18,7 +18,7 @@ export const DISSOLVE_STAGGER_MS = 150;
 // Beat between the runes landing in the play area and the "valid" runes
 // lifting up. Long enough for the player to register every played rune
 // sitting in its slot before the spell-resolution choreography starts.
-export const SETTLE_DELAY_MS = 1000;
+export const SETTLE_DELAY_MS = 500;
 
 // Duration of the slot raise transition. We delay the damage bubbles by
 // this amount so the runes finish lifting BEFORE their numbers start
@@ -27,8 +27,9 @@ export const RAISE_DURATION_MS = 220;
 
 // Duration of a single floating damage bubble's full animation (appear +
 // drift + fade). MUST match the GSAP timeline duration in
-// RuneDamageBubble.tsx.
-export const BUBBLE_DURATION_MS = 600;
+// RuneDamageBubble.tsx. Sized to fit the optional weakness "bonus pop"
+// (base value → yellow boosted value) without truncating the drift phase.
+export const BUBBLE_DURATION_MS = 750;
 
 // Stagger between consecutive damage bubbles in a multi-rune cast. Each
 // successive contributing rune's bubble appears this many ms after the

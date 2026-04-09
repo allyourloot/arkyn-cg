@@ -31,4 +31,5 @@ export type { SpellInfo } from "./spellTable";
 export { resolveSpell, getContributingRuneIndices } from "./resolveSpell";
 export type { ResolvedSpell, RuneData } from "./resolveSpell";
 
-export { calculateDamage } from "./calculateDamage";
+export { calculateDamage, calculateRuneDamageBreakdown } from "./calculateDamage";
+export type { RuneDamageBreakdown } from "./calculateDamage";

@@ -121,6 +121,7 @@ export default function PlayArea() {
                         {damageBubble && (
                             <RuneDamageBubble
                                 amount={damageBubble.amount}
+                                baseAmount={damageBubble.baseAmount}
                                 spellElement={damageBubble.spellElement}
                                 seq={damageBubble.seq}
                                 delayMs={damageBubble.delayMs}
