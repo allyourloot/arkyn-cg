@@ -45,6 +45,14 @@
     color: #fff4d8;
 }
 
+/* Sort reuses the orange button chrome but reads as a UI utility, not
+   a resource-spending game action. The slightly cooler tint and the
+   lack of a "(N)" budget counter on the label keeps it visually
+   distinct from Discard at a glance even though they share artwork. */
+.sort {
+    color: #ffe9c8;
+}
+
 .button:disabled {
     border-image: var(--btn-bg-disabled) 10 10 10 10 fill / 10px 10px 10px 10px;
     cursor: not-allowed;

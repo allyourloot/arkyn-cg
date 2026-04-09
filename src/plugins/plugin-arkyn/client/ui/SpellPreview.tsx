@@ -9,7 +9,7 @@ import {
     useIsCastAnimating,
     useCastDamageCounter,
 } from "../arkynStore";
-import { resolveSpell } from "../../shared/resolveSpell";
+import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import innerFrameBlueUrl from "/assets/ui/inner-frame-blue.png?url";
@@ -47,6 +47,19 @@ export default function SpellPreview() {
 
     const isLive = previewSpell !== null;
     const spell = previewSpell ?? lastCastSpell;
+
+    // Partial-rune indicator: how many of the rune cards backing this
+    // spell will actually contribute. For non-synergistic mismatches
+    // (e.g. 2 Fire + 2 Water → Tier 2 Fireball using only 2 of 4
+    // selected runes) this lets the player see "2/4 runes" before
+    // committing, so they learn the synergy graph by feedback rather
+    // than by silent rune loss.
+    const sourceRunes = isLive ? selectedRunes : lastCastRunes;
+    const totalSourceRunes = sourceRunes.length;
+    const contributingCount = spell && totalSourceRunes > 0
+        ? getContributingRuneIndices(sourceRunes.map(r => ({ element: r.element }))).length
+        : 0;
+    const isPartial = contributingCount > 0 && contributingCount < totalSourceRunes;
 
     // Damage display source:
     //   - During a cast: the live counter that ticks up with each bubble.
@@ -124,7 +137,14 @@ export default function SpellPreview() {
 
                 <span className={styles.tier}>
                     Tier {TIER_LABELS[spell.tier] ?? spell.tier}
-                    {spell.isCombo && " (Combo)"}
+                    {spell.shape === "full_house" && " (Full House)"}
+                    {spell.shape === "two_pair" && " (Two Pair)"}
+                    {spell.shape === "duo" && " (Combo)"}
+                    {isPartial && (
+                        <span className={styles.partialRunes}>
+                            {" · "}{contributingCount}/{totalSourceRunes} runes
+                        </span>
+                    )}
                 </span>
             </div>
 

@@ -101,6 +101,16 @@
     line-height: 1;
 }
 
+/* Partial-rune indicator (e.g. "2/4 runes") shown when the player's
+   selection includes runes the resolved spell won't actually use —
+   typically a non-synergistic poker shape like 2 Fire + 2 Water that
+   falls back to single-element fire. Tinted muted-red so it reads as
+   a soft warning without screaming at the player. */
+.partialRunes {
+    color: #d4836b;
+    font-size: 0.85em;
+}
+
 /* Dedicated damage counter container — its own 9-slice section using the
    red inner-frame so the damage number stands out from the surrounding
    spell info. The counter inside ticks up during a cast (driven by GSAP

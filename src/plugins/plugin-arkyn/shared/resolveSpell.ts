@@ -1,5 +1,13 @@
 import { COMBINABLE_ELEMENTS, type ElementType } from "./arkynConstants";
-import { SPELL_TABLE, COMBO_TABLE, type SpellInfo } from "./spellTable";
+import {
+    SPELL_TABLE,
+    COMBO_TABLE,
+    TWO_PAIR_TABLE,
+    FULL_HOUSE_TABLE,
+    type SpellInfo,
+} from "./spellTable";
+
+export type SpellShape = "single" | "duo" | "two_pair" | "full_house";
 
 export interface ResolvedSpell {
     spellName: string;
@@ -8,6 +16,14 @@ export interface ResolvedSpell {
     baseDamage: number;
     description: string;
     isCombo: boolean;
+    /**
+     * The pattern this spell matched. `single` for single-element spells,
+     * `duo` for the loose 2-element COMBO_TABLE matches (Electrocution
+     * etc.), and `two_pair` / `full_house` for the new poker shapes.
+     * Drives the SpellPreview tier label so the player can see WHY a
+     * combo fired.
+     */
+    shape: SpellShape;
     comboElements?: [ElementType, ElementType];
 }
 
@@ -15,65 +31,163 @@ export interface RuneData {
     element: string;
 }
 
-export function resolveSpell(runes: RuneData[]): ResolvedSpell | null {
+// ----- Shape classification -----
+//
+// Both `resolveSpell` and `getContributingRuneIndices` need to look at
+// the same frequency analysis (which elements were played, how many of
+// each, what poker shape does this represent). Doing it once here keeps
+// the resolver and the contributing-rune selector in lockstep — the only
+// way they can disagree is if the helper itself returns the wrong info,
+// which means there's a single function to test/debug.
+//
+// `entries` is sorted by descending count so a [3, 2] full house is
+// trivially `entries[0].count === 3 && entries[1].count === 2`.
+
+interface ShapeEntry {
+    element: string;
+    count: number;
+}
+
+interface RuneShape {
+    entries: ShapeEntry[];
+    /**
+     * The element with the highest count, used as the primary element
+     * for color/icon and for the single-element fallback. On ties, the
+     * first one encountered wins (matches the legacy resolver behavior).
+     */
+    primaryElement: string;
+    primaryCount: number;
+    distinctCount: number;
+}
+
+function classifyShape(runes: readonly RuneData[]): RuneShape | null {
     if (runes.length === 0) return null;
 
-    // Count element frequencies
+    // Count element frequencies in encounter order — Map preserves
+    // insertion order, which is what the legacy tie-break depended on.
     const freq = new Map<string, number>();
     for (const rune of runes) {
         freq.set(rune.element, (freq.get(rune.element) ?? 0) + 1);
     }
 
-    // Find highest-count element
+    // Build entries and pick the primary in a single pass. Sort
+    // afterwards so the resolver can pattern-match `entries[0].count`.
     let primaryElement = "";
     let primaryCount = 0;
+    const entries: ShapeEntry[] = [];
     for (const [element, count] of freq) {
+        entries.push({ element, count });
         if (count > primaryCount) {
             primaryCount = count;
             primaryElement = element;
         }
     }
+    entries.sort((a, b) => b.count - a.count);
 
-    // Check for combo spell: must have exactly 2 distinct combinable elements
-    const distinctElements = [...freq.keys()];
-    const allCombinable = distinctElements.every(e =>
-        (COMBINABLE_ELEMENTS as readonly string[]).includes(e)
-    );
+    return {
+        entries,
+        primaryElement,
+        primaryCount,
+        distinctCount: entries.length,
+    };
+}
 
-    if (allCombinable && distinctElements.length === 2) {
-        const sorted = [...distinctElements].sort() as [string, string];
-        const comboKey = `${sorted[0]}+${sorted[1]}`;
-        const comboSpell = COMBO_TABLE[comboKey];
+function buildResolvedSpell(
+    info: SpellInfo,
+    tier: number,
+    element: string,
+    shape: SpellShape,
+    comboElements?: [string, string],
+): ResolvedSpell {
+    return {
+        spellName: info.name,
+        tier,
+        element: element as ElementType,
+        baseDamage: info.baseDamage,
+        description: info.description,
+        isCombo: shape !== "single",
+        shape,
+        comboElements: comboElements as [ElementType, ElementType] | undefined,
+    };
+}
 
-        if (comboSpell) {
-            const tier = Math.min(runes.length, 5);
-            return {
-                spellName: comboSpell.name,
-                tier,
-                element: primaryElement as ElementType,
-                baseDamage: comboSpell.baseDamage,
-                description: comboSpell.description,
-                isCombo: true,
-                comboElements: sorted as [ElementType, ElementType],
-            };
+export function resolveSpell(runes: RuneData[]): ResolvedSpell | null {
+    const shape = classifyShape(runes);
+    if (!shape) return null;
+
+    const e0 = shape.entries[0]?.count ?? 0;
+    const e1 = shape.entries[1]?.count ?? 0;
+    const isFullHouse = shape.distinctCount === 2 && e0 === 3 && e1 === 2;
+    const isTwoPair = shape.distinctCount === 2 && e0 === 2 && e1 === 2;
+    // Poker shapes have a special contract: they fire ONLY when the
+    // element pair is in the synergy graph. If the synergy doesn't
+    // exist, we deliberately SKIP the loose-combo branch below — that
+    // way 2F+2W cancels (Tier 2 Fireball, 2 water wasted) instead of
+    // silently dropping into Steam Burst at Tier 4. Loose mixes (1+1,
+    // 1+4, etc.) remain unaffected.
+    const isPokerShape = isFullHouse || isTwoPair;
+
+    // 1. Full House — `[3, 2]`. Order matters: the 3-of element is the
+    //    primary (drives spell color/icon), the table key is
+    //    `${primary}+${secondary}`. Each synergy pair has TWO unique
+    //    directional names (3F+2L = "Inferno Storm", 3L+2F = "Stormfire").
+    if (isFullHouse) {
+        const primary = shape.entries[0].element;
+        const secondary = shape.entries[1].element;
+        const info = FULL_HOUSE_TABLE[`${primary}+${secondary}`];
+        if (info) {
+            return buildResolvedSpell(info, 5, primary, "full_house", [primary, secondary]);
+        }
+        // No synergy for this pair — fall through to single-element
+        // (the loose combo branch is intentionally skipped below).
+    }
+
+    // 2. Two Pair — `[2, 2]`. Elements are interchangeable so the
+    //    table key is alphabetically sorted. Primary element follows
+    //    the legacy "first encountered" rule (via shape.primaryElement)
+    //    so the spell color stays stable across reorders.
+    if (isTwoPair) {
+        const a = shape.entries[0].element;
+        const b = shape.entries[1].element;
+        const sorted: [string, string] = a < b ? [a, b] : [b, a];
+        const info = TWO_PAIR_TABLE[`${sorted[0]}+${sorted[1]}`];
+        if (info) {
+            return buildResolvedSpell(info, 4, shape.primaryElement, "two_pair", sorted);
+        }
+        // No synergy for this pair — fall through to single-element.
+    }
+
+    // 3. Loose duo combo — two distinct combinable elements, ANY count
+    //    split that ISN'T a poker shape ([1,1], [1,2], [2,1], [1,3],
+    //    [3,1], [1,4], [4,1]). Poker shapes that fell through above
+    //    skip this branch on purpose so the cancellation rule holds.
+    //    Unchanged behavior: 1F+4W → Steam Burst Tier 5, 1L+1W →
+    //    Electrocution Tier 2.
+    if (!isPokerShape && shape.distinctCount === 2) {
+        const a = shape.entries[0].element;
+        const b = shape.entries[1].element;
+        const bothCombinable =
+            (COMBINABLE_ELEMENTS as readonly string[]).includes(a) &&
+            (COMBINABLE_ELEMENTS as readonly string[]).includes(b);
+        if (bothCombinable) {
+            const sorted: [string, string] = a < b ? [a, b] : [b, a];
+            const info = COMBO_TABLE[`${sorted[0]}+${sorted[1]}`];
+            if (info) {
+                const tier = Math.min(runes.length, 5);
+                return buildResolvedSpell(info, tier, shape.primaryElement, "duo", sorted);
+            }
         }
     }
 
-    // Single-element spell or fallback to highest-count element
-    const tier = Math.min(primaryCount, 5);
-    const element = primaryElement as ElementType;
-    const spellInfo: SpellInfo | undefined = SPELL_TABLE[element]?.[tier];
-
-    if (!spellInfo) return null;
-
-    return {
-        spellName: spellInfo.name,
-        tier,
-        element,
-        baseDamage: spellInfo.baseDamage,
-        description: spellInfo.description,
-        isCombo: false,
-    };
+    // 4. Single-element fallback — most-frequent element wins, tier
+    //    equals that element's count (capped at 5). Hands that don't
+    //    fit any combo shape (3-distinct, 4-distinct, 5-distinct, or
+    //    [2,1,1]/[3,1,1]) land here, plus non-synergy poker shapes
+    //    that fell through 1 and 2 above.
+    const tier = Math.min(shape.primaryCount, 5);
+    const info = SPELL_TABLE[shape.primaryElement as ElementType]?.[tier];
+    if (!info) return null;
+    return buildResolvedSpell(info, tier, shape.primaryElement, "single");
 }
 
 /**
@@ -85,8 +199,10 @@ export function resolveSpell(runes: RuneData[]): ResolvedSpell | null {
  * returns just `[0]`, while a Tier 2 Fire spell with
  * `[Fire, Fire, Water, Lightning]` returns `[0, 1]`.
  *
- * For a combo spell, every rune matching one of the two combo elements
- * contributes (combos require all played runes to be combo-compatible).
+ * For any combo (loose duo, two pair, full house), every played rune
+ * matching one of the combo elements contributes — for the new poker
+ * shapes that's literally every rune in the hand, so no rune is ever
+ * silently wasted.
  *
  * Returns `[]` if `runes` doesn't resolve to a spell at all.
  *

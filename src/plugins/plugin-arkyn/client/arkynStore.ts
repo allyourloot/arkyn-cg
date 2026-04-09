@@ -1,7 +1,47 @@
 import { useSyncExternalStore } from "react";
-import { MAX_PLAY } from "../shared";
+import { ELEMENT_TYPES, MAX_PLAY } from "../shared";
 import { subscribe, notify, type RuneClientData } from "./arkynStoreCore";
 import { playSelectRune, playDeselectRune } from "./sfx";
+
+// Canonical element order used by the hand sort for ties. Built once
+// from ELEMENT_TYPES (which is alphabetical) so the rune pile sorts the
+// same way every time and elements stay in a familiar order.
+const ELEMENT_ORDER: Record<string, number> = (() => {
+    const out: Record<string, number> = {};
+    ELEMENT_TYPES.forEach((el, i) => {
+        out[el] = i;
+    });
+    return out;
+})();
+
+/**
+ * Pure sort helper used by both `sortHand` (the manual button) and
+ * `setHand` (the auto-sort on every server-driven hand update). Returns
+ * a fresh sorted copy of `arr` so callers can compare against the
+ * original to decide whether anything changed.
+ *
+ * Sort order:
+ *   1. Element COUNT descending — triples before pairs before singles.
+ *   2. Element CANONICAL order (`ELEMENT_TYPES`).
+ *   3. Rune ID — final stability tie-break so two runes of the same
+ *      element keep a consistent relative order across re-sorts.
+ */
+function sortHandArray(arr: readonly RuneClientData[]): RuneClientData[] {
+    if (arr.length < 2) return [...arr];
+    const counts = new Map<string, number>();
+    for (const r of arr) {
+        counts.set(r.element, (counts.get(r.element) ?? 0) + 1);
+    }
+    return [...arr].sort((a, b) => {
+        const countDiff = (counts.get(b.element) ?? 0) - (counts.get(a.element) ?? 0);
+        if (countDiff !== 0) return countDiff;
+        const orderDiff =
+            (ELEMENT_ORDER[a.element] ?? Number.MAX_SAFE_INTEGER) -
+            (ELEMENT_ORDER[b.element] ?? Number.MAX_SAFE_INTEGER);
+        if (orderDiff !== 0) return orderDiff;
+        return a.id.localeCompare(b.id);
+    });
+}
 
 // ============================================================
 // Arkyn data store
@@ -77,15 +117,20 @@ let lastCastRunes: RuneClientData[] = [];
 export function setHand(h: RuneClientData[]) {
     serverHand = h;
 
-    // Preserve current display order for runes that are still present;
-    // append any new runes (in their server order) to the end.
-    const newIds = new Set(h.map(r => r.id));
-    const kept = hand.filter(r => newIds.has(r.id));
-    const keptIds = new Set(kept.map(r => r.id));
-    const fresh = h.filter(r => !keptIds.has(r.id));
-    hand = [...kept, ...fresh];
+    // Auto-sort on every hand update so freshly drawn runes land
+    // adjacent to their kin (poker-shape readability). The manual
+    // drag-reorder still works between syncs — it just gets reset on
+    // the next draw, which is the explicit user-facing contract.
+    //
+    // Note: this also overwrites the player's current manual ordering
+    // on every cast/discard refill, but that's the intended behavior
+    // for "always sorted". `triggerDrawAnimation` looks up indices via
+    // `getHandIndex` AFTER this commit, so the new runes still fly to
+    // their (now sorted) target slots correctly.
+    hand = sortHandArray(h);
 
     // Drop selection entries whose runes no longer exist.
+    const newIds = new Set(h.map(r => r.id));
     selectedRuneIds = selectedRuneIds.filter(id => newIds.has(id));
     recomputeSelectedIndices();
 
@@ -109,6 +154,36 @@ export function reorderHand(fromIndex: number, toIndex: number) {
     const next = [...hand];
     const [moved] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, moved);
+    hand = next;
+    recomputeSelectedIndices();
+    notify();
+}
+
+/**
+ * Manual hand sort triggered by the Sort button. Mostly redundant
+ * since `setHand` auto-sorts on every server sync, but useful as an
+ * explicit "snap to sorted" after the player has manually dragged
+ * runes around. Also gives the player a tactile re-sort affordance.
+ *
+ * Selection follows the runes (selectedRuneIds is the source of truth)
+ * so re-sorting doesn't lose the player's current pick.
+ */
+export function sortHand() {
+    if (hand.length < 2) return;
+    const next = sortHandArray(hand);
+
+    // Bail if the order didn't actually change so the click doesn't
+    // notify subscribers (and re-trigger the HandDisplay GSAP layout
+    // pass) for nothing.
+    let changed = false;
+    for (let i = 0; i < next.length; i++) {
+        if (next[i].id !== hand[i].id) {
+            changed = true;
+            break;
+        }
+    }
+    if (!changed) return;
+
     hand = next;
     recomputeSelectedIndices();
     notify();
