@@ -1,9 +1,21 @@
 .wrapper {
     pointer-events: none;
-    position: absolute;
-    top: clamp(8px, 1.5vw, 16px);
-    left: clamp(8px, 1.5vw, 16px);
-    z-index: 5;
+    /* RoundInfo lives at the top of the SpellPreview panel — flow it as
+       a full-width centered header instead of pinning it to a viewport
+       corner so it sits above the panel's other sections. */
+    box-sizing: border-box;
+    width: 100%;
+    text-align: center;
+    /* 9-slice inner-frame.png chrome — `--section-bg` is supplied by
+       SpellPreview's createPanelStyleVars() and is in scope here because
+       RoundInfo is rendered as a child of .panel. */
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 6px;
+    border-image: var(--section-bg) 6 6 6 6 fill / 6px 6px 6px 6px;
+    padding: clamp(4px, 0.8vw, 10px) clamp(6px, 1vw, 12px);
+    image-rendering: pixelated;
 }
 
 .label {

@@ -1,23 +1,35 @@
 .wrapper {
     pointer-events: none;
-    position: absolute;
-    top: clamp(8px, 1.5vw, 16px);
-    right: clamp(8px, 1.5vw, 16px);
+    box-sizing: border-box;
+    width: 100%;
+    /* Push the gold counter to the bottom of SpellPreview's flex column
+       regardless of how many spell-info sections sit above it. */
+    margin-top: auto;
+    /* 9-slice inner-frame.png chrome — `--section-bg` is supplied by
+       SpellPreview.tsx's createPanelStyleVars() and is in scope here
+       because GoldCounter is rendered as a child of .panel. */
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 6px;
+    border-image: var(--section-bg) 6 6 6 6 fill / 6px 6px 6px 6px;
+    padding: clamp(6px, 1vw, 12px);
     display: flex;
     align-items: center;
-    gap: clamp(4px, 0.6vw, 8px);
-    z-index: 5;
+    justify-content: center;
+    gap: clamp(6px, 1vw, 12px);
+    image-rendering: pixelated;
 }
 
 .icon {
-    width: clamp(28px, 3vw, 42px);
-    height: clamp(28px, 3vw, 42px);
+    width: clamp(20px, 2.2vw, 32px);
+    height: clamp(20px, 2.2vw, 32px);
     image-rendering: pixelated;
     filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.7));
 }
 
 .count {
-    font-size: clamp(20px, 2.4vw, 30px);
+    font-size: clamp(36px, 4vw, 56px);
     font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
     color: #ffd770;

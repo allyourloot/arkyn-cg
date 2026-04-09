@@ -6,7 +6,8 @@
     /* Pushed down from the top of the viewport so the bar isn't pinned to
        the very edge — leaves breathing room above the enemy. */
     padding: clamp(36px, 5vw, 64px) 0 clamp(4px, 0.8vw, 8px);
-    gap: 4px;
+    /* Vertical rhythm between the name, the bar, and the affinity row. */
+    gap: clamp(6px, 1vh, 12px);
     width: 100%;
     min-width: 0;
     /* Anchor for the absolutely-positioned floating damage number that
@@ -14,7 +15,85 @@
     position: relative;
 }
 
-/* The wrapper shake (translateX) and the floating damage number's pop /
+/* Enemy name above the bar. The wrapper used to render only the bar; now
+   it also hosts the enemy header that EnemyPanel used to own, so the
+   name styling lives here. */
+.name {
+    font-size: clamp(20px, 2.6vw, 36px);
+    font-family: 'Sburbits', system-ui, monospace;
+    font-weight: normal;
+    color: #e8d4b8;
+    text-align: center;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+    white-space: nowrap;
+}
+
+/* The shake target. GSAP applies a translateX shake here on every enemy
+   damage hit (see EnemyHealthBar.tsx useGSAP). The wrapper above stays
+   still so the name and affinity frames don't jitter along with the bar. */
+.barShake {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+/* Row of inner-frame chips below the bar. Each child is an
+   .affinitySection (Resists / Weak To). Wraps to a second line on
+   ultra-narrow viewports rather than overflowing. */
+.affinityContainer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: clamp(8px, 1.4vw, 18px);
+    width: 100%;
+    max-width: clamp(320px, 36vw, 520px);
+    margin-top: clamp(2px, 0.4vh, 6px);
+}
+
+/* Individual Resists / Weak To chip. Uses the same `--section-bg`
+   inner-frame.png 9-slice as the other section panels. */
+.affinitySection {
+    box-sizing: border-box;
+    flex: 0 1 auto;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 6px;
+    border-image: var(--section-bg) 6 6 6 6 fill / 6px 6px 6px 6px;
+    padding: clamp(4px, 0.8vw, 8px) clamp(8px, 1.2vw, 14px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(3px, 0.5vw, 6px);
+    image-rendering: pixelated;
+}
+
+.affinityLabel {
+    font-size: clamp(11px, 1.4vw, 16px);
+    font-family: 'Sburbits', system-ui, monospace;
+    font-weight: normal;
+    color: #b0a090;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    line-height: 1;
+}
+
+.affinityIcons {
+    display: flex;
+    gap: clamp(3px, 0.5vw, 6px);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.affinityIcon {
+    width: clamp(22px, 2.6vw, 36px);
+    height: clamp(22px, 2.6vw, 36px);
+    image-rendering: pixelated;
+}
+
+/* The .barShake shake (translateX) and the floating damage number's pop /
    drift / fade are both GSAP-driven from EnemyHealthBar.tsx. See useGSAP
    in that file. */
 

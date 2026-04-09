@@ -61,9 +61,10 @@
  *
  * Wraps the reward breakdown (rewards rows + divider + total row) inside
  * a 9-sliced inner-frame.png box, matching the chrome pattern used by
- * EnemyPanel and SpellPreview sections. The 6px corner slices map to
- * the inner-frame asset's border thickness; rendered at 6px on screen
- * so the pixel art stays crisp at any panel size.
+ * the SpellPreview sections and the EnemyHealthBar affinity chips. The
+ * 6px corner slices map to the inner-frame asset's border thickness;
+ * rendered at 6px on screen so the pixel art stays crisp at any panel
+ * size.
  */
 .contentFrame {
     box-sizing: border-box;

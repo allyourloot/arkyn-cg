@@ -5,10 +5,16 @@ import {
     useDisplayedEnemyHp,
     useEnemyMaxHp,
     useEnemyDamageHit,
+    useEnemyName,
+    useEnemyResistances,
+    useEnemyWeaknesses,
 } from "../arkynStore";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
+import { getRuneImageUrl } from "./runeAssets";
 import styles from "./EnemyHealthBar.module.css";
 
+// `--panel-bg` (frame.png) drives the bar chrome; `--section-bg`
+// (inner-frame.png) drives the Resists / Weak To frames below the bar.
 const wrapperStyleVars = createPanelStyleVars();
 
 interface ActiveHit {
@@ -24,8 +30,15 @@ export default function EnemyHealthBar() {
     const hp = useDisplayedEnemyHp();
     const maxHp = useEnemyMaxHp();
     const enemyDamageHit = useEnemyDamageHit();
+    const name = useEnemyName();
+    const resistances = useEnemyResistances();
+    const weaknesses = useEnemyWeaknesses();
 
+    // wrapperRef scopes the GSAP context for cleanup; the actual shake
+    // target is the inner barShakeRef so the name above and the affinity
+    // sections below stay rock-solid when the enemy gets hit.
     const wrapperRef = useRef<HTMLDivElement>(null);
+    const barShakeRef = useRef<HTMLDivElement>(null);
     const damageFloatRef = useRef<HTMLSpanElement>(null);
 
     // Local active hit drives the conditional render of the floating
@@ -51,13 +64,15 @@ export default function EnemyHealthBar() {
     // same `onComplete` so the float unmounts when the shake ends.
     useGSAP(() => {
         if (!activeHit) return;
-        const wrapper = wrapperRef.current;
+        const shake = barShakeRef.current;
         const float = damageFloatRef.current;
 
-        // Bar wrapper shake — stepped left/right with diminishing amplitude.
-        if (wrapper) {
-            gsap.set(wrapper, { x: 0 });
-            gsap.to(wrapper, {
+        // Bar shake — stepped left/right with diminishing amplitude.
+        // Targets the inner .barShake element so only the bar reacts;
+        // the name and affinity frames stay still.
+        if (shake) {
+            gsap.set(shake, { x: 0 });
+            gsap.to(shake, {
                 keyframes: [
                     { x: -7, duration: 0.036 },
                     { x: 7, duration: 0.036 },
@@ -131,26 +146,66 @@ export default function EnemyHealthBar() {
 
     return (
         <div ref={wrapperRef} className={styles.wrapper} style={wrapperStyleVars}>
-            <div className={styles.barAnchor}>
-                <div className={styles.barOuter}>
-                    <div
-                        className={styles.barFill}
-                        style={{ width: `${pct}%`, backgroundColor: barColor }}
-                    />
-                    <span className={styles.barText}>
-                        {hp} / {maxHp}
-                    </span>
+            {name && <span className={styles.name}>{name}</span>}
+
+            <div ref={barShakeRef} className={styles.barShake}>
+                <div className={styles.barAnchor}>
+                    <div className={styles.barOuter}>
+                        <div
+                            className={styles.barFill}
+                            style={{ width: `${pct}%`, backgroundColor: barColor }}
+                        />
+                        <span className={styles.barText}>
+                            {hp} / {maxHp}
+                        </span>
+                    </div>
+                    {activeHit && (
+                        <span
+                            ref={damageFloatRef}
+                            key={activeHit.seq}
+                            className={styles.damageFloat}
+                            style={damageFloatStyle}
+                        >
+                            -{activeHit.amount}
+                        </span>
+                    )}
                 </div>
-                {activeHit && (
-                    <span
-                        ref={damageFloatRef}
-                        key={activeHit.seq}
-                        className={styles.damageFloat}
-                        style={damageFloatStyle}
-                    >
-                        -{activeHit.amount}
-                    </span>
-                )}
+            </div>
+
+            {(resistances.length > 0 || weaknesses.length > 0) && (
+                <div className={styles.affinityContainer}>
+                    {resistances.length > 0 && (
+                        <AffinitySection label="Resists" elements={resistances} />
+                    )}
+                    {weaknesses.length > 0 && (
+                        <AffinitySection label="Weak To" elements={weaknesses} />
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Single inner-frame chip showing a label ("Resists" / "Weak To") above
+// a row of element rune icons. Lives inside EnemyHealthBar so the visual
+// chrome stays alongside the bar it describes.
+function AffinitySection({ label, elements }: { label: string; elements: readonly string[] }) {
+    return (
+        <div className={styles.affinitySection}>
+            <span className={styles.affinityLabel}>{label}</span>
+            <div className={styles.affinityIcons}>
+                {elements.map(element => {
+                    const url = getRuneImageUrl(element);
+                    if (!url) return null;
+                    return (
+                        <img
+                            key={element}
+                            src={url}
+                            alt={element}
+                            className={styles.affinityIcon}
+                        />
+                    );
+                })}
             </div>
         </div>
     );

@@ -87,12 +87,14 @@
     padding-bottom: clamp(20px, 6vh, 80px);
 }
 
-/* Wrapper around HandDisplay that gives the spellbook PouchCounter something
-   to absolute-position against. The wrapper's width collapses to whatever
-   the hand renders, so PouchCounter at left:100% always sits flush to the
-   hand's right edge while the hand itself stays centered in handStack. */
-.handAnchor {
-    position: relative;
-    display: flex;
-    align-items: center;
+/* Invisible counterweight on the right edge — mirrors SpellPreview's
+   .panel width clamp AND its inset margin so the flex:1 .centerColumn
+   between them stays centered on the viewport. Keep both width and
+   margin in sync with SpellPreview's .panel. */
+.rightSpacer {
+    width: clamp(200px, 22vw, 380px);
+    margin-right: clamp(12px, 2vw, 32px);
+    flex-shrink: 0;
+    pointer-events: none;
 }
+

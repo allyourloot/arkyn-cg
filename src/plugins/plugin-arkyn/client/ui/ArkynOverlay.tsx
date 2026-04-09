@@ -7,12 +7,9 @@ import { ENEMY_DAMAGE_HIT_MS } from "../arkynAnimations";
 import EnemyHealthBar from "./EnemyHealthBar";
 import SpellPreview from "./SpellPreview";
 import PlayArea from "./PlayArea";
-import EnemyPanel from "./EnemyPanel";
 import HandDisplay from "./HandDisplay";
 import ActionButtons from "./ActionButtons";
-import RoundInfo from "./RoundInfo";
 import PouchCounter from "./PouchCounter";
-import GoldCounter from "./GoldCounter";
 import RoundEndOverlay from "./RoundEndOverlay";
 import CastAnimation from "./CastAnimation";
 import DiscardAnimation from "./DiscardAnimation";
@@ -59,13 +56,9 @@ export default function ArkynOverlay() {
             {/* Background image (behind everything) */}
             <BackgroundShader />
 
-            {/* Round info (top-left) */}
-            <RoundInfo />
-
-            {/* Gold counter (top-right) */}
-            <GoldCounter />
-
-            {/* Left side panel: Spell Preview */}
+            {/* Left side panel: Spell Preview (now also hosts the round
+                label at its top and the gold counter at its bottom — see
+                SpellPreview.tsx) */}
             <SpellPreview />
 
             {/* Center column: Enemy health bar, Play area, Hand + Actions */}
@@ -77,20 +70,21 @@ export default function ArkynOverlay() {
                 </div>
 
                 <div className={styles.handStack}>
-                    {/* HandDisplay sets its own width from its cards; the
-                        spellbook sits absolutely-positioned at the right edge
-                        of this anchor so the hand stays centered regardless
-                        of card count. */}
-                    <div className={styles.handAnchor}>
-                        <HandDisplay />
-                        <PouchCounter />
-                    </div>
+                    <HandDisplay />
                     <ActionButtons />
                 </div>
             </div>
 
-            {/* Right side panel: Enemy Panel */}
-            <EnemyPanel />
+            {/* Right-side counterweight — mirrors SpellPreview's width so the
+                centerColumn (flex:1 between two equal-width side columns)
+                stays centered on the viewport now that EnemyPanel is gone. */}
+            <div className={styles.rightSpacer} aria-hidden="true" />
+
+            {/* Spellbook / pouch counter — anchored to the viewport's right
+                edge at roughly hand level rather than tied to the hand's
+                bounding box, so it sits in a stable spot regardless of how
+                many cards are currently in the hand. */}
+            <PouchCounter />
 
             {/* Animation layers */}
             <CastAnimation />

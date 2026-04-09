@@ -1,10 +1,17 @@
 .panel {
     pointer-events: none;
     box-sizing: border-box;
-    width: clamp(160px, 19vw, 320px);
-    height: 80vh;
-    max-height: calc(100vh - 90px);
+    width: clamp(200px, 22vw, 380px);
+    /* 95vh leaves a thin sliver of breathing room above and below so the
+       panel doesn't sit flush against the viewport edges. align-self
+       overrides the .root's align-items: stretch and centers the panel
+       vertically inside the row. Inset from the left edge with a margin
+       so the chrome doesn't sit flush against the viewport — keep
+       .rightSpacer's margin-right in sync to preserve centerColumn
+       centering. */
+    height: 95vh;
     align-self: center;
+    margin-left: clamp(12px, 2vw, 32px);
     flex-shrink: 0;
     /* 9-slice frame: 24px corner slices, rendered at 24px on screen so the
        pixel art stays crisp at any panel size. */
@@ -18,7 +25,7 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 6px;
+    gap: clamp(10px, 1.6vh, 20px);
     overflow: hidden;
     font-family: 'Sburbits', system-ui, monospace;
     image-rendering: pixelated;
@@ -56,7 +63,7 @@
     border-width: 12px;
     border-image: var(--heading-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
     padding: 4px 6px;
-    font-size: clamp(24px, 3vw, 36px);
+    font-size: clamp(18px, 2.2vw, 28px);
     font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
     color: #ffffff;
@@ -68,20 +75,35 @@
     image-rendering: pixelated;
 }
 
-.icon {
-    width: clamp(56px, 6vw, 80px);
-    height: clamp(56px, 6vw, 80px);
-    border-radius: 3px;
-    background-color: rgba(0, 0, 0, 0.4);
+/* Row of contributing-rune tiles for the resolved spell — replaces the
+   single primary-element icon badge so players can see the recipe
+   (e.g. Hailstorm = 2 Ice + 1 Air) at a glance. Sized to fit up to 5
+   rune tiles within the panel's inner width without wrapping. */
+.runeRow {
     display: flex;
-    align-items: center;
+    flex-wrap: wrap;
     justify-content: center;
-    image-rendering: pixelated;
+    gap: clamp(4px, 0.6vw, 8px);
+    width: 100%;
 }
 
-.iconImg {
-    width: 70%;
-    height: 70%;
+/* The recipe rune is a transparent positioning box that hosts the same
+   RuneImage stack the hand cards use (rarity base + element glyph).
+   Both layers from RuneImage are absolutely positioned via .runeLayer
+   so they overlap perfectly inside this box. */
+.rune {
+    position: relative;
+    width: clamp(44px, 4.8vw, 64px);
+    aspect-ratio: 1;
+    image-rendering: pixelated;
+    flex-shrink: 0;
+}
+
+.runeLayer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     image-rendering: pixelated;
 }
 

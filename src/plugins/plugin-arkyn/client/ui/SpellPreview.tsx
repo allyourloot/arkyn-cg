@@ -11,7 +11,9 @@ import {
 } from "../arkynStore";
 import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars } from "./styles";
-import { getRuneImageUrl } from "./runeAssets";
+import RuneImage from "./RuneImage";
+import GoldCounter from "./GoldCounter";
+import RoundInfo from "./RoundInfo";
 import innerFrameBlueUrl from "/assets/ui/inner-frame-blue.png?url";
 import innerFrameRedUrl from "/assets/ui/inner-frame-red.png?url";
 import styles from "./SpellPreview.module.css";
@@ -54,21 +56,30 @@ export default function SpellPreview() {
     // selected runes) this lets the player see "2/4 runes" before
     // committing, so they learn the synergy graph by feedback rather
     // than by silent rune loss.
+    //
+    // We also keep the actual contributing runes around so the preview
+    // can render them as the spell's recipe (e.g. show 2 Ice + 1 Air
+    // tiles for Hailstorm) instead of a single primary-element icon.
     const sourceRunes = isLive ? selectedRunes : lastCastRunes;
     const totalSourceRunes = sourceRunes.length;
-    const contributingCount = spell && totalSourceRunes > 0
-        ? getContributingRuneIndices(sourceRunes.map(r => ({ element: r.element }))).length
-        : 0;
+    const contributingIndices = spell && totalSourceRunes > 0
+        ? getContributingRuneIndices(sourceRunes.map(r => ({ element: r.element })))
+        : [];
+    const contributingCount = contributingIndices.length;
+    const contributingRunes = contributingIndices.map(i => sourceRunes[i]);
     const isPartial = contributingCount > 0 && contributingCount < totalSourceRunes;
 
     // Damage display source:
     //   - During a cast: the live counter that ticks up with each bubble.
-    //   - After a cast: the server-reported lastDamage.
-    //   - Live preview (selected runes, no cast yet): NO damage shown —
-    //     the dedicated damage section is hidden until a cast actually
-    //     resolves, so the player has to commit to see the number.
-    const showDamageSection = isCastAnimating || (!isLive && lastCastSpell !== null);
-    const displayDamage = isCastAnimating ? castDamageCounter : lastDamage;
+    //   - After a cast (showing the last cast): the server-reported lastDamage.
+    //   - Live preview (selected runes, no cast yet): "-" — the player
+    //     still has to commit to see the actual number, but the frame
+    //     stays mounted so the panel layout is stable.
+    const displayDamage: number | string = isCastAnimating
+        ? castDamageCounter
+        : isLive
+            ? "-"
+            : lastDamage;
 
     // Pop the damage number every time the live counter increments. The
     // first tick (counter goes from 0 to its first cumulative amount)
@@ -93,42 +104,58 @@ export default function SpellPreview() {
     if (!spell) {
         return (
             <div className={styles.panel} style={panelStyleVars}>
-                <span className={styles.heading}>Preview</span>
+                <RoundInfo />
+                <span className={styles.heading}>Spell Preview</span>
                 <div className={styles.section}>
                     <span className={styles.empty}>
                         Select runes to preview spell
                     </span>
                 </div>
+                {/* margin-top: auto inside GoldCounter pins it to the
+                    bottom of the panel's flex column. */}
+                <GoldCounter />
             </div>
         );
     }
 
     const elementColor = ELEMENT_COLORS[spell.element] ?? "#aaa";
-    const runeUrl = getRuneImageUrl(spell.element);
 
     const headingLabel = isCastAnimating
         ? "Casting"
         : isLive
-            ? "Preview"
+            ? "Spell Preview"
             : "Last Cast";
 
     return (
         <div className={styles.panel} style={panelStyleVars}>
+            <RoundInfo />
             <span className={styles.heading}>{headingLabel}</span>
 
-            {/* Header section: icon + spell name + tier + damage */}
+            {/* Header section: rune recipe + spell name + tier + description.
+                Description used to live in its own inner-frame below the
+                damage counter; now it sits inside this section directly
+                under the tier so the spell info reads as one unit. */}
             <div className={styles.section}>
-                <div
-                    className={styles.icon}
-                    style={{ borderColor: elementColor, borderWidth: 2, borderStyle: "solid" }}
-                >
-                    {runeUrl && (
-                        <img
-                            src={runeUrl}
-                            alt={spell.element}
-                            className={styles.iconImg}
-                        />
-                    )}
+                {/* Rune recipe — one tile per contributing rune so the
+                    player can see the actual element mix that produced
+                    this spell (e.g. Hailstorm = 2 Ice + 1 Air) instead
+                    of a single primary-element badge. Uses the same
+                    RuneImage (rarity base + element glyph stack) the
+                    hand cards use, so a recipe rune reads as the exact
+                    same artwork as the hand rune it came from. Order
+                    matches the contributing-runes list returned by
+                    resolveSpell, so duplicate runes from a pair / triple
+                    sit next to each other. */}
+                <div className={styles.runeRow}>
+                    {contributingRunes.map((rune, i) => (
+                        <div key={i} className={styles.rune}>
+                            <RuneImage
+                                rarity={rune.rarity}
+                                element={rune.element}
+                                className={styles.runeLayer}
+                            />
+                        </div>
+                    ))}
                 </div>
 
                 <span className={styles.spellName} style={{ color: elementColor }}>
@@ -146,24 +173,19 @@ export default function SpellPreview() {
                         </span>
                     )}
                 </span>
-            </div>
 
-            {/* Dedicated damage counter section. Only mounts when there's
-                a real damage value to show (during a cast or after a cast
-                has resolved) — pure live preview never displays a number,
-                so the player commits to a cast to see what they'll deal. */}
-            {showDamageSection && (
-                <div className={styles.damageSection}>
-                    <span ref={damageRef} className={styles.damage}>
-                        {displayDamage}
-                    </span>
-                </div>
-            )}
-
-            {/* Description section */}
-            <div className={styles.section}>
                 <span className={styles.description}>
                     {spell.description}
+                </span>
+            </div>
+
+            {/* Dedicated damage counter section. Always mounted so the
+                panel layout stays stable — falls back to "-" during live
+                preview (player hasn't committed to a cast yet) so the
+                actual number is still gated behind the cast. */}
+            <div className={styles.damageSection}>
+                <span ref={damageRef} className={styles.damage}>
+                    {displayDamage}
                 </span>
             </div>
 
@@ -186,6 +208,11 @@ export default function SpellPreview() {
                     </div>
                 </div>
             )}
+
+            {/* margin-top: auto inside GoldCounter pins it to the
+                bottom of the panel's flex column, regardless of how
+                many sections sit above it. */}
+            <GoldCounter />
         </div>
     );
 }

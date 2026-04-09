@@ -2,17 +2,14 @@
     /* Parent ArkynOverlay root sets pointer-events: none — opt back in so
        the button can be clicked. */
     pointer-events: auto;
-    /* Anchored to the right edge of the .handAnchor wrapper in
-       ArkynOverlay so the spellbook sits flush against the hand without
-       affecting how the hand cards are centered on screen. The top offset
-       nudges the spellbook below the hand's vertical center, and the
-       margin-left adds breathing room between the rightmost card and the
-       book. */
+    /* Anchored to the viewport's right edge at roughly hand-level vertical
+       position. .root in ArkynOverlay is `position: fixed; inset: 0`, so
+       absolute children resolve against the viewport. `bottom` keeps the
+       book floating above the hand area regardless of viewport height;
+       `right` insets it from the edge so it doesn't sit flush. */
     position: absolute;
-    left: 100%;
-    top: calc(50% + 32px);
-    transform: translateY(-50%);
-    margin-left: clamp(28px, 3.6vw, 48px);
+    right: clamp(40px, 5vw, 90px);
+    bottom: clamp(50px, 8vh, 105px);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -27,20 +24,17 @@
     transition: transform 0.1s ease-out;
 }
 
-/* Hover/active rules must include the translateY(-50%) too, otherwise the
-   scale transform would overwrite it and the button would jump down half
-   its height. */
 .wrapper:hover {
-    transform: translateY(-50%) scale(1.08);
+    transform: scale(1.08);
 }
 
 .wrapper:active {
-    transform: translateY(-50%) scale(0.96);
+    transform: scale(0.96);
 }
 
 .icon {
-    width: clamp(56px, 5.8vw, 76px);
-    height: clamp(56px, 5.8vw, 76px);
+    width: clamp(72px, 7.4vw, 96px);
+    height: clamp(72px, 7.4vw, 96px);
     image-rendering: pixelated;
 }
 
