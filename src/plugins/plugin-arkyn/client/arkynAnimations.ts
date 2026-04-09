@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { flushSync } from "react-dom";
 import {
     MAX_PLAY,
     ARKYN_CAST,
@@ -20,28 +21,29 @@ import {
 } from "./animations/castTimeline";
 
 // ----- Animation timing constants -----
-export const DISSOLVE_DURATION_MS = 550;
-export const DISSOLVE_STAGGER_MS = 150;
-// Beat between the runes landing in the play area and the "valid" runes
-// lifting up. Long enough for the player to register every played rune
-// sitting in its slot before the spell-resolution choreography starts.
-export const SETTLE_DELAY_MS = 1000;
-// Duration of the slot raise transition. MUST match the .slot transition
-// duration in PlayArea.module.css. We delay the damage bubbles by this
-// amount so the runes finish lifting BEFORE their numbers start popping.
-export const RAISE_DURATION_MS = 220;
-// Duration of a single floating damage bubble's full animation (appear +
-// drift + fade). MUST match the keyframe duration in RuneDamageBubble.module.css.
-export const BUBBLE_DURATION_MS = 600;
-// Stagger between consecutive damage bubbles in a multi-rune cast. Each
-// successive contributing rune's bubble appears this many ms after the
-// previous one so the "count" reads sequentially.
-export const BUBBLE_STAGGER_MS = 180;
-// Quiet beat after the LAST bubble finishes before the dissolve begins —
-// gives the final number a moment to land before the runes tear apart.
-export const BUBBLE_TAIL_BUFFER_MS = 150;
-// Duration of the enemy health-bar floating damage / shake animation.
-export const ENEMY_DAMAGE_HIT_MS = 900;
+//
+// The actual numeric definitions live in `./animations/timingConstants` to
+// break the circular import between this file and `castTimeline.ts` (which
+// reads them at module-eval time and would otherwise see `undefined`). We
+// re-export them here so external consumers — including the `arkynStore`
+// barrel — keep their existing import paths.
+export {
+    DISSOLVE_DURATION_MS,
+    DISSOLVE_STAGGER_MS,
+    SETTLE_DELAY_MS,
+    RAISE_DURATION_MS,
+    BUBBLE_DURATION_MS,
+    BUBBLE_STAGGER_MS,
+    BUBBLE_TAIL_BUFFER_MS,
+    ENEMY_DAMAGE_HIT_MS,
+} from "./animations/timingConstants";
+import {
+    SETTLE_DELAY_MS,
+    RAISE_DURATION_MS,
+    BUBBLE_DURATION_MS,
+    BUBBLE_STAGGER_MS,
+    BUBBLE_TAIL_BUFFER_MS,
+} from "./animations/timingConstants";
 
 // Fly / discard / draw durations live inside `animations/castTimeline.ts`
 // (in seconds, ready for GSAP). Component-level fly tweens reference them
@@ -192,13 +194,22 @@ export function triggerDrawAnimation(newRunes: { rune: RuneClientData; handIndex
             }
         }
 
-        drawingRunes = draws;
-        notify();
+        // flushSync forces React to commit before we build the orchestrator
+        // timeline, so DrawAnimation's useGSAP fires (and the draw tween
+        // starts) BEFORE the timeline's clock starts running. Same fix as
+        // the cast/discard flows — without it the orchestrator could outrun
+        // the tween.
+        flushSync(() => {
+            drawingRunes = draws;
+            notify();
+        });
 
         // GSAP timeline drives the post-fly cleanup. The component-level
         // useGSAP in DrawAnimation.tsx tweens the actual flyer DOM in the
-        // same frame this state mounts.
+        // same frame this state mounts. `flyingCount` sizes the fly window
+        // so it covers the full staggered tween.
         buildDrawTimeline({
+            flyingCount: draws.length,
             onComplete: () => {
                 drawingRunes = [];
                 drawingRuneIds = [];
@@ -313,18 +324,30 @@ export function castSpell() {
     // Build the cast timeline. The timeline owns SFX scheduling and the
     // store-state mutation callbacks; the per-flyer fly tweens live inside
     // CastAnimation.tsx (started in the same frame `flyingRunes` is set).
+    // `flyingCount` lets the timeline size its fly window to cover the
+    // full staggered fly tween — without it, the trailing flyers would
+    // be unmounted while still mid-flight.
     buildCastTimeline({
+        flyingCount: flying.length,
         contributingCount: contributing,
         castRunesLength: castRunes.length,
         onStart: () => {
-            // Mount the flyers and lock HP. The cast SFX fires from the
-            // timeline's t=0 callback, before this runs.
-            flyingRunes = flying;
-            isCastAnimating = true;
-            arkynStoreInternal.lockHpDisplay();
-            arkynStoreInternal.clearSelection();
-            arkynStoreInternal.setLastCastRunes(castRunes);
-            notify();
+            // Mount the flyers and lock HP. flushSync forces React to
+            // commit synchronously inside this callback so CastAnimation's
+            // useGSAP fires (and the per-flyer fly tween starts) BEFORE
+            // this function returns. Without flushSync, React would defer
+            // the commit by 1-3 frames, leaving the orchestrator's clock
+            // ahead of the fly tween's clock — which made the fly tween
+            // get killed before completing its motion. The cast SFX fires
+            // from the timeline's t=0 callback, before this runs.
+            flushSync(() => {
+                flyingRunes = flying;
+                isCastAnimating = true;
+                arkynStoreInternal.lockHpDisplay();
+                arkynStoreInternal.clearSelection();
+                arkynStoreInternal.setLastCastRunes(castRunes);
+                notify();
+            });
         },
         onFlyComplete: () => {
             // Send the cast to the server (same instant as today — the
@@ -400,15 +423,23 @@ export function discardRunes() {
         return;
     }
 
-    discardingRunes = discs;
-    isDiscardAnimating = true;
-    arkynStoreInternal.clearSelection();
-    notify();
+    // flushSync forces React to commit before we build the orchestrator
+    // timeline, so DiscardAnimation's useGSAP fires (and the discard tween
+    // starts) BEFORE the timeline's clock starts running. Same fix as the
+    // cast flow — without it the orchestrator could outrun the tween.
+    flushSync(() => {
+        discardingRunes = discs;
+        isDiscardAnimating = true;
+        arkynStoreInternal.clearSelection();
+        notify();
+    });
 
     // GSAP timeline drives the post-fly cleanup. The component-level
     // useGSAP in DiscardAnimation.tsx tweens the actual flyer DOM in the
-    // same frame this state mounts.
+    // same frame this state mounts. `flyingCount` sizes the fly window
+    // so it covers the full staggered tween.
     buildDiscardTimeline({
+        flyingCount: discs.length,
         onComplete: () => {
             sendArkynMessage(ARKYN_DISCARD, { selectedIndices: serverIndices });
             discardingRunes = [];

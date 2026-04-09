@@ -135,10 +135,19 @@ export default function DissolveShader({ rune, startTime, duration }: Props) {
 
         return () => {
             cancelAnimationFrame(rafId);
+            // Stop pending image loads from touching a torn-down context.
+            baseImg.onload = null;
+            runeImg.onload = null;
             gl.deleteTexture(baseTex);
             gl.deleteTexture(runeTex);
             gl.deleteBuffer(buffer);
             gl.deleteProgram(program);
+            // Explicitly release the WebGL context. Without this each mount
+            // leaks a context and the browser eventually evicts the oldest
+            // (often the main Three.js renderer) once it crosses ~16 active
+            // contexts, causing the background to flash white.
+            const loseExt = gl.getExtension("WEBGL_lose_context");
+            if (loseExt) loseExt.loseContext();
         };
     }, [rune.id, rune.element, rune.rarity, startTime, duration]);
 

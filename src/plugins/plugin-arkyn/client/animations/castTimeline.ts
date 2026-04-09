@@ -7,7 +7,7 @@ import {
     BUBBLE_TAIL_BUFFER_MS,
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,
-} from "../arkynAnimations";
+} from "./timingConstants";
 import { playCast, playPlaceRune, playCount, playDamage } from "../sfx";
 
 // ============================================================
@@ -30,9 +30,22 @@ import { playCast, playPlaceRune, playCount, playDamage } from "../sfx";
 // ============================================================
 
 const FLY_DURATION_S = 0.3;
+const FLY_STAGGER_S = 0.06;
 const PLACE_SFX_STAGGER_S = 0.1;
 const DISCARD_FLY_DURATION_S = 0.4;
+const DISCARD_STAGGER_S = 0.04;
 const DRAW_FLY_DURATION_S = 0.45;
+const DRAW_STAGGER_S = 0.06;
+
+/**
+ * Total wall-clock time the orchestrator timeline must wait for an N-flyer
+ * staggered fly tween to fully complete. The last flyer starts at
+ * `(N-1) * stagger` and runs for `duration` seconds, so the timeline
+ * needs to wait `duration + (N-1) * stagger` total.
+ */
+function totalStaggeredDuration(count: number, perFlyerS: number, staggerS: number): number {
+    return perFlyerS + Math.max(0, count - 1) * staggerS;
+}
 
 // Internal seconds-based mirrors of the public ms constants. Centralized
 // here so the timeline math reads in the same units gsap expects.
@@ -51,6 +64,8 @@ let currentDrawTimeline: gsap.core.Timeline | null = null;
 // ----- Cast -----
 
 export interface CastTimelineContext {
+    /** Number of runes flying (drives the staggered fly window). */
+    flyingCount: number;
     contributingCount: number;
     castRunesLength: number;
     /** Fired at t=0 — `flyingRunes` is mounted, HP locked. Plays cast SFX. */
@@ -75,8 +90,14 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
 
     // ----- Compute timeline anchor times (seconds) -----
 
-    // Bubbles begin after the settle hold AND the raise transition.
-    const bubblesStartS = FLY_DURATION_S + SETTLE_DELAY_S + RAISE_DURATION_S;
+    // Total wall-clock window the staggered per-flyer fly tween needs to
+    // FULLY complete. Without accounting for the stagger, the orchestrator
+    // would unmount the flyers before the last few finished animating —
+    // visible as a "flash into place" on the trailing flyers.
+    const flyTotalS = totalStaggeredDuration(ctx.flyingCount, FLY_DURATION_S, FLY_STAGGER_S);
+
+    // Bubbles begin after the fly window, the settle hold, and the raise.
+    const bubblesStartS = flyTotalS + SETTLE_DELAY_S + RAISE_DURATION_S;
 
     // Total time the slots stay raised (including the bubble cascade).
     // Identical math to the legacy raiseHoldMs formula in arkynAnimations.ts,
@@ -91,7 +112,7 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
     // Dissolve start (relative to fly-complete) is the same as the legacy
     // computation: settle + raise hold + per-rune dissolve stagger + dissolve duration.
     const impactAtS =
-        FLY_DURATION_S +
+        flyTotalS +
         SETTLE_DELAY_S +
         raiseHoldS +
         Math.max(0, ctx.castRunesLength - 1) * DISSOLVE_STAGGER_S +
@@ -115,15 +136,15 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
     }, undefined, 0);
 
     // Fly-complete: mount dissolving runes + set dissolveStartTime.
-    tl.call(ctx.onFlyComplete, undefined, FLY_DURATION_S);
+    tl.call(ctx.onFlyComplete, undefined, flyTotalS);
 
     // Place SFX staggered per contributing rune, starting at fly-complete.
     for (let i = 0; i < ctx.contributingCount; i++) {
-        tl.call(playPlaceRune, undefined, FLY_DURATION_S + i * PLACE_SFX_STAGGER_S);
+        tl.call(playPlaceRune, undefined, flyTotalS + i * PLACE_SFX_STAGGER_S);
     }
 
     // Settle done: lift the valid slots.
-    tl.call(ctx.onRaiseStart, undefined, FLY_DURATION_S + SETTLE_DELAY_S);
+    tl.call(ctx.onRaiseStart, undefined, flyTotalS + SETTLE_DELAY_S);
 
     // Raise transition done: mount the damage bubbles. Each bubble's own
     // delayMs (set by the orchestrator) staggers them in the DOM.
@@ -152,6 +173,8 @@ export function killCurrentCast(): void {
 // ----- Discard -----
 
 export interface DiscardTimelineContext {
+    /** Number of runes being discarded (drives the staggered fly window). */
+    flyingCount: number;
     /** Fired at t=0 — sends ARKYN_DISCARD message + clears state at the end. */
     onComplete: () => void;
 }
@@ -166,11 +189,12 @@ export function buildDiscardTimeline(ctx: DiscardTimelineContext): gsap.core.Tim
         },
     });
 
-    // Discard is a single-phase animation: the runes fall and fade for
-    // DISCARD_FLY_DURATION_S, then we send the message + clear state.
-    // We place a no-op tween of the right duration so the timeline has
-    // something to time. (Pure-callback timelines need a duration anchor.)
-    tl.to({}, { duration: DISCARD_FLY_DURATION_S });
+    // Discard is a single-phase animation: the runes fall and fade for the
+    // total staggered duration, then we send the message + clear state.
+    // The pure-callback timeline needs a duration anchor — we use a no-op
+    // tween of the right length so the timeline times out correctly.
+    const flyTotalS = totalStaggeredDuration(ctx.flyingCount, DISCARD_FLY_DURATION_S, DISCARD_STAGGER_S);
+    tl.to({}, { duration: flyTotalS });
 
     currentDiscardTimeline = tl;
     return tl;
@@ -184,6 +208,8 @@ export function killCurrentDiscard(): void {
 // ----- Draw -----
 
 export interface DrawTimelineContext {
+    /** Number of runes being drawn (drives the staggered fly window). */
+    flyingCount: number;
     /** Fired at the end of the draw fly. Clears drawingRunes/drawingRuneIds. */
     onComplete: () => void;
 }
@@ -198,8 +224,10 @@ export function buildDrawTimeline(ctx: DrawTimelineContext): gsap.core.Timeline 
         },
     });
 
-    // Same shape as discard — single-phase fly anchor.
-    tl.to({}, { duration: DRAW_FLY_DURATION_S });
+    // Same shape as discard — single-phase fly anchor sized to cover the
+    // full staggered draw tween.
+    const flyTotalS = totalStaggeredDuration(ctx.flyingCount, DRAW_FLY_DURATION_S, DRAW_STAGGER_S);
+    tl.to({}, { duration: flyTotalS });
 
     currentDrawTimeline = tl;
     return tl;
@@ -210,11 +238,18 @@ export function killCurrentDraw(): void {
     currentDrawTimeline = null;
 }
 
-// Re-export the seconds versions of the fly durations so the per-component
-// fly tweens (CastAnimation/DiscardAnimation/DrawAnimation) can reference
-// them and stay in sync with the orchestrator timeline.
+// Re-export the seconds versions of the fly durations + per-flyer stagger
+// constants so the per-component fly tweens (CastAnimation/DiscardAnimation/
+// DrawAnimation) can reference them and stay in sync with the orchestrator
+// timeline. Sharing these values across the timeline factory and the
+// per-flyer tweens ensures the orchestrator's fly window covers the entire
+// staggered tween — so the trailing flyers always finish before the
+// orchestrator unmounts them.
 export {
     FLY_DURATION_S,
+    FLY_STAGGER_S,
     DISCARD_FLY_DURATION_S,
+    DISCARD_STAGGER_S,
     DRAW_FLY_DURATION_S,
+    DRAW_STAGGER_S,
 };

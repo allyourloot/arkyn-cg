@@ -3,7 +3,10 @@
     "allow": [
       "Read(//c/tmp/**)",
       "Bash(unzip -l template.zip)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(pnpm add:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(rm:*)"
     ]
   }
 }

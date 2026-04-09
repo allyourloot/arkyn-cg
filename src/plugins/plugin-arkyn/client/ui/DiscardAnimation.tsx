@@ -2,11 +2,9 @@ import { useRef } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useDiscardingRunes } from "../arkynStore";
-import { DISCARD_FLY_DURATION_S } from "../animations/castTimeline";
+import { DISCARD_FLY_DURATION_S, DISCARD_STAGGER_S } from "../animations/castTimeline";
 import RuneImage from "./RuneImage";
 import styles from "./DiscardAnimation.module.css";
-
-const DISCARD_STAGGER_S = 0.04;
 
 export default function DiscardAnimation() {
     const discardingRunes = useDiscardingRunes();

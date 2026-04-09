@@ -2,11 +2,9 @@ import { useRef } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useDrawingRunes } from "../arkynStore";
-import { DRAW_FLY_DURATION_S } from "../animations/castTimeline";
+import { DRAW_FLY_DURATION_S, DRAW_STAGGER_S } from "../animations/castTimeline";
 import RuneImage from "./RuneImage";
 import styles from "./DrawAnimation.module.css";
-
-const DRAW_STAGGER_S = 0.06;
 
 export default function DrawAnimation() {
     const drawingRunes = useDrawingRunes();

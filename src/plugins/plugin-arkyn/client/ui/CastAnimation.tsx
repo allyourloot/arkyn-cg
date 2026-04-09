@@ -2,14 +2,9 @@ import { useRef } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useFlyingRunes } from "../arkynStore";
-import { FLY_DURATION_S } from "../animations/castTimeline";
+import { FLY_DURATION_S, FLY_STAGGER_S } from "../animations/castTimeline";
 import RuneImage from "./RuneImage";
 import styles from "./CastAnimation.module.css";
-
-// Per-flyer stagger between successive runes' fly tweens. Matches the
-// pre-migration `transitionDelay: i * 60ms` so the visual cadence is
-// preserved.
-const FLY_STAGGER_S = 0.06;
 
 export default function CastAnimation() {
     const flyingRunes = useFlyingRunes();

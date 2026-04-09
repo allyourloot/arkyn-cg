@@ -60,10 +60,14 @@ export function useHandDragReorder({
     const startXRef = useRef(0);
     // Frozen at drag-start so transforms applied during drag don't pollute math.
     const slotCentersRef = useRef<number[]>([]);
-    // Direct GSAP `quickTo` setter for the dragged slot's transform x. The
-    // fastest available path — bypasses React entirely on every pointermove.
-    // Created on pointerdown, cleared on pointerup/cancel.
-    const draggedQuickToRef = useRef<((v: number) => void) | null>(null);
+    // Direct GSAP `quickSetter` for the dragged slot's transform x. This is
+    // the fastest path GSAP offers — a synchronous setter that writes the
+    // transform matrix in place on every call. `quickTo` was the wrong tool
+    // here: it's designed for smooth tweening with a small duration, and
+    // setting `duration: 0` has edge-case behavior where it doesn't reliably
+    // commit to the DOM. `quickSetter` is the right primitive for direct,
+    // high-frequency updates from pointer events.
+    const draggedSetterRef = useRef<((v: number) => void) | null>(null);
     // Reference to the dragged DOM slot so we can `gsap.set(... { x: 0 })`
     // it on drop, before the React reorder commits.
     const draggedSlotElRef = useRef<HTMLElement | null>(null);
@@ -105,9 +109,9 @@ export function useHandDragReorder({
 
             // Direct 1:1 transform update for the dragged slot. Bypasses
             // React entirely so dragging is buttery smooth even on slow
-            // devices — `quickTo` mutates the GSAP-tracked transform
-            // matrix in place at the speed of pointer events.
-            draggedQuickToRef.current?.(dx);
+            // devices — `quickSetter` writes the transform matrix in
+            // place at the speed of pointer events.
+            draggedSetterRef.current?.(dx);
 
             // Only re-render React when the preview index changes (i.e.
             // when the dragged card crosses a slot boundary). The non-
@@ -138,7 +142,7 @@ export function useHandDragReorder({
             // Reset refs first so listener teardown happens cleanly.
             dragInfoRef.current = null;
             hasMovedRef.current = false;
-            draggedQuickToRef.current = null;
+            draggedSetterRef.current = null;
             draggedSlotElRef.current = null;
             setDragInfo(null);
 
@@ -167,7 +171,7 @@ export function useHandDragReorder({
             }
             dragInfoRef.current = null;
             hasMovedRef.current = false;
-            draggedQuickToRef.current = null;
+            draggedSetterRef.current = null;
             draggedSlotElRef.current = null;
             setDragInfo(null);
         };
@@ -214,15 +218,13 @@ export function useHandDragReorder({
             }
         }
 
-        // Bind a `quickTo` setter to the dragged slot so onMove can update
-        // its transform x with zero React involvement. Duration 0 = direct
-        // set on every call (fastest possible follow path).
+        // Bind a `quickSetter` to the dragged slot so onMove can update
+        // its transform x with zero React involvement. quickSetter is the
+        // synchronous direct-write primitive — every call writes the matrix
+        // immediately, no tween machinery, no scheduling.
         if (draggedSlot) {
             draggedSlotElRef.current = draggedSlot;
-            draggedQuickToRef.current = gsap.quickTo(draggedSlot, "x", {
-                duration: 0,
-                ease: "none",
-            });
+            draggedSetterRef.current = gsap.quickSetter(draggedSlot, "x", "px") as (v: number) => void;
         }
 
         startXRef.current = e.clientX;
