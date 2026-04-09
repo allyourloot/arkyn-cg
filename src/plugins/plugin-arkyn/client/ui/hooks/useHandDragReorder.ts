@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type RefObject, type PointerEvent as ReactPointerEvent } from "react";
+import { gsap } from "gsap";
 import { reorderHand, toggleRuneSelection, type RuneClientData } from "../../arkynStore";
 import { playPickupRune, playDropRune } from "../../sfx";
 
@@ -7,7 +8,6 @@ const DRAG_THRESHOLD_PX = 6;
 export interface DragInfo {
     runeId: string;
     originalIdx: number;
-    offsetX: number;
     previewIdx: number;
     /**
      * Distance between two adjacent card centers, captured at drag start.
@@ -60,6 +60,13 @@ export function useHandDragReorder({
     const startXRef = useRef(0);
     // Frozen at drag-start so transforms applied during drag don't pollute math.
     const slotCentersRef = useRef<number[]>([]);
+    // Direct GSAP `quickTo` setter for the dragged slot's transform x. The
+    // fastest available path — bypasses React entirely on every pointermove.
+    // Created on pointerdown, cleared on pointerup/cancel.
+    const draggedQuickToRef = useRef<((v: number) => void) | null>(null);
+    // Reference to the dragged DOM slot so we can `gsap.set(... { x: 0 })`
+    // it on drop, before the React reorder commits.
+    const draggedSlotElRef = useRef<HTMLElement | null>(null);
 
     useEffect(() => { dragInfoRef.current = dragInfo; }, [dragInfo]);
     useEffect(() => { handRef.current = hand; }, [hand]);
@@ -96,10 +103,21 @@ export function useHandDragReorder({
             if (!hasMovedRef.current) playPickupRune();
             hasMovedRef.current = true;
 
-            const newPreviewIdx = indexAtClientX(e.clientX);
-            if (info.offsetX === dx && info.previewIdx === newPreviewIdx) return;
+            // Direct 1:1 transform update for the dragged slot. Bypasses
+            // React entirely so dragging is buttery smooth even on slow
+            // devices — `quickTo` mutates the GSAP-tracked transform
+            // matrix in place at the speed of pointer events.
+            draggedQuickToRef.current?.(dx);
 
-            const next: DragInfo = { ...info, offsetX: dx, previewIdx: newPreviewIdx };
+            // Only re-render React when the preview index changes (i.e.
+            // when the dragged card crosses a slot boundary). The non-
+            // dragged slots' slide-aside is the only thing that depends
+            // on render output, and it's gated on previewIdx in
+            // HandDisplay's useGSAP hook.
+            const newPreviewIdx = indexAtClientX(e.clientX);
+            if (info.previewIdx === newPreviewIdx) return;
+
+            const next: DragInfo = { ...info, previewIdx: newPreviewIdx };
             dragInfoRef.current = next;
             setDragInfo(next);
         };
@@ -107,10 +125,21 @@ export function useHandDragReorder({
         const onUp = (e: PointerEvent) => {
             const info = dragInfoRef.current;
             const wasMoved = hasMovedRef.current;
+            const draggedSlot = draggedSlotElRef.current;
 
-            // Reset state first so listener teardown happens cleanly.
+            // Zero out the dragged slot's transform BEFORE the React
+            // reorder commits. The slot's component instance survives the
+            // reorder (key={rune.id}), so a stale x value would otherwise
+            // drift the rune to the wrong position post-reorder.
+            if (draggedSlot) {
+                gsap.set(draggedSlot, { x: 0 });
+            }
+
+            // Reset refs first so listener teardown happens cleanly.
             dragInfoRef.current = null;
             hasMovedRef.current = false;
+            draggedQuickToRef.current = null;
+            draggedSlotElRef.current = null;
             setDragInfo(null);
 
             if (!info) return;
@@ -132,8 +161,14 @@ export function useHandDragReorder({
         };
 
         const onCancel = () => {
+            const draggedSlot = draggedSlotElRef.current;
+            if (draggedSlot) {
+                gsap.set(draggedSlot, { x: 0 });
+            }
             dragInfoRef.current = null;
             hasMovedRef.current = false;
+            draggedQuickToRef.current = null;
+            draggedSlotElRef.current = null;
             setDragInfo(null);
         };
 
@@ -162,12 +197,16 @@ export function useHandDragReorder({
         // make getBoundingClientRect() report shifted positions.
         let cardStride = 56; // sensible default if we can't measure
         const container = containerRef.current;
+        let draggedSlot: HTMLElement | null = null;
         if (container) {
             const slots = container.querySelectorAll<HTMLElement>("[data-rune-index]");
             const centers: number[] = [];
             slots.forEach(slot => {
                 const rect = slot.getBoundingClientRect();
                 centers.push(rect.left + rect.width / 2);
+                if (slot.getAttribute("data-rune-id") === runeId) {
+                    draggedSlot = slot;
+                }
             });
             slotCentersRef.current = centers;
             if (centers.length >= 2) {
@@ -175,12 +214,22 @@ export function useHandDragReorder({
             }
         }
 
+        // Bind a `quickTo` setter to the dragged slot so onMove can update
+        // its transform x with zero React involvement. Duration 0 = direct
+        // set on every call (fastest possible follow path).
+        if (draggedSlot) {
+            draggedSlotElRef.current = draggedSlot;
+            draggedQuickToRef.current = gsap.quickTo(draggedSlot, "x", {
+                duration: 0,
+                ease: "none",
+            });
+        }
+
         startXRef.current = e.clientX;
         hasMovedRef.current = false;
         const info: DragInfo = {
             runeId,
             originalIdx: idx,
-            offsetX: 0,
             previewIdx: idx,
             cardStride,
         };

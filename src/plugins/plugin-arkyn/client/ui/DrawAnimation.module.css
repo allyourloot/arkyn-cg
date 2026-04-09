@@ -7,11 +7,8 @@
 
 .flyer {
     position: absolute;
-    transition:
-        left 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-        top 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-        transform 0.35s ease,
-        opacity 0.2s ease;
+    /* Transform/opacity GSAP-driven (see DrawAnimation.tsx useGSAP). */
+    will-change: transform, opacity;
 }
 
 .runeImg {

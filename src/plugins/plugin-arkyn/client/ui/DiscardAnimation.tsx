@@ -1,43 +1,72 @@
+import { useRef } from "react";
+import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
 import { useDiscardingRunes } from "../arkynStore";
-import { useFlyTrigger } from "./hooks/useFlyTrigger";
+import { DISCARD_FLY_DURATION_S } from "../animations/castTimeline";
 import RuneImage from "./RuneImage";
 import styles from "./DiscardAnimation.module.css";
 
+const DISCARD_STAGGER_S = 0.04;
+
 export default function DiscardAnimation() {
     const discardingRunes = useDiscardingRunes();
-    const animated = useFlyTrigger(discardingRunes);
+    const layerRef = useRef<HTMLDivElement>(null);
+    const flyerRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+    useGSAP(() => {
+        if (discardingRunes.length === 0) return;
+        const tl = gsap.timeline();
+        discardingRunes.forEach((dr, i) => {
+            const el = flyerRefs.current[i];
+            if (!el) return;
+            const half = dr.size / 2;
+            // Snap to origin, then run the discard tween: drop down ~200px
+            // while shrinking, rotating, and fading.
+            gsap.set(el, {
+                x: dr.fromX - half,
+                y: dr.fromY - half,
+                scale: 1,
+                rotation: 0,
+                opacity: 1,
+            });
+            tl.to(
+                el,
+                {
+                    y: `+=200`,
+                    scale: 0.4,
+                    rotation: 15,
+                    opacity: 0,
+                    duration: DISCARD_FLY_DURATION_S,
+                    ease: "power2.in",
+                },
+                i * DISCARD_STAGGER_S,
+            );
+        });
+    }, { dependencies: [discardingRunes], scope: layerRef });
 
     if (discardingRunes.length === 0) return null;
 
     return (
-        <div className={styles.layer}>
-            {discardingRunes.map((dr, i) => {
-                const half = dr.size / 2;
-                const x = dr.fromX - half;
-                const y = animated ? dr.fromY + 200 : dr.fromY - half;
-
-                return (
-                    <div
-                        key={`discard-${dr.rune.id}-${i}`}
-                        className={styles.flyer}
-                        style={{
-                            left: x,
-                            top: y,
-                            width: dr.size,
-                            height: dr.size,
-                            transitionDelay: `${i * 40}ms`,
-                            opacity: animated ? 0 : 1,
-                            transform: animated ? "scale(0.4) rotate(15deg)" : "scale(1) rotate(0deg)",
-                        }}
-                    >
-                        <RuneImage
-                            rarity={dr.rune.rarity}
-                            element={dr.rune.element}
-                            className={styles.runeImg}
-                        />
-                    </div>
-                );
-            })}
+        <div ref={layerRef} className={styles.layer}>
+            {discardingRunes.map((dr, i) => (
+                <div
+                    key={`discard-${dr.rune.id}-${i}`}
+                    ref={(el) => { flyerRefs.current[i] = el; }}
+                    className={styles.flyer}
+                    style={{
+                        left: 0,
+                        top: 0,
+                        width: dr.size,
+                        height: dr.size,
+                    }}
+                >
+                    <RuneImage
+                        rarity={dr.rune.rarity}
+                        element={dr.rune.element}
+                        className={styles.runeImg}
+                    />
+                </div>
+            ))}
         </div>
     );
 }

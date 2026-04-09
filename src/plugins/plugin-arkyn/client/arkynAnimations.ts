@@ -13,7 +13,11 @@ import { sendArkynMessage } from "./arkynNetwork";
 // Importing it here is safe despite the cyclic appearance because every
 // access happens inside a function body (call time, not module-eval time).
 import { arkynStoreInternal } from "./arkynStore";
-import { playPlaceRune, playCount, playDamage, playCast } from "./sfx";
+import {
+    buildCastTimeline,
+    buildDiscardTimeline,
+    buildDrawTimeline,
+} from "./animations/castTimeline";
 
 // ----- Animation timing constants -----
 export const DISSOLVE_DURATION_MS = 550;
@@ -39,10 +43,10 @@ export const BUBBLE_TAIL_BUFFER_MS = 150;
 // Duration of the enemy health-bar floating damage / shake animation.
 export const ENEMY_DAMAGE_HIT_MS = 900;
 
-const FLY_DURATION_MS = 300;
-const PLACE_SFX_STAGGER_MS = 100;
-const DISCARD_FLY_DURATION_MS = 400;
-const DRAW_FLY_DURATION_MS = 450;
+// Fly / discard / draw durations live inside `animations/castTimeline.ts`
+// (in seconds, ready for GSAP). Component-level fly tweens reference them
+// through `castTimeline`'s exports so the orchestrator timeline and the
+// per-component tween clocks stay in sync.
 
 // ----- Animation state types -----
 
@@ -191,12 +195,16 @@ export function triggerDrawAnimation(newRunes: { rune: RuneClientData; handIndex
         drawingRunes = draws;
         notify();
 
-        // After animation completes, show the real runes
-        setTimeout(() => {
-            drawingRunes = [];
-            drawingRuneIds = [];
-            notify();
-        }, DRAW_FLY_DURATION_MS);
+        // GSAP timeline drives the post-fly cleanup. The component-level
+        // useGSAP in DrawAnimation.tsx tweens the actual flyer DOM in the
+        // same frame this state mounts.
+        buildDrawTimeline({
+            onComplete: () => {
+                drawingRunes = [];
+                drawingRuneIds = [];
+                notify();
+            },
+        });
     });
 }
 
@@ -247,21 +255,6 @@ export function castSpell() {
         return;
     }
 
-    flyingRunes = flying;
-    isCastAnimating = true;
-    // Cast SFX fires the moment the runes start flying toward the play
-    // area — sound and visual launch together.
-    playCast();
-    // Freeze the HP bar at its pre-cast value. The server will apply the
-    // real HP drop as soon as it receives the cast, but we don't want the
-    // bar to lurch until the visual impact moment at the end of the
-    // dissolve. The cleanup step unlocks and catches the bar up.
-    arkynStoreInternal.lockHpDisplay();
-    arkynStoreInternal.clearSelection();
-    // Remember the cast runes for the SpellPreview "Last Cast" view.
-    arkynStoreInternal.setLastCastRunes(castRunes);
-    notify();
-
     // Resolve the spell on the client so we can compute per-rune damage
     // for the floating bubble UI. Uses the same shared formula as the
     // server, with the synced enemy resistances/weaknesses, so the numbers
@@ -275,137 +268,105 @@ export function castSpell() {
         )
         : 0;
 
-    // Phase 1: fly to the play area.
-    setTimeout(() => {
-        sendArkynMessage(ARKYN_CAST, { selectedIndices: serverIndices });
-        flyingRunes = [];
+    // Pre-compute the contributing-rune info up front so the timeline
+    // callbacks can mount the right state without re-deriving anything.
+    const contributingIndices = getContributingRuneIndices(castRunes);
+    const contributing = contributingIndices.length;
+    // Per-rune damage = total / contributing, distributed evenly with any
+    // remainder spread across the first few runes so the displayed numbers
+    // always sum to exactly `totalDamage`.
+    const perRuneBase = contributing > 0 ? Math.floor(totalDamage / contributing) : 0;
+    const perRuneRemainder = contributing > 0 ? totalDamage - perRuneBase * contributing : 0;
+    // The spell's primary element drives the outline color of every bubble
+    // in this cast — and the matching enemy floating damage — so the
+    // colorway reads as one cohesive spell impact.
+    const spellElement = resolvedSpell?.element ?? "";
+    const bubbles: (RuneDamageBubble | null)[] = new Array(MAX_PLAY).fill(null);
+    for (let i = 0; i < contributingIndices.length; i++) {
+        const slotIdx = contributingIndices[i];
+        const rune = castRunes[slotIdx];
+        if (!rune) continue;
+        bubbles[slotIdx] = {
+            amount: perRuneBase + (i < perRuneRemainder ? 1 : 0),
+            spellElement,
+            seq: ++bubbleSeqCounter,
+            // Each successive contributing rune's bubble waits its turn
+            // so the damage reads like a counter ticking up.
+            delayMs: i * BUBBLE_STAGGER_MS,
+        };
+    }
 
-        // Pre-compute the contributing-rune info now so the deferred raise
-        // step doesn't need to re-derive it later.
-        const contributingIndices = getContributingRuneIndices(castRunes);
-        const contributing = contributingIndices.length;
-        // Per-rune damage = total / contributing, distributed evenly with
-        // any remainder spread across the first few runes so the displayed
-        // numbers always sum to exactly `totalDamage`.
-        const perRuneBase = contributing > 0 ? Math.floor(totalDamage / contributing) : 0;
-        const perRuneRemainder = contributing > 0 ? totalDamage - perRuneBase * contributing : 0;
+    // Dynamic raise hold: long enough for the slot raise transition to
+    // FIRST finish, then for the LAST staggered bubble to fully play out
+    // (plus a small tail beat) before the dissolve tears the runes apart.
+    // Identical math to what the timeline factory uses internally for SFX
+    // scheduling — we recompute it here only for the dissolve-start time
+    // that DissolveShader's wall-clock RAF loop reads.
+    const lastBubbleDelayMs = Math.max(0, contributing - 1) * BUBBLE_STAGGER_MS;
+    const raiseHoldMs =
+        RAISE_DURATION_MS + (
+            contributing > 0
+                ? lastBubbleDelayMs + BUBBLE_DURATION_MS + BUBBLE_TAIL_BUFFER_MS
+                : BUBBLE_DURATION_MS + BUBBLE_TAIL_BUFFER_MS
+        );
 
-        // The spell's primary element drives the outline color of every
-        // bubble in this cast — and the matching enemy floating damage —
-        // so the colorway reads as one cohesive spell impact.
-        const spellElement = resolvedSpell?.element ?? "";
-        const bubbles: (RuneDamageBubble | null)[] = new Array(MAX_PLAY).fill(null);
-        for (let i = 0; i < contributingIndices.length; i++) {
-            const slotIdx = contributingIndices[i];
-            const rune = castRunes[slotIdx];
-            if (!rune) continue;
-            bubbles[slotIdx] = {
-                amount: perRuneBase + (i < perRuneRemainder ? 1 : 0),
-                spellElement,
-                seq: ++bubbleSeqCounter,
-                // Each successive contributing rune's bubble waits its
-                // turn so the damage reads like a counter ticking up.
-                delayMs: i * BUBBLE_STAGGER_MS,
-            };
-        }
-
-        // Dynamic raise hold: long enough for the slot raise transition
-        // to FIRST finish, then for the LAST staggered bubble to fully
-        // play out (plus a small tail beat) before the dissolve tears
-        // the runes apart. The bubbles wait for the raise to complete so
-        // the "lift then count" choreography reads in two beats instead
-        // of all happening on the same frame.
-        const lastBubbleDelayMs = Math.max(0, contributing - 1) * BUBBLE_STAGGER_MS;
-        const raiseHoldMs =
-            RAISE_DURATION_MS + (
-                contributing > 0
-                    ? lastBubbleDelayMs + BUBBLE_DURATION_MS + BUBBLE_TAIL_BUFFER_MS
-                    : BUBBLE_DURATION_MS + BUBBLE_TAIL_BUFFER_MS
-            );
-
-        // Phase 2a: cards land in the play area as static runes. We mount
-        // them in DissolveShader immediately but push the dissolve start
-        // time into the future by SETTLE_DELAY_MS + raiseHoldMs so they
-        // read as fully intact runes through the settle beat AND the
-        // subsequent raise hold. The raise + damage bubbles wait for the
-        // settle delay so the player has a moment to register every
-        // played rune sitting in its slot before the spell resolution
-        // choreography starts.
-        dissolvingRunes = castRunes;
-        dissolveStartTime = performance.now() + SETTLE_DELAY_MS + raiseHoldMs;
-        notify();
-
-        // Play the "place rune" SFX once for each rune that actually
-        // contributes to the resolved spell. Non-matching runes still fly
-        // and dissolve visually but stay silent. Stagger so the sounds
-        // layer instead of stacking into one thud.
-        for (let i = 0; i < contributing; i++) {
-            if (i === 0) playPlaceRune();
-            else setTimeout(playPlaceRune, i * PLACE_SFX_STAGGER_MS);
-        }
-
-        // Phase 2b: settle delay over — raise the valid runes. This is its
-        // own beat now: the slots lift up and HOLD before any numbers pop.
-        setTimeout(() => {
+    // Build the cast timeline. The timeline owns SFX scheduling and the
+    // store-state mutation callbacks; the per-flyer fly tweens live inside
+    // CastAnimation.tsx (started in the same frame `flyingRunes` is set).
+    buildCastTimeline({
+        contributingCount: contributing,
+        castRunesLength: castRunes.length,
+        onStart: () => {
+            // Mount the flyers and lock HP. The cast SFX fires from the
+            // timeline's t=0 callback, before this runs.
+            flyingRunes = flying;
+            isCastAnimating = true;
+            arkynStoreInternal.lockHpDisplay();
+            arkynStoreInternal.clearSelection();
+            arkynStoreInternal.setLastCastRunes(castRunes);
+            notify();
+        },
+        onFlyComplete: () => {
+            // Send the cast to the server (same instant as today — the
+            // server's HP update arrives mid-animation but the bar stays
+            // frozen via lockHpDisplay until the impact callback unlocks).
+            sendArkynMessage(ARKYN_CAST, { selectedIndices: serverIndices });
+            flyingRunes = [];
+            // Mount the dissolving runes statically. The shader keeps them
+            // intact through the settle + raise + bubble cascade because
+            // dissolveStartTime is in the future.
+            dissolvingRunes = castRunes;
+            dissolveStartTime = performance.now() + SETTLE_DELAY_MS + raiseHoldMs;
+            notify();
+        },
+        onRaiseStart: () => {
             raisedSlotIndices = contributingIndices;
             notify();
-        }, SETTLE_DELAY_MS);
-
-        // Phase 2c: raise transition complete — mount the per-rune damage
-        // bubbles. They stagger themselves via their own CSS animation-
-        // delay (delayMs field), so they appear one at a time and the
-        // runes shake in sync with each bubble.
-        const bubblesStartMs = SETTLE_DELAY_MS + RAISE_DURATION_MS;
-        setTimeout(() => {
+        },
+        onBubblesStart: () => {
             runeDamageBubbles = bubbles;
             notify();
-        }, bubblesStartMs);
-
-        // Schedule one "count" SFX per contributing rune, in lockstep with
-        // its bubble. Each bubble appears at bubblesStartMs + delayMs, so
-        // we fire its sound at the same offset.
-        for (let i = 0; i < contributingIndices.length; i++) {
-            const countDelay = bubblesStartMs + i * BUBBLE_STAGGER_MS;
-            setTimeout(playCount, countDelay);
-        }
-
-        // Phase 3: wait for the settle delay + raise hold + LAST staggered
-        // dissolve to finish. At that moment — with the per-rune bubbles
-        // done and all runes fully torn apart — we fire the enemy damage
-        // hit (floating total + shake), unlock the HP bar so it catches
-        // up to the server value, and clear the dissolve state. All three
-        // things land on the same frame so the visual impact reads as one
-        // cohesive spell hit instead of the bar lurching early.
-        const totalDissolveMs =
-            SETTLE_DELAY_MS +
-            raiseHoldMs +
-            (castRunes.length - 1) * DISSOLVE_STAGGER_MS +
-            DISSOLVE_DURATION_MS;
-        setTimeout(() => {
+        },
+        onImpact: () => {
             enemyDamageHit = {
                 amount: totalDamage,
                 spellElement,
                 seq: ++enemyDamageSeqCounter,
             };
-            // The enemy floating damage + bar shake fires on this frame —
-            // play the impact SFX in lockstep so the sound lands with the hit.
-            playDamage();
             // Release the HP bar lock and snap the displayed value to
-            // whatever the server currently says. Because the cast was
-            // sent immediately at fly-complete, the server's HP is
-            // already post-damage — the bar will animate from its frozen
-            // pre-cast value down to the new target via its CSS
-            // width/color transitions.
+            // whatever the server currently says.
             arkynStoreInternal.unlockHpDisplayAndSyncToServer();
-
+            notify();
+        },
+        onComplete: () => {
             dissolvingRunes = [];
             dissolveStartTime = 0;
             raisedSlotIndices = [];
             runeDamageBubbles = [];
             isCastAnimating = false;
             notify();
-        }, totalDissolveMs);
-    }, FLY_DURATION_MS);
+        },
+    });
 }
 
 export function discardRunes() {
@@ -444,10 +405,15 @@ export function discardRunes() {
     arkynStoreInternal.clearSelection();
     notify();
 
-    setTimeout(() => {
-        sendArkynMessage(ARKYN_DISCARD, { selectedIndices: serverIndices });
-        discardingRunes = [];
-        isDiscardAnimating = false;
-        notify();
-    }, DISCARD_FLY_DURATION_MS);
+    // GSAP timeline drives the post-fly cleanup. The component-level
+    // useGSAP in DiscardAnimation.tsx tweens the actual flyer DOM in the
+    // same frame this state mounts.
+    buildDiscardTimeline({
+        onComplete: () => {
+            sendArkynMessage(ARKYN_DISCARD, { selectedIndices: serverIndices });
+            discardingRunes = [];
+            isDiscardAnimating = false;
+            notify();
+        },
+    });
 }
