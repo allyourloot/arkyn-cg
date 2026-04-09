@@ -1,8 +1,9 @@
 import { ArkynPlayerState, EnemyState, HAND_SIZE, type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
 import { createPouch } from "../utils/createPouch";
-import { drawRunes } from "../utils/drawRunes";
+import { drawRunes, syncPlayerPouch } from "../utils/drawRunes";
 import { setPouch } from "../resources/playerPouch";
+import { getEnemyForRound } from "../utils/enemyDefinitions";
 
 const logger = new Logger("ArkynJoin");
 
@@ -32,6 +33,7 @@ export function handleJoin(
         player.hand.push(rune);
     }
     player.pouchSize = pouch.length;
+    syncPlayerPouch(player, pouch);
 
     // Spawn enemy for round 1
     spawnEnemy(state);
@@ -44,38 +46,22 @@ export function handleJoin(
 }
 
 function spawnEnemy(state: ArkynState): void {
-    const enemy = new EnemyState();
     const round = Math.max(state.currentRound, 1);
+    const def = getEnemyForRound(round);
 
-    // Scale enemy HP with round
-    const baseHp = 80 + (round - 1) * 20;
-    enemy.name = getEnemyName(round);
-    enemy.maxHp = baseHp;
-    enemy.currentHp = baseHp;
-    enemy.element = "earth";
+    const enemy = new EnemyState();
+    enemy.name = def.name;
+    enemy.maxHp = def.hp;
+    enemy.currentHp = def.hp;
+    enemy.element = def.element;
 
     // Clear and set resistances/weaknesses
     while (enemy.resistances.length > 0) enemy.resistances.pop();
     while (enemy.weaknesses.length > 0) enemy.weaknesses.pop();
-    enemy.resistances.push("earth");
-    enemy.weaknesses.push("fire");
-    enemy.weaknesses.push("lightning");
+    for (const r of def.resistances) enemy.resistances.push(r);
+    for (const w of def.weaknesses) enemy.weaknesses.push(w);
 
     state.enemy = enemy;
-}
-
-function getEnemyName(round: number): string {
-    const enemies = [
-        "Goblin Scout",
-        "Forest Imp",
-        "Stone Golem",
-        "Shadow Wraith",
-        "Fire Drake",
-        "Ice Elemental",
-        "Dark Sorcerer",
-        "Ancient Wyrm",
-    ];
-    return enemies[(round - 1) % enemies.length];
 }
 
 export { spawnEnemy };

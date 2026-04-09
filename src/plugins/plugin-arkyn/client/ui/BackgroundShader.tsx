@@ -5,7 +5,20 @@ import styles from "./BackgroundShader.module.css";
 // Each rendered shader pixel becomes a PIXEL_SIZE x PIXEL_SIZE block on screen
 // after the CSS nearest-neighbor upscale. Larger = chunkier pixels and cheaper
 // fragment shader.
-const PIXEL_SIZE = 3;
+//
+// Touch devices get a much chunkier internal resolution + 30fps cap. Combined
+// that's roughly a 5x reduction in shader work (≈2.8x fewer pixels at
+// PIXEL_SIZE 5 vs 3, plus 2x fewer frames at 30 vs 60fps) — large enough to
+// stop the shader from competing with React for the main thread on phones.
+// The aesthetic stays the same: it's already a pixel-art look, the blocks
+// just get a touch chunkier.
+const HAS_HOVER =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(hover: hover)").matches;
+
+const PIXEL_SIZE = HAS_HOVER ? 3 : 5;
+const FRAME_INTERVAL_MS = HAS_HOVER ? 0 : 1000 / 30;
 
 function compileShader(
     gl: WebGLRenderingContext,
@@ -96,17 +109,27 @@ export default function BackgroundShader() {
         let rafId = 0;
         let running = true;
         const start = performance.now();
+        let lastDrawAt = 0;
 
-        const render = () => {
+        // requestAnimationFrame still ticks at the display refresh rate,
+        // but we skip drawing if we're inside the throttle window. On
+        // desktop FRAME_INTERVAL_MS is 0 (no throttle), on mobile it's
+        // ~33ms which gives a stable 30fps cap.
+        const render = (now: number) => {
             if (!running) return;
+            if (FRAME_INTERVAL_MS > 0 && now - lastDrawAt < FRAME_INTERVAL_MS) {
+                rafId = requestAnimationFrame(render);
+                return;
+            }
+            lastDrawAt = now;
             resize();
-            const t = (performance.now() - start) / 1000;
+            const t = (now - start) / 1000;
             gl.uniform2f(uResolution, canvas.width, canvas.height);
             gl.uniform1f(uTime, t);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             rafId = requestAnimationFrame(render);
         };
-        render();
+        rafId = requestAnimationFrame(render);
 
         // Pause when the tab is hidden so we don't burn battery in the background.
         const onVisibility = () => {
@@ -115,7 +138,7 @@ export default function BackgroundShader() {
                 cancelAnimationFrame(rafId);
             } else if (!running) {
                 running = true;
-                render();
+                rafId = requestAnimationFrame(render);
             }
         };
         document.addEventListener("visibilitychange", onVisibility);

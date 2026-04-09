@@ -8,7 +8,7 @@ import {
     resolveSpell,
     calculateDamage,
 } from "../shared";
-import { playSelectRune, playPlaceRune } from "./sfx";
+import { playSelectRune, playDeselectRune, playPlaceRune } from "./sfx";
 
 type Listener = () => void;
 
@@ -33,6 +33,12 @@ let selectedIndices: number[] = [];
 let playedRunes: RuneClientData[] = [];
 let enemyName = "";
 let enemyHp = 0;
+// Visual HP bar value — normally mirrors `enemyHp`, but during a cast
+// animation it's frozen at its pre-cast value and only catches up when the
+// enemy damage hit fires at the end of the dissolve. Decouples the visual
+// impact moment from the server's (near-instant) HP update.
+let displayedEnemyHp = 0;
+let hpDisplayLocked = false;
 let enemyMaxHp = 0;
 let enemyElement = "";
 let enemyResistances: string[] = [];
@@ -43,6 +49,9 @@ let lastSpellTier = 0;
 let lastDamage = 0;
 let currentRound = 0;
 let pouchSize = 0;
+// Full undrawn-rune list mirrored from the server. Used by the pouch modal
+// to show what's still available to draw alongside the dimmed hand.
+let pouchContents: RuneClientData[] = [];
 let castsRemaining = 3;
 let discardsRemaining = 3;
 
@@ -108,7 +117,16 @@ export function getHandIndex(runeId: string): number {
 }
 export function setPlayedRunes(r: RuneClientData[]) { playedRunes = r; notify(); }
 export function setEnemyName(n: string) { enemyName = n; notify(); }
-export function setEnemyHp(hp: number) { enemyHp = hp; notify(); }
+export function setEnemyHp(hp: number) {
+    enemyHp = hp;
+    // Only drive the visual bar if we're not in the middle of a cast
+    // animation — otherwise castSpell releases the lock itself at the
+    // right moment so the bar drops in sync with the impact.
+    if (!hpDisplayLocked) {
+        displayedEnemyHp = hp;
+    }
+    notify();
+}
 export function setEnemyMaxHp(hp: number) { enemyMaxHp = hp; notify(); }
 export function setEnemyElement(e: string) { enemyElement = e; notify(); }
 export function setEnemyResistances(r: string[]) { enemyResistances = r; notify(); }
@@ -119,6 +137,7 @@ export function setLastSpellTier(t: number) { lastSpellTier = t; notify(); }
 export function setLastDamage(d: number) { lastDamage = d; notify(); }
 export function setCurrentRound(r: number) { currentRound = r; notify(); }
 export function setPouchSize(s: number) { pouchSize = s; notify(); }
+export function setPouchContents(p: RuneClientData[]) { pouchContents = p; notify(); }
 export function setCastsRemaining(c: number) { castsRemaining = c; notify(); }
 export function setDiscardsRemaining(d: number) { discardsRemaining = d; notify(); }
 
@@ -133,15 +152,16 @@ export function toggleRuneSelection(index: number) {
     const rune = hand[index];
     if (!rune) return;
 
-    let didChange = false;
+    let changeKind: "select" | "deselect" | null = null;
     if (selectedRuneIds.includes(rune.id)) {
         selectedRuneIds = selectedRuneIds.filter(id => id !== rune.id);
-        didChange = true;
+        changeKind = "deselect";
     } else if (selectedRuneIds.length < MAX_PLAY) {
         selectedRuneIds = [...selectedRuneIds, rune.id];
-        didChange = true;
+        changeKind = "select";
     }
-    if (didChange) playSelectRune();
+    if (changeKind === "select") playSelectRune();
+    else if (changeKind === "deselect") playDeselectRune();
     recomputeSelectedIndices();
     notify();
 }
@@ -166,6 +186,12 @@ export interface RuneDamageBubble {
     spellElement: string;
     /** Monotonically increasing — used as a React key so re-casts re-trigger CSS animation. */
     seq: number;
+    /**
+     * Per-bubble appearance delay (ms). Used as the CSS `animation-delay`
+     * on both the bubble itself and the matching rune shake, so valid
+     * runes get "counted" one after another in slot order.
+     */
+    delayMs: number;
 }
 let runeDamageBubbles: (RuneDamageBubble | null)[] = [];
 let bubbleSeqCounter = 0;
@@ -193,15 +219,20 @@ export function useLastCastRunes() {
 
 export const DISSOLVE_DURATION_MS = 550;
 export const DISSOLVE_STAGGER_MS = 150;
-// How long the "valid" runes stay raised in the play area after landing,
-// before the dissolve actually begins. Tuned long enough that the player
-// can read every per-rune floating damage number above the raised runes
-// before the dissolve tears them apart.
-export const RAISE_HOLD_MS = 1100;
-// Duration of the floating per-rune damage bubble's float-up + fade
-// animation, kept in sync with the matching CSS keyframes so the bubble
-// finishes just before the dissolve begins.
-export const RUNE_DAMAGE_BUBBLE_MS = 1000;
+// Beat between the runes landing in the play area and the "valid" runes
+// lifting up. Long enough for the player to register every played rune
+// sitting in its slot before the spell-resolution choreography starts.
+export const SETTLE_DELAY_MS = 1000;
+// Duration of a single floating damage bubble's full animation (appear +
+// drift + fade). MUST match the keyframe duration in RuneDamageBubble.module.css.
+export const BUBBLE_DURATION_MS = 1000;
+// Stagger between consecutive damage bubbles in a multi-rune cast. Each
+// successive contributing rune's bubble appears this many ms after the
+// previous one so the "count" reads sequentially.
+export const BUBBLE_STAGGER_MS = 260;
+// Quiet beat after the LAST bubble finishes before the dissolve begins —
+// gives the final number a moment to land before the runes tear apart.
+export const BUBBLE_TAIL_BUFFER_MS = 150;
 // Duration of the enemy health-bar floating damage / shake animation.
 export const ENEMY_DAMAGE_HIT_MS = 900;
 
@@ -388,6 +419,11 @@ export function castSpell() {
 
     flyingRunes = flying;
     isCastAnimating = true;
+    // Freeze the HP bar at its pre-cast value. The server will apply the
+    // real HP drop as soon as it receives the cast, but we don't want the
+    // bar to lurch until the visual impact moment at the end of the
+    // dissolve. The cleanup step unlocks and catches the bar up.
+    hpDisplayLocked = true;
     selectedRuneIds = [];
     selectedIndices = [];
     // Remember the cast runes for the SpellPreview "Last Cast" view.
@@ -408,13 +444,8 @@ export function castSpell() {
         sendFn?.(ARKYN_CAST, { selectedIndices: serverIndices });
         flyingRunes = [];
 
-        // Phase 2a: cards land in the play area as static runes. We mount
-        // them in DissolveShader immediately but push the dissolve start
-        // time into the future by RAISE_HOLD_MS so they read as fully
-        // intact runes during the raise hold. Meanwhile, the slots whose
-        // runes actually power the resolved spell get lifted via CSS so
-        // the player can see which played runes mattered, and a floating
-        // damage bubble blooms above each contributing rune.
+        // Pre-compute the contributing-rune info now so the deferred raise
+        // step doesn't need to re-derive it later.
         const contributingIndices = getContributingRuneIndices(castRunes);
         const contributing = contributingIndices.length;
         // Per-rune damage = total / contributing, distributed evenly with
@@ -436,13 +467,32 @@ export function castSpell() {
                 amount: perRuneBase + (i < perRuneRemainder ? 1 : 0),
                 spellElement,
                 seq: ++bubbleSeqCounter,
+                // Each successive contributing rune's bubble waits its
+                // turn so the damage reads like a counter ticking up.
+                delayMs: i * BUBBLE_STAGGER_MS,
             };
         }
 
+        // Dynamic raise hold: long enough for the LAST staggered bubble
+        // to fully play out (plus a small tail beat) before the dissolve
+        // tears the runes apart. For a 1-rune cast this is ~1150ms; for a
+        // 5-rune cast it's ~2190ms — automatically scaling with count.
+        const lastBubbleDelayMs = Math.max(0, contributing - 1) * BUBBLE_STAGGER_MS;
+        const raiseHoldMs =
+            contributing > 0
+                ? lastBubbleDelayMs + BUBBLE_DURATION_MS + BUBBLE_TAIL_BUFFER_MS
+                : BUBBLE_DURATION_MS + BUBBLE_TAIL_BUFFER_MS;
+
+        // Phase 2a: cards land in the play area as static runes. We mount
+        // them in DissolveShader immediately but push the dissolve start
+        // time into the future by SETTLE_DELAY_MS + raiseHoldMs so they
+        // read as fully intact runes through the settle beat AND the
+        // subsequent raise hold. The raise + damage bubbles wait for the
+        // settle delay so the player has a moment to register every
+        // played rune sitting in its slot before the spell resolution
+        // choreography starts.
         dissolvingRunes = castRunes;
-        dissolveStartTime = performance.now() + RAISE_HOLD_MS;
-        raisedSlotIndices = contributingIndices;
-        runeDamageBubbles = bubbles;
+        dissolveStartTime = performance.now() + SETTLE_DELAY_MS + raiseHoldMs;
         notify();
 
         // Play the "place rune" SFX once for each rune that actually
@@ -454,28 +504,43 @@ export function castSpell() {
             else setTimeout(playPlaceRune, i * PLACE_SFX_STAGGER_MS);
         }
 
-        // Phase 2b: when the raise hold ends and the dissolve actually
-        // begins, fire the enemy health-bar damage hit (floating number +
-        // shake). This synchronizes the enemy reaction with the moment
-        // the runes start to be consumed.
+        // Phase 2b: settle delay over — raise the valid runes and mount
+        // their per-rune damage bubbles. The bubbles stagger themselves
+        // via their own CSS animation-delay (delayMs field), so they
+        // appear one at a time and the runes shake in sync.
+        setTimeout(() => {
+            raisedSlotIndices = contributingIndices;
+            runeDamageBubbles = bubbles;
+            notify();
+        }, SETTLE_DELAY_MS);
+
+        // Phase 3: wait for the settle delay + raise hold + LAST staggered
+        // dissolve to finish. At that moment — with the per-rune bubbles
+        // done and all runes fully torn apart — we fire the enemy damage
+        // hit (floating total + shake), unlock the HP bar so it catches
+        // up to the server value, and clear the dissolve state. All three
+        // things land on the same frame so the visual impact reads as one
+        // cohesive spell hit instead of the bar lurching early.
+        const totalDissolveMs =
+            SETTLE_DELAY_MS +
+            raiseHoldMs +
+            (castRunes.length - 1) * DISSOLVE_STAGGER_MS +
+            DISSOLVE_DURATION_MS;
         setTimeout(() => {
             enemyDamageHit = {
                 amount: totalDamage,
                 spellElement,
                 seq: ++enemyDamageSeqCounter,
             };
-            notify();
-        }, RAISE_HOLD_MS);
+            // Release the HP bar lock and snap the displayed value to
+            // whatever the server currently says. Because the cast was
+            // sent immediately at fly-complete, the server's HP is
+            // already post-damage — the bar will animate from its frozen
+            // pre-cast value down to the new target via its CSS
+            // width/color transitions.
+            hpDisplayLocked = false;
+            displayedEnemyHp = enemyHp;
 
-        // Phase 3: wait for the raise hold + LAST staggered dissolve to
-        // finish, then clear. The dissolves are themselves offset by
-        // RAISE_HOLD_MS via dissolveStartTime, so the cleanup must wait
-        // that long extra before tearing everything down.
-        const totalDissolveMs =
-            RAISE_HOLD_MS +
-            (castRunes.length - 1) * DISSOLVE_STAGGER_MS +
-            DISSOLVE_DURATION_MS;
-        setTimeout(() => {
             dissolvingRunes = [];
             dissolveStartTime = 0;
             raisedSlotIndices = [];
@@ -542,6 +607,7 @@ export function useSelectedIndices() { return useSyncExternalStore(subscribe, ()
 export function usePlayedRunes() { return useSyncExternalStore(subscribe, () => playedRunes); }
 export function useEnemyName() { return useSyncExternalStore(subscribe, () => enemyName); }
 export function useEnemyHp() { return useSyncExternalStore(subscribe, () => enemyHp); }
+export function useDisplayedEnemyHp() { return useSyncExternalStore(subscribe, () => displayedEnemyHp); }
 export function useEnemyMaxHp() { return useSyncExternalStore(subscribe, () => enemyMaxHp); }
 export function useEnemyElement() { return useSyncExternalStore(subscribe, () => enemyElement); }
 export function useEnemyResistances() { return useSyncExternalStore(subscribe, () => enemyResistances); }
@@ -552,5 +618,6 @@ export function useLastSpellTier() { return useSyncExternalStore(subscribe, () =
 export function useLastDamage() { return useSyncExternalStore(subscribe, () => lastDamage); }
 export function useCurrentRound() { return useSyncExternalStore(subscribe, () => currentRound); }
 export function usePouchSize() { return useSyncExternalStore(subscribe, () => pouchSize); }
+export function usePouchContents() { return useSyncExternalStore(subscribe, () => pouchContents); }
 export function useCastsRemaining() { return useSyncExternalStore(subscribe, () => castsRemaining); }
 export function useDiscardsRemaining() { return useSyncExternalStore(subscribe, () => discardsRemaining); }

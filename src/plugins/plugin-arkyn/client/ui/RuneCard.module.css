@@ -29,6 +29,30 @@
     filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
 }
 
+/* On touch devices the per-card drop-shadow filters become the bottleneck:
+   each card has TWO continuously-running filters (the float-wrap depth
+   shadow and, when selected, the gold glow), and the mobile GPU has to
+   recompute the alpha silhouette every frame for every card. Strip the
+   filters on touch — the lift + fan layout is enough visual feedback,
+   and selection still highlights via the translateY in the card style.
+   The selected runes also still pulse via .card.selected scale below. */
+@media (hover: none) {
+    .floatWrap {
+        filter: none;
+        will-change: transform;
+    }
+
+    .card.selected {
+        filter: none;
+    }
+
+    .card {
+        /* Drop the filter from the transition list so the property is no
+           longer animated at all on mobile — saves a per-tap layout/paint. */
+        transition: transform 0.2s ease;
+    }
+}
+
 @keyframes rune-float {
     0%,
     100% {

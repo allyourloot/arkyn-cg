@@ -17,8 +17,34 @@
     display: flex;
     flex-direction: row;
     align-items: stretch;
-    padding: 0 clamp(8px, 2vw, 32px);
+    /* Horizontal padding = the larger of a viewport-relative clamp and the
+       iOS safe-area inset (notch / Dynamic Island in landscape). This
+       pushes the left and right panels inward on notched phones so they
+       clear the device cutout, without affecting desktop or non-notched
+       devices where env(safe-area-inset-*) resolves to 0. */
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: max(clamp(8px, 2vw, 32px), env(safe-area-inset-left));
+    padding-right: max(clamp(8px, 2vw, 32px), env(safe-area-inset-right));
     font-family: 'Sburbits', system-ui, monospace;
+}
+
+/* Touch devices get extra breathing room beyond the safe area — the
+   panels should feel like they live inside the frame of the phone, not
+   jammed against its cutouts. On a notched iPhone in landscape this
+   ends up around (44px safe area + 14px) = 58px of horizontal inset on
+   whichever side holds the notch. */
+@media (hover: none) {
+    .root {
+        padding-left: max(
+            clamp(16px, 3vw, 40px),
+            calc(env(safe-area-inset-left) + 14px)
+        );
+        padding-right: max(
+            clamp(16px, 3vw, 40px),
+            calc(env(safe-area-inset-right) + 14px)
+        );
+    }
 }
 
 .waitingRoot {

@@ -28,15 +28,22 @@ export default function PlayArea() {
                 const dissolving = dissolvingRunes[i];
                 const isRaised = raisedSlotIndices.includes(i);
                 const damageBubble = runeDamageBubbles[i] ?? null;
-                // A slot is "dimmed" when it has a played rune that *didn't*
-                // contribute to the resolved spell — visually demoting the
-                // wasted runes so the valid ones (which raise) stand out.
-                const isDimmed = !!dissolving && !isRaised;
 
-                const slotClasses = [styles.slot];
-                if (isRaised) slotClasses.push(styles.raised);
-                if (isDimmed) slotClasses.push(styles.dimmed);
-                const slotClassName = slotClasses.join(" ");
+                const slotClassName = isRaised
+                    ? `${styles.slot} ${styles.raised}`
+                    : styles.slot;
+
+                // When a bubble is present, wrap the dissolving rune in a
+                // shake layer that replays its CSS keyframe animation each
+                // time the bubble's `seq` changes. The same `delayMs` used
+                // by the bubble drives the shake's animation-delay so the
+                // rune shakes exactly when its number pops.
+                const shakeStyle = damageBubble
+                    ? { animationDelay: `${damageBubble.delayMs}ms` }
+                    : undefined;
+                const shakeClassName = damageBubble
+                    ? `${styles.runeShake} ${styles.shaking}`
+                    : styles.runeShake;
 
                 return (
                     <div
@@ -58,19 +65,25 @@ export default function PlayArea() {
                             />
                         )}
                         {dissolving && (
-                            <DissolveShader
-                                rune={dissolving}
-                                // Stagger each rune so they dissolve one after
-                                // another for a more dramatic spell impact.
-                                startTime={dissolveStartTime + i * DISSOLVE_STAGGER_MS}
-                                duration={DISSOLVE_DURATION_MS}
-                            />
+                            <div
+                                className={shakeClassName}
+                                style={shakeStyle}
+                            >
+                                <DissolveShader
+                                    rune={dissolving}
+                                    // Stagger each rune so they dissolve one after
+                                    // another for a more dramatic spell impact.
+                                    startTime={dissolveStartTime + i * DISSOLVE_STAGGER_MS}
+                                    duration={DISSOLVE_DURATION_MS}
+                                />
+                            </div>
                         )}
                         {damageBubble && (
                             <RuneDamageBubble
                                 amount={damageBubble.amount}
                                 spellElement={damageBubble.spellElement}
                                 seq={damageBubble.seq}
+                                delayMs={damageBubble.delayMs}
                             />
                         )}
                     </div>

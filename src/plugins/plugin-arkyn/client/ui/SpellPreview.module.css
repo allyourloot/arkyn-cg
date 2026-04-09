@@ -6,13 +6,13 @@
     max-height: calc(100vh - 90px);
     align-self: center;
     flex-shrink: 0;
-    /* 9-slice frame: 10px corner slices, rendered at 10px on screen so the
+    /* 9-slice frame: 24px corner slices, rendered at 24px on screen so the
        pixel art stays crisp at any panel size. */
     background: transparent;
     border-style: solid;
     border-color: transparent;
-    border-width: 10px;
-    border-image: var(--panel-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
+    border-width: 24px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
     /* Slight padding so inner sections sit just inside the frame edge. */
     padding: 6px 4px;
     display: flex;
@@ -45,17 +45,27 @@
     image-rendering: pixelated;
 }
 
+/* Inline header bar at the top of the panel. Uses the blue inner-frame
+   9-slice so it reads as a distinct accent against the regular sections. */
 .heading {
-    font-size: clamp(20px, 2.4vw, 28px);
+    box-sizing: border-box;
+    width: 100%;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--heading-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 4px 6px;
+    font-size: clamp(24px, 3vw, 36px);
     font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
-    color: #d4a574;
+    color: #ffffff;
     text-transform: uppercase;
-    letter-spacing: 3px;
+    letter-spacing: 2px;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
-    line-height: 1;
+    line-height: 1.1;
     text-align: center;
-    padding: 4px 0 2px;
+    image-rendering: pixelated;
 }
 
 .icon {

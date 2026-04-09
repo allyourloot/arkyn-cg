@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { RuneClientData } from "../arkynStore";
 import { getRuneImageUrl, getBaseRuneImageUrl } from "./runeAssets";
 import styles from "./RuneCard.module.css";
@@ -6,11 +6,19 @@ import styles from "./RuneCard.module.css";
 const MAX_TILT_DEG = 14;
 const PERSPECTIVE_PX = 600;
 
+// Touch devices have no real "hover" state, so the 3D tilt-on-pointermove
+// effect is purely cosmetic clutter on phones — and worse, the constant
+// setState it triggers on every touch movement causes noticeable input lag.
+// Detect once at module load and short-circuit the tilt logic on touch.
+const HAS_HOVER =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(hover: hover)").matches;
+
 interface RuneCardProps {
     rune: RuneClientData;
     isSelected: boolean;
     index: number;
-    onClick: () => void;
     rotation?: number;
     /** When true, tilt-on-hover is suppressed (e.g. during a drag). */
     tiltDisabled?: boolean;
@@ -18,11 +26,10 @@ interface RuneCardProps {
 
 const FLOAT_STAGGER_S = 0.32;
 
-export default function RuneCard({
+function RuneCardImpl({
     rune,
     isSelected,
     index,
-    onClick,
     rotation = 0,
     tiltDisabled = false,
 }: RuneCardProps) {
@@ -64,9 +71,10 @@ export default function RuneCard({
     return (
         <div
             ref={cardRef}
-            onClick={onClick}
-            onPointerMove={handlePointerMove}
-            onPointerLeave={handlePointerLeave}
+            // Tilt handlers only attach on devices with a real hover state.
+            // On touch they're a no-op, saving a setState per touchmove.
+            onPointerMove={HAS_HOVER ? handlePointerMove : undefined}
+            onPointerLeave={HAS_HOVER ? handlePointerLeave : undefined}
             className={`${styles.card} ${isSelected ? styles.selected : ""}`}
             style={{
                 transform: `translateY(${isSelected ? -24 : 0}px) rotate(${rotation}deg)`,
@@ -97,3 +105,10 @@ export default function RuneCard({
         </div>
     );
 }
+
+// Memoize so a tap on one rune only re-renders that rune's card instead of
+// re-rendering all 7+ cards in the hand. With the unused onClick prop gone,
+// every prop is a primitive (or a stable rune object reference), so the
+// default shallow comparison is enough.
+const RuneCard = memo(RuneCardImpl);
+export default RuneCard;

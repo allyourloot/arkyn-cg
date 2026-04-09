@@ -1,11 +1,11 @@
 import { useEffect } from "react";
-import riverWalkUrl from "/assets/audio/river-walk.mp3?url";
+import arkynThemeUrl from "/assets/audio/music/arkyn-theme.mp3?url";
 
 export default function BackgroundMusic() {
     useEffect(() => {
-        const audio = new Audio(riverWalkUrl);
+        const audio = new Audio(arkynThemeUrl);
         audio.loop = true;
-        audio.volume = 0.2;
+        audio.volume = 0.15;
 
         const tryPlay = () => {
             audio.play().catch(() => {

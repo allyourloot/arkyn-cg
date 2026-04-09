@@ -8,11 +8,13 @@ import { ELEMENT_COLORS } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import frameUrl from "/assets/ui/frame.png?url";
 import innerFrameUrl from "/assets/ui/inner-frame.png?url";
+import innerFrameGoldUrl from "/assets/ui/inner-frame-gold.png?url";
 import styles from "./EnemyPanel.module.css";
 
 const panelStyleVars = {
     "--panel-bg": `url(${frameUrl})`,
     "--section-bg": `url(${innerFrameUrl})`,
+    "--heading-bg": `url(${innerFrameGoldUrl})`,
 } as React.CSSProperties;
 
 export default function EnemyPanel() {

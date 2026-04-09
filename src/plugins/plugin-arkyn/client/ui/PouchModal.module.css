@@ -1,0 +1,140 @@
+.backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    pointer-events: auto;
+    animation: fade-in 0.15s ease-out;
+}
+
+.modal {
+    box-sizing: border-box;
+    width: clamp(420px, 86vw, 920px);
+    max-height: min(90vh, 760px);
+    /* 9-slice frame matching the side panels. */
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    padding: 8px 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-family: 'Sburbits', system-ui, monospace;
+    color: #e8d4b8;
+    image-rendering: pixelated;
+    /* Stop backdrop click from closing when clicking the modal body. */
+    cursor: default;
+    animation: scale-in 0.18s cubic-bezier(0.2, 0.8, 0.4, 1);
+}
+
+.header {
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    image-rendering: pixelated;
+}
+
+.title {
+    font-size: clamp(22px, 2.6vw, 32px);
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+}
+
+.subtitle {
+    font-size: clamp(13px, 1.4vw, 16px);
+    color: #b0a090;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
+.closeButton {
+    background: transparent;
+    border: 2px solid #b0a090;
+    color: #e8d4b8;
+    font-family: inherit;
+    font-size: clamp(16px, 1.8vw, 20px);
+    line-height: 1;
+    width: clamp(28px, 3vw, 36px);
+    height: clamp(28px, 3vw, 36px);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: transform 0.1s ease, border-color 0.1s ease;
+}
+
+.closeButton:hover {
+    border-color: #ffffff;
+    color: #ffffff;
+    transform: scale(1.08);
+}
+
+.closeButton:active {
+    transform: scale(0.94);
+}
+
+/* Flat rune grid. Runes overlap horizontally (negative margin) so we can
+   pack more per row at a fixed modal width — same trick the hand uses.
+   The grid sizes itself to fit the deck so no scrollbar is needed. */
+.grid {
+    overflow: hidden;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-content: flex-start;
+    padding: 8px 16px;
+    row-gap: 6px;
+}
+
+.rune {
+    position: relative;
+    width: clamp(52px, 6.4vw, 80px);
+    aspect-ratio: 1;
+    /* Negative horizontal margin makes adjacent runes overlap by ~30%,
+       letting more fit per row without shrinking each rune. */
+    margin-left: clamp(-14px, -1.2vw, -10px);
+    margin-right: clamp(-14px, -1.2vw, -10px);
+    image-rendering: pixelated;
+    transition: opacity 0.15s ease;
+}
+
+.rune.dimmed {
+    opacity: 0.28;
+    filter: grayscale(0.6);
+}
+
+.runeLayer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scale-in {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}

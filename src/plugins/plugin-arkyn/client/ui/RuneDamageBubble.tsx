@@ -13,13 +13,22 @@ interface Props {
      * the CSS keyframe animation cleanly.
      */
     seq: number;
+    /**
+     * Milliseconds of CSS animation-delay before this bubble appears.
+     * Used to stagger bubbles across contributing runes so they read
+     * like a counter ticking up.
+     */
+    delayMs: number;
 }
 
-export default function RuneDamageBubble({ amount, spellElement, seq }: Props) {
+export default function RuneDamageBubble({ amount, spellElement, seq, delayMs }: Props) {
     const strokeColor = ELEMENT_COLORS[spellElement] ?? "#ffffff";
     // CSS variable lets the stylesheet apply -webkit-text-stroke without
-    // hard-coding the color. The cast keeps TS happy about custom props.
-    const style = { "--stroke-color": strokeColor } as CSSProperties;
+    // hard-coding the color. Cast keeps TS happy about custom props.
+    const style: CSSProperties = {
+        ["--stroke-color" as string]: strokeColor,
+        animationDelay: `${delayMs}ms`,
+    };
     return (
         <span
             key={seq}

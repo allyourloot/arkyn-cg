@@ -9,6 +9,7 @@ import {
     reorderHand,
 } from "../arkynStore";
 import RuneCard from "./RuneCard";
+import { playPickupRune, playDropRune } from "../sfx";
 import styles from "./HandDisplay.module.css";
 
 const DRAG_THRESHOLD_PX = 6;
@@ -70,6 +71,7 @@ export default function HandDisplay() {
 
             // Suppress noise until the user clearly intends to drag.
             if (!hasMovedRef.current && Math.abs(dx) < DRAG_THRESHOLD_PX) return;
+            if (!hasMovedRef.current) playPickupRune();
             hasMovedRef.current = true;
 
             const newPreviewIdx = indexAtClientX(e.clientX);
@@ -92,6 +94,7 @@ export default function HandDisplay() {
             if (!info) return;
 
             if (wasMoved) {
+                playDropRune();
                 if (info.previewIdx !== info.originalIdx) {
                     reorderHand(info.originalIdx, info.previewIdx);
                 }
@@ -214,9 +217,6 @@ export default function HandDisplay() {
                             rune={rune}
                             isSelected={isSelected}
                             index={index}
-                            // Selection happens in the pointerup handler so it
-                            // doesn't fire mid-drag. No-op here.
-                            onClick={() => { /* handled in pointerup */ }}
                             rotation={rotation}
                             tiltDisabled={dragInfo !== null}
                         />

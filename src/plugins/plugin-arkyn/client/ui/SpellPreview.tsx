@@ -10,11 +10,13 @@ import { ELEMENT_COLORS, TIER_LABELS } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import frameUrl from "/assets/ui/frame.png?url";
 import innerFrameUrl from "/assets/ui/inner-frame.png?url";
+import innerFrameBlueUrl from "/assets/ui/inner-frame-blue.png?url";
 import styles from "./SpellPreview.module.css";
 
 const panelStyleVars = {
     "--panel-bg": `url(${frameUrl})`,
     "--section-bg": `url(${innerFrameUrl})`,
+    "--heading-bg": `url(${innerFrameBlueUrl})`,
 } as React.CSSProperties;
 
 export default function SpellPreview() {
@@ -41,7 +43,7 @@ export default function SpellPreview() {
     if (!spell) {
         return (
             <div className={styles.panel} style={panelStyleVars}>
-                <span className={styles.heading}>Spell Preview</span>
+                <span className={styles.heading}>Preview</span>
                 <div className={styles.section}>
                     <span className={styles.empty}>
                         Select runes to preview spell
@@ -64,7 +66,7 @@ export default function SpellPreview() {
     return (
         <div className={styles.panel} style={panelStyleVars}>
             <span className={styles.heading}>
-                {isLive ? "Spell Preview" : "Last Cast"}
+                {isLive ? "Preview" : "Last Cast"}
             </span>
 
             {/* Header section: icon + spell name + tier + damage */}

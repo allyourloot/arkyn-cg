@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import {
-    useEnemyHp,
+    useDisplayedEnemyHp,
     useEnemyMaxHp,
     useEnemyName,
     useEnemyDamageHit,
@@ -16,7 +16,10 @@ interface ActiveHit {
 }
 
 export default function EnemyHealthBar() {
-    const hp = useEnemyHp();
+    // The bar reads the "displayed" HP, which lags behind the server's
+    // authoritative `enemyHp` during a cast animation so the damage
+    // drops in sync with the dissolve finale (not when the cast is sent).
+    const hp = useDisplayedEnemyHp();
     const maxHp = useEnemyMaxHp();
     const name = useEnemyName();
     const enemyDamageHit = useEnemyDamageHit();

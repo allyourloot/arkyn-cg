@@ -1,7 +1,7 @@
 import { HAND_SIZE, type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
 import { createPouch } from "../utils/createPouch";
-import { drawRunes } from "../utils/drawRunes";
+import { drawRunes, syncPlayerPouch } from "../utils/drawRunes";
 import { setPouch } from "../resources/playerPouch";
 import { spawnEnemy } from "./handleJoin";
 
@@ -44,6 +44,7 @@ export function handleReady(
         player.hand.push(rune);
     }
     player.pouchSize = pouch.length;
+    syncPlayerPouch(player, pouch);
 
     // Spawn new enemy
     spawnEnemy(state);

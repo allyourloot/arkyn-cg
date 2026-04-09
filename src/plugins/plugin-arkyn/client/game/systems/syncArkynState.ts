@@ -14,6 +14,7 @@ import {
     setLastDamage,
     setCurrentRound,
     setPouchSize,
+    setPouchContents,
     setCastsRemaining,
     setDiscardsRemaining,
     clearSelectedIndices,
@@ -36,6 +37,7 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevDamage = -1;
     let prevRound = -1;
     let prevPouchSize = -1;
+    let prevPouchJson = "";
     let prevCasts = -1;
     let prevDiscards = -1;
 
@@ -145,6 +147,18 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (player.pouchSize !== prevPouchSize) {
             setPouchSize(player.pouchSize);
             prevPouchSize = player.pouchSize;
+        }
+
+        // Sync pouch contents (used by the pouch modal)
+        const pouchData: RuneClientData[] = [];
+        for (let i = 0; i < player.pouch.length; i++) {
+            const r = player.pouch[i];
+            pouchData.push({ id: r.id, element: r.element, rarity: r.rarity, level: r.level });
+        }
+        const pouchJson = JSON.stringify(pouchData);
+        if (pouchJson !== prevPouchJson) {
+            setPouchContents(pouchData);
+            prevPouchJson = pouchJson;
         }
         if (player.castsRemaining !== prevCasts) {
             setCastsRemaining(player.castsRemaining);

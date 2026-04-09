@@ -2,7 +2,7 @@ import { HAND_SIZE, MAX_PLAY, type ArkynState } from "../../shared";
 import { resolveSpell } from "../../shared/resolveSpell";
 import { Logger } from "@core/shared/utils";
 import { calculateDamage } from "../utils/calculateDamage";
-import { drawRunes } from "../utils/drawRunes";
+import { drawRunes, syncPlayerPouch } from "../utils/drawRunes";
 import { getPouch } from "../resources/playerPouch";
 
 const logger = new Logger("ArkynCast");
@@ -103,5 +103,6 @@ export function handleCast(
             player.hand.push(rune);
         }
         player.pouchSize = pouch.length;
+        syncPlayerPouch(player, pouch);
     }
 }

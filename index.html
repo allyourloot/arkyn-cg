@@ -3,7 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover lets the page extend into the iOS safe area
+         (notch / Dynamic Island), eliminating the white margins iOS adds
+         around the safe-area rect by default. user-scalable=no +
+         maximum-scale=1 stop the page from pinch-zooming during play. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <!-- "Add to Home Screen" PWA hints. When the page is launched from the
+         home screen on iOS these turn off the URL bar entirely; they have
+         no effect inside an in-app browser like SFSafariViewController. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>client-v2</title>
     <style>
       html,
@@ -14,8 +27,31 @@
         margin: 0;
       }
 
+      /* Black fill behind everything so any pixel not covered by the game
+         (safe-area gutters, transient layout gaps) reads as part of the
+         dark game background instead of flashing white. */
+      html,
+      body {
+        background-color: #0a0510;
+      }
+
       body {
         overflow: hidden;
+        /* Disable the iOS rubber-band scroll and tap-to-zoom behaviors that
+           would otherwise interfere with rune drag/select gestures. */
+        overscroll-behavior: none;
+        touch-action: manipulation;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      /* Universal tap-highlight kill. The webkit property doesn't inherit
+         on every browser, so applying it on `body` alone leaves a faint
+         dark flash on the actual clickable child elements. Wildcard rule
+         catches every interactive element. */
+      *,
+      *::before,
+      *::after {
+        -webkit-tap-highlight-color: transparent;
       }
     </style>
   </head>

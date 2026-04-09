@@ -20,6 +20,7 @@ export class EnemyState extends Schema {
 export class ArkynPlayerState extends Schema {
     @type([RuneInstance]) hand = new ArraySchema<RuneInstance>();
     @type([RuneInstance]) playedRunes = new ArraySchema<RuneInstance>();
+    @type([RuneInstance]) pouch = new ArraySchema<RuneInstance>();
     @type("number") pouchSize = 0;
     @type("string") lastSpellName = "";
     @type("number") lastSpellTier = 0;
