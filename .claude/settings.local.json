@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Read(//c/tmp/**)",
-      "Bash(unzip -l template.zip)"
+      "Bash(unzip -l template.zip)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

@@ -1,19 +1,15 @@
 import { useEffect } from "react";
 import { ELEMENT_TYPES, RUNES_PER_ELEMENT } from "../../shared";
 import { useHand, usePouchContents } from "../arkynStore";
-import { getRuneImageUrl, getBaseRuneImageUrl } from "./runeAssets";
-import frameUrl from "/assets/ui/frame.png?url";
-import innerFrameUrl from "/assets/ui/inner-frame.png?url";
+import RuneImage from "./RuneImage";
+import { createPanelStyleVars } from "./styles";
 import styles from "./PouchModal.module.css";
 
 interface PouchModalProps {
     onClose: () => void;
 }
 
-const modalStyleVars = {
-    "--panel-bg": `url(${frameUrl})`,
-    "--section-bg": `url(${innerFrameUrl})`,
-} as React.CSSProperties;
+const modalStyleVars = createPanelStyleVars();
 
 // Each rune slot in the modal is one of three states. Pouch runes render at
 // full opacity; drawn (in-hand) and spent (played/discarded) both render
@@ -99,13 +95,10 @@ export default function PouchModal({ onClose }: PouchModalProps) {
 }
 
 function RuneIcon({ element, state }: { element: string; state: SlotState }) {
-    const baseUrl = getBaseRuneImageUrl("common");
-    const runeUrl = getRuneImageUrl(element);
     const dimmed = state !== "pouch";
     return (
         <div className={`${styles.rune} ${dimmed ? styles.dimmed : ""}`}>
-            {baseUrl && <img src={baseUrl} alt="" className={styles.runeLayer} draggable={false} />}
-            {runeUrl && <img src={runeUrl} alt={element} className={styles.runeLayer} draggable={false} />}
+            <RuneImage rarity="common" element={element} className={styles.runeLayer} />
         </div>
     );
 }

@@ -6,13 +6,7 @@ import type { EnemyState } from "../../shared";
 // directly on the client for the floating per-rune damage numbers, so both
 // sides agree on what the displayed numbers should sum to.
 export function calculateDamage(spell: ResolvedSpell, enemy: EnemyState): number {
-    const resistances: string[] = [];
-    for (let i = 0; i < enemy.resistances.length; i++) {
-        resistances.push(enemy.resistances[i]);
-    }
-    const weaknesses: string[] = [];
-    for (let i = 0; i < enemy.weaknesses.length; i++) {
-        weaknesses.push(enemy.weaknesses[i]);
-    }
+    const resistances = Array.from(enemy.resistances);
+    const weaknesses = Array.from(enemy.weaknesses);
     return sharedCalculateDamage(spell, resistances, weaknesses);
 }

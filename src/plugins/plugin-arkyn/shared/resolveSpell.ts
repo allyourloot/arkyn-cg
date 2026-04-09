@@ -75,3 +75,43 @@ export function resolveSpell(runes: RuneData[]): ResolvedSpell | null {
         isCombo: false,
     };
 }
+
+/**
+ * Returns the indices of runes in `runes` that actually contribute to the
+ * spell those runes would resolve to.
+ *
+ * For a single-element spell, that's the FIRST `tier` runes whose element
+ * matches the spell — so a Tier 1 Fire spell with `[Fire, Water, Lightning]`
+ * returns just `[0]`, while a Tier 2 Fire spell with
+ * `[Fire, Fire, Water, Lightning]` returns `[0, 1]`.
+ *
+ * For a combo spell, every rune matching one of the two combo elements
+ * contributes (combos require all played runes to be combo-compatible).
+ *
+ * Returns `[]` if `runes` doesn't resolve to a spell at all.
+ *
+ * Used by the client to drive the per-rune damage bubble UI; lives in the
+ * shared layer alongside `resolveSpell` so the rule for "which runes
+ * counted" stays in one place.
+ */
+export function getContributingRuneIndices(runes: RuneData[]): number[] {
+    if (runes.length === 0) return [];
+    const spell = resolveSpell(runes);
+    if (!spell) return [];
+
+    if (spell.isCombo && spell.comboElements) {
+        const combo = spell.comboElements as readonly string[];
+        const out: number[] = [];
+        for (let i = 0; i < runes.length; i++) {
+            if (combo.includes(runes[i].element)) out.push(i);
+        }
+        return out;
+    }
+
+    // Single-element: take the first `tier` runes whose element matches.
+    const out: number[] = [];
+    for (let i = 0; i < runes.length && out.length < spell.tier; i++) {
+        if (runes[i].element === spell.element) out.push(i);
+    }
+    return out;
+}

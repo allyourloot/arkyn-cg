@@ -3,7 +3,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: clamp(8px, 1.5vw, 16px) 0 clamp(4px, 0.8vw, 8px);
+    /* Pushed down from the top of the viewport so the bar isn't pinned to
+       the very edge — leaves breathing room above the enemy. */
+    padding: clamp(36px, 5vw, 64px) 0 clamp(4px, 0.8vw, 8px);
     gap: 4px;
     width: 100%;
     min-width: 0;
@@ -80,21 +82,6 @@
     }
 }
 
-.name {
-    font-size: clamp(18px, 2.2vw, 26px);
-    font-family: 'Sburbits', system-ui, monospace;
-    font-weight: normal;
-    color: #d4a574;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
-    line-height: 1;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 /* Positioning anchor for the floating damage number that needs to escape
    .barOuter (which clips overflow to keep the bar fill inside its border).
    The anchor matches the bar's max-width so the damage number centers on
@@ -102,27 +89,83 @@
 .barAnchor {
     position: relative;
     width: 100%;
-    max-width: 320px;
+    max-width: clamp(320px, 36vw, 520px);
     display: flex;
     justify-content: center;
 }
 
 .barOuter {
+    box-sizing: border-box;
     width: 100%;
-    max-width: 320px;
+    max-width: clamp(320px, 36vw, 520px);
     min-width: 0;
-    height: clamp(18px, 2vw, 24px);
-    border-radius: 4px;
-    border: 2px solid #5a4a3a;
-    background-color: rgba(20, 15, 10, 0.7);
+    height: clamp(40px, 4.5vw, 60px);
+    /* 9-slice frame.png as the bar's chrome — sample 24px corner slices but
+       render at 8px on screen so the frame is thin enough to leave room for
+       the fill while still reading as pixel-art chrome. */
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 8px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
     position: relative;
     overflow: hidden;
+    image-rendering: pixelated;
 }
 
+/* Pixel-art fill: the inline backgroundColor sets the base color, and on
+   top of it we layer
+     1) a tiled diagonal stripe pattern that scrolls continuously — the
+        classic SNES/JRPG "charging energy" texture,
+     2) a 3-band stepped highlight/shadow with HARD edges (top bright row,
+        middle base color, bottom shadow row).
+   `image-rendering: pixelated` keeps any scaled detail crisp. */
 .barFill {
     height: 100%;
-    transition: width 0.4s ease, background-color 0.3s ease;
-    border-radius: 2px;
+    /* Stepped width transition — the bar loses HP in chunky frames instead
+       of gliding smoothly. */
+    transition: width 0.35s steps(16, end), background-color 0.2s steps(4, end);
+    position: relative;
+    background-image:
+        /* Diagonal stripes — sharp, repeating, hardware-tile style. */
+        linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.22) 0%,
+            rgba(255, 255, 255, 0.22) 25%,
+            transparent 25%,
+            transparent 50%,
+            rgba(255, 255, 255, 0.22) 50%,
+            rgba(255, 255, 255, 0.22) 75%,
+            transparent 75%,
+            transparent 100%
+        ),
+        /* 3-band stepped highlight with HARD edges. */
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.55) 0%,
+            rgba(255, 255, 255, 0.55) 28%,
+            transparent 28%,
+            transparent 70%,
+            rgba(0, 0, 0, 0.45) 70%,
+            rgba(0, 0, 0, 0.45) 100%
+        );
+    /* Tile size for the diagonal stripe pattern. Animating background-
+       position by exactly one tile width gives a seamless loop. */
+    background-size: 14px 14px, 100% 100%;
+    background-repeat: repeat, no-repeat;
+    /* Slow chunky stepped scroll so the stripes "tick" forward in discrete
+       pixel-art frames. */
+    animation: barStripes 3s steps(8, end) infinite;
+    image-rendering: pixelated;
+}
+
+@keyframes barStripes {
+    0% {
+        background-position: 0 0, 0 0;
+    }
+    100% {
+        background-position: 14px 0, 0 0;
+    }
 }
 
 .barText {
@@ -131,10 +174,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: clamp(16px, 1.8vw, 22px);
+    font-size: clamp(18px, 2.2vw, 28px);
     font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
     color: #fff;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
+    text-shadow:
+        2px 2px 0 rgba(0, 0, 0, 0.9),
+        0 0 4px rgba(0, 0, 0, 0.8);
     line-height: 1;
+    /* Sit above the shimmer animation so the text never feels washed out. */
+    z-index: 1;
 }

@@ -5,7 +5,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 100;
+    /* Must beat selected hand-card slot z-index (100) and the round-end
+       overlay (200), since both share the same overlay root and selected
+       runes would otherwise poke through the modal. */
+    z-index: 1000;
     pointer-events: auto;
     animation: fade-in 0.15s ease-out;
 }

@@ -28,7 +28,7 @@ export type {
 export { SPELL_TABLE, COMBO_TABLE, TIER_MULTIPLIERS } from "./spellTable";
 export type { SpellInfo } from "./spellTable";
 
-export { resolveSpell } from "./resolveSpell";
+export { resolveSpell, getContributingRuneIndices } from "./resolveSpell";
 export type { ResolvedSpell, RuneData } from "./resolveSpell";
 
 export { calculateDamage } from "./calculateDamage";

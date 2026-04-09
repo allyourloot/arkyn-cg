@@ -1,3 +1,6 @@
+import frameUrl from "/assets/ui/frame.png?url";
+import innerFrameUrl from "/assets/ui/inner-frame.png?url";
+
 export const ELEMENT_COLORS: Record<string, string> = {
     fire: "#e84430",
     water: "#3b82f6",
@@ -33,3 +36,26 @@ export const ELEMENT_BG_COLORS: Record<string, string> = {
 export const TIER_LABELS = ["", "I", "II", "III", "IV", "V"];
 
 export const FONT_STACK = "'Sburbits', system-ui, monospace";
+
+// ----- Panel chrome -----
+
+/**
+ * CSS variables for the standard panel chrome (frame border + sectioned
+ * inner panels). All panels share the same `--panel-bg` and `--section-bg`
+ * art; pass an optional `headingUrl` to set `--heading-bg` for panels that
+ * have a tinted title strip (e.g. gold for the enemy panel, blue for the
+ * spell preview). Panels without a heading strip can omit the argument.
+ *
+ * Centralizes the URL imports so anyone changing the panel art only has
+ * to update this file.
+ */
+export function createPanelStyleVars(headingUrl?: string): React.CSSProperties {
+    const vars: Record<string, string> = {
+        "--panel-bg": `url(${frameUrl})`,
+        "--section-bg": `url(${innerFrameUrl})`,
+    };
+    if (headingUrl !== undefined) {
+        vars["--heading-bg"] = `url(${headingUrl})`;
+    }
+    return vars as React.CSSProperties;
+}

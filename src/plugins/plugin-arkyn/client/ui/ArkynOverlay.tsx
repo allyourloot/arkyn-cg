@@ -1,4 +1,12 @@
-import { useGamePhase, useLastSpellName, useLastDamage, sendReady } from "../arkynStore";
+import { useEffect, useState } from "react";
+import {
+    useGamePhase,
+    useLastSpellName,
+    useLastDamage,
+    useIsCastAnimating,
+    sendReady,
+} from "../arkynStore";
+import { ENEMY_DAMAGE_HIT_MS } from "../arkynAnimations";
 import EnemyHealthBar from "./EnemyHealthBar";
 import SpellPreview from "./SpellPreview";
 import PlayArea from "./PlayArea";
@@ -18,6 +26,24 @@ export default function ArkynOverlay() {
     const gamePhase = useGamePhase();
     const lastSpellName = useLastSpellName();
     const lastDamage = useLastDamage();
+    const isCastAnimating = useIsCastAnimating();
+
+    // The server flips gamePhase to "round_end" the instant the killing-blow
+    // cast is processed (~500ms in), but the client cast animation needs to
+    // finish — settle, raise, bubbles, dissolve, then the enemy floating
+    // damage hit — before the "Enemy Defeated!" overlay appears. We hold the
+    // overlay until isCastAnimating clears (which fires the damage hit) and
+    // wait one more ENEMY_DAMAGE_HIT_MS for the floating number to play out.
+    const [showRoundEnd, setShowRoundEnd] = useState(false);
+    useEffect(() => {
+        if (gamePhase !== "round_end") {
+            setShowRoundEnd(false);
+            return;
+        }
+        if (isCastAnimating) return;
+        const t = setTimeout(() => setShowRoundEnd(true), ENEMY_DAMAGE_HIT_MS);
+        return () => clearTimeout(t);
+    }, [gamePhase, isCastAnimating]);
 
     if (gamePhase === "waiting") {
         return (
@@ -71,7 +97,7 @@ export default function ArkynOverlay() {
             <BackgroundMusic />
 
             {/* Round End overlay */}
-            {gamePhase === "round_end" && (
+            {showRoundEnd && (
                 <div className={styles.roundEnd}>
                     <span className={styles.roundEndTitle}>
                         Enemy Defeated!

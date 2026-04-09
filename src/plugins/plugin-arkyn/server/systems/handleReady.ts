@@ -1,8 +1,6 @@
-import { HAND_SIZE, type ArkynState } from "../../shared";
+import { type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
-import { createPouch } from "../utils/createPouch";
-import { drawRunes, syncPlayerPouch } from "../utils/drawRunes";
-import { setPouch } from "../resources/playerPouch";
+import { initPlayerForRound } from "../utils/initPlayerForRound";
 import { spawnEnemy } from "./handleJoin";
 
 const logger = new Logger("ArkynReady");
@@ -22,31 +20,9 @@ export function handleReady(
         return;
     }
 
-    // Next round
+    // Next round — reset player and spawn the next enemy
     state.currentRound++;
-
-    // Reset player state
-    while (player.hand.length > 0) player.hand.pop();
-    while (player.playedRunes.length > 0) player.playedRunes.pop();
-    player.lastSpellName = "";
-    player.lastSpellTier = 0;
-    player.lastDamage = 0;
-    player.castsRemaining = 3;
-    player.discardsRemaining = 3;
-
-    // Create fresh pouch for the new round
-    const pouch = createPouch();
-    setPouch(client.sessionId, pouch);
-
-    // Draw new hand
-    const drawn = drawRunes(pouch, HAND_SIZE);
-    for (const rune of drawn) {
-        player.hand.push(rune);
-    }
-    player.pouchSize = pouch.length;
-    syncPlayerPouch(player, pouch);
-
-    // Spawn new enemy
+    initPlayerForRound(player, client.sessionId);
     spawnEnemy(state);
 
     state.gamePhase = "playing";

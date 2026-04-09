@@ -1,9 +1,9 @@
-import { HAND_SIZE, MAX_PLAY, type ArkynState } from "../../shared";
+import { type ArkynState } from "../../shared";
 import { resolveSpell } from "../../shared/resolveSpell";
 import { Logger } from "@core/shared/utils";
 import { calculateDamage } from "../utils/calculateDamage";
-import { drawRunes, syncPlayerPouch } from "../utils/drawRunes";
-import { getPouch } from "../resources/playerPouch";
+import { refillHand } from "../utils/refillHand";
+import { removeRunesFromHand, validateRuneSelection } from "./utils/runeSelection";
 
 const logger = new Logger("ArkynCast");
 
@@ -12,44 +12,13 @@ export function handleCast(
     client: { sessionId: string },
     payload: unknown,
 ): void {
-    if (state.gamePhase !== "playing") {
-        logger.warn(`Cast rejected: game phase is ${state.gamePhase}`);
-        return;
-    }
-
-    const player = state.players.get(client.sessionId);
-    if (!player) {
-        logger.warn(`Cast rejected: player ${client.sessionId} not found`);
-        return;
-    }
-
-    if (player.castsRemaining <= 0) {
-        logger.warn(`Cast rejected: no casts remaining`);
-        return;
-    }
-
-    // Validate payload
-    const data = payload as { selectedIndices?: number[] };
-    const indices = data?.selectedIndices;
-    if (!Array.isArray(indices) || indices.length === 0 || indices.length > MAX_PLAY) {
-        logger.warn(`Cast rejected: invalid indices`);
-        return;
-    }
-
-    // Validate all indices are within hand bounds
-    const handSize = player.hand.length;
-    for (const idx of indices) {
-        if (!Number.isInteger(idx) || idx < 0 || idx >= handSize) {
-            logger.warn(`Cast rejected: index ${idx} out of bounds (hand size ${handSize})`);
-            return;
-        }
-    }
-
-    // Check for duplicate indices
-    if (new Set(indices).size !== indices.length) {
-        logger.warn(`Cast rejected: duplicate indices`);
-        return;
-    }
+    const result = validateRuneSelection(state, client, payload, {
+        logger,
+        action: "Cast",
+        budgetField: "castsRemaining",
+    });
+    if (!result) return;
+    const { player, indices } = result;
 
     // Extract selected runes (by index)
     const selectedRunes = indices.map(i => player.hand[i]);
@@ -70,11 +39,8 @@ export function handleCast(
         player.playedRunes.push(rune);
     }
 
-    // Remove played runes from hand (remove in reverse order to preserve indices)
-    const sortedIndices = [...indices].sort((a, b) => b - a);
-    for (const idx of sortedIndices) {
-        player.hand.splice(idx, 1);
-    }
+    // Remove played runes from hand
+    removeRunesFromHand(player, indices);
 
     // Apply damage
     state.enemy.currentHp = Math.max(0, state.enemy.currentHp - damage);
@@ -95,14 +61,5 @@ export function handleCast(
     }
 
     // Draw back to hand size
-    const pouch = getPouch(client.sessionId);
-    if (pouch && player.hand.length < HAND_SIZE) {
-        const toDraw = HAND_SIZE - player.hand.length;
-        const drawn = drawRunes(pouch, toDraw);
-        for (const rune of drawn) {
-            player.hand.push(rune);
-        }
-        player.pouchSize = pouch.length;
-        syncPlayerPouch(player, pouch);
-    }
+    refillHand(player, client.sessionId);
 }

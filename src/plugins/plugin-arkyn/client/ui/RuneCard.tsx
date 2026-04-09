@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from "react";
 import type { RuneClientData } from "../arkynStore";
-import { getRuneImageUrl, getBaseRuneImageUrl } from "./runeAssets";
+import RuneImage from "./RuneImage";
 import styles from "./RuneCard.module.css";
 
 const MAX_TILT_DEG = 14;
@@ -33,9 +33,6 @@ function RuneCardImpl({
     rotation = 0,
     tiltDisabled = false,
 }: RuneCardProps) {
-    const runeUrl = getRuneImageUrl(rune.element);
-    const baseUrl = getBaseRuneImageUrl(rune.rarity);
-
     const cardRef = useRef<HTMLDivElement>(null);
     const [tilt, setTilt] = useState({ rotX: 0, rotY: 0 });
 
@@ -92,14 +89,11 @@ function RuneCardImpl({
                         transform: `perspective(${PERSPECTIVE_PX}px) rotateX(${tilt.rotX}deg) rotateY(${tilt.rotY}deg)`,
                     }}
                 >
-                    {/* Base rarity image (bottom layer) */}
-                    {baseUrl && (
-                        <img src={baseUrl} alt="" className={styles.layer} draggable={false} />
-                    )}
-                    {/* Rune type icon (top layer) */}
-                    {runeUrl && (
-                        <img src={runeUrl} alt={rune.element} className={styles.layer} draggable={false} />
-                    )}
+                    <RuneImage
+                        rarity={rune.rarity}
+                        element={rune.element}
+                        className={styles.layer}
+                    />
                 </div>
             </div>
         </div>

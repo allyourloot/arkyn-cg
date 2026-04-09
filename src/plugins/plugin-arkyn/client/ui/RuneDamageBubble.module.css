@@ -21,8 +21,13 @@
     /* The animation drives the actual translate/opacity. The transform
        above is just the resting/anchoring transform. `both` fill mode
        makes the 0% keyframe (opacity 0) apply during the staggered
-       animation-delay, so the bubble stays hidden until its turn. */
-    animation: damageBubble 1000ms cubic-bezier(0.22, 1, 0.36, 1) both;
+       animation-delay, so the bubble stays hidden until its turn.
+       ease-out-expo curve = very fast start, smooth tail, no overshoot
+       in the curve itself (the "pop" comes from the keyframe scale peak,
+       not a wobbly bezier). Together with the 4-keyframe shape this
+       reads as a clean snap instead of a jittery glide. */
+    animation: damageBubble 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: transform, opacity;
     /* Subtle drop shadow under the stroke for depth without competing with
        the colored outline. */
     text-shadow:
@@ -33,21 +38,18 @@
 @keyframes damageBubble {
     0% {
         opacity: 0;
-        transform: translate(-50%, 8px) scale(0.6);
+        transform: translate(-50%, 6px) scale(0.55);
     }
-    18% {
+    22% {
         opacity: 1;
-        transform: translate(-50%, -6px) scale(1.15);
+        transform: translate(-50%, -10px) scale(1.18);
     }
-    32% {
-        transform: translate(-50%, -10px) scale(1);
-    }
-    78% {
+    34% {
         opacity: 1;
-        transform: translate(-50%, -28px) scale(1);
+        transform: translate(-50%, -14px) scale(1);
     }
     100% {
         opacity: 0;
-        transform: translate(-50%, -44px) scale(0.95);
+        transform: translate(-50%, -38px) scale(1);
     }
 }

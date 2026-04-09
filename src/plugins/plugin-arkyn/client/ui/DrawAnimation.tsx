@@ -1,24 +1,11 @@
-import { useEffect, useState } from "react";
 import { useDrawingRunes } from "../arkynStore";
-import { getRuneImageUrl, getBaseRuneImageUrl } from "./runeAssets";
+import { useFlyTrigger } from "./hooks/useFlyTrigger";
+import RuneImage from "./RuneImage";
 import styles from "./DrawAnimation.module.css";
 
 export default function DrawAnimation() {
     const drawingRunes = useDrawingRunes();
-    const [animated, setAnimated] = useState(false);
-
-    useEffect(() => {
-        if (drawingRunes.length > 0) {
-            setAnimated(false);
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    setAnimated(true);
-                });
-            });
-        } else {
-            setAnimated(false);
-        }
-    }, [drawingRunes]);
+    const animated = useFlyTrigger(drawingRunes);
 
     if (drawingRunes.length === 0) return null;
 
@@ -31,9 +18,6 @@ export default function DrawAnimation() {
     return (
         <div className={styles.layer}>
             {drawingRunes.map((dr, i) => {
-                const baseUrl = getBaseRuneImageUrl(dr.rune.rarity);
-                const runeUrl = getRuneImageUrl(dr.rune.element);
-
                 const half = dr.size / 2;
                 const x = animated ? dr.toX - half : originX - half;
                 const y = animated ? dr.toY - half : originY - half;
@@ -53,12 +37,11 @@ export default function DrawAnimation() {
                             opacity: animated ? 1 : 0,
                         }}
                     >
-                        {baseUrl && (
-                            <img src={baseUrl} alt="" className={styles.runeImg} />
-                        )}
-                        {runeUrl && (
-                            <img src={runeUrl} alt={dr.rune.element} className={styles.runeImg} />
-                        )}
+                        <RuneImage
+                            rarity={dr.rune.rarity}
+                            element={dr.rune.element}
+                            className={styles.runeImg}
+                        />
                     </div>
                 );
             })}

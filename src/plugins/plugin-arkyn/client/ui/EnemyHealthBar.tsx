@@ -2,12 +2,13 @@ import { useEffect, useState, type CSSProperties } from "react";
 import {
     useDisplayedEnemyHp,
     useEnemyMaxHp,
-    useEnemyName,
     useEnemyDamageHit,
     ENEMY_DAMAGE_HIT_MS,
 } from "../arkynStore";
-import { ELEMENT_COLORS } from "./styles";
+import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import styles from "./EnemyHealthBar.module.css";
+
+const wrapperStyleVars = createPanelStyleVars();
 
 interface ActiveHit {
     amount: number;
@@ -21,7 +22,6 @@ export default function EnemyHealthBar() {
     // drops in sync with the dissolve finale (not when the cast is sent).
     const hp = useDisplayedEnemyHp();
     const maxHp = useEnemyMaxHp();
-    const name = useEnemyName();
     const enemyDamageHit = useEnemyDamageHit();
 
     // Local active hit drives both the floating damage number and the
@@ -62,8 +62,7 @@ export default function EnemyHealthBar() {
     const damageFloatStyle = { "--stroke-color": damageStrokeColor } as CSSProperties;
 
     return (
-        <div className={wrapperClassName}>
-            <span className={styles.name}>{name}</span>
+        <div className={wrapperClassName} style={wrapperStyleVars}>
             <div className={styles.barAnchor}>
                 <div className={styles.barOuter}>
                     <div

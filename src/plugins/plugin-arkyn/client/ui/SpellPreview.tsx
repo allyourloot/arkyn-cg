@@ -6,18 +6,12 @@ import {
 } from "../arkynStore";
 import { resolveSpell } from "../../shared/resolveSpell";
 import { TIER_MULTIPLIERS } from "../../shared/spellTable";
-import { ELEMENT_COLORS, TIER_LABELS } from "./styles";
+import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
-import frameUrl from "/assets/ui/frame.png?url";
-import innerFrameUrl from "/assets/ui/inner-frame.png?url";
 import innerFrameBlueUrl from "/assets/ui/inner-frame-blue.png?url";
 import styles from "./SpellPreview.module.css";
 
-const panelStyleVars = {
-    "--panel-bg": `url(${frameUrl})`,
-    "--section-bg": `url(${innerFrameUrl})`,
-    "--heading-bg": `url(${innerFrameBlueUrl})`,
-} as React.CSSProperties;
+const panelStyleVars = createPanelStyleVars(innerFrameBlueUrl);
 
 export default function SpellPreview() {
     const hand = useHand();

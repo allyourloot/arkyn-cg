@@ -3,6 +3,7 @@ import type { RuneClientData } from "../arkynStore";
 import { getRuneImageUrl, getBaseRuneImageUrl } from "./runeAssets";
 import { ELEMENT_COLORS } from "./styles";
 import { DISSOLVE_FRAGMENT_SHADER, DISSOLVE_VERTEX_SHADER } from "./DissolveShader.frag";
+import { createProgram } from "./utils/glProgram";
 import styles from "./DissolveShader.module.css";
 
 interface Props {
@@ -11,35 +12,6 @@ interface Props {
     startTime: number;
     /** Total dissolve duration in milliseconds. */
     duration: number;
-}
-
-function compileShader(gl: WebGLRenderingContext, type: number, src: string): WebGLShader | null {
-    const sh = gl.createShader(type);
-    if (!sh) return null;
-    gl.shaderSource(sh, src);
-    gl.compileShader(sh);
-    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-        console.error("Dissolve shader compile error:", gl.getShaderInfoLog(sh));
-        gl.deleteShader(sh);
-        return null;
-    }
-    return sh;
-}
-
-function createProgram(gl: WebGLRenderingContext, vs: string, fs: string): WebGLProgram | null {
-    const v = compileShader(gl, gl.VERTEX_SHADER, vs);
-    const f = compileShader(gl, gl.FRAGMENT_SHADER, fs);
-    if (!v || !f) return null;
-    const p = gl.createProgram();
-    if (!p) return null;
-    gl.attachShader(p, v);
-    gl.attachShader(p, f);
-    gl.linkProgram(p);
-    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
-        console.error("Dissolve program link error:", gl.getProgramInfoLog(p));
-        return null;
-    }
-    return p;
 }
 
 function hexToRgbTriple(hex: string): [number, number, number] {
@@ -61,7 +33,7 @@ export default function DissolveShader({ rune, startTime, duration }: Props) {
         const gl = canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false, antialias: false });
         if (!gl) return;
 
-        const program = createProgram(gl, DISSOLVE_VERTEX_SHADER, DISSOLVE_FRAGMENT_SHADER);
+        const program = createProgram(gl, DISSOLVE_VERTEX_SHADER, DISSOLVE_FRAGMENT_SHADER, "dissolve");
         if (!program) return;
         gl.useProgram(program);
 

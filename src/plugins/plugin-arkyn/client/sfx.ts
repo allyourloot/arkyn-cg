@@ -1,5 +1,8 @@
 import selectRuneUrl from "/assets/audio/sfx/select-rune.mp3?url";
 import placeRuneUrl from "/assets/audio/sfx/place-rune.mp3?url";
+import countUrl from "/assets/audio/sfx/count.mp3?url";
+import damageUrl from "/assets/audio/sfx/damage.mp3?url";
+import castUrl from "/assets/audio/sfx/cast.mp3?url";
 
 // Preload one Audio per sfx so the browser caches the buffer. Each play
 // clones the node so rapid plays can overlap without cutting each
@@ -24,3 +27,6 @@ export const playDeselectRune = () => playRuneSfx(0.85);
 export const playPickupRune = () => playRuneSfx(1.3);
 export const playDropRune = () => playRuneSfx(0.7);
 export const playPlaceRune = makeSfx(placeRuneUrl, 0.9);
+export const playCount = makeSfx(countUrl, 0.9);
+export const playDamage = makeSfx(damageUrl, 0.9);
+export const playCast = makeSfx(castUrl, 0.9);

@@ -1,4 +1,5 @@
-import type { ArkynState } from "../../../shared";
+import type { ArraySchema } from "@colyseus/schema";
+import type { ArkynState, RuneInstance } from "../../../shared";
 import {
     setHand,
     setPlayedRunes,
@@ -23,10 +24,54 @@ import {
     type RuneClientData,
 } from "../../arkynStore";
 
+function runeFromSchema(r: RuneInstance): RuneClientData {
+    return { id: r.id, element: r.element, rarity: r.rarity, level: r.level };
+}
+
+/**
+ * Allocation-free identity check between a Schema rune array and the last
+ * snapshot we sent to the store. Rune ids are server-assigned and unique
+ * (createPouch.ts), and rune fields don't mutate after construction, so
+ * matching length + matching ids in order is enough to know the array is
+ * unchanged. The common case (no change) returns without allocating.
+ */
+function runeArraysEqualById(
+    schemaArr: ArraySchema<RuneInstance>,
+    prev: RuneClientData[],
+): boolean {
+    if (schemaArr.length !== prev.length) return false;
+    for (let i = 0; i < schemaArr.length; i++) {
+        if (schemaArr[i].id !== prev[i].id) return false;
+    }
+    return true;
+}
+
+function stringArraysEqual(
+    schemaArr: ArraySchema<string>,
+    prev: string[],
+): boolean {
+    if (schemaArr.length !== prev.length) return false;
+    for (let i = 0; i < schemaArr.length; i++) {
+        if (schemaArr[i] !== prev[i]) return false;
+    }
+    return true;
+}
+
+function snapshotRunes(schemaArr: ArraySchema<RuneInstance>): RuneClientData[] {
+    const out: RuneClientData[] = new Array(schemaArr.length);
+    for (let i = 0; i < schemaArr.length; i++) {
+        out[i] = runeFromSchema(schemaArr[i]);
+    }
+    return out;
+}
+
 export function createSyncArkynStateSystem(state: ArkynState, sessionId: string) {
-    let prevHandJson = "";
+    let prevHand: RuneClientData[] = [];
     let prevHandIds = new Set<string>();
-    let prevPlayedJson = "";
+    let prevPlayed: RuneClientData[] = [];
+    let prevPouch: RuneClientData[] = [];
+    let prevRes: string[] = [];
+    let prevWeak: string[] = [];
     let prevPhase = "";
     let prevEnemyHp = -1;
     let prevEnemyMaxHp = -1;
@@ -37,7 +82,6 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevDamage = -1;
     let prevRound = -1;
     let prevPouchSize = -1;
-    let prevPouchJson = "";
     let prevCasts = -1;
     let prevDiscards = -1;
 
@@ -45,21 +89,15 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         const player = state.players.get(sessionId);
         if (!player) return;
 
-        // Sync hand
-        const handData: RuneClientData[] = [];
-        for (let i = 0; i < player.hand.length; i++) {
-            const r = player.hand[i];
-            handData.push({ id: r.id, element: r.element, rarity: r.rarity, level: r.level });
-        }
-        const handJson = JSON.stringify(handData);
-        if (handJson !== prevHandJson) {
-            // Detect runes that weren't in the previous hand (newly drawn)
+        // Sync hand — only allocate when ids actually changed.
+        if (!runeArraysEqualById(player.hand, prevHand)) {
+            const handData = snapshotRunes(player.hand);
             const currentIds = new Set(handData.map(r => r.id));
             const freshRunes = handData.filter(r => !prevHandIds.has(r.id));
 
             setHand(handData);
             clearSelectedIndices();
-            prevHandJson = handJson;
+            prevHand = handData;
             prevHandIds = currentIds;
 
             // Trigger draw animation (skip initial draw). Look up display
@@ -75,15 +113,9 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         }
 
         // Sync played runes
-        const playedData: RuneClientData[] = [];
-        for (let i = 0; i < player.playedRunes.length; i++) {
-            const r = player.playedRunes[i];
-            playedData.push({ id: r.id, element: r.element, rarity: r.rarity, level: r.level });
-        }
-        const playedJson = JSON.stringify(playedData);
-        if (playedJson !== prevPlayedJson) {
-            setPlayedRunes(playedData);
-            prevPlayedJson = playedJson;
+        if (!runeArraysEqualById(player.playedRunes, prevPlayed)) {
+            prevPlayed = snapshotRunes(player.playedRunes);
+            setPlayedRunes(prevPlayed);
         }
 
         // Sync game phase
@@ -111,18 +143,16 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
                 prevEnemyElement = state.enemy.element;
             }
 
-            // Resistances and weaknesses (simple array comparison)
-            const res: string[] = [];
-            for (let i = 0; i < state.enemy.resistances.length; i++) {
-                res.push(state.enemy.resistances[i]);
+            // Resistances / weaknesses — gated so the setters (and the
+            // notify they trigger) don't fire on every tick.
+            if (!stringArraysEqual(state.enemy.resistances, prevRes)) {
+                prevRes = Array.from(state.enemy.resistances);
+                setEnemyResistances(prevRes);
             }
-            setEnemyResistances(res);
-
-            const weak: string[] = [];
-            for (let i = 0; i < state.enemy.weaknesses.length; i++) {
-                weak.push(state.enemy.weaknesses[i]);
+            if (!stringArraysEqual(state.enemy.weaknesses, prevWeak)) {
+                prevWeak = Array.from(state.enemy.weaknesses);
+                setEnemyWeaknesses(prevWeak);
             }
-            setEnemyWeaknesses(weak);
         }
 
         // Sync spell info
@@ -150,15 +180,9 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         }
 
         // Sync pouch contents (used by the pouch modal)
-        const pouchData: RuneClientData[] = [];
-        for (let i = 0; i < player.pouch.length; i++) {
-            const r = player.pouch[i];
-            pouchData.push({ id: r.id, element: r.element, rarity: r.rarity, level: r.level });
-        }
-        const pouchJson = JSON.stringify(pouchData);
-        if (pouchJson !== prevPouchJson) {
-            setPouchContents(pouchData);
-            prevPouchJson = pouchJson;
+        if (!runeArraysEqualById(player.pouch, prevPouch)) {
+            prevPouch = snapshotRunes(player.pouch);
+            setPouchContents(prevPouch);
         }
         if (player.castsRemaining !== prevCasts) {
             setCastsRemaining(player.castsRemaining);

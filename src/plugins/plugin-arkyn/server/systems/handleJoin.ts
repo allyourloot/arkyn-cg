@@ -1,8 +1,8 @@
-import { ArkynPlayerState, EnemyState, HAND_SIZE, type ArkynState } from "../../shared";
+import { ArkynPlayerState, EnemyState, type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
-import { createPouch } from "../utils/createPouch";
-import { drawRunes, syncPlayerPouch } from "../utils/drawRunes";
-import { setPouch } from "../resources/playerPouch";
+import { clearArraySchema } from "../utils/clearArraySchema";
+import { initPlayerForRound } from "../utils/initPlayerForRound";
+import { removePouch } from "../resources/playerPouch";
 import { getEnemyForRound } from "../utils/enemyDefinitions";
 
 const logger = new Logger("ArkynJoin");
@@ -11,29 +11,19 @@ export function handleJoin(
     state: ArkynState,
     client: { sessionId: string },
 ): void {
-    // Don't re-join if already in game
+    // Don't re-join if already in game — clean up the previous player + pouch
+    // before creating fresh state, otherwise the stale pouch lingers in the
+    // resource map between the delete and the next setPouch.
     if (state.players.has(client.sessionId)) {
         logger.info(`Player ${client.sessionId} already in game, re-initializing`);
         state.players.delete(client.sessionId);
+        removePouch(client.sessionId);
     }
 
-    // Create player state
+    // Create player state and run the standard round-init flow
     const player = new ArkynPlayerState();
-    player.castsRemaining = 3;
-    player.discardsRemaining = 3;
     state.players.set(client.sessionId, player);
-
-    // Create and store pouch
-    const pouch = createPouch();
-    setPouch(client.sessionId, pouch);
-
-    // Draw initial hand
-    const drawn = drawRunes(pouch, HAND_SIZE);
-    for (const rune of drawn) {
-        player.hand.push(rune);
-    }
-    player.pouchSize = pouch.length;
-    syncPlayerPouch(player, pouch);
+    initPlayerForRound(player, client.sessionId);
 
     // Spawn enemy for round 1
     spawnEnemy(state);
@@ -42,7 +32,7 @@ export function handleJoin(
     state.currentRound = 1;
     state.gamePhase = "playing";
 
-    logger.info(`Player ${client.sessionId} joined. Hand: ${player.hand.length}, Pouch: ${pouch.length}`);
+    logger.info(`Player ${client.sessionId} joined. Hand: ${player.hand.length}, Pouch: ${player.pouchSize}`);
 }
 
 function spawnEnemy(state: ArkynState): void {
@@ -56,8 +46,8 @@ function spawnEnemy(state: ArkynState): void {
     enemy.element = def.element;
 
     // Clear and set resistances/weaknesses
-    while (enemy.resistances.length > 0) enemy.resistances.pop();
-    while (enemy.weaknesses.length > 0) enemy.weaknesses.pop();
+    clearArraySchema(enemy.resistances);
+    clearArraySchema(enemy.weaknesses);
     for (const r of def.resistances) enemy.resistances.push(r);
     for (const w of def.weaknesses) enemy.weaknesses.push(w);
 

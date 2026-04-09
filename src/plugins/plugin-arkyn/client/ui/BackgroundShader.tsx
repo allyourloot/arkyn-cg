@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./BackgroundShader.frag";
+import { createProgram } from "./utils/glProgram";
 import styles from "./BackgroundShader.module.css";
 
 // Each rendered shader pixel becomes a PIXEL_SIZE x PIXEL_SIZE block on screen
@@ -20,43 +21,6 @@ const HAS_HOVER =
 const PIXEL_SIZE = HAS_HOVER ? 3 : 5;
 const FRAME_INTERVAL_MS = HAS_HOVER ? 0 : 1000 / 30;
 
-function compileShader(
-    gl: WebGLRenderingContext,
-    type: number,
-    source: string,
-): WebGLShader | null {
-    const shader = gl.createShader(type);
-    if (!shader) return null;
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error("Shader compile error:", gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
-        return null;
-    }
-    return shader;
-}
-
-function createProgram(
-    gl: WebGLRenderingContext,
-    vsSource: string,
-    fsSource: string,
-): WebGLProgram | null {
-    const vs = compileShader(gl, gl.VERTEX_SHADER, vsSource);
-    const fs = compileShader(gl, gl.FRAGMENT_SHADER, fsSource);
-    if (!vs || !fs) return null;
-    const program = gl.createProgram();
-    if (!program) return null;
-    gl.attachShader(program, vs);
-    gl.attachShader(program, fs);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        console.error("Program link error:", gl.getProgramInfoLog(program));
-        return null;
-    }
-    return program;
-}
-
 export default function BackgroundShader() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -70,7 +34,7 @@ export default function BackgroundShader() {
             return;
         }
 
-        const program = createProgram(gl, VERTEX_SHADER, FRAGMENT_SHADER);
+        const program = createProgram(gl, VERTEX_SHADER, FRAGMENT_SHADER, "background");
         if (!program) return;
         gl.useProgram(program);
 
