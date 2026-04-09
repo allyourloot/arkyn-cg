@@ -101,13 +101,40 @@
     line-height: 1;
 }
 
+/* Dedicated damage counter container — its own 9-slice section using the
+   red inner-frame so the damage number stands out from the surrounding
+   spell info. The counter inside ticks up during a cast (driven by GSAP
+   in SpellPreview.tsx) and pops on every increment. */
+.damageSection {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    flex-shrink: 0;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--damage-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    image-rendering: pixelated;
+}
+
 .damage {
-    font-size: clamp(22px, 2.6vw, 32px);
+    font-size: clamp(34px, 4vw, 52px);
     font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
-    color: #ff6b6b;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    color: #ffffff;
+    text-shadow:
+        2px 2px 0 rgba(0, 0, 0, 0.85),
+        0 0 8px rgba(0, 0, 0, 0.5);
     line-height: 1;
+    /* `display: inline-block` lets the GSAP scale tween apply cleanly to
+       the span — inline elements don't accept transform. */
+    display: inline-block;
+    transform-origin: center center;
 }
 
 .description {

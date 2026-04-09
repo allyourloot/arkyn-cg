@@ -127,6 +127,13 @@ let isDiscardAnimating = false;
 let drawingRuneIds: string[] = [];
 let drawingRunes: DrawingRune[] = [];
 
+// Live damage counter that ticks up in lockstep with the per-rune damage
+// bubbles during a cast. SpellPreview reads this and pops its damage number
+// on every increment for a "number go up" dopamine effect. Reset to 0 at
+// the start of every cast; reaches the final cast damage by the time the
+// last bubble fires.
+let castDamageCounter = 0;
+
 // ----- Hooks -----
 export function useDissolvingRunes() {
     return useSyncExternalStore(subscribe, () => dissolvingRunes);
@@ -160,6 +167,9 @@ export function useDrawingRuneIds() {
 }
 export function useDrawingRunes() {
     return useSyncExternalStore(subscribe, () => drawingRunes);
+}
+export function useCastDamageCounter() {
+    return useSyncExternalStore(subscribe, () => castDamageCounter);
 }
 
 // ----- Helpers -----
@@ -293,18 +303,27 @@ export function castSpell() {
     // colorway reads as one cohesive spell impact.
     const spellElement = resolvedSpell?.element ?? "";
     const bubbles: (RuneDamageBubble | null)[] = new Array(MAX_PLAY).fill(null);
+    // Cumulative damage values per bubble fire — index `i` is the running
+    // total after the i-th contributing rune's bubble has popped. Drives
+    // the live SpellPreview damage counter so it ticks 0 → final in lock-
+    // step with the floating numbers.
+    const cumulativeBubbleAmounts: number[] = [];
+    let cumulativeAcc = 0;
     for (let i = 0; i < contributingIndices.length; i++) {
         const slotIdx = contributingIndices[i];
         const rune = castRunes[slotIdx];
         if (!rune) continue;
+        const amount = perRuneBase + (i < perRuneRemainder ? 1 : 0);
         bubbles[slotIdx] = {
-            amount: perRuneBase + (i < perRuneRemainder ? 1 : 0),
+            amount,
             spellElement,
             seq: ++bubbleSeqCounter,
             // Each successive contributing rune's bubble waits its turn
             // so the damage reads like a counter ticking up.
             delayMs: i * BUBBLE_STAGGER_MS,
         };
+        cumulativeAcc += amount;
+        cumulativeBubbleAmounts.push(cumulativeAcc);
     }
 
     // Dynamic raise hold: long enough for the slot raise transition to
@@ -331,6 +350,7 @@ export function castSpell() {
         flyingCount: flying.length,
         contributingCount: contributing,
         castRunesLength: castRunes.length,
+        cumulativeBubbleAmounts,
         onStart: () => {
             // Mount the flyers and lock HP. flushSync forces React to
             // commit synchronously inside this callback so CastAnimation's
@@ -343,11 +363,19 @@ export function castSpell() {
             flushSync(() => {
                 flyingRunes = flying;
                 isCastAnimating = true;
+                // Reset the live damage counter — it'll tick up with the
+                // bubbles below. Starting at 0 reads as "calculating" and
+                // makes the count-up payoff feel earned.
+                castDamageCounter = 0;
                 arkynStoreInternal.lockHpDisplay();
                 arkynStoreInternal.clearSelection();
                 arkynStoreInternal.setLastCastRunes(castRunes);
                 notify();
             });
+        },
+        onCountTick: (cumulative) => {
+            castDamageCounter = cumulative;
+            notify();
         },
         onFlyComplete: () => {
             // Send the cast to the server (same instant as today — the

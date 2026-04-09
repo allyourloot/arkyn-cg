@@ -264,6 +264,7 @@ export {
     useRaisedSlotIndices,
     useRuneDamageBubbles,
     useEnemyDamageHit,
+    useCastDamageCounter,
 } from "./arkynAnimations";
 export type {
     RuneDamageBubble,

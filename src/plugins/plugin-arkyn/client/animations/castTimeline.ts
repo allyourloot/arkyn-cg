@@ -8,7 +8,7 @@ import {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,
 } from "./timingConstants";
-import { playCast, playPlaceRune, playCount, playDamage } from "../sfx";
+import { playCast, playPlaceRune, playCount, playDamage, playDiscard } from "../sfx";
 
 // ============================================================
 // GSAP timeline factories for the gameplay orchestrators
@@ -68,6 +68,13 @@ export interface CastTimelineContext {
     flyingCount: number;
     contributingCount: number;
     castRunesLength: number;
+    /**
+     * Running totals — index `i` is the cumulative damage AFTER the i-th
+     * contributing rune's bubble has popped. Drives the live damage
+     * counter in SpellPreview so the displayed number ticks up in lock-
+     * step with the floating bubbles. Length === contributingCount.
+     */
+    cumulativeBubbleAmounts: readonly number[];
     /** Fired at t=0 — `flyingRunes` is mounted, HP locked. Plays cast SFX. */
     onStart: () => void;
     /** Fired when the fly tween completes. Mounts dissolving runes + sets dissolveStartTime. */
@@ -76,6 +83,12 @@ export interface CastTimelineContext {
     onRaiseStart: () => void;
     /** Fired after the raise transition completes. Mounts runeDamageBubbles. */
     onBubblesStart: () => void;
+    /**
+     * Fired once per contributing rune in lockstep with its bubble +
+     * count SFX. Receives the cumulative cast damage AFTER this rune's
+     * contribution. SpellPreview pops its damage number on every call.
+     */
+    onCountTick: (cumulative: number) => void;
     /** Fired at the end of the dissolve. Sets enemyDamageHit + unlocks HP. */
     onImpact: () => void;
     /** Fired when the timeline finishes. Clears all animation state. */
@@ -150,9 +163,15 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
     // delayMs (set by the orchestrator) staggers them in the DOM.
     tl.call(ctx.onBubblesStart, undefined, bubblesStartS);
 
-    // Schedule one Count SFX per contributing rune in lockstep with its bubble.
+    // Schedule one Count SFX + one count-tick callback per contributing
+    // rune. Each pair fires in lockstep with its bubble — the SFX, the
+    // visible bubble pop, and the live damage counter increment all land
+    // on the same frame.
     for (let i = 0; i < ctx.contributingCount; i++) {
-        tl.call(playCount, undefined, bubblesStartS + i * BUBBLE_STAGGER_S);
+        const tickAt = bubblesStartS + i * BUBBLE_STAGGER_S;
+        tl.call(playCount, undefined, tickAt);
+        const cumulative = ctx.cumulativeBubbleAmounts[i] ?? 0;
+        tl.call(() => ctx.onCountTick(cumulative), undefined, tickAt);
     }
 
     // Impact: enemy floating damage + bar shake + HP unlock + damage SFX.
@@ -195,6 +214,14 @@ export function buildDiscardTimeline(ctx: DiscardTimelineContext): gsap.core.Tim
     // tween of the right length so the timeline times out correctly.
     const flyTotalS = totalStaggeredDuration(ctx.flyingCount, DISCARD_FLY_DURATION_S, DISCARD_STAGGER_S);
     tl.to({}, { duration: flyTotalS });
+
+    // One discard SFX per discard action — not per rune. Multi-rune
+    // discards layered too many overlapping shots into a muddy click.
+    // playDiscard's built-in pitch randomization (±8%) keeps consecutive
+    // discards from sounding identical across multiple actions.
+    if (ctx.flyingCount > 0) {
+        tl.call(playDiscard, undefined, 0);
+    }
 
     currentDiscardTimeline = tl;
     return tl;

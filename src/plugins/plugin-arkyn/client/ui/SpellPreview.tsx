@@ -1,23 +1,37 @@
+import { useRef, type CSSProperties } from "react";
+import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
 import {
     useHand,
     useSelectedIndices,
     useLastCastRunes,
     useLastDamage,
+    useIsCastAnimating,
+    useCastDamageCounter,
 } from "../arkynStore";
 import { resolveSpell } from "../../shared/resolveSpell";
-import { TIER_MULTIPLIERS } from "../../shared/spellTable";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import innerFrameBlueUrl from "/assets/ui/inner-frame-blue.png?url";
+import innerFrameRedUrl from "/assets/ui/inner-frame-red.png?url";
 import styles from "./SpellPreview.module.css";
 
-const panelStyleVars = createPanelStyleVars(innerFrameBlueUrl);
+// Standard panel chrome (frame + section + heading) plus a custom red
+// `--damage-bg` for the dedicated damage counter section.
+const panelStyleVars = {
+    ...createPanelStyleVars(innerFrameBlueUrl),
+    ["--damage-bg" as string]: `url(${innerFrameRedUrl})`,
+} as CSSProperties;
 
 export default function SpellPreview() {
     const hand = useHand();
     const selectedIndices = useSelectedIndices();
     const lastCastRunes = useLastCastRunes();
     const lastDamage = useLastDamage();
+    const isCastAnimating = useIsCastAnimating();
+    const castDamageCounter = useCastDamageCounter();
+
+    const damageRef = useRef<HTMLSpanElement>(null);
 
     // Live preview from currently selected runes.
     const selectedRunes = selectedIndices.map(i => hand[i]).filter(Boolean);
@@ -34,6 +48,35 @@ export default function SpellPreview() {
     const isLive = previewSpell !== null;
     const spell = previewSpell ?? lastCastSpell;
 
+    // Damage display source:
+    //   - During a cast: the live counter that ticks up with each bubble.
+    //   - After a cast: the server-reported lastDamage.
+    //   - Live preview (selected runes, no cast yet): NO damage shown —
+    //     the dedicated damage section is hidden until a cast actually
+    //     resolves, so the player has to commit to see the number.
+    const showDamageSection = isCastAnimating || (!isLive && lastCastSpell !== null);
+    const displayDamage = isCastAnimating ? castDamageCounter : lastDamage;
+
+    // Pop the damage number every time the live counter increments. The
+    // first tick (counter goes from 0 to its first cumulative amount)
+    // pops, and every subsequent rune pops again — building anticipation
+    // toward the final number. Outside the cast window the dep doesn't
+    // change frequently, so the hook is a no-op for normal preview state.
+    useGSAP(() => {
+        if (!damageRef.current) return;
+        if (!isCastAnimating || castDamageCounter <= 0) return;
+        gsap.fromTo(
+            damageRef.current,
+            { scale: 1.45 },
+            {
+                scale: 1,
+                duration: 0.32,
+                ease: "back.out(2.6)",
+                overwrite: "auto",
+            },
+        );
+    }, { dependencies: [castDamageCounter, isCastAnimating], scope: damageRef });
+
     if (!spell) {
         return (
             <div className={styles.panel} style={panelStyleVars}>
@@ -49,19 +92,16 @@ export default function SpellPreview() {
 
     const elementColor = ELEMENT_COLORS[spell.element] ?? "#aaa";
     const runeUrl = getRuneImageUrl(spell.element);
-    // Live preview shows estimated damage (no enemy resists factored in);
-    // last-cast shows the server's actual damage dealt.
-    const tierMult = TIER_MULTIPLIERS[spell.tier] ?? 1;
-    const displayDamage = isLive
-        ? Math.round(spell.baseDamage * tierMult)
-        : lastDamage;
-    const damagePrefix = isLive ? "~" : "";
+
+    const headingLabel = isCastAnimating
+        ? "Casting"
+        : isLive
+            ? "Preview"
+            : "Last Cast";
 
     return (
         <div className={styles.panel} style={panelStyleVars}>
-            <span className={styles.heading}>
-                {isLive ? "Preview" : "Last Cast"}
-            </span>
+            <span className={styles.heading}>{headingLabel}</span>
 
             {/* Header section: icon + spell name + tier + damage */}
             <div className={styles.section}>
@@ -86,11 +126,19 @@ export default function SpellPreview() {
                     Tier {TIER_LABELS[spell.tier] ?? spell.tier}
                     {spell.isCombo && " (Combo)"}
                 </span>
-
-                <span className={styles.damage}>
-                    {damagePrefix}{displayDamage} DMG
-                </span>
             </div>
+
+            {/* Dedicated damage counter section. Only mounts when there's
+                a real damage value to show (during a cast or after a cast
+                has resolved) — pure live preview never displays a number,
+                so the player commits to a cast to see what they'll deal. */}
+            {showDamageSection && (
+                <div className={styles.damageSection}>
+                    <span ref={damageRef} className={styles.damage}>
+                        {displayDamage} DMG
+                    </span>
+                </div>
+            )}
 
             {/* Description section */}
             <div className={styles.section}>
