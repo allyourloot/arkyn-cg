@@ -21,6 +21,8 @@ import {
     clearSelectedIndices,
     triggerDrawAnimation,
     getHandIndex,
+    getIsCastAnimating,
+    clearCastingRuneIds,
     type RuneClientData,
 } from "../../arkynStore";
 
@@ -90,13 +92,27 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (!player) return;
 
         // Sync hand — only allocate when ids actually changed.
-        if (!runeArraysEqualById(player.hand, prevHand)) {
+        //
+        // Defer hand updates while a cast is animating so the new runes don't
+        // pop in (and the draw animation doesn't fire) until the played
+        // sequence has fully resolved. The server response arrives mid-cast
+        // and would otherwise overlap the dissolve. Skipping the block here
+        // is safe because `prevHand` is left untouched, so the next tick
+        // after `isCastAnimating` clears will detect the change and run the
+        // full sync + draw animation in a single pass.
+        if (!getIsCastAnimating() && !runeArraysEqualById(player.hand, prevHand)) {
             const handData = snapshotRunes(player.hand);
             const currentIds = new Set(handData.map(r => r.id));
             const freshRunes = handData.filter(r => !prevHandIds.has(r.id));
 
             setHand(handData);
             clearSelectedIndices();
+            // Clear `castingRuneIds` in the same synchronous batch as
+            // `setHand` so HandDisplay's useGSAP (useLayoutEffect) snaps the
+            // remaining cards' slid-left transforms to x=0 in lockstep with
+            // the new flex layout — no flicker between the cast slide and
+            // the new natural positions of the persisted slot DOM nodes.
+            clearCastingRuneIds();
             prevHand = handData;
             prevHandIds = currentIds;
 

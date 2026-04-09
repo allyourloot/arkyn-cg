@@ -122,6 +122,10 @@ let enemyDamageSeqCounter = 0;
 
 let flyingRunes: FlyingRune[] = [];
 let isCastAnimating = false;
+// IDs of the runes currently being cast — used by HandDisplay to keep their
+// hand slots hidden for the entire cast sequence (fly → dissolve → impact),
+// since the server's hand update is now deferred until the cast finishes.
+let castingRuneIds: string[] = [];
 let discardingRunes: DiscardingRune[] = [];
 let isDiscardAnimating = false;
 let drawingRuneIds: string[] = [];
@@ -156,6 +160,9 @@ export function useFlyingRunes() {
 export function useIsCastAnimating() {
     return useSyncExternalStore(subscribe, () => isCastAnimating);
 }
+export function useCastingRuneIds() {
+    return useSyncExternalStore(subscribe, () => castingRuneIds);
+}
 export function useDiscardingRunes() {
     return useSyncExternalStore(subscribe, () => discardingRunes);
 }
@@ -176,6 +183,26 @@ export function useCastDamageCounter() {
 
 function isAnimating(): boolean {
     return isCastAnimating || isDiscardAnimating;
+}
+
+/**
+ * Imperative read of the cast animation flag, for non-React callers (e.g.
+ * the Colyseus state sync system, which needs to know whether to defer a
+ * server-driven hand update until the cast sequence finishes).
+ */
+export function getIsCastAnimating(): boolean {
+    return isCastAnimating;
+}
+
+/**
+ * Clears the `castingRuneIds` set. Called by the sync system in the same
+ * synchronous batch as `setHand`, so the remaining hand cards' slid-left
+ * GSAP transforms can snap to x=0 in lockstep with the new flex layout.
+ */
+export function clearCastingRuneIds(): void {
+    if (castingRuneIds.length === 0) return;
+    castingRuneIds = [];
+    notify();
 }
 
 // ----- Orchestrators -----
@@ -363,6 +390,11 @@ export function castSpell() {
             flushSync(() => {
                 flyingRunes = flying;
                 isCastAnimating = true;
+                // Mark these IDs as "currently casting" so HandDisplay keeps
+                // their slots hidden for the full cast sequence. Without
+                // this, the deferred server hand-sync would leave the played
+                // runes visible in the hand until the dissolve completes.
+                castingRuneIds = castRunes.map(r => r.id);
                 // Reset the live damage counter — it'll tick up with the
                 // bubbles below. Starting at 0 reads as "calculating" and
                 // makes the count-up payoff feel earned.
@@ -415,6 +447,12 @@ export function castSpell() {
             raisedSlotIndices = [];
             runeDamageBubbles = [];
             isCastAnimating = false;
+            // NOTE: `castingRuneIds` is intentionally NOT cleared here. The
+            // sync system clears it atomically with `setHand` so the
+            // remaining hand cards (which slid left to fill the cast gap)
+            // stay pinned in their slid positions until the new hand layout
+            // commits — at which point HandDisplay's useGSAP snaps the
+            // persisted slot transforms to x=0 (FLIP-style) without flicker.
             notify();
         },
     });

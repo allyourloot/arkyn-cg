@@ -8,7 +8,7 @@ import {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,
 } from "./timingConstants";
-import { playCast, playPlaceRune, playCount, playDamage, playDiscard } from "../sfx";
+import { playCast, playPlaceRune, playCount, playDamage, playDiscard, playDissolve } from "../sfx";
 
 // ============================================================
 // GSAP timeline factories for the gameplay orchestrators
@@ -112,6 +112,10 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
     // Bubbles begin after the fly window, the settle hold, and the raise.
     const bubblesStartS = flyTotalS + SETTLE_DELAY_S + RAISE_DURATION_S;
 
+    // Dissolve begins after the slots have raised and the bubble cascade has
+    // played out — same instant the DissolveShader's RAF loop reads from its
+    // wall-clock `dissolveStartTime`. Computed below once `raiseHoldS` exists.
+
     // Total time the slots stay raised (including the bubble cascade).
     // Identical math to the legacy raiseHoldMs formula in arkynAnimations.ts,
     // expressed in seconds.
@@ -122,12 +126,15 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
             : BUBBLE_DURATION_S + BUBBLE_TAIL_BUFFER_S
     );
 
+    // Dissolve starts the moment the raise hold finishes — this matches the
+    // wall-clock `dissolveStartTime` set in arkynAnimations.ts so the SFX
+    // lands on the same frame the shader begins eating the runes.
+    const dissolveStartS = flyTotalS + SETTLE_DELAY_S + raiseHoldS;
+
     // Dissolve start (relative to fly-complete) is the same as the legacy
     // computation: settle + raise hold + per-rune dissolve stagger + dissolve duration.
     const impactAtS =
-        flyTotalS +
-        SETTLE_DELAY_S +
-        raiseHoldS +
+        dissolveStartS +
         Math.max(0, ctx.castRunesLength - 1) * DISSOLVE_STAGGER_S +
         DISSOLVE_DURATION_S;
 
@@ -173,6 +180,9 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
         const cumulative = ctx.cumulativeBubbleAmounts[i] ?? 0;
         tl.call(() => ctx.onCountTick(cumulative), undefined, tickAt);
     }
+
+    // Dissolve SFX — fires the instant the shader begins eating the runes.
+    tl.call(playDissolve, undefined, dissolveStartS);
 
     // Impact: enemy floating damage + bar shake + HP unlock + damage SFX.
     tl.call(() => {

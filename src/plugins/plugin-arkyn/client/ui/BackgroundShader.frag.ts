@@ -44,6 +44,30 @@ float orbGlow(vec2 p, vec2 center, float radius) {
     return exp(-length(p - center) / radius);
 }
 
+// 4x4 Bayer matrix — used for ordered dithering. Produces the classic
+// crunchy 8-bit color banding pattern instead of smooth gradients.
+float bayer4(vec2 pos) {
+    int x = int(mod(pos.x, 4.0));
+    int y = int(mod(pos.y, 4.0));
+    int idx = x + y * 4;
+    if (idx == 0)  return  0.0 / 16.0;
+    if (idx == 1)  return  8.0 / 16.0;
+    if (idx == 2)  return  2.0 / 16.0;
+    if (idx == 3)  return 10.0 / 16.0;
+    if (idx == 4)  return 12.0 / 16.0;
+    if (idx == 5)  return  4.0 / 16.0;
+    if (idx == 6)  return 14.0 / 16.0;
+    if (idx == 7)  return  6.0 / 16.0;
+    if (idx == 8)  return  3.0 / 16.0;
+    if (idx == 9)  return 11.0 / 16.0;
+    if (idx == 10) return  1.0 / 16.0;
+    if (idx == 11) return  9.0 / 16.0;
+    if (idx == 12) return 15.0 / 16.0;
+    if (idx == 13) return  7.0 / 16.0;
+    if (idx == 14) return 13.0 / 16.0;
+    return 5.0 / 16.0;
+}
+
 void main() {
     // Aspect-corrected coordinates centered on (0,0).
     vec2 p = (gl_FragCoord.xy - 0.5 * uResolution.xy) / min(uResolution.x, uResolution.y);
@@ -108,6 +132,23 @@ void main() {
 
     // Slight gamma lift for richer midtones.
     color = pow(color, vec3(0.92));
+
+    // ----- Texture overlay -----
+    // Operates in pixel-space (gl_FragCoord) so the grain and dither snap
+    // to the chunky upscaled pixel grid.
+    vec2 px = gl_FragCoord.xy;
+
+    // Static grain — per-pixel hash with no time term, so it stays locked
+    // in place like a paper texture instead of crawling.
+    float grain = hash(px) - 0.5;
+    color += grain * 0.045;
+
+    // Ordered dithering — quantize each channel to a small set of levels
+    // using a Bayer matrix as the threshold. Smooth gradients become bands
+    // of dotted pixels for a subtle 8-bit texture.
+    float levels = 24.0;
+    vec3 dithered = floor(color * levels + bayer4(px)) / levels;
+    color = mix(color, dithered, 0.30);
 
     gl_FragColor = vec4(color, 1.0);
 }
