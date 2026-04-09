@@ -16,9 +16,11 @@
   },
   "dependencies": {
     "@colyseus/schema": "^4.0.19",
+    "@gsap/react": "^2.1.2",
     "@tailwindcss/vite": "^4.2.1",
     "archiver": "^7.0.1",
     "colyseus": "^0.17.8",
+    "gsap": "^3.14.2",
     "qrcode": "^1.5.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",

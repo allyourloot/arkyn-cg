@@ -4,6 +4,9 @@ import { Logger } from "@core/shared/utils";
 import type { ArkynState } from "../shared";
 import { initArkynGame } from "./game";
 import ArkynOverlay from "./ui/ArkynOverlay";
+// Side-effect import: registers GSAP's `useGSAP` plugin once at app load.
+// MUST be imported before any UI component calls `useGSAP()`.
+import "./animations/registerGsap";
 
 const logger = new Logger("ArkynClient");
 

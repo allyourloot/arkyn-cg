@@ -1,5 +1,16 @@
 import { memo, useEffect, useRef, useState } from "react";
+import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
 import type { RuneClientData } from "../arkynStore";
+import {
+    SELECT_LIFT_PX,
+    SELECT_SCALE,
+    SELECT_JITTER_DEG,
+    SELECT_EASE,
+    SELECT_DURATION_S,
+    DESELECT_EASE,
+    DESELECT_DURATION_S,
+} from "../animations/runeCardMotion";
 import RuneImage from "./RuneImage";
 import styles from "./RuneCard.module.css";
 
@@ -35,12 +46,51 @@ function RuneCardImpl({
 }: RuneCardProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [tilt, setTilt] = useState({ rotX: 0, rotY: 0 });
+    // First-render guard so the very first useGSAP pass uses gsap.set
+    // (instant) instead of gsap.to (animated). Otherwise the card would
+    // briefly tween from rotation:0 to its fan rotation on mount.
+    const didMountRef = useRef(false);
 
     // Reset tilt as soon as the parent disables it (e.g. on drag start) so a
     // stale tilt doesn't combine with the drag transform.
     useEffect(() => {
         if (tiltDisabled) setTilt({ rotX: 0, rotY: 0 });
     }, [tiltDisabled]);
+
+    // GSAP-driven select / deselect lift. Uses `overwrite: 'auto'` so rapid
+    // clicks on different cards retarget cleanly mid-flight without leaving
+    // any card in a stuck "half-lifted" state. Replaces the previous CSS
+    // transition on `.card { transform }` for snappier, interruptible motion.
+    useGSAP(() => {
+        const el = cardRef.current;
+        if (!el) return;
+        if (!didMountRef.current) {
+            // Snap to the initial fan rotation without animating from 0 on
+            // first mount. Subsequent renders go through gsap.to.
+            gsap.set(el, { y: 0, rotation, scale: 1 });
+            didMountRef.current = true;
+            return;
+        }
+        if (isSelected) {
+            gsap.to(el, {
+                y: SELECT_LIFT_PX,
+                rotation: rotation + SELECT_JITTER_DEG,
+                scale: SELECT_SCALE,
+                duration: SELECT_DURATION_S,
+                ease: SELECT_EASE,
+                overwrite: "auto",
+            });
+        } else {
+            gsap.to(el, {
+                y: 0,
+                rotation,
+                scale: 1,
+                duration: DESELECT_DURATION_S,
+                ease: DESELECT_EASE,
+                overwrite: "auto",
+            });
+        }
+    }, { dependencies: [isSelected, rotation], scope: cardRef });
 
     const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
         if (tiltDisabled) return;
@@ -73,9 +123,6 @@ function RuneCardImpl({
             onPointerMove={HAS_HOVER ? handlePointerMove : undefined}
             onPointerLeave={HAS_HOVER ? handlePointerLeave : undefined}
             className={`${styles.card} ${isSelected ? styles.selected : ""}`}
-            style={{
-                transform: `translateY(${isSelected ? -24 : 0}px) rotate(${rotation}deg)`,
-            }}
         >
             <div
                 className={styles.floatWrap}
