@@ -18,6 +18,10 @@ import {
     setPouchContents,
     setCastsRemaining,
     setDiscardsRemaining,
+    setGold,
+    setLastRoundGoldBase,
+    setLastRoundGoldHandsBonus,
+    setLastRoundGoldHandsCount,
     clearSelectedIndices,
     triggerDrawAnimation,
     getHandIndex,
@@ -86,6 +90,10 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevPouchSize = -1;
     let prevCasts = -1;
     let prevDiscards = -1;
+    let prevGold = -1;
+    let prevGoldBase = -1;
+    let prevGoldHandsBonus = -1;
+    let prevGoldHandsCount = -1;
 
     return () => {
         const player = state.players.get(sessionId);
@@ -207,6 +215,24 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (player.discardsRemaining !== prevDiscards) {
             setDiscardsRemaining(player.discardsRemaining);
             prevDiscards = player.discardsRemaining;
+        }
+
+        // Sync currency
+        if (player.gold !== prevGold) {
+            setGold(player.gold);
+            prevGold = player.gold;
+        }
+        if (player.lastRoundGoldBase !== prevGoldBase) {
+            setLastRoundGoldBase(player.lastRoundGoldBase);
+            prevGoldBase = player.lastRoundGoldBase;
+        }
+        if (player.lastRoundGoldHandsBonus !== prevGoldHandsBonus) {
+            setLastRoundGoldHandsBonus(player.lastRoundGoldHandsBonus);
+            prevGoldHandsBonus = player.lastRoundGoldHandsBonus;
+        }
+        if (player.lastRoundGoldHandsCount !== prevGoldHandsCount) {
+            setLastRoundGoldHandsCount(player.lastRoundGoldHandsCount);
+            prevGoldHandsCount = player.lastRoundGoldHandsCount;
         }
     };
 }

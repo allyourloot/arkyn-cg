@@ -1,0 +1,27 @@
+.wrapper {
+    pointer-events: none;
+    position: absolute;
+    top: clamp(8px, 1.5vw, 16px);
+    right: clamp(8px, 1.5vw, 16px);
+    display: flex;
+    align-items: center;
+    gap: clamp(4px, 0.6vw, 8px);
+    z-index: 5;
+}
+
+.icon {
+    width: clamp(28px, 3vw, 42px);
+    height: clamp(28px, 3vw, 42px);
+    image-rendering: pixelated;
+    filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.7));
+}
+
+.count {
+    font-size: clamp(20px, 2.4vw, 30px);
+    font-family: 'Sburbits', system-ui, monospace;
+    font-weight: normal;
+    color: #ffd770;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+    letter-spacing: 1px;
+}

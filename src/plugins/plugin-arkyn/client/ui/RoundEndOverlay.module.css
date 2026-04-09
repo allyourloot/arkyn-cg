@@ -1,0 +1,265 @@
+/* ----- Backdrop ----- */
+
+.backdrop {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.65);
+    z-index: 200;
+    /* Block clicks on the gameplay surface behind the overlay. */
+    pointer-events: auto;
+    animation: backdropFade 220ms ease-out;
+}
+
+@keyframes backdropFade {
+    from { background-color: rgba(0, 0, 0, 0); }
+    to { background-color: rgba(0, 0, 0, 0.65); }
+}
+
+/* ----- Panel ----- */
+
+.panel {
+    box-sizing: border-box;
+    width: clamp(360px, 52vw, 680px);
+    /* 9-slice frame.png — same 24px corner pattern other panels use so
+       the chrome reads as part of the same UI family. */
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    padding: clamp(18px, 2.4vw, 32px) clamp(24px, 3.2vw, 44px) clamp(20px, 2.6vw, 36px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(14px, 2.2vh, 26px);
+    image-rendering: pixelated;
+    font-family: 'Sburbits', system-ui, monospace;
+    animation: panelIn 260ms cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+@keyframes panelIn {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* ----- Title ----- */
+
+.title {
+    font-size: clamp(28px, 3.8vw, 48px);
+    font-weight: normal;
+    color: #ffd700;
+    text-shadow: 0 0 16px rgba(255, 215, 0, 0.55), 3px 3px 0 rgba(0, 0, 0, 0.85);
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+/* ----- Inner content frame -----
+ *
+ * Wraps the reward breakdown (rewards rows + divider + total row) inside
+ * a 9-sliced inner-frame.png box, matching the chrome pattern used by
+ * EnemyPanel and SpellPreview sections. The 6px corner slices map to
+ * the inner-frame asset's border thickness; rendered at 6px on screen
+ * so the pixel art stays crisp at any panel size.
+ */
+.contentFrame {
+    box-sizing: border-box;
+    width: 100%;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 6px;
+    border-image: var(--section-bg) 6 6 6 6 fill / 6px 6px 6px 6px;
+    padding: clamp(12px, 1.8vh, 20px) clamp(14px, 2vw, 24px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 1.4vh, 16px);
+    image-rendering: pixelated;
+}
+
+/* ----- Reward rows ----- */
+
+.rewards {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 1.4vh, 16px);
+    width: 100%;
+    /* Reserve enough vertical space for both rows so the panel doesn't
+       jump in size as lines type out one character at a time. */
+    min-height: clamp(96px, 13vh, 140px);
+    /* Left-align the rewards block; rows still flow content from the
+       left edge so partial typewriter strings sit naturally. */
+    align-items: flex-start;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: clamp(6px, 0.8vw, 12px);
+    /* Lock minimum row height so coin pop-ins don't reflow the row
+       baseline as the icons appear. */
+    min-height: clamp(34px, 4.6vh, 50px);
+}
+
+.label {
+    font-size: clamp(18px, 2.2vw, 28px);
+    color: #e8d4b8;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+    white-space: nowrap;
+    letter-spacing: 1px;
+}
+
+.coins {
+    display: flex;
+    align-items: center;
+    gap: clamp(2px, 0.4vw, 6px);
+}
+
+.coin {
+    width: clamp(26px, 3vw, 40px);
+    height: clamp(26px, 3vw, 40px);
+    image-rendering: pixelated;
+    filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.7));
+    /* Each new <img> mounts on its own — the keyframe runs on mount. */
+    animation: coinPop 280ms cubic-bezier(0.2, 1.5, 0.4, 1);
+    transform-origin: center;
+}
+
+@keyframes coinPop {
+    0%   { transform: scale(0) rotate(-18deg); opacity: 0; }
+    55%  { transform: scale(1.22) rotate(8deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+/* ----- Pixelated dashed divider -----
+ *
+ * Used between the reward rows and the Total Earned row inside the
+ * inner content frame. A repeating linear gradient gives us a hard-
+ * edged dash pattern that pairs naturally with the pixel-art chrome —
+ * `image-rendering: pixelated` makes sure browsers keep the edges crisp
+ * if the page is fractionally scaled.
+ */
+.divider {
+    width: 100%;
+    height: 4px;
+    background-image: repeating-linear-gradient(
+        to right,
+        #d4a574 0,
+        #d4a574 8px,
+        transparent 8px,
+        transparent 16px
+    );
+    image-rendering: pixelated;
+    /* Subtle drop shadow so the dashes read against the inner frame
+       background regardless of where in the panel they sit. */
+    filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.7));
+}
+
+/* ----- Total row ----- */
+
+/*
+ * The total row + Continue button stay mounted from the moment the panel
+ * opens so the panel keeps a stable, final-size height while the
+ * typewriter and coin pop-ins play out. They start hidden via opacity +
+ * a small downward translate, then transition into view when their
+ * `*Visible` modifier class is toggled by the React sequencer. Using a
+ * class-driven transition (instead of mount-time keyframes) lets the
+ * elements occupy their layout slot from frame one without flashing.
+ */
+.totalRow {
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 1vw, 16px);
+    width: 100%;
+    /* Total Earned sits flush-left with the reward rows above so the
+       eye tracks straight down the column. */
+    justify-content: flex-start;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 320ms ease-out, transform 320ms cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+.totalRowVisible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.totalLabel {
+    font-size: clamp(20px, 2.4vw, 30px);
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.45), 2px 2px 0 rgba(0, 0, 0, 0.85);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    line-height: 1;
+}
+
+.totalCoin {
+    width: clamp(34px, 4vw, 52px);
+    height: clamp(34px, 4vw, 52px);
+    image-rendering: pixelated;
+    filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.75));
+}
+
+.totalAmount {
+    font-size: clamp(28px, 3.4vw, 44px);
+    color: #ffe680;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.55), 2px 2px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+}
+
+/* ----- Continue button ----- */
+
+/*
+ * Stays mounted alongside the total row so the panel reserves its
+ * full height from the start. `pointer-events: none` while invisible
+ * so it can't be clicked through during the type-out, and the cursor
+ * only switches to pointer once the visible modifier lands.
+ *
+ * The chrome is a 9-slice border-image of `button-green.png`, mirroring
+ * the pattern from ActionButtons (10px corner slices, `fill` keyword
+ * draws the center). This keeps the button corners pixel-crisp at any
+ * size instead of stretching the source image edge-to-edge.
+ */
+.button {
+    pointer-events: none;
+    box-sizing: border-box;
+    margin-top: clamp(4px, 0.6vh, 10px);
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    border-image: var(--btn-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
+    background-color: transparent;
+    color: #fff;
+    font-family: 'Sburbits', system-ui, monospace;
+    font-size: clamp(18px, 2.2vw, 26px);
+    font-weight: normal;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    cursor: default;
+    image-rendering: pixelated;
+    line-height: 1;
+    padding: clamp(8px, 1.2vh, 14px) clamp(24px, 3vw, 40px);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 280ms ease-out, transform 280ms cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+.buttonVisible {
+    pointer-events: auto;
+    cursor: pointer;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.buttonVisible:hover {
+    border-image: var(--btn-bg-hover) 10 10 10 10 fill / 10px 10px 10px 10px;
+}
+
+.buttonVisible:active {
+    transform: translateY(2px);
+}

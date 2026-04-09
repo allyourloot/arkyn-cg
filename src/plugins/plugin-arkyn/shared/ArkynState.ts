@@ -27,6 +27,15 @@ export class ArkynPlayerState extends Schema {
     @type("number") lastDamage = 0;
     @type("number") castsRemaining = 3;
     @type("number") discardsRemaining = 3;
+    // Persistent currency. `gold` is the running total a player has banked
+    // across rounds. The `lastRoundGold*` fields are the breakdown for the
+    // most recent enemy defeat — the round-end overlay reads them to play
+    // the typewriter reward animation. They reset at the start of each
+    // round so a stale breakdown can never flash on screen.
+    @type("number") gold = 0;
+    @type("number") lastRoundGoldBase = 0;
+    @type("number") lastRoundGoldHandsBonus = 0;
+    @type("number") lastRoundGoldHandsCount = 0;
 }
 
 export class ArkynState extends PluginState {

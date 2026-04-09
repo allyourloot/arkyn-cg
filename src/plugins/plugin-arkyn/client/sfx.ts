@@ -6,6 +6,10 @@ import castUrl from "/assets/audio/sfx/cast.mp3?url";
 import discardUrl from "/assets/audio/sfx/discard.mp3?url";
 import dissolveUrl from "/assets/audio/sfx/dissolve.ogg?url";
 import criticalUrl from "/assets/audio/sfx/critical.ogg?url";
+import goldUrl from "/assets/audio/sfx/gold.ogg?url";
+import goldTotalUrl from "/assets/audio/sfx/gold-total.ogg?url";
+import menuOpenUrl from "/assets/audio/sfx/menu-open.ogg?url";
+import typewriterUrl from "/assets/audio/sfx/typewriter.ogg?url";
 
 // Preload one Audio per sfx so the browser caches the buffer. Each play
 // clones the node so rapid plays can overlap without cutting each
@@ -35,6 +39,30 @@ export const playDamage = makeSfx(damageUrl, 0.9);
 export const playCast = makeSfx(castUrl, 0.9);
 export const playDissolve = makeSfx(dissolveUrl, 0.9);
 export const playCritical = makeSfx(criticalUrl, 0.9);
+export const playGold = makeSfx(goldUrl, 0.9);
+export const playGoldTotal = makeSfx(goldTotalUrl, 0.9);
+export const playMenuOpen = makeSfx(menuOpenUrl, 0.9);
+
+// Typewriter SFX — needs to be startable + stoppable so the sound can
+// run for the duration of a single typewriter line and be cut off
+// cleanly when the line finishes (or when the overlay unmounts mid-
+// type). We use a single shared Audio instance instead of the cloning
+// pattern above so successive `play()` calls reuse the same node and
+// `stop()` actually halts playback. Each `play()` rewinds to the
+// start, so calling it once per line gives a clean per-line ratchet.
+const typewriterAudio = new Audio(typewriterUrl);
+typewriterAudio.preload = "auto";
+typewriterAudio.volume = 0.85;
+export function playTypewriter(): void {
+    typewriterAudio.currentTime = 0;
+    typewriterAudio.play().catch(() => {
+        // Browsers block autoplay until first user interaction.
+    });
+}
+export function stopTypewriter(): void {
+    typewriterAudio.pause();
+    typewriterAudio.currentTime = 0;
+}
 
 // Discard SFX with built-in pitch randomization. Plays one shot of
 // `discard.mp3` at a slightly randomized playback rate so a multi-rune

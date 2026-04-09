@@ -7,6 +7,11 @@ import { removeRunesFromHand, validateRuneSelection } from "./utils/runeSelectio
 
 const logger = new Logger("ArkynCast");
 
+// Base gold awarded for defeating an enemy. Bonus gold is added on top
+// equal to the player's remaining hands (cast budget) at the moment of
+// the killing blow.
+const GOLD_BASE_REWARD = 3;
+
 export function handleCast(
     state: ArkynState,
     client: { sessionId: string },
@@ -56,8 +61,25 @@ export function handleCast(
 
     // Check if enemy is defeated
     if (state.enemy.currentHp <= 0) {
+        // Award gold:
+        //  - 3 base for the kill
+        //  - +1 per remaining cast ("hand") the player still has banked.
+        //    `castsRemaining` was decremented above for the killing-blow
+        //    cast itself, so a 1-cast clear yields a 2-hand bonus, etc.
+        const baseGold = GOLD_BASE_REWARD;
+        const handsCount = player.castsRemaining;
+        const handsBonus = handsCount;
+        player.lastRoundGoldBase = baseGold;
+        player.lastRoundGoldHandsBonus = handsBonus;
+        player.lastRoundGoldHandsCount = handsCount;
+        player.gold += baseGold + handsBonus;
+
         state.gamePhase = "round_end";
-        logger.info(`Enemy defeated! Round ${state.currentRound} complete.`);
+        logger.info(
+            `Enemy defeated! Round ${state.currentRound} complete. ` +
+            `Gold awarded: ${baseGold} base + ${handsBonus} hands bonus ` +
+            `= ${baseGold + handsBonus} (total: ${player.gold})`,
+        );
         return;
     }
 

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { ELEMENT_TYPES, RUNES_PER_ELEMENT } from "../../shared";
 import { useHand, usePouchContents } from "../arkynStore";
+import { playMenuOpen } from "../sfx";
 import RuneImage from "./RuneImage";
 import { createPanelStyleVars } from "./styles";
 import styles from "./PouchModal.module.css";
@@ -37,6 +38,11 @@ const ELEMENT_LABELS: Record<string, string> = {
 export default function PouchModal({ onClose }: PouchModalProps) {
     const pouchContents = usePouchContents();
     const hand = useHand();
+
+    // Play the shared menu-open stinger once on mount.
+    useEffect(() => {
+        playMenuOpen();
+    }, []);
 
     // Close on Escape.
     useEffect(() => {

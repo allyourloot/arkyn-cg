@@ -23,6 +23,13 @@ export function initPlayerForRound(player: ArkynPlayerState, sessionId: string):
     player.lastDamage = 0;
     player.castsRemaining = 3;
     player.discardsRemaining = 3;
+    // Clear the previous round's reward breakdown so the round-end overlay
+    // never shows stale numbers if the next defeat happens before the
+    // server has had a chance to set them. `gold` (the running total) is
+    // intentionally NOT reset — it persists across rounds.
+    player.lastRoundGoldBase = 0;
+    player.lastRoundGoldHandsBonus = 0;
+    player.lastRoundGoldHandsCount = 0;
 
     setPouch(sessionId, createPouch());
     refillHand(player, sessionId);

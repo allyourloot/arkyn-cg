@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import {
     useGamePhase,
-    useLastSpellName,
-    useLastDamage,
     useIsCastAnimating,
-    sendReady,
 } from "../arkynStore";
 import { ENEMY_DAMAGE_HIT_MS } from "../arkynAnimations";
 import EnemyHealthBar from "./EnemyHealthBar";
@@ -15,6 +12,8 @@ import HandDisplay from "./HandDisplay";
 import ActionButtons from "./ActionButtons";
 import RoundInfo from "./RoundInfo";
 import PouchCounter from "./PouchCounter";
+import GoldCounter from "./GoldCounter";
+import RoundEndOverlay from "./RoundEndOverlay";
 import CastAnimation from "./CastAnimation";
 import DiscardAnimation from "./DiscardAnimation";
 import DrawAnimation from "./DrawAnimation";
@@ -24,8 +23,6 @@ import styles from "./ArkynOverlay.module.css";
 
 export default function ArkynOverlay() {
     const gamePhase = useGamePhase();
-    const lastSpellName = useLastSpellName();
-    const lastDamage = useLastDamage();
     const isCastAnimating = useIsCastAnimating();
 
     // The server flips gamePhase to "round_end" the instant the killing-blow
@@ -65,6 +62,9 @@ export default function ArkynOverlay() {
             {/* Round info (top-left) */}
             <RoundInfo />
 
+            {/* Gold counter (top-right) */}
+            <GoldCounter />
+
             {/* Pouch counter (bottom-right) */}
             <PouchCounter />
 
@@ -96,25 +96,8 @@ export default function ArkynOverlay() {
             {/* Background music */}
             <BackgroundMusic />
 
-            {/* Round End overlay */}
-            {showRoundEnd && (
-                <div className={styles.roundEnd}>
-                    <span className={styles.roundEndTitle}>
-                        Enemy Defeated!
-                    </span>
-                    {lastSpellName && (
-                        <span className={styles.roundEndSubtitle}>
-                            Final blow: {lastSpellName} for {lastDamage} damage
-                        </span>
-                    )}
-                    <button
-                        onClick={sendReady}
-                        className={styles.roundEndButton}
-                    >
-                        Continue
-                    </button>
-                </div>
-            )}
+            {/* Round End overlay — animated reward breakdown */}
+            {showRoundEnd && <RoundEndOverlay />}
         </div>
     );
 }

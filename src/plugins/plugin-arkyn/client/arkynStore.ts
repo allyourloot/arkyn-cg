@@ -59,6 +59,14 @@ let pouchSize = 0;
 let pouchContents: RuneClientData[] = [];
 let castsRemaining = 3;
 let discardsRemaining = 3;
+// Persistent currency. `gold` is the running total banked across rounds.
+// The `lastRoundGold*` fields mirror the server-side reward breakdown for
+// the most recent enemy defeat — `RoundEndOverlay` reads them to play the
+// typewriter reward animation.
+let gold = 0;
+let lastRoundGoldBase = 0;
+let lastRoundGoldHandsBonus = 0;
+let lastRoundGoldHandsCount = 0;
 // The exact runes from the most recent cast. Persists between casts so the
 // SpellPreview panel can re-resolve them and display the last cast result
 // (element / description / combo info that the server doesn't sync).
@@ -135,6 +143,10 @@ export function setPouchSize(s: number) { pouchSize = s; notify(); }
 export function setPouchContents(p: RuneClientData[]) { pouchContents = p; notify(); }
 export function setCastsRemaining(c: number) { castsRemaining = c; notify(); }
 export function setDiscardsRemaining(d: number) { discardsRemaining = d; notify(); }
+export function setGold(g: number) { gold = g; notify(); }
+export function setLastRoundGoldBase(g: number) { lastRoundGoldBase = g; notify(); }
+export function setLastRoundGoldHandsBonus(g: number) { lastRoundGoldHandsBonus = g; notify(); }
+export function setLastRoundGoldHandsCount(c: number) { lastRoundGoldHandsCount = c; notify(); }
 
 export function clearSelectedIndices() {
     selectedRuneIds = [];
@@ -232,6 +244,10 @@ export function usePouchContents() { return useSyncExternalStore(subscribe, () =
 export function useCastsRemaining() { return useSyncExternalStore(subscribe, () => castsRemaining); }
 export function useDiscardsRemaining() { return useSyncExternalStore(subscribe, () => discardsRemaining); }
 export function useLastCastRunes() { return useSyncExternalStore(subscribe, () => lastCastRunes); }
+export function useGold() { return useSyncExternalStore(subscribe, () => gold); }
+export function useLastRoundGoldBase() { return useSyncExternalStore(subscribe, () => lastRoundGoldBase); }
+export function useLastRoundGoldHandsBonus() { return useSyncExternalStore(subscribe, () => lastRoundGoldHandsBonus); }
+export function useLastRoundGoldHandsCount() { return useSyncExternalStore(subscribe, () => lastRoundGoldHandsCount); }
 
 // ============================================================
 // Barrel re-exports
