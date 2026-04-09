@@ -30,30 +30,46 @@ export default function HandDisplay() {
         animating,
     });
 
-    // Tracks whether the previous render had cast cards in flight, so the
-    // cleanup branch below can tell "drag end" (smooth tween back) apart
-    // from "cast end" (instant snap, since the hand layout JUST changed
-    // beneath the persisted slot DOM nodes).
-    const prevCastingCountRef = useRef(0);
+    // Tracks whether the previous render had a drag in progress so the
+    // cleanup branch can tell drag-end (skip FLIP, the dragged slot was
+    // already zeroed by useHandDragReorder before commit) apart from
+    // sort / auto-sort cleanups (apply FLIP).
+    const prevDraggingRef = useRef(false);
 
-    // Slot transform orchestration. Three branches:
+    // Per-slot layout map (rune-id → offsetLeft from the previous useGSAP
+    // run). Used by the FLIP branch to compute "old visual position →
+    // new visual position" deltas so kept slots smoothly animate when
+    // setHand auto-sorts the hand under them.
+    const prevSlotLayoutsRef = useRef<Map<string, number>>(new Map());
+
+    // Slot transform orchestration. Four branches in priority order:
     //   1. Drag in progress → slide non-dragged slots aside.
-    //   2. Cast in progress → slide non-casting slots LEFT to fill the gap
-    //      left by the runes flying to the play area. Each remaining slot
-    //      moves by `stride * (count of casting slots to its left)` so the
-    //      hand visually compacts to the leftmost positions.
-    //   3. Cleanup → return to x=0. After a CAST we snap instantly (the
-    //      sync system replaced the hand in the same React commit, so the
-    //      persisted slots' new flex positions already match where they
-    //      were visually — anything but a snap would jitter). After a DRAG
-    //      we tween smoothly so the slid-aside slots ease home.
+    //   2. Cast in progress → slide non-casting slots LEFT to fill the
+    //      gap left by the runes flying to the play area.
+    //   3. Drag just ended → tween slid-aside slots back to 0
+    //      (useHandDragReorder already zeroed the dragged slot).
+    //   4. FLIP / cleanup → animate kept slots from their old visual
+    //      positions to their new flex positions whenever the hand
+    //      reorders (sort button, auto-sort on draw, cast-end with
+    //      sort). Uses a stored map of previous offsetLefts to bridge
+    //      the React commit boundary smoothly.
     useGSAP(() => {
         const container = containerRef.current;
         if (!container) return;
         const slots = container.querySelectorAll<HTMLElement>("[data-rune-index]");
 
-        const wasCasting = prevCastingCountRef.current > 0;
-        prevCastingCountRef.current = castingRuneIds.length;
+        // Capture each slot's current offsetLeft for the next FLIP run.
+        // Called at the END of every branch so the next render has
+        // accurate "where things were" data even if a non-FLIP branch
+        // ran in between.
+        const captureLayouts = () => {
+            const out = new Map<string, number>();
+            slots.forEach(slot => {
+                const id = slot.getAttribute("data-rune-id");
+                if (id) out.set(id, slot.offsetLeft);
+            });
+            prevSlotLayoutsRef.current = out;
+        };
 
         if (dragInfo) {
             const stride = dragInfo.cardStride;
@@ -69,8 +85,16 @@ export default function HandDisplay() {
                 }
                 gsap.to(slot, { x: targetX, duration: 0.18, ease: "power2.out", overwrite: "auto" });
             });
+            prevDraggingRef.current = true;
+            captureLayouts();
             return;
         }
+
+        // Drag transitioned from active to inactive between this render
+        // and the previous one — clear the flag and remember it locally
+        // so the cleanup branches can take a different path.
+        const justEndedDrag = prevDraggingRef.current;
+        prevDraggingRef.current = false;
 
         if (castingRuneIds.length > 0) {
             // Measure the natural stride between adjacent slots via offsetLeft
@@ -96,18 +120,64 @@ export default function HandDisplay() {
                 }
                 gsap.to(slot, { x: -stride * castingBefore, duration: 0.25, ease: "power2.out", overwrite: "auto" });
             });
+            captureLayouts();
             return;
         }
 
-        // Cleanup. Snap instantly if we just exited a cast (the new hand
-        // layout commit already moved the persisted slots into the right
-        // visual positions); otherwise tween smoothly for drag-end feel.
-        if (wasCasting) {
-            gsap.killTweensOf(slots, "x");
-            gsap.set(slots, { x: 0 });
-        } else {
+        // Drag just ended → preserve the original drag-end behavior:
+        // tween any slid-aside slots from their offset back to 0. The
+        // dragged slot itself was zeroed synchronously by
+        // useHandDragReorder before reorderHand committed, so it's
+        // already at its target visual position and gets a no-op tween.
+        // We deliberately SKIP the FLIP branch here because reorderHand
+        // doesn't auto-sort — the player's manually-placed order is
+        // exactly the final layout and no FLIP correction is needed.
+        if (justEndedDrag) {
             gsap.to(slots, { x: 0, duration: 0.18, ease: "power2.out", overwrite: "auto" });
+            captureLayouts();
+            return;
         }
+
+        // FLIP / cleanup branch.
+        //
+        // Whenever the hand reorders without a drag or cast in progress
+        // — auto-sort on draw, manual sort button click, cast-end where
+        // setHand reordered the kept runes — kept slots may end up at
+        // different flex positions than where they were visually right
+        // before the React commit. The FLIP pattern bridges the gap:
+        //
+        //   1. Read each slot's previous offsetLeft from the ref
+        //      (captured by the previous useGSAP run).
+        //   2. Compute the layout delta vs the slot's new offsetLeft.
+        //   3. Add that delta to the slot's current transform — this
+        //      preserves the slot's visual position across the commit
+        //      because transform contributes additively to layout.
+        //   4. Tween the transform back to 0, smoothly animating the
+        //      slot from its old visual position to its new flex spot.
+        //
+        // For brand-new runes (no previous-layout entry), we leave the
+        // slot alone — DrawAnimation handles the fly-in via an overlay
+        // flyer, and the underlying slot is hidden until that finishes.
+        const oldLayouts = prevSlotLayoutsRef.current;
+        slots.forEach(slot => {
+            const id = slot.getAttribute("data-rune-id");
+            if (!id) return;
+            const newLayout = slot.offsetLeft;
+            const oldLayout = oldLayouts.get(id);
+            if (oldLayout === undefined) return;
+            const layoutDelta = oldLayout - newLayout;
+            if (Math.abs(layoutDelta) <= 0.5) return;
+            const currentX = (gsap.getProperty(slot, "x") as number) || 0;
+            gsap.set(slot, { x: currentX + layoutDelta });
+        });
+
+        // One unified tween for all slots: FLIP-set transforms animate
+        // from "old visual position" → "new flex position", and any
+        // unchanged-but-still-transformed slots (cast-slide residue)
+        // animate home as well.
+        gsap.to(slots, { x: 0, duration: 0.32, ease: "power2.out", overwrite: "auto" });
+
+        captureLayouts();
     }, {
         dependencies: [
             dragInfo?.previewIdx,

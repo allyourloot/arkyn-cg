@@ -108,7 +108,23 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         // is safe because `prevHand` is left untouched, so the next tick
         // after `isCastAnimating` clears will detect the change and run the
         // full sync + draw animation in a single pass.
-        if (!getIsCastAnimating() && !runeArraysEqualById(player.hand, prevHand)) {
+        //
+        // Also defer for the entire `round_end` phase. On a winning cast the
+        // server removes the 5 played runes but never refills (handleCast
+        // returns early on the killing blow), so the hand state shrinks from
+        // 8 → 3. Applying that update would visibly collapse the hand
+        // container behind the round-end overlay's translucent backdrop:
+        // the 3 survivors snap to center and the spellbook (anchored at
+        // .handAnchor's right edge in PouchCounter.module.css) jumps left.
+        // Holding the old hand layout — castingRuneIds keeps the 5 played
+        // slots hidden because clearCastingRuneIds is also inside this
+        // block — keeps the UI rock-solid until handleReady starts the next
+        // round and gamePhase leaves "round_end".
+        if (
+            !getIsCastAnimating() &&
+            state.gamePhase !== "round_end" &&
+            !runeArraysEqualById(player.hand, prevHand)
+        ) {
             const handData = snapshotRunes(player.hand);
             const currentIds = new Set(handData.map(r => r.id));
             const freshRunes = handData.filter(r => !prevHandIds.has(r.id));

@@ -143,6 +143,16 @@ function recomputeSelectedIndices() {
         const idx = hand.findIndex(r => r.id === id);
         if (idx >= 0) next.push(idx);
     }
+    // Sort ascending so `selectedIndices` always reads in display-hand
+    // order, not in click-order. SpellPreview uses this to feed runes
+    // to `resolveSpell`, which uses encounter order as its primary-
+    // element tie-break — so a 2-Air + 2-Poison hand should preview
+    // as Wind Slash regardless of which pair the player clicked first
+    // (Air sits in the earlier slots). The cast pipeline already
+    // re-sorts defensively (`arkynAnimations.ts` line 277), but
+    // anchoring the canonical store value here keeps every consumer
+    // — preview, cast animation, server payload — in lockstep.
+    next.sort((a, b) => a - b);
     selectedIndices = next;
 }
 
@@ -286,12 +296,22 @@ export const arkynStoreInternal = {
     /**
      * Convert client selection (by rune id) into server-side hand indices.
      * Used by cast/discard right before sending the message to the server.
+     *
+     * Iterates the SORTED display-hand `selectedIndices` (not the
+     * click-order `selectedRuneIds`) so the server receives the runes
+     * in the same order the player sees them in their hand. This
+     * matters because `resolveSpell`'s primary-element tie-break uses
+     * encounter order — without this, casting 2-Air + 2-Poison after
+     * clicking the Poison pair first would resolve to Venom Strike on
+     * the server while the client preview already showed Wind Slash.
      */
     selectedIdsToServerIndices(): number[] {
         const out: number[] = [];
-        for (const id of selectedRuneIds) {
-            const idx = serverHand.findIndex(r => r.id === id);
-            if (idx >= 0) out.push(idx);
+        for (const handIdx of selectedIndices) {
+            const rune = hand[handIdx];
+            if (!rune) continue;
+            const serverIdx = serverHand.findIndex(r => r.id === rune.id);
+            if (serverIdx >= 0) out.push(serverIdx);
         }
         return out;
     },

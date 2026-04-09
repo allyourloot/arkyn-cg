@@ -2,12 +2,21 @@
     /* Parent ArkynOverlay root sets pointer-events: none — opt back in so
        the button can be clicked. */
     pointer-events: auto;
+    /* Anchored to the right edge of the .handAnchor wrapper in
+       ArkynOverlay so the spellbook sits flush against the hand without
+       affecting how the hand cards are centered on screen. The top offset
+       nudges the spellbook below the hand's vertical center, and the
+       margin-left adds breathing room between the rightmost card and the
+       book. */
     position: absolute;
-    bottom: clamp(8px, 1.5vw, 20px);
-    right: clamp(8px, 1.5vw, 20px);
+    left: 100%;
+    top: calc(50% + 32px);
+    transform: translateY(-50%);
+    margin-left: clamp(28px, 3.6vw, 48px);
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
     z-index: 5;
     cursor: pointer;
     background: none;
@@ -18,26 +27,40 @@
     transition: transform 0.1s ease-out;
 }
 
+/* Hover/active rules must include the translateY(-50%) too, otherwise the
+   scale transform would overwrite it and the button would jump down half
+   its height. */
 .wrapper:hover {
-    transform: scale(1.08);
+    transform: translateY(-50%) scale(1.08);
 }
 
 .wrapper:active {
-    transform: scale(0.96);
+    transform: translateY(-50%) scale(0.96);
 }
 
 .icon {
-    width: clamp(28px, 3vw, 40px);
-    height: clamp(28px, 3vw, 40px);
+    width: clamp(56px, 5.8vw, 76px);
+    height: clamp(56px, 5.8vw, 76px);
     image-rendering: pixelated;
-    opacity: 0.8;
 }
 
 .count {
-    font-size: clamp(20px, 2.4vw, 28px);
+    /* 9-slice frame.png chrome around the number — same border-image
+       pattern as the other panels (24px source slices rendered at 8px
+       on screen). `--panel-bg` is supplied by the inline style on
+       .wrapper via createPanelStyleVars(). */
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 8px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+    padding: 2px 10px;
+    font-size: clamp(18px, 2vw, 24px);
     font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
-    color: #d4a574;
+    color: #e8d4b8;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
     line-height: 1;
+    image-rendering: pixelated;
 }

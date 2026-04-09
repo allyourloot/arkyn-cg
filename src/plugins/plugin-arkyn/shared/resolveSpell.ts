@@ -117,15 +117,22 @@ export function resolveSpell(runes: RuneData[]): ResolvedSpell | null {
 
     const e0 = shape.entries[0]?.count ?? 0;
     const e1 = shape.entries[1]?.count ?? 0;
+    const e2 = shape.entries[2]?.count ?? 0;
     const isFullHouse = shape.distinctCount === 2 && e0 === 3 && e1 === 2;
     const isTwoPair = shape.distinctCount === 2 && e0 === 2 && e1 === 2;
+    // Two Pair + kicker: 5 runes split [2, 2, 1]. The two paired
+    // elements drive the synergy; the lone "kicker" is consumed by
+    // the cast but contributes no damage. Lets a player burn an
+    // unwanted rune as a quasi-discard while still firing the combo.
+    const isTwoPairWithKicker =
+        shape.distinctCount === 3 && e0 === 2 && e1 === 2 && e2 === 1;
     // Poker shapes have a special contract: they fire ONLY when the
     // element pair is in the synergy graph. If the synergy doesn't
     // exist, we deliberately SKIP the loose-combo branch below — that
     // way 2F+2W cancels (Tier 2 Fireball, 2 water wasted) instead of
     // silently dropping into Steam Burst at Tier 4. Loose mixes (1+1,
     // 1+4, etc.) remain unaffected.
-    const isPokerShape = isFullHouse || isTwoPair;
+    const isPokerShape = isFullHouse || isTwoPair || isTwoPairWithKicker;
 
     // 1. Full House — `[3, 2]`. Order matters: the 3-of element is the
     //    primary (drives spell color/icon), the table key is
@@ -142,11 +149,19 @@ export function resolveSpell(runes: RuneData[]): ResolvedSpell | null {
         // (the loose combo branch is intentionally skipped below).
     }
 
-    // 2. Two Pair — `[2, 2]`. Elements are interchangeable so the
+    // 2. Two Pair — `[2, 2]` (4 runes) or `[2, 2, 1]` (Two Pair plus
+    //    a single kicker rune). Elements are interchangeable so the
     //    table key is alphabetically sorted. Primary element follows
     //    the legacy "first encountered" rule (via shape.primaryElement)
     //    so the spell color stays stable across reorders.
-    if (isTwoPair) {
+    //
+    //    For the kicker variant, `comboElements` deliberately omits
+    //    the kicker's element — `getContributingRuneIndices` filters
+    //    by comboElements, so the kicker is excluded from the damage
+    //    breakdown. The cast still consumes it from hand (handleCast
+    //    removes by selected indices, not contributing indices), so
+    //    the player can use the slot as a quasi-discard.
+    if (isTwoPair || isTwoPairWithKicker) {
         const a = shape.entries[0].element;
         const b = shape.entries[1].element;
         const sorted: [string, string] = a < b ? [a, b] : [b, a];

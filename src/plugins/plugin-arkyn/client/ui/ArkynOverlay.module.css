@@ -86,3 +86,13 @@
     align-items: center;
     padding-bottom: clamp(20px, 6vh, 80px);
 }
+
+/* Wrapper around HandDisplay that gives the spellbook PouchCounter something
+   to absolute-position against. The wrapper's width collapses to whatever
+   the hand renders, so PouchCounter at left:100% always sits flush to the
+   hand's right edge while the hand itself stays centered in handStack. */
+.handAnchor {
+    position: relative;
+    display: flex;
+    align-items: center;
+}

@@ -65,9 +65,6 @@ export default function ArkynOverlay() {
             {/* Gold counter (top-right) */}
             <GoldCounter />
 
-            {/* Pouch counter (bottom-right) */}
-            <PouchCounter />
-
             {/* Left side panel: Spell Preview */}
             <SpellPreview />
 
@@ -80,7 +77,14 @@ export default function ArkynOverlay() {
                 </div>
 
                 <div className={styles.handStack}>
-                    <HandDisplay />
+                    {/* HandDisplay sets its own width from its cards; the
+                        spellbook sits absolutely-positioned at the right edge
+                        of this anchor so the hand stays centered regardless
+                        of card count. */}
+                    <div className={styles.handAnchor}>
+                        <HandDisplay />
+                        <PouchCounter />
+                    </div>
                     <ActionButtons />
                 </div>
             </div>

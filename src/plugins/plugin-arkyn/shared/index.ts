@@ -33,3 +33,6 @@ export type { ResolvedSpell, RuneData } from "./resolveSpell";
 
 export { calculateDamage, calculateRuneDamageBreakdown } from "./calculateDamage";
 export type { RuneDamageBreakdown } from "./calculateDamage";
+
+export { SPELLBOOKS, DEFAULT_SPELLBOOK_ID } from "./spellbooks";
+export type { SpellbookId, SpellbookDefinition } from "./spellbooks";

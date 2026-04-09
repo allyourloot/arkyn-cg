@@ -1,7 +1,7 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { ELEMENT_TYPES, RUNES_PER_ELEMENT } from "../../shared";
 import { useHand, usePouchContents } from "../arkynStore";
-import { playMenuOpen } from "../sfx";
+import { playMenuClose, playMenuOpen } from "../sfx";
 import RuneImage from "./RuneImage";
 import { createPanelStyleVars } from "./styles";
 import styles from "./PouchModal.module.css";
@@ -44,14 +44,22 @@ export default function PouchModal({ onClose }: PouchModalProps) {
         playMenuOpen();
     }, []);
 
+    // Wrap onClose so every dismiss path (backdrop click, Escape, X
+    // button) plays the menu-close stinger without each call site having
+    // to remember to fire it.
+    const closeWithSfx = useCallback(() => {
+        playMenuClose();
+        onClose();
+    }, [onClose]);
+
     // Close on Escape.
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") onClose();
+            if (e.key === "Escape") closeWithSfx();
         };
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [onClose]);
+    }, [closeWithSfx]);
 
     // Count pouch + hand runes per element. Each element starts with exactly
     // RUNES_PER_ELEMENT copies, so any missing slot is "spent" (played or
@@ -70,7 +78,7 @@ export default function PouchModal({ onClose }: PouchModalProps) {
     const totalSpent = ELEMENT_TYPES.length * RUNES_PER_ELEMENT - totalPouch - totalHand;
 
     return (
-        <div className={styles.backdrop} onClick={onClose}>
+        <div className={styles.backdrop} onClick={closeWithSfx}>
             <div
                 className={styles.modal}
                 style={modalStyleVars}
@@ -84,7 +92,7 @@ export default function PouchModal({ onClose }: PouchModalProps) {
                     <button
                         type="button"
                         className={styles.closeButton}
-                        onClick={onClose}
+                        onClick={closeWithSfx}
                         aria-label="Close pouch"
                     >
                         ×

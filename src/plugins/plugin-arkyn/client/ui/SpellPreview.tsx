@@ -155,7 +155,7 @@ export default function SpellPreview() {
             {showDamageSection && (
                 <div className={styles.damageSection}>
                     <span ref={damageRef} className={styles.damage}>
-                        {displayDamage} DMG
+                        {displayDamage}
                     </span>
                 </div>
             )}
