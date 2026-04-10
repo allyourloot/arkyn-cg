@@ -28,3 +28,16 @@
     line-height: 1;
     letter-spacing: 1px;
 }
+
+/* ── Landscape phone compact ── */
+@media (max-height: 500px) {
+    .wrapper {
+        border-width: 6px;
+        border-image: var(--round-info-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        padding: clamp(1px, 0.3vw, 4px) clamp(4px, 0.6vw, 8px);
+    }
+
+    .label {
+        font-size: clamp(16px, 2vw, 24px);
+    }
+}

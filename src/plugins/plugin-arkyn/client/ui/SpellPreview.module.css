@@ -245,3 +245,86 @@
     line-height: 1.2;
     padding: 0 12px;
 }
+
+/* ── Landscape phone compact ── */
+@media (max-height: 500px) {
+    .panel {
+        width: clamp(170px, 21vw, 300px);
+        height: 94vh;
+        margin-left: clamp(6px, 1vw, 16px);
+        border-width: 12px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+        padding: 2px 2px;
+        gap: clamp(4px, 0.8vh, 10px);
+    }
+
+    .section {
+        min-height: 28vh;
+        border-width: 16px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 16px 16px 16px 16px;
+        padding: 4px 3px;
+        gap: clamp(2px, 0.5vw, 6px);
+    }
+
+    .heading {
+        font-size: clamp(9px, 1.1vw, 13px);
+        letter-spacing: 1px;
+        margin-top: clamp(4px, 0.8vh, 10px);
+    }
+
+    .runeRow {
+        gap: clamp(2px, 0.4vw, 5px);
+    }
+
+    .rune {
+        width: clamp(28px, 3.4vw, 44px);
+    }
+
+    .spellName {
+        font-size: clamp(14px, 1.7vw, 20px);
+    }
+
+    .tier {
+        font-size: clamp(11px, 1.4vw, 16px);
+    }
+
+    .description {
+        display: none;
+    }
+
+    .empty {
+        font-size: clamp(12px, 1.5vw, 16px);
+        padding: 0 6px;
+    }
+
+    .damageSection {
+        gap: clamp(3px, 0.6vh, 8px);
+    }
+
+    .damageRow {
+        gap: clamp(3px, 0.6vw, 8px);
+    }
+
+    .damageChipLabel {
+        font-size: clamp(9px, 1.1vw, 13px);
+        letter-spacing: 1px;
+    }
+
+    .damageChip {
+        border-width: 6px;
+        border-image: var(--base-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        padding: 2px 4px 3px;
+    }
+
+    .damageChipMult {
+        border-image: var(--mult-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+    }
+
+    .damageChipTotal {
+        border-image: var(--total-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+    }
+
+    .damageChipValue {
+        font-size: clamp(20px, 2.6vw, 34px);
+    }
+}

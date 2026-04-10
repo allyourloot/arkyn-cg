@@ -56,3 +56,11 @@
     height: 100%;
     image-rendering: pixelated;
 }
+
+/* ── Landscape phone compact ── */
+@media (max-height: 500px) {
+    .area {
+        gap: clamp(3px, 0.6vw, 8px);
+        padding: 4px 0;
+    }
+}

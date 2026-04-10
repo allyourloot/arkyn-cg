@@ -101,3 +101,24 @@
     pointer-events: none;
 }
 
+/* ── Landscape phone compact ── */
+@media (max-height: 500px) {
+    .centerColumn {
+        padding: 0 clamp(4px, 1vw, 12px);
+    }
+
+    .centerStage {
+        gap: clamp(2px, 0.5vh, 6px);
+    }
+
+    .handStack {
+        gap: clamp(6px, 1.2vh, 16px);
+        padding-bottom: clamp(6px, 1.5vh, 20px);
+    }
+
+    .rightSpacer {
+        width: clamp(80px, 10vw, 160px);
+        margin-right: clamp(4px, 1vw, 12px);
+    }
+}
+

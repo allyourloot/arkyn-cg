@@ -58,3 +58,24 @@
     line-height: 1;
     image-rendering: pixelated;
 }
+
+/* ── Landscape phone compact ── */
+@media (max-height: 500px) {
+    .wrapper {
+        right: clamp(16px, 2.5vw, 50px);
+        bottom: clamp(20px, 4vh, 60px);
+        gap: 4px;
+    }
+
+    .icon {
+        width: clamp(48px, 5.4vw, 72px);
+        height: clamp(48px, 5.4vw, 72px);
+    }
+
+    .count {
+        border-width: 6px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        padding: 1px 6px;
+        font-size: clamp(14px, 1.6vw, 18px);
+    }
+}
