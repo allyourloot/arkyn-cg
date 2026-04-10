@@ -72,8 +72,8 @@
     background: transparent;
     border-style: solid;
     border-color: transparent;
-    border-width: 6px;
-    border-image: var(--section-bg) 6 6 6 6 fill / 6px 6px 6px 6px;
+    border-width: 24px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
     padding: clamp(12px, 1.8vh, 20px) clamp(14px, 2vw, 24px);
     display: flex;
     flex-direction: column;

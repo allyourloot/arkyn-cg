@@ -88,12 +88,28 @@ export interface CastTimelineContext {
      * so resisted runes audibly read as "weak hits".
      *
      * The orchestrator builds an interleaved tick-event timeline from this
-     * (sorted by wall-clock time) so the SpellPreview counter and SFX
+     * (sorted by wall-clock time) so the SpellPreview Base counter and SFX
      * stay in lockstep with whatever the bubbles are currently showing,
      * even when a rune's bonus pop falls between two later bubble
      * appearances. Length === contributingCount.
      */
     runeBreakdown: readonly { base: number; final: number; isResisted: boolean }[];
+    /**
+     * Spell-tier base damage (SPELL_TIER_BASE_DAMAGE[tier]) — added to the
+     * Base counter at t=0 so the chip starts at the spell's tier base and
+     * each subsequent rune impact ticks on top of it. By the last rune
+     * event the running cumulative equals spellBase + Σ runeBaseContributions
+     * = the breakdown's baseTotal, matching the value the server applied.
+     */
+    spellBaseDamage: number;
+    /**
+     * Final post-mult damage (= breakdown.finalDamage). The timeline kicks
+     * off a GSAP count-up tween that ramps the Total chip from 0 to this
+     * value once all rune ticks have completed — Balatro-style dopamine
+     * reveal. The orchestrator stores it in `castTotalDamage` via the
+     * `onTotalReveal` callback below.
+     */
+    totalDamage: number;
     /** Fired at t=0 — `flyingRunes` is mounted, HP locked. Plays cast SFX. */
     onStart: () => void;
     /** Fired when the fly tween completes. Mounts dissolving runes + sets dissolveStartTime. */
@@ -111,6 +127,15 @@ export interface CastTimelineContext {
      * boosted). SpellPreview pops its damage number on every call.
      */
     onCountTick: (cumulative: number) => void;
+    /**
+     * Fired on every frame of the GSAP count-up tween that reveals the
+     * Total chip after all rune ticks have completed. The orchestrator
+     * stores the latest value in `castTotalDamage`. Called with `0` first
+     * (start of tween) and ends at `totalDamage` exactly. While
+     * `castTotalDamage` is the sentinel `-1` (never called), SpellPreview
+     * shows "-".
+     */
+    onTotalReveal: (value: number) => void;
     /** Fired at the end of the dissolve. Sets enemyDamageHit + unlocks HP. */
     onImpact: () => void;
     /** Fired when the timeline finishes. Clears all animation state. */
@@ -169,12 +194,16 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
         },
     });
 
-    // t=0: fire cast SFX, mount flying runes, lock HP. The fly tweens
-    // themselves live inside CastAnimation's useGSAP — they start in the
-    // same frame this callback fires.
+    // t=0: fire cast SFX, mount flying runes, lock HP, and snap the Base
+    // counter to spellBase so the SpellPreview chip reads the spell's tier
+    // base from the very first frame (Balatro's "hand-type chips appear
+    // instantly when you press play"). The fly tweens themselves live
+    // inside CastAnimation's useGSAP — they start in the same frame this
+    // callback fires.
     tl.call(() => {
         playCast();
         ctx.onStart();
+        ctx.onCountTick(ctx.spellBaseDamage);
     }, undefined, 0);
 
     // Fly-complete: mount dissolving runes + set dissolveStartTime.
@@ -237,7 +266,11 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
     // weak hit.
     const RESISTED_COUNT_PITCH = 0.65;
 
-    let runningCumulative = 0;
+    // Cumulative starts at the spell's tier base — the t=0 tick above
+    // already pushed `spellBaseDamage` into the Base counter, so the
+    // first per-rune event needs to add its delta on top of that, not
+    // start fresh from zero.
+    let runningCumulative = ctx.spellBaseDamage;
     for (const e of rawEvents) {
         runningCumulative += e.delta;
         const cumulativeAtEvent = runningCumulative;
@@ -250,6 +283,34 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
         }
         tl.call(() => ctx.onCountTick(cumulativeAtEvent), undefined, e.timeS);
     }
+
+    // Total chip count-up reveal — Balatro-style. Starts at the dissolve
+    // moment (all rune ticks have completed by then, so the Base counter
+    // has reached its final value), then ramps from 0 → totalDamage in
+    // ~0.5s for a snappy "number go up" payoff. Lands well before the
+    // impact frame so the player sees the total before the floating
+    // enemy damage number flies up. The orchestrator's `onTotalReveal`
+    // callback writes each frame's value into `castTotalDamage`, and the
+    // Spell Preview switches the chip from "-" to the live tween value
+    // as soon as the first frame fires.
+    const TOTAL_REVEAL_DURATION_S = 0.5;
+    tl.call(() => {
+        const tweenObj = { value: 0 };
+        gsap.to(tweenObj, {
+            value: ctx.totalDamage,
+            duration: TOTAL_REVEAL_DURATION_S,
+            ease: "power2.out",
+            onUpdate: () => {
+                ctx.onTotalReveal(Math.round(tweenObj.value));
+            },
+            onComplete: () => {
+                // Snap to the exact target on the final frame so any
+                // floating-point rounding error during the tween doesn't
+                // leave the chip one off from the actual final damage.
+                ctx.onTotalReveal(ctx.totalDamage);
+            },
+        });
+    }, undefined, dissolveStartS);
 
     // Dissolve SFX — fires the instant the shader begins eating the runes.
     tl.call(playDissolve, undefined, dissolveStartS);

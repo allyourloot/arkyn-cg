@@ -25,14 +25,24 @@ export type {
     RarityType,
 } from "./arkynConstants";
 
-export { SPELL_TABLE, COMBO_TABLE, TIER_MULTIPLIERS } from "./spellTable";
+export {
+    SPELL_TABLE,
+    COMBO_TABLE,
+    SPELL_TIER_BASE_DAMAGE,
+    SPELL_TIER_MULT,
+    RUNE_BASE_DAMAGE,
+} from "./spellTable";
 export type { SpellInfo } from "./spellTable";
 
 export { resolveSpell, getContributingRuneIndices } from "./resolveSpell";
 export type { ResolvedSpell, RuneData } from "./resolveSpell";
 
-export { calculateDamage, calculateRuneDamageBreakdown } from "./calculateDamage";
-export type { RuneDamageBreakdown } from "./calculateDamage";
+export {
+    calculateDamage,
+    calculateRuneDamageBreakdown,
+    calculateSpellDamage,
+} from "./calculateDamage";
+export type { RuneDamageBreakdown, SpellDamageBreakdown } from "./calculateDamage";
 
 export { SPELLBOOKS, DEFAULT_SPELLBOOK_ID } from "./spellbooks";
 export type { SpellbookId, SpellbookDefinition } from "./spellbooks";

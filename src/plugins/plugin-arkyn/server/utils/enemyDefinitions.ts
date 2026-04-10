@@ -4,13 +4,14 @@
  * is `ENEMY_DEFINITIONS[0]`).
  *
  * Damage model recap (`shared/calculateDamage.ts`):
- *     damage = 8 × tier × elementalMod
+ *     baseTotal   = SPELL_TIER_BASE_DAMAGE[tier] + Σ runeBase × elementalMod
+ *     finalDamage = baseTotal × SPELL_TIER_MULT[tier]
  *     elementalMod = 0.5 (resist) / 1.0 (neutral) / 1.5 (weak)
  *
- * The early rounds are tuned so that any cast tier 2+ should comfortably
- * kill the enemy in 1–2 casts even without rolling the weakness — they're
- * meant to feel like a warm-up. The curve then ramps up hard so later
- * rounds reward stacking weakness elements and using max-tier spells.
+ * NOTE: HP values below were tuned for the legacy 8 × tier × mod formula
+ * and are too soft for the new Base + Mult curve (T1 = 12 vs old 8, T5 =
+ * 300 vs old 40). They will need a balancing pass before the difficulty
+ * feels right.
  */
 export interface EnemyDefinition {
     name: string;

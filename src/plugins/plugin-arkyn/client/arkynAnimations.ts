@@ -5,9 +5,10 @@ import {
     ARKYN_CAST,
     ARKYN_DISCARD,
     resolveSpell,
-    calculateRuneDamageBreakdown,
+    calculateSpellDamage,
     getContributingRuneIndices,
 } from "../shared";
+import type { RarityType } from "../shared/arkynConstants";
 import { subscribe, notify, type RuneClientData } from "./arkynStoreCore";
 import { sendArkynMessage } from "./arkynNetwork";
 // `arkynStoreInternal` is the data store's internal mutator/getter object.
@@ -140,12 +141,31 @@ let isDiscardAnimating = false;
 let drawingRuneIds: string[] = [];
 let drawingRunes: DrawingRune[] = [];
 
-// Live damage counter that ticks up in lockstep with the per-rune damage
-// bubbles during a cast. SpellPreview reads this and pops its damage number
-// on every increment for a "number go up" dopamine effect. Reset to 0 at
-// the start of every cast; reaches the final cast damage by the time the
-// last bubble fires.
-let castDamageCounter = 0;
+// Live BASE counter for the Spell Preview's Base + Mult chip pair. Ticks
+// up in lockstep with the per-rune damage bubbles during a cast: starts at
+// the spell's tier base (set by an initial timeline tick at t=0), then
+// each rune impact adds its post-modifier base contribution. SpellPreview
+// reads this and pops its Base number on every increment for a Balatro-
+// style "number go up" effect. Reset to 0 at the start of every cast.
+//
+// The MULT counter is NOT stored here — it's purely tier-derived and
+// SpellPreview computes it from the resolved spell directly.
+let castBaseCounter = 0;
+
+// Live TOTAL counter for the Spell Preview's red TOTAL chip. `-1` is the
+// sentinel meaning "not yet revealed" — while it's negative, SpellPreview
+// shows "-" so the player doesn't see the final post-mult damage until
+// AFTER all the rune ticks have finished landing on the Base counter.
+// The cast timeline then kicks off a GSAP count-up tween that ramps this
+// from 0 → totalDamage in ~0.5s for a Balatro-style dopamine reveal.
+let castTotalDamage = -1;
+
+// Snapshot of the last resolved cast's BASE total (spellBase + Σ rune
+// contributions). Set when a cast resolves so the Spell Preview's "Last
+// Cast" view can render the post-cast Base value without re-running the
+// formula against potentially-stale enemy state. The corresponding total
+// can be derived as `lastCastBaseDamage × mult` from the resolved spell.
+let lastCastBaseDamage = 0;
 
 // ----- Hooks -----
 export function useDissolvingRunes() {
@@ -184,8 +204,14 @@ export function useDrawingRuneIds() {
 export function useDrawingRunes() {
     return useSyncExternalStore(subscribe, () => drawingRunes);
 }
-export function useCastDamageCounter() {
-    return useSyncExternalStore(subscribe, () => castDamageCounter);
+export function useCastBaseCounter() {
+    return useSyncExternalStore(subscribe, () => castBaseCounter);
+}
+export function useCastTotalDamage() {
+    return useSyncExternalStore(subscribe, () => castTotalDamage);
+}
+export function useLastCastBaseDamage() {
+    return useSyncExternalStore(subscribe, () => lastCastBaseDamage);
 }
 
 // ----- Helpers -----
@@ -312,25 +338,36 @@ export function castSpell() {
         return;
     }
 
-    // Resolve the spell on the client so we can compute per-rune damage
-    // for the floating bubble UI. Uses the same shared formula as the
-    // server — each contributing rune is evaluated against the enemy's
-    // resistances/weaknesses individually, so the displayed bubbles always
-    // sum to the actual damage that will be applied.
+    // Resolve the spell on the client so we can compute the same Base + Mult
+    // breakdown the server uses. Each contributing rune is evaluated against
+    // the enemy's resistances/weaknesses individually, so the per-rune
+    // bubbles, the Spell Preview Base counter, and the floating enemy
+    // damage number all read identical numbers from this single breakdown.
     const resolvedSpell = resolveSpell(castRunes.map(r => ({ element: r.element })));
     const contributingIndices = getContributingRuneIndices(castRunes);
     const contributing = contributingIndices.length;
     const contributingRuneData = contributingIndices.map(i => ({ element: castRunes[i].element }));
+    // Parallel rarity array — runs alongside contributingRuneData so
+    // calculateSpellDamage can look up each rune's RUNE_BASE_DAMAGE.
+    const contributingRuneRarities: RarityType[] = contributingIndices.map(
+        i => castRunes[i].rarity as RarityType,
+    );
     const breakdown = resolvedSpell
-        ? calculateRuneDamageBreakdown(
+        ? calculateSpellDamage(
             resolvedSpell,
             contributingRuneData,
+            contributingRuneRarities,
             arkynStoreInternal.getEnemyResistances(),
             arkynStoreInternal.getEnemyWeaknesses(),
         )
-        : [];
-    let totalDamage = 0;
-    for (const b of breakdown) totalDamage += b.amount;
+        : null;
+    // Final post-mult damage applied to the enemy on the impact frame.
+    // Falls back to 0 if the spell didn't resolve (defensive — castSpell
+    // bails on selectedRuneIds.length === 0 above, so this only matters
+    // if a future hand passes the gate without resolving).
+    const totalDamage = breakdown?.finalDamage ?? 0;
+    const spellBaseDamage = breakdown?.spellBase ?? 0;
+    const baseTotal = breakdown?.baseTotal ?? 0;
 
     // The spell's primary element drives the outline color of every bubble
     // in this cast — and the matching enemy floating damage — so the
@@ -346,29 +383,34 @@ export function castSpell() {
     // tells the timeline to pitch the count SFX down on the appearance
     // event so resisted runes audibly read as weak hits.
     const runeBreakdown: { base: number; final: number; isResisted: boolean }[] = [];
-    for (let i = 0; i < contributingIndices.length; i++) {
-        const slotIdx = contributingIndices[i];
-        const rune = castRunes[slotIdx];
-        const item = breakdown[i];
-        if (!rune || !item) continue;
-        // Bubble's initial display: full pre-modifier value for criticals
-        // (so they pop 8 → 12 yellow), or the post-modifier value directly
-        // for neutral / resisted runes (no misleading "pop down").
-        const initialDisplay = item.isCritical ? item.baseAmount : item.amount;
-        bubbles[slotIdx] = {
-            amount: item.amount,
-            baseAmount: initialDisplay,
-            spellElement,
-            seq: ++bubbleSeqCounter,
-            // Each successive contributing rune's bubble waits its turn
-            // so the damage reads like a counter ticking up.
-            delayMs: i * BUBBLE_STAGGER_MS,
-        };
-        runeBreakdown.push({
-            base: initialDisplay,
-            final: item.amount,
-            isResisted: item.isResisted,
-        });
+    if (breakdown) {
+        for (let i = 0; i < contributingIndices.length; i++) {
+            const slotIdx = contributingIndices[i];
+            const rune = castRunes[slotIdx];
+            if (!rune) continue;
+            const isCritical = breakdown.isCritical[i];
+            const isResisted = breakdown.isResisted[i];
+            const preModifier = breakdown.runeBasePreModifier[i];
+            const postModifier = breakdown.runeBaseContributions[i];
+            // Bubble's initial display: full pre-modifier value for criticals
+            // (so they pop 8 → 12 yellow), or the post-modifier value
+            // directly for neutral / resisted runes (no misleading "pop down").
+            const initialDisplay = isCritical ? preModifier : postModifier;
+            bubbles[slotIdx] = {
+                amount: postModifier,
+                baseAmount: initialDisplay,
+                spellElement,
+                seq: ++bubbleSeqCounter,
+                // Each successive contributing rune's bubble waits its turn
+                // so the Base counter reads like a counter ticking up.
+                delayMs: i * BUBBLE_STAGGER_MS,
+            };
+            runeBreakdown.push({
+                base: initialDisplay,
+                final: postModifier,
+                isResisted,
+            });
+        }
     }
 
     // Dynamic raise hold: long enough for the slot raise transition to
@@ -396,6 +438,8 @@ export function castSpell() {
         contributingCount: contributing,
         castRunesLength: castRunes.length,
         runeBreakdown,
+        spellBaseDamage,
+        totalDamage,
         onStart: () => {
             // Mount the flyers and lock HP. flushSync forces React to
             // commit synchronously inside this callback so CastAnimation's
@@ -413,10 +457,20 @@ export function castSpell() {
                 // this, the deferred server hand-sync would leave the played
                 // runes visible in the hand until the dissolve completes.
                 castingRuneIds = castRunes.map(r => r.id);
-                // Reset the live damage counter — it'll tick up with the
-                // bubbles below. Starting at 0 reads as "calculating" and
-                // makes the count-up payoff feel earned.
-                castDamageCounter = 0;
+                // Reset the live Base counter — it'll tick up with the
+                // bubbles below. Starting at 0 reads as "calculating"; the
+                // timeline's initial t=0 tick snaps it up to spellBase
+                // immediately so the chip starts at the spell's tier base.
+                castBaseCounter = 0;
+                // Sentinel-reset the Total counter to "hidden" so the
+                // chip shows "-" until the timeline's count-up reveal
+                // tween fires (after all rune ticks have completed).
+                castTotalDamage = -1;
+                // Snapshot the resolved Base total so the Spell Preview's
+                // "Last Cast" view can render the post-cast Base value
+                // without re-running the formula against (potentially
+                // stale) enemy state after a round transition.
+                lastCastBaseDamage = baseTotal;
                 arkynStoreInternal.lockHpDisplay();
                 arkynStoreInternal.clearSelection();
                 arkynStoreInternal.setLastCastRunes(castRunes);
@@ -424,7 +478,11 @@ export function castSpell() {
             });
         },
         onCountTick: (cumulative) => {
-            castDamageCounter = cumulative;
+            castBaseCounter = cumulative;
+            notify();
+        },
+        onTotalReveal: (value) => {
+            castTotalDamage = value;
             notify();
         },
         onFlyComplete: () => {

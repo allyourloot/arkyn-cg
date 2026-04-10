@@ -13,7 +13,6 @@ export interface ResolvedSpell {
     spellName: string;
     tier: number;
     element: ElementType;
-    baseDamage: number;
     description: string;
     isCombo: boolean;
     /**
@@ -103,7 +102,6 @@ function buildResolvedSpell(
         spellName: info.name,
         tier,
         element: element as ElementType,
-        baseDamage: info.baseDamage,
         description: info.description,
         isCombo: shape !== "single",
         shape,

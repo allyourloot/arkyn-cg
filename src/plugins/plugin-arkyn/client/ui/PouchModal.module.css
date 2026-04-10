@@ -40,8 +40,8 @@
     background: transparent;
     border-style: solid;
     border-color: transparent;
-    border-width: 12px;
-    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    border-width: 24px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
     padding: 8px 12px;
     display: flex;
     align-items: center;
@@ -113,8 +113,8 @@
     background: transparent;
     border-style: solid;
     border-color: transparent;
-    border-width: 12px;
-    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    border-width: 24px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
     padding: 6px 10px;
     display: flex;
     flex-direction: column;

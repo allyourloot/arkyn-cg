@@ -1,37 +1,45 @@
-import { useRef, type CSSProperties } from "react";
+import { useRef, type CSSProperties, type RefObject } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
     useHand,
     useSelectedIndices,
     useLastCastRunes,
-    useLastDamage,
     useIsCastAnimating,
-    useCastDamageCounter,
+    useCastBaseCounter,
+    useCastTotalDamage,
+    useLastCastBaseDamage,
 } from "../arkynStore";
 import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
+import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT } from "../../shared";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars } from "./styles";
 import RuneImage from "./RuneImage";
 import GoldCounter from "./GoldCounter";
 import RoundInfo from "./RoundInfo";
 import innerFrameBlueUrl from "/assets/ui/inner-frame-blue.png?url";
 import innerFrameRedUrl from "/assets/ui/inner-frame-red.png?url";
+import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
 import styles from "./SpellPreview.module.css";
 
-// Standard panel chrome (frame + section + heading) plus a custom red
-// `--damage-bg` for the dedicated damage counter section.
+// Standard panel chrome (frame + section + heading) plus three custom
+// background variables for the damage section's Balatro-style chip row:
+// blue for Base, green for Mult, red for the post-mult Total. Each chip
+// reads as a distinct track at a glance.
 const panelStyleVars = {
     ...createPanelStyleVars(innerFrameBlueUrl),
-    ["--damage-bg" as string]: `url(${innerFrameRedUrl})`,
+    ["--base-bg" as string]: `url(${innerFrameBlueUrl})`,
+    ["--mult-bg" as string]: `url(${innerFrameGreenUrl})`,
+    ["--total-bg" as string]: `url(${innerFrameRedUrl})`,
 } as CSSProperties;
 
 export default function SpellPreview() {
     const hand = useHand();
     const selectedIndices = useSelectedIndices();
     const lastCastRunes = useLastCastRunes();
-    const lastDamage = useLastDamage();
     const isCastAnimating = useIsCastAnimating();
-    const castDamageCounter = useCastDamageCounter();
+    const castBaseCounter = useCastBaseCounter();
+    const castTotalDamage = useCastTotalDamage();
+    const lastCastBaseDamage = useLastCastBaseDamage();
 
     const damageRef = useRef<HTMLSpanElement>(null);
 
@@ -69,26 +77,58 @@ export default function SpellPreview() {
     const contributingRunes = contributingIndices.map(i => sourceRunes[i]);
     const isPartial = contributingCount > 0 && contributingCount < totalSourceRunes;
 
-    // Damage display source:
-    //   - During a cast: the live counter that ticks up with each bubble.
-    //   - After a cast (showing the last cast): the server-reported lastDamage.
-    //   - Live preview (selected runes, no cast yet): "-" — the player
-    //     still has to commit to see the actual number, but the frame
-    //     stays mounted so the panel layout is stable.
-    const displayDamage: number | string = isCastAnimating
-        ? castDamageCounter
-        : isLive
-            ? "-"
-            : lastDamage;
+    // Base + Mult + Total display source:
+    //   - During a cast (`isCastAnimating`): the live Base counter ticks
+    //     up with each bubble (started at the spell's tier base by the
+    //     timeline's t=0 tick). Mult is read directly from the resolved
+    //     spell's tier — it's a constant for the whole cast. Total is
+    //     gated behind the GSAP count-up reveal that fires after all
+    //     rune ticks complete: while `castTotalDamage` is the sentinel
+    //     `-1` the chip shows "-", then the tween ramps it from 0 → final
+    //     post-mult damage in ~0.5s for a Balatro-style dopamine reveal.
+    //   - Live preview (selected runes form a spell, no cast in progress):
+    //     Base shows just the spell tier's flat base (matching the cast
+    //     counter's t=0 starting value); Total stays "-" so the player
+    //     has to commit to the cast to see the actual damage. Showing
+    //     the would-be post-cast values here would spoil the reveal.
+    //   - Last cast (no current selection): Base reads from
+    //     `lastCastBaseDamage` (snapshotted on the client when the cast
+    //     resolved); Total = that snapshot × mult — the static post-cast
+    //     value the player just dealt.
+    //   - Empty branch (no spell at all): handled below — all chips "-".
+    let displayBase: number | string = "-";
+    let displayMult: number | string = "-";
+    let displayTotal: number | string = "-";
+    if (spell) {
+        const mult = SPELL_TIER_MULT[spell.tier] ?? 0;
+        const spellTierBase = SPELL_TIER_BASE_DAMAGE[spell.tier] ?? 0;
+        displayMult = mult;
 
-    // Pop the damage number every time the live counter increments. The
-    // first tick (counter goes from 0 to its first cumulative amount)
-    // pops, and every subsequent rune pops again — building anticipation
-    // toward the final number. Outside the cast window the dep doesn't
-    // change frequently, so the hook is a no-op for normal preview state.
+        if (isCastAnimating) {
+            displayBase = castBaseCounter;
+            // Total stays "-" until the timeline's count-up reveal kicks
+            // in. The orchestrator resets `castTotalDamage` to -1 in
+            // onStart and the GSAP tween writes 0+ once the rune ticks
+            // are done (see castTimeline.ts).
+            displayTotal = castTotalDamage >= 0 ? castTotalDamage : "-";
+        } else if (isLive) {
+            displayBase = spellTierBase;
+            displayTotal = "-";
+        } else {
+            displayBase = lastCastBaseDamage;
+            displayTotal = lastCastBaseDamage * mult;
+        }
+    }
+
+    // Pop the Base number every time the live counter increments. The
+    // first tick (counter goes from 0 → spellBase via the timeline's t=0
+    // tick) pops, then every subsequent rune impact pops again — building
+    // anticipation toward the final base total. Outside the cast window
+    // the dep doesn't change frequently, so the hook is a no-op for
+    // normal preview state.
     useGSAP(() => {
         if (!damageRef.current) return;
-        if (!isCastAnimating || castDamageCounter <= 0) return;
+        if (!isCastAnimating || castBaseCounter <= 0) return;
         gsap.fromTo(
             damageRef.current,
             { scale: 1.45 },
@@ -99,7 +139,7 @@ export default function SpellPreview() {
                 overwrite: "auto",
             },
         );
-    }, { dependencies: [castDamageCounter, isCastAnimating], scope: damageRef });
+    }, { dependencies: [castBaseCounter, isCastAnimating], scope: damageRef });
 
     if (!spell) {
         return (
@@ -111,6 +151,10 @@ export default function SpellPreview() {
                         Select runes to preview spell
                     </span>
                 </div>
+                {/* Damage chips stay mounted in the empty state too so
+                    the panel doesn't reflow when a spell first resolves —
+                    both read "-" until something's selected. */}
+                <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} />
                 {/* margin-top: auto inside GoldCounter pins it to the
                     bottom of the panel's flex column. */}
                 <GoldCounter />
@@ -179,40 +223,70 @@ export default function SpellPreview() {
                 </span>
             </div>
 
-            {/* Dedicated damage counter section. Always mounted so the
-                panel layout stays stable — falls back to "-" during live
-                preview (player hasn't committed to a cast yet) so the
-                actual number is still gated behind the cast. */}
-            <div className={styles.damageSection}>
-                <span ref={damageRef} className={styles.damage}>
-                    {displayDamage}
-                </span>
-            </div>
-
-            {/* Combo elements section */}
-            {spell.isCombo && spell.comboElements && (
-                <div className={styles.section}>
-                    <div className={styles.comboRow}>
-                        {spell.comboElements.map(el => {
-                            const color = ELEMENT_COLORS[el] ?? "#aaa";
-                            return (
-                                <span
-                                    key={el}
-                                    className={styles.comboChip}
-                                    style={{ color, border: `1px solid ${color}` }}
-                                >
-                                    {el}
-                                </span>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
+            {/* Base + Mult damage chips, side-by-side. The Base value is
+                whatever the live cast counter / preview computation /
+                last-cast snapshot resolved to (see the displayBase block
+                above); Mult is the static tier-derived multiplier. */}
+            <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} />
 
             {/* margin-top: auto inside GoldCounter pins it to the
                 bottom of the panel's flex column, regardless of how
                 many sections sit above it. */}
             <GoldCounter />
+        </div>
+    );
+}
+
+/**
+ * Damage section: a vertical stack with the Base + Mult chips on top and
+ * the post-mult Total chip below. Each chip uses its own coloured 9-slice
+ * frame variable (`--base-bg` blue / `--mult-bg` green / `--total-bg`
+ * red) so the three tracks read as visually distinct.
+ *
+ * The Base chip's value span receives the GSAP pop ref so it animates
+ * on every cast tick. The Mult chip prepends a `×` glyph to numeric
+ * values; the Total chip is bare (it's already a damage number).
+ *
+ * Any of `base` / `mult` / `total` may be a number (live / cast / last
+ * cast) or `"-"` (empty state).
+ */
+function DamageChips({
+    base,
+    mult,
+    total,
+    baseRef,
+}: {
+    base: number | string;
+    mult: number | string;
+    total: number | string;
+    baseRef: RefObject<HTMLSpanElement | null>;
+}) {
+    return (
+        <div className={styles.damageSection}>
+            <div className={styles.damageRow}>
+                <div className={styles.damageChipColumn}>
+                    <span className={styles.damageChipLabel}>Base</span>
+                    <div className={styles.damageChip}>
+                        <span ref={baseRef} className={styles.damageChipValue}>
+                            {base}
+                        </span>
+                    </div>
+                </div>
+                <div className={styles.damageChipColumn}>
+                    <span className={styles.damageChipLabel}>Mult</span>
+                    <div className={`${styles.damageChip} ${styles.damageChipMult}`}>
+                        <span className={styles.damageChipValue}>
+                            {typeof mult === "number" ? `×${mult}` : mult}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div className={styles.damageChipColumn}>
+                <span className={styles.damageChipLabel}>Total</span>
+                <div className={`${styles.damageChip} ${styles.damageChipTotal}`}>
+                    <span className={styles.damageChipValue}>{total}</span>
+                </div>
+            </div>
         </div>
     );
 }

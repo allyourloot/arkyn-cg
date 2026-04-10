@@ -39,40 +39,45 @@
     width: 100%;
     min-width: 0;
     flex-shrink: 0;
+    /* Reserve enough vertical room to comfortably hold the largest spell
+       content (rune recipe + name + tier + multi-line description) so the
+       section doesn't grow/shrink between the empty preview state and a
+       resolved spell — that would otherwise shove the damage chips and
+       gold counter up and down. min-height includes the 24px border on
+       both sides because `box-sizing: border-box`. */
+    min-height: 24vh;
     background: transparent;
     border-style: solid;
     border-color: transparent;
-    border-width: 6px;
-    border-image: var(--section-bg) 6 6 6 6 fill / 6px 6px 6px 6px;
+    border-width: 24px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
     padding: 8px 6px;
     display: flex;
     flex-direction: column;
     align-items: center;
+    /* Vertical-center the children so the empty placeholder + the spell
+       info both sit in the middle of the reserved height instead of
+       pinning to the top. */
+    justify-content: center;
     gap: clamp(4px, 0.8vw, 10px);
     image-rendering: pixelated;
 }
 
-/* Inline header bar at the top of the panel. Uses the blue inner-frame
-   9-slice so it reads as a distinct accent against the regular sections. */
+/* Section header at the top of the panel — styled to match the small
+   uppercase labels above the Base / Mult / Total chips below so the
+   panel reads as one coherent typographic system. No chrome of its
+   own; it's just text. */
 .heading {
     box-sizing: border-box;
     width: 100%;
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 12px;
-    border-image: var(--heading-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-    padding: 4px 6px;
-    font-size: clamp(18px, 2.2vw, 28px);
+    text-align: center;
+    font-size: clamp(12px, 1.3vw, 16px);
     font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
-    color: #ffffff;
+    color: #c4a882;
     text-transform: uppercase;
     letter-spacing: 2px;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
-    line-height: 1.1;
-    text-align: center;
-    image-rendering: pixelated;
+    line-height: 1;
 }
 
 /* Row of contributing-rune tiles for the resolved spell — replaces the
@@ -133,29 +138,83 @@
     font-size: 0.85em;
 }
 
-/* Dedicated damage counter container — its own 9-slice section using the
-   red inner-frame so the damage number stands out from the surrounding
-   spell info. The counter inside ticks up during a cast (driven by GSAP
-   in SpellPreview.tsx) and pops on every increment. */
+/* Damage section — a vertical stack with the Base + Mult horizontal
+   chip pair on top and the post-mult Total chip below. The Total chip
+   reads `Base × Mult` and ticks alongside the Base counter during the
+   cast (the multiplication is computed in SpellPreview.tsx, not in CSS). */
 .damageSection {
     box-sizing: border-box;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: clamp(6px, 1vh, 12px);
+}
+
+/* Base + Mult horizontal chip row — two framed value chips side-by-side,
+   each capped by an external uppercase label. The labels live OUTSIDE
+   the inner-frame chrome so the framed value reads as the focus and the
+   small label sits above as a header. */
+.damageRow {
+    box-sizing: border-box;
+    width: 100%;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: clamp(6px, 1vw, 12px);
+}
+
+/* Column wrapper for one damage track — label above, framed value below.
+   Has no chrome of its own; the .damageChip child owns the border-image. */
+.damageChipColumn {
+    flex: 1 1 0;
     min-width: 0;
-    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(2px, 0.4vh, 6px);
+}
+
+.damageChipLabel {
+    font-size: clamp(12px, 1.3vw, 16px);
+    font-family: 'Sburbits', system-ui, monospace;
+    font-weight: normal;
+    color: #c4a882;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    line-height: 1;
+}
+
+/* Framed value box. Defaults to the blue `--base-bg` 9-slice (Base);
+   the .damageChipMult modifier swaps it to the green `--mult-bg` and
+   .damageChipTotal swaps it to the red `--total-bg`. border-width and
+   the trailing /24px in border-image must stay in sync — both define
+   the visual border thickness in screen px. */
+.damageChip {
+    box-sizing: border-box;
+    width: 100%;
     background: transparent;
     border-style: solid;
     border-color: transparent;
     border-width: 12px;
-    border-image: var(--damage-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-    padding: 6px 8px;
+    border-image: var(--base-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 4px 6px 6px;
     display: flex;
     align-items: center;
     justify-content: center;
     image-rendering: pixelated;
 }
 
-.damage {
-    font-size: clamp(34px, 4vw, 52px);
+.damageChipMult {
+    border-image: var(--mult-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+}
+
+.damageChipTotal {
+    border-image: var(--total-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+}
+
+.damageChipValue {
+    font-size: clamp(30px, 3.6vw, 48px);
     font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
     color: #ffffff;
@@ -164,7 +223,7 @@
         0 0 8px rgba(0, 0, 0, 0.5);
     line-height: 1;
     /* `display: inline-block` lets the GSAP scale tween apply cleanly to
-       the span — inline elements don't accept transform. */
+       the Base span (the value the cast counter pops on each tick). */
     display: inline-block;
     transform-origin: center center;
 }
@@ -178,29 +237,11 @@
     padding: 0 8px;
 }
 
-.comboRow {
-    display: flex;
-    gap: 6px;
-    margin-top: 4px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.comboChip {
-    font-size: clamp(14px, 1.6vw, 18px);
-    font-family: 'Sburbits', system-ui, monospace;
-    text-transform: uppercase;
-    padding: 2px 8px;
-    border-radius: 2px;
-    line-height: 1;
-}
-
 .empty {
     font-size: clamp(16px, 1.9vw, 22px);
     font-family: 'Sburbits', system-ui, monospace;
     color: #7a7a7a;
     text-align: center;
-    margin-top: clamp(20px, 4vw, 40px);
     line-height: 1.2;
     padding: 0 12px;
 }

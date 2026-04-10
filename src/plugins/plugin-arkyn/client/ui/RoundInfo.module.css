@@ -6,14 +6,15 @@
     box-sizing: border-box;
     width: 100%;
     text-align: center;
-    /* 9-slice inner-frame.png chrome — `--section-bg` is supplied by
-       SpellPreview's createPanelStyleVars() and is in scope here because
-       RoundInfo is rendered as a child of .panel. */
+    /* 9-slice orange inner-frame chrome. The `--round-info-bg` variable
+       is set inline on the wrapper by RoundInfo.tsx, so the chip uses
+       its own colour rather than inheriting `--section-bg` from the
+       enclosing panel. */
     background: transparent;
     border-style: solid;
     border-color: transparent;
-    border-width: 6px;
-    border-image: var(--section-bg) 6 6 6 6 fill / 6px 6px 6px 6px;
+    border-width: 24px;
+    border-image: var(--round-info-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
     padding: clamp(4px, 0.8vw, 10px) clamp(6px, 1vw, 12px);
     image-rendering: pixelated;
 }
@@ -22,7 +23,7 @@
     font-size: clamp(18px, 2.2vw, 26px);
     font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
-    color: #d4a574;
+    color: #ffffff;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
     line-height: 1;
     letter-spacing: 1px;

@@ -1,6 +1,6 @@
 import selectRuneUrl from "/assets/audio/sfx/select-rune.mp3?url";
 import placeRuneUrl from "/assets/audio/sfx/place-rune.mp3?url";
-import countUrl from "/assets/audio/sfx/count.mp3?url";
+import countUrl from "/assets/audio/sfx/count.ogg?url";
 import damageUrl from "/assets/audio/sfx/damage.mp3?url";
 import castUrl from "/assets/audio/sfx/cast.mp3?url";
 import discardUrl from "/assets/audio/sfx/discard.mp3?url";
