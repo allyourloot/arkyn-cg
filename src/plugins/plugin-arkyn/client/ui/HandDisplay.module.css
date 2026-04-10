@@ -6,11 +6,25 @@
 }
 
 .hand {
+    position: relative;
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    padding: 0 clamp(8px, 1.5vw, 20px);
+    padding: clamp(10px, 1.4vh, 18px) clamp(14px, 2vw, 28px);
     touch-action: none;
+}
+
+.hand::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px;
+    border-image: var(--hand-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    image-rendering: pixelated;
+    opacity: 1;
+    pointer-events: none;
 }
 
 .sortButton {
@@ -45,6 +59,19 @@
     width: clamp(32px, 3.5vw, 48px);
     height: clamp(32px, 3.5vw, 48px);
     image-rendering: pixelated;
+}
+
+.handSize {
+    position: absolute;
+    right: clamp(8px, 1vw, 16px);
+    top: 100%;
+    margin-top: clamp(2px, 0.4vh, 6px);
+    font-size: var(--font-size-xs, 1rem);
+    color: #ffffff;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+    letter-spacing: 1px;
+    pointer-events: none;
+    opacity: 0.7;
 }
 
 .cardSlot {

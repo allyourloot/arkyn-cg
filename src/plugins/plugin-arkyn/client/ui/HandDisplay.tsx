@@ -11,11 +11,17 @@ import {
     useGamePhase,
     sortHand,
 } from "../arkynStore";
+import { HAND_SIZE } from "../../shared";
 import { playPlaceRune } from "../sfx";
 import RuneCard from "./RuneCard";
 import { useHandDragReorder } from "./hooks/useHandDragReorder";
 import sortIconUrl from "/assets/icons/sort-128x128.png?url";
+import handFrameUrl from "/assets/ui/hand-frame.png?url";
 import styles from "./HandDisplay.module.css";
+
+const handStyleVars = {
+    "--hand-bg": `url(${handFrameUrl})`,
+} as React.CSSProperties;
 
 export default function HandDisplay() {
     const hand = useHand();
@@ -210,7 +216,7 @@ export default function HandDisplay() {
 
     return (
         <div className={styles.handRow}>
-            <div ref={containerRef} className={styles.hand}>
+            <div ref={containerRef} className={styles.hand} style={handStyleVars}>
                 {hand.map((rune, index) => {
                     const rotation = totalCards > 1 ? startAngle + angleStep * index : 0;
                     const isSelected = selectedIndices.includes(index);
@@ -251,6 +257,7 @@ export default function HandDisplay() {
                     );
                 })}
             </div>
+            <span className={styles.handSize}>{hand.length - castingRuneIds.length}/{HAND_SIZE}</span>
             <button
                 onClick={handleSort}
                 disabled={!canSort}
