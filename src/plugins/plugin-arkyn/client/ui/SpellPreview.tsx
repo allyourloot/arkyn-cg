@@ -43,6 +43,7 @@ export default function SpellPreview() {
     const lastCastBaseDamage = useLastCastBaseDamage();
 
     const damageRef = useRef<HTMLSpanElement>(null);
+    const totalRef = useRef<HTMLSpanElement>(null);
 
     // Live preview from currently selected runes.
     const selectedRunes = selectedIndices.map(i => hand[i]).filter(Boolean);
@@ -142,6 +143,22 @@ export default function SpellPreview() {
         );
     }, { dependencies: [castBaseCounter, isCastAnimating], scope: damageRef });
 
+    // Pop the Total number every time the count-up tween increments it.
+    useGSAP(() => {
+        if (!totalRef.current) return;
+        if (!isCastAnimating || castTotalDamage <= 0) return;
+        gsap.fromTo(
+            totalRef.current,
+            { scale: 1.45 },
+            {
+                scale: 1,
+                duration: 0.32,
+                ease: "back.out(2.6)",
+                overwrite: "auto",
+            },
+        );
+    }, { dependencies: [castTotalDamage, isCastAnimating], scope: totalRef });
+
     if (!spell) {
         return (
             <div className={styles.panel} style={panelStyleVars}>
@@ -155,7 +172,7 @@ export default function SpellPreview() {
                 {/* Damage chips stay mounted in the empty state too so
                     the panel doesn't reflow when a spell first resolves —
                     both read "-" until something's selected. */}
-                <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} />
+                <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} totalRef={totalRef} />
                 {/* margin-top: auto inside GoldCounter pins it to the
                     bottom of the panel's flex column. */}
                 <GoldCounter />
@@ -267,7 +284,7 @@ export default function SpellPreview() {
                 whatever the live cast counter / preview computation /
                 last-cast snapshot resolved to (see the displayBase block
                 above); Mult is the static tier-derived multiplier. */}
-            <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} />
+            <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} totalRef={totalRef} />
 
             {/* margin-top: auto inside GoldCounter pins it to the
                 bottom of the panel's flex column, regardless of how
@@ -295,11 +312,13 @@ function DamageChips({
     mult,
     total,
     baseRef,
+    totalRef,
 }: {
     base: number | string;
     mult: number | string;
     total: number | string;
     baseRef: RefObject<HTMLSpanElement | null>;
+    totalRef: RefObject<HTMLSpanElement | null>;
 }) {
     return (
         <div className={styles.damageSection}>
@@ -329,7 +348,7 @@ function DamageChips({
             <div className={styles.damageChipColumn}>
                 <span className={styles.damageChipLabel}>Total</span>
                 <div className={`${styles.damageChip} ${styles.damageChipTotal}`}>
-                    <BouncyText className={styles.damageChipValue}>{total}</BouncyText>
+                    <BouncyText ref={totalRef} className={styles.damageChipValue}>{total}</BouncyText>
                 </div>
             </div>
         </div>

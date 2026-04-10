@@ -1,4 +1,5 @@
-import selectRuneUrl from "/assets/audio/sfx/select-rune.mp3?url";
+import selectRuneUrl from "/assets/audio/sfx/select-rune.ogg?url";
+import dropRuneUrl from "/assets/audio/sfx/drop-rune.ogg?url";
 import placeRuneUrl from "/assets/audio/sfx/place-rune.mp3?url";
 import countUrl from "/assets/audio/sfx/count.ogg?url";
 import damageUrl from "/assets/audio/sfx/damage.mp3?url";
@@ -30,11 +31,11 @@ function makeSfx(url: string, volume: number) {
     };
 }
 
-const playRuneSfx = makeSfx(selectRuneUrl, 0.9);
+const playRuneSfx = makeSfx(selectRuneUrl, 0.65);
 export const playSelectRune = () => playRuneSfx(1.15);
 export const playDeselectRune = () => playRuneSfx(0.85);
 export const playPickupRune = () => playRuneSfx(1.3);
-export const playDropRune = () => playRuneSfx(0.7);
+export const playDropRune = makeSfx(dropRuneUrl, 0.65);
 export const playPlaceRune = makeSfx(placeRuneUrl, 0.9);
 export const playCount = makeSfx(countUrl, 0.9);
 export const playDamage = makeSfx(damageUrl, 0.9);

@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState, type RefObject, type PointerEvent as ReactPointerEvent } from "react";
+import { useRef, useState, type RefObject, type PointerEvent as ReactPointerEvent } from "react";
 import { gsap } from "gsap";
 import { reorderHand, toggleRuneSelection, type RuneClientData } from "../../arkynStore";
 import { playPickupRune, playDropRune } from "../../sfx";
 
 const DRAG_THRESHOLD_PX = 6;
+/** Pointer must be held for at least this long before drag can engage. */
+const DRAG_HOLD_MS = 150;
 
 export interface DragInfo {
     runeId: string;
@@ -56,135 +58,60 @@ export function useHandDragReorder({
 
     const dragInfoRef = useRef<DragInfo | null>(null);
     const handRef = useRef(hand);
+    handRef.current = hand;
     const hasMovedRef = useRef(false);
     const startXRef = useRef(0);
     // Frozen at drag-start so transforms applied during drag don't pollute math.
     const slotCentersRef = useRef<number[]>([]);
     // Direct GSAP `quickSetter` for the dragged slot's transform x. This is
     // the fastest path GSAP offers — a synchronous setter that writes the
-    // transform matrix in place on every call. `quickTo` was the wrong tool
-    // here: it's designed for smooth tweening with a small duration, and
-    // setting `duration: 0` has edge-case behavior where it doesn't reliably
-    // commit to the DOM. `quickSetter` is the right primitive for direct,
-    // high-frequency updates from pointer events.
+    // transform matrix in place on every call.
     const draggedSetterRef = useRef<((v: number) => void) | null>(null);
     // Reference to the dragged DOM slot so we can `gsap.set(... { x: 0 })`
     // it on drop, before the React reorder commits.
     const draggedSlotElRef = useRef<HTMLElement | null>(null);
+    // Cleanup function for the synchronous window listeners. Stored so
+    // onPointerDown can be called again safely without leaking listeners.
+    const cleanupRef = useRef<(() => void) | null>(null);
+    // Timestamp of the pointer-down event. Drag only engages if the pointer
+    // has been held for at least DRAG_HOLD_MS.
+    const downTimeRef = useRef(0);
+    // The pending drag info before threshold is crossed. Not exposed to
+    // React state until the drag threshold is actually reached.
+    const pendingInfoRef = useRef<DragInfo | null>(null);
+    // Stride captured at pointer-down for the pending drag.
+    const pendingStrideRef = useRef(56);
 
-    useEffect(() => { dragInfoRef.current = dragInfo; }, [dragInfo]);
-    useEffect(() => { handRef.current = hand; }, [hand]);
-
-    // Window-level listeners. Set up once per drag-active phase. Closures read
-    // live values via refs so listeners don't go stale across re-renders.
-    const isDragActive = dragInfo !== null;
-    useEffect(() => {
-        if (!isDragActive) return;
-
-        const indexAtClientX = (clientX: number): number => {
-            const centers = slotCentersRef.current;
-            if (centers.length === 0) return 0;
-            let bestIdx = 0;
-            let bestDist = Infinity;
-            for (let i = 0; i < centers.length; i++) {
-                const dist = Math.abs(clientX - centers[i]);
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    bestIdx = i;
-                }
+    const indexAtClientX = (clientX: number): number => {
+        const centers = slotCentersRef.current;
+        if (centers.length === 0) return 0;
+        let bestIdx = 0;
+        let bestDist = Infinity;
+        for (let i = 0; i < centers.length; i++) {
+            const dist = Math.abs(clientX - centers[i]);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestIdx = i;
             }
-            return bestIdx;
-        };
+        }
+        return bestIdx;
+    };
 
-        const onMove = (e: PointerEvent) => {
-            const info = dragInfoRef.current;
-            if (!info) return;
+    const teardownListeners = () => {
+        if (cleanupRef.current) {
+            cleanupRef.current();
+            cleanupRef.current = null;
+        }
+    };
 
-            const dx = e.clientX - startXRef.current;
-
-            // Suppress noise until the user clearly intends to drag.
-            if (!hasMovedRef.current && Math.abs(dx) < DRAG_THRESHOLD_PX) return;
-            if (!hasMovedRef.current) playPickupRune();
-            hasMovedRef.current = true;
-
-            // Direct 1:1 transform update for the dragged slot. Bypasses
-            // React entirely so dragging is buttery smooth even on slow
-            // devices — `quickSetter` writes the transform matrix in
-            // place at the speed of pointer events.
-            draggedSetterRef.current?.(dx);
-
-            // Only re-render React when the preview index changes (i.e.
-            // when the dragged card crosses a slot boundary). The non-
-            // dragged slots' slide-aside is the only thing that depends
-            // on render output, and it's gated on previewIdx in
-            // HandDisplay's useGSAP hook.
-            const newPreviewIdx = indexAtClientX(e.clientX);
-            if (info.previewIdx === newPreviewIdx) return;
-
-            const next: DragInfo = { ...info, previewIdx: newPreviewIdx };
-            dragInfoRef.current = next;
-            setDragInfo(next);
-        };
-
-        const onUp = (e: PointerEvent) => {
-            const info = dragInfoRef.current;
-            const wasMoved = hasMovedRef.current;
-            const draggedSlot = draggedSlotElRef.current;
-
-            // Zero out the dragged slot's transform BEFORE the React
-            // reorder commits. The slot's component instance survives the
-            // reorder (key={rune.id}), so a stale x value would otherwise
-            // drift the rune to the wrong position post-reorder.
-            if (draggedSlot) {
-                gsap.set(draggedSlot, { x: 0 });
-            }
-
-            // Reset refs first so listener teardown happens cleanly.
-            dragInfoRef.current = null;
-            hasMovedRef.current = false;
-            draggedSetterRef.current = null;
-            draggedSlotElRef.current = null;
-            setDragInfo(null);
-
-            if (!info) return;
-
-            if (wasMoved) {
-                playDropRune();
-                if (info.previewIdx !== info.originalIdx) {
-                    reorderHand(info.originalIdx, info.previewIdx);
-                }
-            } else {
-                // No drag → treat as a tap, toggle selection.
-                const currentHand = handRef.current;
-                const idx = currentHand.findIndex(r => r.id === info.runeId);
-                if (idx >= 0) toggleRuneSelection(idx);
-            }
-
-            // Suppress the synthetic click that follows.
-            e.preventDefault();
-        };
-
-        const onCancel = () => {
-            const draggedSlot = draggedSlotElRef.current;
-            if (draggedSlot) {
-                gsap.set(draggedSlot, { x: 0 });
-            }
-            dragInfoRef.current = null;
-            hasMovedRef.current = false;
-            draggedSetterRef.current = null;
-            draggedSlotElRef.current = null;
-            setDragInfo(null);
-        };
-
-        window.addEventListener("pointermove", onMove);
-        window.addEventListener("pointerup", onUp);
-        window.addEventListener("pointercancel", onCancel);
-        return () => {
-            window.removeEventListener("pointermove", onMove);
-            window.removeEventListener("pointerup", onUp);
-            window.removeEventListener("pointercancel", onCancel);
-        };
-    }, [isDragActive]);
+    const resetDragState = () => {
+        dragInfoRef.current = null;
+        pendingInfoRef.current = null;
+        hasMovedRef.current = false;
+        draggedSetterRef.current = null;
+        draggedSlotElRef.current = null;
+        setDragInfo(null);
+    };
 
     const onSlotPointerDown = (
         e: ReactPointerEvent<HTMLDivElement>,
@@ -196,9 +123,10 @@ export function useHandDragReorder({
         // Block native HTML5 image drag from hijacking the gesture.
         e.preventDefault();
 
-        // Snapshot slot centers + stride at drag start. We use frozen
-        // positions because applied transforms during drag would otherwise
-        // make getBoundingClientRect() report shifted positions.
+        // Clean up any stale listeners from a previous gesture.
+        teardownListeners();
+
+        // Snapshot slot centers + stride at pointer-down.
         let cardStride = 56; // sensible default if we can't measure
         const container = containerRef.current;
         let draggedSlot: HTMLElement | null = null;
@@ -218,25 +146,115 @@ export function useHandDragReorder({
             }
         }
 
-        // Bind a `quickSetter` to the dragged slot so onMove can update
-        // its transform x with zero React involvement. quickSetter is the
-        // synchronous direct-write primitive — every call writes the matrix
-        // immediately, no tween machinery, no scheduling.
         if (draggedSlot) {
             draggedSlotElRef.current = draggedSlot;
             draggedSetterRef.current = gsap.quickSetter(draggedSlot, "x", "px") as (v: number) => void;
         }
 
         startXRef.current = e.clientX;
+        downTimeRef.current = performance.now();
         hasMovedRef.current = false;
+
+        // Store pending info in a ref — React state is NOT set yet. We
+        // only promote to real dragInfo once the drag threshold is crossed,
+        // so quick taps never enter drag mode.
         const info: DragInfo = {
             runeId,
             originalIdx: idx,
             previewIdx: idx,
             cardStride,
         };
-        dragInfoRef.current = info;
-        setDragInfo(info);
+        pendingInfoRef.current = info;
+
+        // Attach window listeners synchronously so there's no race between
+        // a fast pointerup and React's async useEffect scheduling.
+        const onMove = (ev: PointerEvent) => {
+            const pending = pendingInfoRef.current;
+            const active = dragInfoRef.current;
+            const info = active || pending;
+            if (!info) return;
+
+            const dx = ev.clientX - startXRef.current;
+
+            // Suppress noise until the user clearly intends to drag.
+            // Both the distance threshold AND the hold-time gate must pass.
+            if (!hasMovedRef.current && Math.abs(dx) < DRAG_THRESHOLD_PX) return;
+            if (!hasMovedRef.current && (performance.now() - downTimeRef.current) < DRAG_HOLD_MS) return;
+
+            // Threshold just crossed — promote to real drag state.
+            if (!hasMovedRef.current) {
+                hasMovedRef.current = true;
+                playPickupRune();
+                dragInfoRef.current = info;
+                pendingInfoRef.current = null;
+                setDragInfo(info);
+            }
+
+            // Direct 1:1 transform update for the dragged slot.
+            draggedSetterRef.current?.(dx);
+
+            // Only re-render React when the preview index changes.
+            const newPreviewIdx = indexAtClientX(ev.clientX);
+            if (dragInfoRef.current!.previewIdx === newPreviewIdx) return;
+
+            const next: DragInfo = { ...dragInfoRef.current!, previewIdx: newPreviewIdx };
+            dragInfoRef.current = next;
+            setDragInfo(next);
+        };
+
+        const onUp = (ev: PointerEvent) => {
+            teardownListeners();
+
+            const wasMoved = hasMovedRef.current;
+            const draggedSlot = draggedSlotElRef.current;
+
+            // Zero out the dragged slot's transform BEFORE the React
+            // reorder commits.
+            if (draggedSlot) {
+                gsap.set(draggedSlot, { x: 0 });
+            }
+
+            const activeInfo = dragInfoRef.current;
+            const pendingInfo = pendingInfoRef.current;
+
+            resetDragState();
+
+            if (wasMoved && activeInfo) {
+                playDropRune();
+                if (activeInfo.previewIdx !== activeInfo.originalIdx) {
+                    reorderHand(activeInfo.originalIdx, activeInfo.previewIdx);
+                }
+            } else {
+                // No drag → treat as a tap, toggle selection.
+                const targetId = activeInfo?.runeId ?? pendingInfo?.runeId;
+                if (targetId) {
+                    const currentHand = handRef.current;
+                    const idx = currentHand.findIndex(r => r.id === targetId);
+                    if (idx >= 0) toggleRuneSelection(idx);
+                }
+            }
+
+            // Suppress the synthetic click that follows.
+            ev.preventDefault();
+        };
+
+        const onCancel = () => {
+            teardownListeners();
+            const draggedSlot = draggedSlotElRef.current;
+            if (draggedSlot) {
+                gsap.set(draggedSlot, { x: 0 });
+            }
+            resetDragState();
+        };
+
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointercancel", onCancel);
+        cleanupRef.current = () => {
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", onUp);
+            window.removeEventListener("pointercancel", onCancel);
+        };
     };
 
     return { dragInfo, onSlotPointerDown };

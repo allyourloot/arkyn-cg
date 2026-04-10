@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { ELEMENT_TYPES, MAX_PLAY } from "../shared";
 import { subscribe, notify, type RuneClientData } from "./arkynStoreCore";
-import { playSelectRune, playDeselectRune } from "./sfx";
+import { playSelectRune, playDropRune } from "./sfx";
 
 // Canonical element order used by the hand sort for ties. Built once
 // from ELEMENT_TYPES (which is alphabetical) so the rune pile sorts the
@@ -278,7 +278,7 @@ export function toggleRuneSelection(index: number) {
         changeKind = "select";
     }
     if (changeKind === "select") playSelectRune();
-    else if (changeKind === "deselect") playDeselectRune();
+    else if (changeKind === "deselect") playDropRune();
     recomputeSelectedIndices();
     notify();
 }

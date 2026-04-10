@@ -16,6 +16,11 @@ import styles from "./RuneCard.module.css";
 
 const MAX_TILT_DEG = 14;
 const PERSPECTIVE_PX = 600;
+const HOVER_POP_SCALE = 1.08;
+const HOVER_POP_DURATION = 0.05;
+const HOVER_POP_EASE = "power4.out";
+const HOVER_SHRINK_DURATION = 0.08;
+const HOVER_SHRINK_EASE = "power3.out";
 
 // Touch devices have no real "hover" state, so the 3D tilt-on-pointermove
 // effect is purely cosmetic clutter on phones — and worse, the constant
@@ -45,6 +50,7 @@ function RuneCardImpl({
     tiltDisabled = false,
 }: RuneCardProps) {
     const cardRef = useRef<HTMLDivElement>(null);
+    const popRef = useRef<HTMLDivElement>(null);
     const [tilt, setTilt] = useState({ rotX: 0, rotY: 0 });
     // First-render guard so the very first useGSAP pass uses gsap.set
     // (instant) instead of gsap.to (animated). Otherwise the card would
@@ -111,8 +117,28 @@ function RuneCardImpl({
         });
     };
 
+    const handlePointerEnter = () => {
+        if (tiltDisabled) return;
+        const el = popRef.current;
+        if (!el) return;
+        gsap.to(el, {
+            scale: HOVER_POP_SCALE,
+            duration: HOVER_POP_DURATION,
+            ease: HOVER_POP_EASE,
+            overwrite: "auto",
+        });
+    };
+
     const handlePointerLeave = () => {
         setTilt({ rotX: 0, rotY: 0 });
+        const el = popRef.current;
+        if (!el) return;
+        gsap.to(el, {
+            scale: 1,
+            duration: HOVER_SHRINK_DURATION,
+            ease: HOVER_SHRINK_EASE,
+            overwrite: "auto",
+        });
     };
 
     return (
@@ -120,6 +146,7 @@ function RuneCardImpl({
             ref={cardRef}
             // Tilt handlers only attach on devices with a real hover state.
             // On touch they're a no-op, saving a setState per touchmove.
+            onPointerEnter={HAS_HOVER ? handlePointerEnter : undefined}
             onPointerMove={HAS_HOVER ? handlePointerMove : undefined}
             onPointerLeave={HAS_HOVER ? handlePointerLeave : undefined}
             className={`${styles.card} ${isSelected ? styles.selected : ""}`}
@@ -130,17 +157,19 @@ function RuneCardImpl({
                 // out of phase on first render rather than slowly drifting apart.
                 style={{ animationDelay: `${-index * FLOAT_STAGGER_S}s` }}
             >
-                <div
-                    className={styles.tiltInner}
-                    style={{
-                        transform: `perspective(${PERSPECTIVE_PX}px) rotateX(${tilt.rotX}deg) rotateY(${tilt.rotY}deg)`,
-                    }}
-                >
-                    <RuneImage
-                        rarity={rune.rarity}
-                        element={rune.element}
-                        className={styles.layer}
-                    />
+                <div ref={popRef} className={styles.popWrap}>
+                    <div
+                        className={styles.tiltInner}
+                        style={{
+                            transform: `perspective(${PERSPECTIVE_PX}px) rotateX(${tilt.rotX}deg) rotateY(${tilt.rotY}deg)`,
+                        }}
+                    >
+                        <RuneImage
+                            rarity={rune.rarity}
+                            element={rune.element}
+                            className={styles.layer}
+                        />
+                    </div>
                 </div>
             </div>
         </div>
