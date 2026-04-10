@@ -4,6 +4,10 @@ import { Logger } from "@core/shared/utils";
 import { calculateDamage } from "../utils/calculateDamage";
 import { refillHand } from "../utils/refillHand";
 import { removeRunesFromHand, validateRuneSelection } from "./utils/runeSelection";
+import type { ArkynContext } from "../types/ArkynContext";
+import { getRunStats } from "../resources/runStats";
+import { syncRunStatsToSchema } from "../utils/syncRunStatsToSchema";
+import { finalizeRun } from "../utils/finalizeRun";
 
 const logger = new Logger("ArkynCast");
 
@@ -16,6 +20,7 @@ export function handleCast(
     state: ArkynState,
     client: { sessionId: string },
     payload: unknown,
+    ctx: ArkynContext,
 ): void {
     const result = validateRuneSelection(state, client, payload, {
         logger,
@@ -57,6 +62,15 @@ export function handleCast(
     player.lastDamage = damage;
     player.castsRemaining--;
 
+    // Accumulate run stats
+    const stats = getRunStats(client.sessionId);
+    if (stats) {
+        stats.totalCasts++;
+        stats.totalDamage += damage;
+        stats.highestSingleCastDamage = Math.max(stats.highestSingleCastDamage, damage);
+        stats.spellUsage[spell.spellName] = (stats.spellUsage[spell.spellName] ?? 0) + 1;
+    }
+
     logger.info(`${spell.spellName} (Tier ${spell.tier}) deals ${damage} damage! Enemy HP: ${state.enemy.currentHp}/${state.enemy.maxHp}`);
 
     // Check if enemy is defeated
@@ -74,6 +88,11 @@ export function handleCast(
         player.lastRoundGoldHandsCount = handsCount;
         player.gold += baseGold + handsBonus;
 
+        if (stats) {
+            stats.enemiesDefeated++;
+            stats.goldEarned += baseGold + handsBonus;
+        }
+
         state.gamePhase = "round_end";
         logger.info(
             `Enemy defeated! Round ${state.currentRound} complete. ` +
@@ -90,6 +109,11 @@ export function handleCast(
     // the run is over — discards can't deal damage so there's no way
     // to finish the fight.
     if (player.castsRemaining <= 0) {
+        // Sync final run stats to schema before setting game_over so the
+        // client receives both in the same Colyseus state patch.
+        if (stats) syncRunStatsToSchema(player, stats);
+        finalizeRun(client.sessionId, ctx, state.currentRound);
+
         state.gamePhase = "game_over";
         logger.info(`Game over! Player ${client.sessionId} ran out of casts on round ${state.currentRound}.`);
     }

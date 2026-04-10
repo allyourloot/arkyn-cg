@@ -27,11 +27,11 @@
     border-color: transparent;
     border-width: 24px;
     border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
-    padding: clamp(18px, 2.4vw, 32px) clamp(24px, 3.2vw, 44px) clamp(20px, 2.6vw, 36px);
+    padding: clamp(12px, 1.6vw, 20px) clamp(10px, 1.4vw, 18px) clamp(14px, 1.8vw, 22px);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(14px, 2.2vh, 26px);
+    gap: clamp(8px, 1.2vh, 14px);
     image-rendering: pixelated;
     font-family: 'Sburbits', system-ui, monospace;
     animation: panelIn 300ms cubic-bezier(0.2, 1.2, 0.4, 1);
@@ -55,35 +55,88 @@
     text-align: center;
 }
 
-/* ----- Content frame ----- */
+/* ----- Stat chips ----- */
 
-.contentFrame {
+/* Horizontal row for paired chips (e.g. Spells Cast + Discards Used). */
+.statsRow {
     box-sizing: border-box;
+    width: 100%;
+    display: flex;
+    gap: clamp(6px, 1vw, 12px);
+}
+
+/* Individual stat chip — inner-frame 9-slice with label + value. */
+.statChip {
+    box-sizing: border-box;
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
     width: 100%;
     background: transparent;
     border-style: solid;
     border-color: transparent;
-    border-width: 24px;
-    border-image: var(--section-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
-    padding: clamp(12px, 1.8vh, 20px) clamp(14px, 2vw, 24px);
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: clamp(4px, 0.6vh, 8px) clamp(8px, 1vw, 14px);
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: clamp(6px, 1vh, 12px);
+    justify-content: center;
+    gap: clamp(4px, 0.6vw, 8px);
     image-rendering: pixelated;
-}
-
-.stat {
-    font-size: clamp(18px, 2.2vw, 28px);
-    color: #e8d4b8;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
-    line-height: 1;
-    letter-spacing: 1px;
     text-align: center;
 }
 
+.statLabel {
+    font-size: clamp(15px, 1.8vw, 22px);
+    font-weight: normal;
+    color: #c4b097;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* Default value — white text */
 .statValue {
+    font-size: clamp(17px, 2vw, 26px);
+    font-weight: normal;
+    color: #ffffff;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+    letter-spacing: 0.5px;
+    background: rgba(0, 0, 0, 0.35);
+    padding: clamp(3px, 0.4vh, 6px) clamp(6px, 0.8vw, 12px);
+    border-radius: 4px;
+}
+
+/* New-best value — gold text */
+.statValueBest {
+    composes: statValue;
     color: #ffd700;
+}
+
+/* Badge pinned to top-right corner of the chip with a slight slant. */
+.newBest {
+    position: absolute;
+    top: clamp(-8px, -0.8vh, -4px);
+    right: clamp(-4px, -0.4vw, 0px);
+    font-size: clamp(10px, 1.1vw, 14px);
+    font-weight: normal;
+    color: #ffd700;
+    background: rgba(180, 40, 40, 0.9);
+    padding: clamp(2px, 0.3vh, 4px) clamp(5px, 0.6vw, 8px);
+    border-radius: 3px;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.7);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transform: rotate(-3deg);
+    animation: bestPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes bestPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
 /* ----- New Run button ----- */
@@ -125,7 +178,7 @@
         width: clamp(280px, 40vw, 480px);
         border-width: 12px;
         border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-        padding: clamp(10px, 1.6vw, 20px) clamp(14px, 2vw, 28px);
+        padding: clamp(8px, 1.2vw, 14px) clamp(6px, 1vw, 12px);
         gap: clamp(8px, 1.4vh, 16px);
     }
 
@@ -133,15 +186,26 @@
         font-size: clamp(24px, 3.2vw, 40px);
     }
 
-    .contentFrame {
-        border-width: 12px;
-        border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-        padding: clamp(8px, 1.2vh, 14px) clamp(10px, 1.4vw, 18px);
-        gap: clamp(4px, 0.6vh, 8px);
+    .statChip {
+        border-width: 8px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: clamp(2px, 0.4vh, 5px) clamp(6px, 0.8vw, 10px);
+        gap: clamp(3px, 0.4vw, 6px);
     }
 
-    .stat {
-        font-size: clamp(14px, 1.8vw, 22px);
+    .statLabel {
+        font-size: clamp(12px, 1.4vw, 17px);
+    }
+
+    .statValue {
+        font-size: clamp(13px, 1.5vw, 19px);
+        padding: 2px clamp(4px, 0.6vw, 8px);
+    }
+
+    .newBest {
+        font-size: clamp(8px, 0.9vw, 12px);
+        top: clamp(-6px, -0.6vh, -3px);
+        padding: 1px clamp(3px, 0.4vw, 6px);
     }
 
     .button {

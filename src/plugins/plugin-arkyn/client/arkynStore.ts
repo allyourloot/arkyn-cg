@@ -112,6 +112,19 @@ let lastRoundGoldHandsCount = 0;
 // (element / description / combo info that the server doesn't sync).
 let lastCastRunes: RuneClientData[] = [];
 
+// Run stats — synced from server for the game-over screen.
+let runTotalDamage = 0;
+let runTotalCasts = 0;
+let runTotalDiscards = 0;
+let runHighestSingleCast = 0;
+let runFavoriteSpell = "";
+let runEnemiesDefeated = 0;
+let runGoldEarned = 0;
+
+// Personal bests — loaded from save data on join.
+let bestRound = 0;
+let bestSingleCast = 0;
+
 // ----- Setters (each notifies; called from sync system / actions) -----
 
 export function setHand(h: RuneClientData[]) {
@@ -233,6 +246,17 @@ export function setLastRoundGoldBase(g: number) { lastRoundGoldBase = g; notify(
 export function setLastRoundGoldHandsBonus(g: number) { lastRoundGoldHandsBonus = g; notify(); }
 export function setLastRoundGoldHandsCount(c: number) { lastRoundGoldHandsCount = c; notify(); }
 
+// Run stats setters
+export function setRunTotalDamage(d: number) { runTotalDamage = d; notify(); }
+export function setRunTotalCasts(c: number) { runTotalCasts = c; notify(); }
+export function setRunTotalDiscards(d: number) { runTotalDiscards = d; notify(); }
+export function setRunHighestSingleCast(d: number) { runHighestSingleCast = d; notify(); }
+export function setRunFavoriteSpell(s: string) { runFavoriteSpell = s; notify(); }
+export function setRunEnemiesDefeated(n: number) { runEnemiesDefeated = n; notify(); }
+export function setRunGoldEarned(g: number) { runGoldEarned = g; notify(); }
+export function setBestRound(r: number) { bestRound = r; notify(); }
+export function setBestSingleCast(d: number) { bestSingleCast = d; notify(); }
+
 export function clearSelectedIndices() {
     selectedRuneIds = [];
     selectedIndices = [];
@@ -343,6 +367,17 @@ export function useGold() { return useSyncExternalStore(subscribe, () => gold); 
 export function useLastRoundGoldBase() { return useSyncExternalStore(subscribe, () => lastRoundGoldBase); }
 export function useLastRoundGoldHandsBonus() { return useSyncExternalStore(subscribe, () => lastRoundGoldHandsBonus); }
 export function useLastRoundGoldHandsCount() { return useSyncExternalStore(subscribe, () => lastRoundGoldHandsCount); }
+
+// Run stats hooks
+export function useRunTotalDamage() { return useSyncExternalStore(subscribe, () => runTotalDamage); }
+export function useRunTotalCasts() { return useSyncExternalStore(subscribe, () => runTotalCasts); }
+export function useRunTotalDiscards() { return useSyncExternalStore(subscribe, () => runTotalDiscards); }
+export function useRunHighestSingleCast() { return useSyncExternalStore(subscribe, () => runHighestSingleCast); }
+export function useRunFavoriteSpell() { return useSyncExternalStore(subscribe, () => runFavoriteSpell); }
+export function useRunEnemiesDefeated() { return useSyncExternalStore(subscribe, () => runEnemiesDefeated); }
+export function useRunGoldEarned() { return useSyncExternalStore(subscribe, () => runGoldEarned); }
+export function useBestRound() { return useSyncExternalStore(subscribe, () => bestRound); }
+export function useBestSingleCast() { return useSyncExternalStore(subscribe, () => bestSingleCast); }
 
 // ============================================================
 // Barrel re-exports

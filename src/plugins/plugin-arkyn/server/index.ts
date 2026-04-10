@@ -1,5 +1,7 @@
 import { ServerPlugin, type ServerRuntime } from "@core/server";
 import { Logger } from "@core/shared/utils";
+import type { AuthPluginInterface } from "@plugins/plugin-auth/server";
+import type { SaveStatesInterface } from "@plugins/plugin-save-states/server";
 import {
     ARKYN_JOIN,
     ARKYN_CAST,
@@ -8,6 +10,7 @@ import {
     ARKYN_NEW_RUN,
     ArkynState,
 } from "../shared";
+import { createArkynContext } from "./types/ArkynContext";
 import { handleJoin } from "./systems/handleJoin";
 import { handleCast } from "./systems/handleCast";
 import { handleDiscard } from "./systems/handleDiscard";
@@ -25,16 +28,20 @@ export function PluginArkynServer(): ServerPlugin {
         version: "0.0.1",
         description: "Arkyn - Fantasy Roguelike Rune Game",
         author: "Arkyn",
-        dependencies: [],
+        dependencies: ["auth"],
         init: async (runtime: ServerRuntime) => {
             const state = new ArkynState();
 
+            const auth = runtime.getInterface<AuthPluginInterface>("auth") ?? null;
+            const saveStates = runtime.getInterface<SaveStatesInterface>("save-states") ?? null;
+            const ctx = createArkynContext(auth, saveStates);
+
             runtime.onMessage(ARKYN_JOIN, (client: ServerClientRef) => {
-                handleJoin(state, client);
+                handleJoin(state, client, ctx);
             });
 
             runtime.onMessage(ARKYN_CAST, (client: ServerClientRef, payload: unknown) => {
-                handleCast(state, client, payload);
+                handleCast(state, client, payload, ctx);
             });
 
             runtime.onMessage(ARKYN_DISCARD, (client: ServerClientRef, payload: unknown) => {
@@ -46,11 +53,11 @@ export function PluginArkynServer(): ServerPlugin {
             });
 
             runtime.onMessage(ARKYN_NEW_RUN, (client: ServerClientRef) => {
-                handleNewRun(state, client);
+                handleNewRun(state, client, ctx);
             });
 
             runtime.onClientLeave((client: ServerClientRef) => {
-                handleLeave(state, client);
+                handleLeave(state, client, ctx);
             });
 
             logger.info("Arkyn server plugin initialized");

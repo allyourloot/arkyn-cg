@@ -36,6 +36,19 @@ export class ArkynPlayerState extends Schema {
     @type("number") lastRoundGoldBase = 0;
     @type("number") lastRoundGoldHandsBonus = 0;
     @type("number") lastRoundGoldHandsCount = 0;
+
+    // Run stats — synced to client for the game-over screen.
+    @type("number") runTotalDamage = 0;
+    @type("number") runTotalCasts = 0;
+    @type("number") runTotalDiscards = 0;
+    @type("number") runHighestSingleCast = 0;
+    @type("string") runFavoriteSpell = "";
+    @type("number") runEnemiesDefeated = 0;
+    @type("number") runGoldEarned = 0;
+
+    // Personal bests — loaded from save data on join.
+    @type("number") bestRound = 0;
+    @type("number") bestSingleCast = 0;
 }
 
 export class ArkynState extends PluginState {

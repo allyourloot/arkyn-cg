@@ -22,6 +22,15 @@ import {
     setLastRoundGoldBase,
     setLastRoundGoldHandsBonus,
     setLastRoundGoldHandsCount,
+    setRunTotalDamage,
+    setRunTotalCasts,
+    setRunTotalDiscards,
+    setRunHighestSingleCast,
+    setRunFavoriteSpell,
+    setRunEnemiesDefeated,
+    setRunGoldEarned,
+    setBestRound,
+    setBestSingleCast,
     clearSelectedIndices,
     triggerDrawAnimation,
     getHandIndex,
@@ -94,6 +103,15 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevGoldBase = -1;
     let prevGoldHandsBonus = -1;
     let prevGoldHandsCount = -1;
+    let prevRunTotalDamage = -1;
+    let prevRunTotalCasts = -1;
+    let prevRunTotalDiscards = -1;
+    let prevRunHighestSingleCast = -1;
+    let prevRunFavoriteSpell = "";
+    let prevRunEnemiesDefeated = -1;
+    let prevRunGoldEarned = -1;
+    let prevBestRound = -1;
+    let prevBestSingleCast = -1;
 
     return () => {
         const player = state.players.get(sessionId);
@@ -249,6 +267,46 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (player.lastRoundGoldHandsCount !== prevGoldHandsCount) {
             setLastRoundGoldHandsCount(player.lastRoundGoldHandsCount);
             prevGoldHandsCount = player.lastRoundGoldHandsCount;
+        }
+
+        // Sync run stats
+        if (player.runTotalDamage !== prevRunTotalDamage) {
+            setRunTotalDamage(player.runTotalDamage);
+            prevRunTotalDamage = player.runTotalDamage;
+        }
+        if (player.runTotalCasts !== prevRunTotalCasts) {
+            setRunTotalCasts(player.runTotalCasts);
+            prevRunTotalCasts = player.runTotalCasts;
+        }
+        if (player.runTotalDiscards !== prevRunTotalDiscards) {
+            setRunTotalDiscards(player.runTotalDiscards);
+            prevRunTotalDiscards = player.runTotalDiscards;
+        }
+        if (player.runHighestSingleCast !== prevRunHighestSingleCast) {
+            setRunHighestSingleCast(player.runHighestSingleCast);
+            prevRunHighestSingleCast = player.runHighestSingleCast;
+        }
+        if (player.runFavoriteSpell !== prevRunFavoriteSpell) {
+            setRunFavoriteSpell(player.runFavoriteSpell);
+            prevRunFavoriteSpell = player.runFavoriteSpell;
+        }
+        if (player.runEnemiesDefeated !== prevRunEnemiesDefeated) {
+            setRunEnemiesDefeated(player.runEnemiesDefeated);
+            prevRunEnemiesDefeated = player.runEnemiesDefeated;
+        }
+        if (player.runGoldEarned !== prevRunGoldEarned) {
+            setRunGoldEarned(player.runGoldEarned);
+            prevRunGoldEarned = player.runGoldEarned;
+        }
+
+        // Sync personal bests
+        if (player.bestRound !== prevBestRound) {
+            setBestRound(player.bestRound);
+            prevBestRound = player.bestRound;
+        }
+        if (player.bestSingleCast !== prevBestSingleCast) {
+            setBestSingleCast(player.bestSingleCast);
+            prevBestSingleCast = player.bestSingleCast;
         }
     };
 }

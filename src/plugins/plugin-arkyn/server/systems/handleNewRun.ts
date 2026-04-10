@@ -3,17 +3,25 @@ import { Logger } from "@core/shared/utils";
 import { removePouch } from "../resources/playerPouch";
 import { initPlayerForRound } from "../utils/initPlayerForRound";
 import { spawnEnemy } from "./handleJoin";
+import type { ArkynContext } from "../types/ArkynContext";
+import { initRunStats } from "../resources/runStats";
+import { finalizeRun } from "../utils/finalizeRun";
 
 const logger = new Logger("ArkynNewRun");
 
 export function handleNewRun(
     state: ArkynState,
     client: { sessionId: string },
+    ctx: ArkynContext,
 ): void {
     if (state.gamePhase !== "game_over") {
         logger.warn(`New run rejected: game phase is ${state.gamePhase}`);
         return;
     }
+
+    // Finalize the old run stats (already done in handleCast on game_over,
+    // but safe to call again — getRunStats returns undefined after removal)
+    finalizeRun(client.sessionId, ctx, state.currentRound);
 
     // Clean up old player state
     if (state.players.has(client.sessionId)) {
@@ -25,6 +33,16 @@ export function handleNewRun(
     const player = new ArkynPlayerState();
     state.players.set(client.sessionId, player);
     initPlayerForRound(player, client.sessionId);
+
+    // Initialize fresh run stats
+    initRunStats(client.sessionId);
+
+    // Load updated personal bests from save data
+    const saveData = ctx.getSaveData(client.sessionId);
+    if (saveData) {
+        player.bestRound = saveData.lifetime.highestRound;
+        player.bestSingleCast = saveData.lifetime.highestSingleCastDamage;
+    }
 
     // Reset to round 1 with a new enemy
     state.currentRound = 1;

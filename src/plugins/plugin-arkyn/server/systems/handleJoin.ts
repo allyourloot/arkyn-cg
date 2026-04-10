@@ -4,12 +4,15 @@ import { clearArraySchema } from "../utils/clearArraySchema";
 import { initPlayerForRound } from "../utils/initPlayerForRound";
 import { removePouch } from "../resources/playerPouch";
 import { getEnemyForRound } from "../utils/enemyDefinitions";
+import type { ArkynContext } from "../types/ArkynContext";
+import { initRunStats, removeRunStats } from "../resources/runStats";
 
 const logger = new Logger("ArkynJoin");
 
 export function handleJoin(
     state: ArkynState,
     client: { sessionId: string },
+    ctx: ArkynContext,
 ): void {
     // Don't re-join if already in game — clean up the previous player + pouch
     // before creating fresh state, otherwise the stale pouch lingers in the
@@ -18,12 +21,23 @@ export function handleJoin(
         logger.info(`Player ${client.sessionId} already in game, re-initializing`);
         state.players.delete(client.sessionId);
         removePouch(client.sessionId);
+        removeRunStats(client.sessionId);
     }
 
     // Create player state and run the standard round-init flow
     const player = new ArkynPlayerState();
     state.players.set(client.sessionId, player);
     initPlayerForRound(player, client.sessionId);
+
+    // Initialize ephemeral run stats
+    initRunStats(client.sessionId);
+
+    // Load personal bests from save data (if available)
+    const saveData = ctx.getSaveData(client.sessionId);
+    if (saveData) {
+        player.bestRound = saveData.lifetime.highestRound;
+        player.bestSingleCast = saveData.lifetime.highestSingleCastDamage;
+    }
 
     // Spawn enemy for round 1
     spawnEnemy(state);
