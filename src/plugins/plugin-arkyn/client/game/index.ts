@@ -1,6 +1,6 @@
 import type { ClientRuntime } from "@core/client";
 import type { ArkynState } from "../../shared";
-import { setConnection, joinGame } from "../arkynStore";
+import { setConnection } from "../arkynStore";
 import { createSyncArkynStateSystem } from "./systems/syncArkynState";
 
 export function initArkynGame(runtime: ClientRuntime, state: ArkynState) {
@@ -19,6 +19,6 @@ export function initArkynGame(runtime: ClientRuntime, state: ArkynState) {
     // Register state sync system
     runtime.addSystem("PRE_UPDATE", createSyncArkynStateSystem(state, room.sessionId));
 
-    // Auto-join the game
-    joinGame();
+    // Game starts when the player clicks PLAY on the main menu,
+    // which calls joinGame() from the UI.
 }

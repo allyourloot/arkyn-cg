@@ -1,0 +1,97 @@
+/* ----- Main Menu ----- */
+
+.root {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(24px, 4vh, 48px);
+
+    --font-family: 'Knightwood', system-ui, monospace;
+    --font-size-xs: 1rem;
+    --font-size-sm: 1.5rem;
+    --font-size-md: 2rem;
+    --font-size-lg: 2.5rem;
+    --font-size-xl: 3rem;
+    --font-size-2xl: 4rem;
+    --font-size-3xl: 5rem;
+    font-family: var(--font-family);
+    -webkit-font-smoothing: none;
+    font-smooth: never;
+}
+
+/* ----- Logo ----- */
+
+.logo {
+    width: clamp(280px, 36vw, 520px);
+    height: auto;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 0 24px rgba(120, 60, 200, 0.4));
+    animation: logoIn 600ms cubic-bezier(0.2, 1.2, 0.4, 1);
+    user-select: none;
+}
+
+@keyframes logoIn {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* ----- Play button ----- */
+
+.playButton {
+    pointer-events: auto;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    border-image: var(--btn-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
+    background-color: transparent;
+    image-rendering: pixelated;
+    padding: clamp(12px, 1.8vh, 20px) clamp(48px, 6vw, 80px);
+    font-family: inherit;
+    font-size: clamp(var(--font-size-md), 3.5vw, var(--font-size-xl));
+    font-weight: normal;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: #f4ffe8;
+    cursor: pointer;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+    transition: transform 0.1s ease;
+    line-height: 1;
+    animation: buttonIn 400ms 200ms cubic-bezier(0.2, 1.2, 0.4, 1) both;
+}
+
+@keyframes buttonIn {
+    from { transform: translateY(12px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.playButton:hover {
+    border-image: var(--btn-bg-hover) 10 10 10 10 fill / 10px 10px 10px 10px;
+}
+
+.playButton:active {
+    transform: translateY(3px);
+    filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35));
+}
+
+/* ── Landscape phone compact ── */
+@media (max-height: 500px) {
+    .root {
+        gap: clamp(12px, 2vh, 24px);
+    }
+
+    .logo {
+        width: clamp(180px, 28vw, 340px);
+    }
+
+    .playButton {
+        padding: clamp(8px, 1.2vh, 14px) clamp(32px, 4vw, 56px);
+        font-size: clamp(var(--font-size-sm), 2.5vw, var(--font-size-md));
+        letter-spacing: 6px;
+    }
+}

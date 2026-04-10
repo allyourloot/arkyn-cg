@@ -15,6 +15,7 @@ import GameOverOverlay from "./GameOverOverlay";
 import CastAnimation from "./CastAnimation";
 import DiscardAnimation from "./DiscardAnimation";
 import DrawAnimation from "./DrawAnimation";
+import MainMenu from "./MainMenu";
 import BackgroundMusic from "./BackgroundMusic";
 import BackgroundShader from "./BackgroundShader";
 import OverlayShader from "./OverlayShader";
@@ -54,6 +55,17 @@ export default function ArkynOverlay() {
         const t = setTimeout(() => setShowGameOver(true), ENEMY_DAMAGE_HIT_MS);
         return () => clearTimeout(t);
     }, [gamePhase, isCastAnimating]);
+
+    if (gamePhase === "menu") {
+        return (
+            <div className={styles.root}>
+                <BackgroundShader />
+                <BackgroundMusic />
+                <MainMenu />
+                <OverlayShader />
+            </div>
+        );
+    }
 
     if (gamePhase === "waiting") {
         return (
