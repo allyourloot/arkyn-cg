@@ -13,14 +13,14 @@
     background: transparent;
     border-style: solid;
     border-color: transparent;
-    border-width: 24px;
-    border-image: var(--round-info-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    border-width: 12px;
+    border-image: var(--round-info-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
     padding: clamp(4px, 0.8vw, 10px) clamp(6px, 1vw, 12px);
     image-rendering: pixelated;
 }
 
 .label {
-    font-size: clamp(18px, 2.2vw, 26px);
+    font-size: clamp(24px, 3vw, 36px);
     font-family: 'Sburbits', system-ui, monospace;
     font-weight: normal;
     color: #ffffff;

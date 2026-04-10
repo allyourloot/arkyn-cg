@@ -2,14 +2,14 @@ import frameUrl from "/assets/ui/frame.png?url";
 import innerFrameUrl from "/assets/ui/inner-frame.png?url";
 
 export const ELEMENT_COLORS: Record<string, string> = {
-    fire: "#e84430",
+    fire: "#ff5722",
     water: "#3b82f6",
     earth: "#6b8e23",
     air: "#87ceeb",
     ice: "#00d4ff",
     lightning: "#fbbf24",
     arcane: "#a855f7",
-    death: "#4a4a4a",
+    death: "#dc143c",
     holy: "#fef08a",
     poison: "#22c55e",
     psy: "#ec4899",
@@ -18,14 +18,14 @@ export const ELEMENT_COLORS: Record<string, string> = {
 };
 
 export const ELEMENT_BG_COLORS: Record<string, string> = {
-    fire: "rgba(232, 68, 48, 0.3)",
+    fire: "rgba(255, 87, 34, 0.3)",
     water: "rgba(59, 130, 246, 0.3)",
     earth: "rgba(107, 142, 35, 0.3)",
     air: "rgba(135, 206, 235, 0.3)",
     ice: "rgba(0, 212, 255, 0.3)",
     lightning: "rgba(251, 191, 36, 0.3)",
     arcane: "rgba(168, 85, 247, 0.3)",
-    death: "rgba(74, 74, 74, 0.3)",
+    death: "rgba(220, 20, 60, 0.3)",
     holy: "rgba(254, 240, 138, 0.3)",
     poison: "rgba(34, 197, 94, 0.3)",
     psy: "rgba(236, 72, 153, 0.3)",

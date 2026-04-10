@@ -1,0 +1,26 @@
+.canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    /* Sit on top of every other UI layer in the overlay's stacking
+       context. RoundEndOverlay's backdrop is z-index 200; this needs
+       to be higher so the grain shows over the round-end screen too. */
+    z-index: 9999;
+    display: block;
+    /* Pixelated upscale: the canvas renders at 1/PIXEL_SIZE of the
+       viewport (see OverlayShader.tsx) and CSS blows it up so each
+       shader pixel becomes a chunky block — same trick the background
+       shader uses, here applied as a global grain layer. */
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+    /* Soft-light blending: gray=0.5 from the shader is the neutral
+       midpoint, brighter pixels gently lift the underlying UI and
+       darker pixels gently darken it. The opacity below dials the
+       overall strength of the effect — start subtle, raise to taste. */
+    mix-blend-mode: soft-light;
+    opacity: 0.18;
+}

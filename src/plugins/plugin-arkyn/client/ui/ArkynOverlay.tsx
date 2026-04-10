@@ -16,6 +16,7 @@ import DiscardAnimation from "./DiscardAnimation";
 import DrawAnimation from "./DrawAnimation";
 import BackgroundMusic from "./BackgroundMusic";
 import BackgroundShader from "./BackgroundShader";
+import OverlayShader from "./OverlayShader";
 import styles from "./ArkynOverlay.module.css";
 
 export default function ArkynOverlay() {
@@ -96,6 +97,12 @@ export default function ArkynOverlay() {
 
             {/* Round End overlay — animated reward breakdown */}
             {showRoundEnd && <RoundEndOverlay />}
+
+            {/* Global pixel-art grain overlay — sits on top of every
+                other layer (z-index 9999, pointer-events: none) and
+                composites over the UI via mix-blend-mode: soft-light.
+                Mounted last so it's the topmost child of .root. */}
+            <OverlayShader />
         </div>
     );
 }
