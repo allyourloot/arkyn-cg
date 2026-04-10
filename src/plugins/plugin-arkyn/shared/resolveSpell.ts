@@ -1,12 +1,14 @@
-import { COMBINABLE_ELEMENTS, type ElementType } from "./arkynConstants";
+import { type ElementType } from "./arkynConstants";
 import {
     SPELL_TABLE,
-    COMBO_TABLE,
     TWO_PAIR_TABLE,
     FULL_HOUSE_TABLE,
     type SpellInfo,
 } from "./spellTable";
 
+// `duo` is kept in the union for the future shop-unlock path that
+// re-enables loose-duo combos (COMBO_TABLE). In the base game, only
+// `single`, `two_pair`, and `full_house` can be resolved.
 export type SpellShape = "single" | "duo" | "two_pair" | "full_house";
 
 export interface ResolvedSpell {
@@ -124,14 +126,6 @@ export function resolveSpell(runes: RuneData[]): ResolvedSpell | null {
     // unwanted rune as a quasi-discard while still firing the combo.
     const isTwoPairWithKicker =
         shape.distinctCount === 3 && e0 === 2 && e1 === 2 && e2 === 1;
-    // Poker shapes have a special contract: they fire ONLY when the
-    // element pair is in the synergy graph. If the synergy doesn't
-    // exist, we deliberately SKIP the loose-combo branch below — that
-    // way 2F+2W cancels (Tier 2 Fireball, 2 water wasted) instead of
-    // silently dropping into Steam Burst at Tier 4. Loose mixes (1+1,
-    // 1+4, etc.) remain unaffected.
-    const isPokerShape = isFullHouse || isTwoPair || isTwoPairWithKicker;
-
     // 1. Full House — `[3, 2]`. Order matters: the 3-of element is the
     //    primary (drives spell color/icon), the table key is
     //    `${primary}+${secondary}`. Each synergy pair has TWO unique
@@ -143,8 +137,7 @@ export function resolveSpell(runes: RuneData[]): ResolvedSpell | null {
         if (info) {
             return buildResolvedSpell(info, 5, primary, "full_house", [primary, secondary]);
         }
-        // No synergy for this pair — fall through to single-element
-        // (the loose combo branch is intentionally skipped below).
+        // No synergy for this pair — fall through to single-element.
     }
 
     // 2. Two Pair — `[2, 2]` (4 runes) or `[2, 2, 1]` (Two Pair plus
@@ -170,29 +163,20 @@ export function resolveSpell(runes: RuneData[]): ResolvedSpell | null {
         // No synergy for this pair — fall through to single-element.
     }
 
-    // 3. Loose duo combo — two distinct combinable elements, ANY count
-    //    split that ISN'T a poker shape ([1,1], [1,2], [2,1], [1,3],
-    //    [3,1], [1,4], [4,1]). Poker shapes that fell through above
-    //    skip this branch on purpose so the cancellation rule holds.
-    //    Unchanged behavior: 1F+4W → Steam Burst Tier 5, 1L+1W →
-    //    Electrocution Tier 2.
-    if (!isPokerShape && shape.distinctCount === 2) {
-        const a = shape.entries[0].element;
-        const b = shape.entries[1].element;
-        const bothCombinable =
-            (COMBINABLE_ELEMENTS as readonly string[]).includes(a) &&
-            (COMBINABLE_ELEMENTS as readonly string[]).includes(b);
-        if (bothCombinable) {
-            const sorted: [string, string] = a < b ? [a, b] : [b, a];
-            const info = COMBO_TABLE[`${sorted[0]}+${sorted[1]}`];
-            if (info) {
-                const tier = Math.min(runes.length, 5);
-                return buildResolvedSpell(info, tier, shape.primaryElement, "duo", sorted);
-            }
-        }
-    }
+    // NOTE: Loose duo combos (COMBO_TABLE) are intentionally disabled
+    // in the base game. Mixed-element hands that don't form a synergy
+    // poker shape (Two Pair / Full House) fall through to single-
+    // element — the non-matching runes are wasted. This keeps the
+    // poker analogy clean: only real "hands" score, and mismatched
+    // runes are dead weight, creating meaningful commit-vs-hold
+    // tension during play.
+    //
+    // The COMBO_TABLE content is preserved for a future shop item
+    // (e.g. "Grimoire of Wild Magic") that unlocks loose-duo combos
+    // as a run-wide power-up. When that item is equipped, re-enable
+    // the loose-duo branch here (gate on a player/runtime flag).
 
-    // 4. Single-element fallback — most-frequent element wins, tier
+    // 3. Single-element fallback — most-frequent element wins, tier
     //    equals that element's count (capped at 5). Hands that don't
     //    fit any combo shape (3-distinct, 4-distinct, 5-distinct, or
     //    [2,1,1]/[3,1,1]) land here, plus non-synergy poker shapes

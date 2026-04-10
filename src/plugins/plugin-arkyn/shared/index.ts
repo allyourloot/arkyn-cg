@@ -11,7 +11,6 @@ export {
     POUCH_SIZE,
     RUNES_PER_ELEMENT,
     ELEMENT_TYPES,
-    COMBINABLE_ELEMENTS,
     RARITY_TYPES,
     ARKYN_JOIN,
     ARKYN_CAST,
@@ -21,13 +20,11 @@ export {
 
 export type {
     ElementType,
-    CombinableElement,
     RarityType,
 } from "./arkynConstants";
 
 export {
     SPELL_TABLE,
-    COMBO_TABLE,
     SPELL_TIER_BASE_DAMAGE,
     SPELL_TIER_MULT,
     RUNE_BASE_DAMAGE,

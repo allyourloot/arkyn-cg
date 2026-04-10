@@ -203,12 +203,42 @@ export default function SpellPreview() {
                     ))}
                 </div>
 
-                <BouncyText
-                    className={styles.spellName}
-                    style={{ color: elementColor }}
-                >
-                    {spell.spellName}
-                </BouncyText>
+                {spell.isCombo && spell.comboElements ? (
+                    /* Combo spells: pass `colorRange` to BouncyText so each
+                       visible character gets a solid color interpolated
+                       between the two element colors. The "gradient" is
+                       technically stepped per-glyph but at typical spell-
+                       name sizes (~20-28px) and short lengths (~10 chars)
+                       it reads as a smooth left-to-right gradient, with
+                       the bonus that:
+                         - per-char bounce still works (each char has its
+                           own solid color and its own translateY)
+                         - text-shadow still works (text-shadow respects
+                           solid colors, unlike the background-clip: text
+                           workaround which forced color: transparent)
+                         - no `display: inline-block` wrapper needed, so
+                           the spell name still flows inline. */
+                    (() => {
+                        const [el1, el2] = spell.comboElements;
+                        const c1 = ELEMENT_COLORS[el1] ?? "#aaa";
+                        const c2 = ELEMENT_COLORS[el2] ?? "#aaa";
+                        return (
+                            <BouncyText
+                                className={styles.spellName}
+                                colorRange={[c1, c2]}
+                            >
+                                {spell.spellName}
+                            </BouncyText>
+                        );
+                    })()
+                ) : (
+                    <BouncyText
+                        className={styles.spellName}
+                        style={{ color: elementColor }}
+                    >
+                        {spell.spellName}
+                    </BouncyText>
+                )}
                 {/* Tier line: bouncing main label + the static partial-rune
                     warning sibling (kept out of BouncyText so its muted-red
                     styling and contextual content are preserved). */}
