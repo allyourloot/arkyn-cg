@@ -13,7 +13,7 @@ import {
     useBestSingleCast,
 } from "../arkynStore";
 import { playGameOver } from "../sfx";
-import { setBgMusicPlaybackRate } from "./BackgroundMusic";
+import { setBgMusicPitch } from "./BackgroundMusic";
 import { createPanelStyleVars } from "./styles";
 import buttonGreenUrl from "/assets/ui/button-green.png?url";
 import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
@@ -46,8 +46,8 @@ export default function GameOverOverlay() {
 
     useEffect(() => {
         playGameOver();
-        setBgMusicPlaybackRate(0.82);
-        return () => setBgMusicPlaybackRate(1);
+        setBgMusicPitch(0.92, -100);
+        return () => setBgMusicPitch(1, 0);
     }, []);
 
     return (
