@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { useCurrentRound } from "../arkynStore";
+import BouncyText from "./BouncyText";
 import innerFrameOrangeUrl from "/assets/ui/inner-frame-orange.png?url";
 import styles from "./RoundInfo.module.css";
 
@@ -17,7 +18,7 @@ export default function RoundInfo() {
 
     return (
         <div className={styles.wrapper} style={wrapperStyle}>
-            <span className={styles.label}>Round {round}</span>
+            <BouncyText className={styles.label}>{`Round ${round}`}</BouncyText>
         </div>
     );
 }

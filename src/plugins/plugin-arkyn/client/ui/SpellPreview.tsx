@@ -14,6 +14,7 @@ import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSp
 import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT } from "../../shared";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars } from "./styles";
 import RuneImage from "./RuneImage";
+import BouncyText from "./BouncyText";
 import GoldCounter from "./GoldCounter";
 import RoundInfo from "./RoundInfo";
 import innerFrameBlueUrl from "/assets/ui/inner-frame-blue.png?url";
@@ -147,9 +148,9 @@ export default function SpellPreview() {
                 <RoundInfo />
                 <span className={styles.heading}>Spell Preview</span>
                 <div className={styles.section}>
-                    <span className={styles.empty}>
+                    <BouncyText className={styles.empty}>
                         Select runes to preview spell
-                    </span>
+                    </BouncyText>
                 </div>
                 {/* Damage chips stay mounted in the empty state too so
                     the panel doesn't reflow when a spell first resolves —
@@ -202,15 +203,24 @@ export default function SpellPreview() {
                     ))}
                 </div>
 
-                <span className={styles.spellName} style={{ color: elementColor }}>
+                <BouncyText
+                    className={styles.spellName}
+                    style={{ color: elementColor }}
+                >
                     {spell.spellName}
-                </span>
-
+                </BouncyText>
+                {/* Tier line: bouncing main label + the static partial-rune
+                    warning sibling (kept out of BouncyText so its muted-red
+                    styling and contextual content are preserved). */}
                 <span className={styles.tier}>
-                    Tier {TIER_LABELS[spell.tier] ?? spell.tier}
-                    {spell.shape === "full_house" && " (Full House)"}
-                    {spell.shape === "two_pair" && " (Two Pair)"}
-                    {spell.shape === "duo" && " (Combo)"}
+                    <BouncyText>
+                        {`Tier ${TIER_LABELS[spell.tier] ?? spell.tier}${
+                            spell.shape === "full_house" ? " (Full House)"
+                            : spell.shape === "two_pair" ? " (Two Pair)"
+                            : spell.shape === "duo" ? " (Combo)"
+                            : ""
+                        }`}
+                    </BouncyText>
                     {isPartial && (
                         <span className={styles.partialRunes}>
                             {" · "}{contributingCount}/{totalSourceRunes} runes
@@ -218,9 +228,9 @@ export default function SpellPreview() {
                     )}
                 </span>
 
-                <span className={styles.description}>
+                <BouncyText className={styles.description}>
                     {spell.description}
-                </span>
+                </BouncyText>
             </div>
 
             {/* Base + Mult damage chips, side-by-side. The Base value is
@@ -267,24 +277,29 @@ function DamageChips({
                 <div className={styles.damageChipColumn}>
                     <span className={styles.damageChipLabel}>Base</span>
                     <div className={styles.damageChip}>
-                        <span ref={baseRef} className={styles.damageChipValue}>
+                        {/* baseRef forwards to BouncyText's wrapper span so
+                            the existing damage-pop scale tween still hits
+                            it. The scale on the wrapper composes cleanly
+                            with the per-char translateY animation on the
+                            inner spans. */}
+                        <BouncyText ref={baseRef} className={styles.damageChipValue}>
                             {base}
-                        </span>
+                        </BouncyText>
                     </div>
                 </div>
                 <div className={styles.damageChipColumn}>
                     <span className={styles.damageChipLabel}>Mult</span>
                     <div className={`${styles.damageChip} ${styles.damageChipMult}`}>
-                        <span className={styles.damageChipValue}>
+                        <BouncyText className={styles.damageChipValue}>
                             {typeof mult === "number" ? `×${mult}` : mult}
-                        </span>
+                        </BouncyText>
                     </div>
                 </div>
             </div>
             <div className={styles.damageChipColumn}>
                 <span className={styles.damageChipLabel}>Total</span>
                 <div className={`${styles.damageChip} ${styles.damageChipTotal}`}>
-                    <span className={styles.damageChipValue}>{total}</span>
+                    <BouncyText className={styles.damageChipValue}>{total}</BouncyText>
                 </div>
             </div>
         </div>

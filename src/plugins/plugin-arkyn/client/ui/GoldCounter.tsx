@@ -1,5 +1,6 @@
 import { useGold } from "../arkynStore";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
+import BouncyText from "./BouncyText";
 import styles from "./GoldCounter.module.css";
 
 /**
@@ -14,7 +15,7 @@ export default function GoldCounter() {
     return (
         <div className={styles.wrapper}>
             <img src={goldIconUrl} alt="Gold" className={styles.icon} />
-            <span className={styles.count}>{gold}</span>
+            <BouncyText className={styles.count}>{gold}</BouncyText>
         </div>
     );
 }

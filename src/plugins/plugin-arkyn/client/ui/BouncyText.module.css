@@ -1,0 +1,17 @@
+/* Per-character bob keyframe used by BouncyText.tsx. Each `.char` span
+   gets a negative `animation-delay` set inline so adjacent characters
+   sit at slightly different points in the cycle, creating a gentle
+   left-to-right wave across the text. The compositor handles the
+   transform on the GPU so the motion stays smooth even during heavy
+   React work elsewhere. Tuned to be just-perceptible — 1px peak with
+   a slow 1.6s cycle. */
+@keyframes textBob {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-1px); }
+}
+
+.char {
+    display: inline-block;
+    animation: textBob 1.6s ease-in-out infinite alternate;
+    will-change: transform;
+}
