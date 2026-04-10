@@ -32,11 +32,45 @@ function makeSfx(url: string, volume: number) {
     };
 }
 
+// Web Audio API sfx maker — uses AudioBufferSourceNode.detune for
+// proper pitch shifting (in cents) without affecting playback speed.
+// Lazily initializes the AudioContext on first play (browser autoplay
+// policy requires a user gesture before creating/resuming a context).
+let audioCtx: AudioContext | null = null;
+function getAudioCtx(): AudioContext {
+    if (!audioCtx) audioCtx = new AudioContext();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+}
+
+function makeDetuneSfx(url: string, volume: number) {
+    let buffer: AudioBuffer | null = null;
+    // Kick off the fetch + decode immediately so the buffer is ready
+    // by the time the first play call arrives.
+    fetch(url)
+        .then(res => res.arrayBuffer())
+        .then(arr => getAudioCtx().decodeAudioData(arr))
+        .then(decoded => { buffer = decoded; })
+        .catch(() => { /* silent — sfx just won't play */ });
+
+    return (detuneCents = 0) => {
+        if (!buffer) return;
+        const ctx = getAudioCtx();
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.detune.value = detuneCents;
+        const gain = ctx.createGain();
+        gain.gain.value = volume;
+        source.connect(gain).connect(ctx.destination);
+        source.start();
+    };
+}
+
 const playRuneSfx = makeSfx(selectRuneUrl, 0.65);
 export const playSelectRune = () => playRuneSfx(1.15);
 export const playDeselectRune = () => playRuneSfx(0.85);
 export const playPickupRune = () => playRuneSfx(1.3);
-export const playDropRune = makeSfx(dropRuneUrl, 0.65);
+export const playDropRune = makeDetuneSfx(dropRuneUrl, 0.65);
 export const playPlaceRune = makeSfx(placeRuneUrl, 0.9);
 export const playCount = makeSfx(countUrl, 0.9);
 export const playDamage = makeSfx(damageUrl, 0.9);
@@ -45,8 +79,8 @@ export const playDissolve = makeSfx(dissolveUrl, 0.9);
 export const playCritical = makeSfx(criticalUrl, 0.9);
 export const playGold = makeSfx(goldUrl, 0.9);
 export const playGoldTotal = makeSfx(goldTotalUrl, 0.9);
-export const playMenuOpen = makeSfx(menuOpenUrl, 0.9);
-export const playMenuClose = makeSfx(menuCloseUrl, 0.9);
+export const playMenuOpen = makeSfx(menuOpenUrl, 0.45);
+export const playMenuClose = makeSfx(menuCloseUrl, 0.45);
 export const playRoundWin = makeSfx(roundWinUrl, 0.9);
 export const playGameOver = makeSfx(gameOverUrl, 0.9);
 

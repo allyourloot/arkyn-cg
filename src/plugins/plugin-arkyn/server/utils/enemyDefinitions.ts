@@ -8,10 +8,11 @@
  *     finalDamage = baseTotal × SPELL_TIER_MULT[tier]
  *     elementalMod = 0.5 (resist) / 1.0 (neutral) / 1.5 (weak)
  *
- * NOTE: HP values below were tuned for the legacy 8 × tier × mod formula
- * and are too soft for the new Base + Mult curve (T1 = 12 vs old 8, T5 =
- * 300 vs old 40). They will need a balancing pass before the difficulty
- * feels right.
+ * HP tuned for the Base + Mult curve. Reference damage outputs (common):
+ *   T1 = 12 neutral / 16 weak     T2 = 48 / 64
+ *   T3 = 108 / 144                T4 = 192 / 256
+ *   T5 = 300 / 400
+ * Player has 3 casts per round with 8 runes in hand.
  */
 export interface EnemyDefinition {
     name: string;
@@ -22,60 +23,62 @@ export interface EnemyDefinition {
 }
 
 export const ENEMY_DEFINITIONS: EnemyDefinition[] = [
-    // ----- Trivial warm-up: one cast should usually do it. -----
+    // ----- Warm-up: one good cast should do it. -----
     {
         name: "Goblin Scout",
-        hp: 30,
+        hp: 60,
         element: "earth",
         resistances: ["earth"],
         weaknesses: ["fire", "lightning"],
     },
     {
         name: "Forest Imp",
-        hp: 45,
+        hp: 100,
         element: "shadow",
         resistances: ["shadow"],
         weaknesses: ["holy", "fire"],
     },
+    // ----- Getting real: need 2 decent casts. -----
     {
         name: "Stone Golem",
-        hp: 70,
+        hp: 175,
         element: "earth",
         resistances: ["earth", "steel"],
         weaknesses: ["water", "lightning"],
     },
-    // ----- Real fights begin: two casts on average. -----
     {
         name: "Shadow Wraith",
-        hp: 100,
+        hp: 300,
         element: "shadow",
         resistances: ["shadow", "death"],
         weaknesses: ["holy", "fire"],
     },
+    // ----- Hard fights: need strong hands + weakness exploitation. -----
     {
         name: "Fire Drake",
-        hp: 140,
+        hp: 450,
         element: "fire",
         resistances: ["fire"],
         weaknesses: ["water", "ice"],
     },
     {
         name: "Ice Elemental",
-        hp: 180,
+        hp: 625,
         element: "ice",
         resistances: ["ice", "water"],
         weaknesses: ["fire", "lightning"],
     },
     {
         name: "Dark Sorcerer",
-        hp: 230,
+        hp: 800,
         element: "arcane",
         resistances: ["arcane", "shadow"],
         weaknesses: ["holy", "psy"],
     },
+    // ----- Boss: need to maximize every cast. -----
     {
         name: "Ancient Wyrm",
-        hp: 300,
+        hp: 1000,
         element: "death",
         resistances: ["death", "fire", "ice"],
         weaknesses: ["holy", "lightning"],

@@ -86,6 +86,7 @@ export interface RuneDamageBubble {
 export interface EnemyDamageHit {
     amount: number;
     spellElement: string;
+    isCritical: boolean;
     seq: number;
 }
 
@@ -127,7 +128,7 @@ let dissolveStartTime = 0;
 let raisedSlotIndices: number[] = [];
 let runeDamageBubbles: (RuneDamageBubble | null)[] = [];
 let bubbleSeqCounter = 0;
-let enemyDamageHit: EnemyDamageHit = { amount: 0, spellElement: "", seq: 0 };
+let enemyDamageHit: EnemyDamageHit = { amount: 0, spellElement: "", isCritical: false, seq: 0 };
 let enemyDamageSeqCounter = 0;
 
 let flyingRunes: FlyingRune[] = [];
@@ -368,6 +369,7 @@ export function castSpell() {
     const totalDamage = breakdown?.finalDamage ?? 0;
     const spellBaseDamage = breakdown?.spellBase ?? 0;
     const baseTotal = breakdown?.baseTotal ?? 0;
+    const hasCritical = breakdown?.isCritical.some(Boolean) ?? false;
 
     // The spell's primary element drives the outline color of every bubble
     // in this cast — and the matching enemy floating damage — so the
@@ -510,6 +512,7 @@ export function castSpell() {
             enemyDamageHit = {
                 amount: totalDamage,
                 spellElement,
+                isCritical: hasCritical,
                 seq: ++enemyDamageSeqCounter,
             };
             // Release the HP bar lock and snap the displayed value to

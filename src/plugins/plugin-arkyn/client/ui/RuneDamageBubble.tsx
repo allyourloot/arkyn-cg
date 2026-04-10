@@ -2,6 +2,7 @@ import { useRef, type CSSProperties } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ELEMENT_COLORS } from "./styles";
+import criticalUrl from "/assets/ui/critical.png?url";
 import styles from "./RuneDamageBubble.module.css";
 
 interface Props {
@@ -37,6 +38,8 @@ const BASE_COLOR = "#ffffff";
 
 export default function RuneDamageBubble({ amount, baseAmount, spellElement, seq, delayMs }: Props) {
     const bubbleRef = useRef<HTMLSpanElement>(null);
+    const textRef = useRef<HTMLSpanElement>(null);
+    const criticalRef = useRef<HTMLImageElement>(null);
     const strokeColor = ELEMENT_COLORS[spellElement] ?? "#ffffff";
     // Only the upward (weakness → critical) case triggers the two-pop
     // sequence. Resisted runes have `amount < baseAmount` and just show
@@ -52,10 +55,19 @@ export default function RuneDamageBubble({ amount, baseAmount, spellElement, seq
     // with the animated y/scale without fighting the matrix.
     useGSAP(() => {
         const el = bubbleRef.current;
+        const textEl = textRef.current;
+        const critEl = criticalRef.current;
         if (!el) return;
         // Reset text + color in case the same DOM node is reused across casts.
-        el.textContent = String(baseAmount);
+        // Update the inner text span (not el.textContent, which would destroy
+        // sibling DOM nodes like the critical burst <img>).
+        if (textEl) textEl.textContent = String(baseAmount);
         gsap.set(el, { xPercent: -50, y: 6, scale: 0.55, opacity: 0, color: BASE_COLOR });
+        // Hide the critical burst until the bonus pop reveals it.
+        // xPercent/yPercent handle centering here because GSAP owns the
+        // transform property — a CSS translate would be overwritten by the
+        // scale tween.
+        if (critEl) gsap.set(critEl, { opacity: 0, scale: 0.5, xPercent: -50, yPercent: -50 });
 
         const tl = gsap.timeline({ delay: delayMs / 1000 });
 
@@ -80,15 +92,23 @@ export default function RuneDamageBubble({ amount, baseAmount, spellElement, seq
             tl.to({}, { duration: 0.08 });
             // Phase 3b: swap text to the bonus value
             tl.call(() => {
-                el.textContent = String(amount);
+                if (textEl) textEl.textContent = String(amount);
             });
             // Phase 3c: bonus pop — bigger overshoot + flash to yellow (130ms)
+            // Critical burst pops in at the same time as the yellow flash.
+            if (critEl) {
+                tl.to(critEl, {
+                    opacity: 1,
+                    scale: 1,
+                    duration: 0.13,
+                    ease: "back.out(2.5)",
+                }, "<");
+            }
             tl.to(el, {
                 scale: 1.38,
-                color: BONUS_COLOR,
                 duration: 0.13,
                 ease: "back.out(2.5)",
-            });
+            }, "<");
             // Phase 3d: settle the bonus pop (50ms)
             tl.to(el, {
                 scale: 1.12,
@@ -127,7 +147,15 @@ export default function RuneDamageBubble({ amount, baseAmount, spellElement, seq
             className={styles.bubble}
             style={style}
         >
-            {baseAmount}
+            {isBonus && (
+                <img
+                    ref={criticalRef}
+                    src={criticalUrl}
+                    alt=""
+                    className={styles.criticalBg}
+                />
+            )}
+            <span ref={textRef}>{baseAmount}</span>
         </span>
     );
 }

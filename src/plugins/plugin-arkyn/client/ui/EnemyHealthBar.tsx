@@ -11,6 +11,7 @@ import {
 } from "../arkynStore";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
+import criticalUrl from "/assets/ui/critical.png?url";
 import styles from "./EnemyHealthBar.module.css";
 
 // `--panel-bg` (frame.png) drives the bar chrome; `--section-bg`
@@ -20,6 +21,7 @@ const wrapperStyleVars = createPanelStyleVars();
 interface ActiveHit {
     amount: number;
     spellElement: string;
+    isCritical: boolean;
     seq: number;
 }
 
@@ -54,9 +56,10 @@ export default function EnemyHealthBar() {
         setActiveHit({
             amount: enemyDamageHit.amount,
             spellElement: enemyDamageHit.spellElement,
+            isCritical: enemyDamageHit.isCritical,
             seq: enemyDamageHit.seq,
         });
-    }, [enemyDamageHit.seq, enemyDamageHit.amount, enemyDamageHit.spellElement]);
+    }, [enemyDamageHit.seq, enemyDamageHit.amount, enemyDamageHit.spellElement, enemyDamageHit.isCritical]);
 
     // GSAP-driven shake + floating damage tween. Fires whenever activeHit
     // gets a new seq. The bar wrapper does the side-to-side shake; the
@@ -95,30 +98,34 @@ export default function EnemyHealthBar() {
         // @keyframes enemyDamageFloat. The whole tween is ~0.9s and on
         // completion clears `activeHit` so the span unmounts.
         if (float) {
-            gsap.set(float, { xPercent: -50, y: 18, scale: 0.5, opacity: 0 });
+            gsap.set(float, { x: 0, y: 0, scale: 0.5, opacity: 0 });
             const tl = gsap.timeline({
                 onComplete: () => setActiveHit(null),
             });
             tl.to(float, {
-                y: -8,
+                x: 10,
+                y: -6,
                 scale: 1.25,
                 opacity: 1,
                 duration: 0.135,
                 ease: "back.out(2)",
             })
                 .to(float, {
-                    y: -16,
+                    x: 18,
+                    y: -10,
                     scale: 1,
                     duration: 0.117,
                     ease: "power2.out",
                 })
                 .to(float, {
-                    y: -52,
+                    x: 50,
+                    y: -28,
                     duration: 0.45,
                     ease: "power1.out",
                 })
                 .to(float, {
-                    y: -76,
+                    x: 64,
+                    y: -36,
                     scale: 0.92,
                     opacity: 0,
                     duration: 0.198,
@@ -166,6 +173,13 @@ export default function EnemyHealthBar() {
                             className={styles.damageFloat}
                             style={damageFloatStyle}
                         >
+                            {activeHit.isCritical && (
+                                <img
+                                    src={criticalUrl}
+                                    alt=""
+                                    className={styles.criticalBg}
+                                />
+                            )}
                             -{activeHit.amount}
                         </span>
                     )}

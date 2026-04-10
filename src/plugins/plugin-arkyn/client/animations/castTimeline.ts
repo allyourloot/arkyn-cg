@@ -321,6 +321,13 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
         ctx.onImpact();
     }, undefined, impactAtS);
 
+    // Post-impact breather — hold 1s after the enemy HP bar hit before the
+    // timeline completes. This prevents the draw animation from overlapping
+    // the floating damage number + HP bar shake, giving the impact moment
+    // room to land.
+    const POST_IMPACT_PAUSE_S = 1;
+    tl.to({}, { duration: POST_IMPACT_PAUSE_S }, impactAtS);
+
     currentCastTimeline = tl;
     return tl;
 }

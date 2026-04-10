@@ -102,8 +102,8 @@
 
 .damageFloat {
     position: absolute;
-    left: 50%;
-    bottom: 100%;
+    right: -10%;
+    top: 50%;
     font-family: 'Sburbits', system-ui, monospace;
     font-size: clamp(44px, 5.5vw, 72px);
     font-weight: normal;
@@ -115,6 +115,21 @@
         0 0 14px rgba(0, 0, 0, 0.55);
     pointer-events: none;
     will-change: transform, opacity;
+}
+
+/* Spiky burst graphic behind the damage number on critical (weakness) hits.
+   Centered on the text, scaled to overshoot the number so the burst reads
+   as an impact flash rather than a tight crop. */
+.criticalBg {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 250%;
+    height: auto;
+    pointer-events: none;
+    z-index: -1;
+    image-rendering: pixelated;
 }
 
 /* Positioning anchor for the floating damage number that needs to escape

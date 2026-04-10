@@ -21,3 +21,19 @@
         2px 2px 0 rgba(0, 0, 0, 0.85),
         0 0 10px rgba(0, 0, 0, 0.6);
 }
+
+/* Spiky burst graphic behind the per-rune damage number on critical
+   (weakness) hits. Starts hidden; GSAP pops it in sync with the bonus
+   yellow flash so the burst and the color change land together. */
+/* GSAP owns the transform property on this element (scale + centering),
+   so centering uses xPercent/yPercent in the tween — NOT CSS transform. */
+.criticalBg {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 250%;
+    height: auto;
+    pointer-events: none;
+    z-index: -1;
+    image-rendering: pixelated;
+}

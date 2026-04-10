@@ -3,6 +3,7 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useDrawingRunes } from "../arkynStore";
 import { DRAW_FLY_DURATION_S, DRAW_STAGGER_S } from "../animations/castTimeline";
+import { playDropRune } from "../sfx";
 import RuneImage from "./RuneImage";
 import styles from "./DrawAnimation.module.css";
 
@@ -22,6 +23,10 @@ export default function DrawAnimation() {
         const originY = pouchRect ? pouchRect.top + pouchRect.height / 2 : window.innerHeight - 40;
 
         const tl = gsap.timeline();
+        // Detune in cents: start a few semitones below natural pitch and
+        // step up per rune so the draw reads as a rising scale.
+        const baseCents = -300; // 3 semitones down
+        const centsStep = 100;  // 1 semitone per rune
         drawingRunes.forEach((dr, i) => {
             const el = flyerRefs.current[i];
             if (!el) return;
@@ -43,6 +48,7 @@ export default function DrawAnimation() {
                     opacity: 1,
                     duration: DRAW_FLY_DURATION_S,
                     ease: "back.out(1.4)",
+                    onStart: () => playDropRune(baseCents + i * centsStep),
                 },
                 i * DRAW_STAGGER_S,
             );
