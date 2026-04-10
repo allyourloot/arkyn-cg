@@ -31,9 +31,6 @@ interface Props {
     delayMs: number;
 }
 
-// Bonus pop color — bright canary yellow, distinct from `lightning`
-// (#fbbf24) and `holy` (#fef08a) so weakness bonuses always read clearly.
-const BONUS_COLOR = "#ffe24a";
 const BASE_COLOR = "#ffffff";
 
 export default function RuneDamageBubble({ amount, baseAmount, spellElement, seq, delayMs }: Props) {

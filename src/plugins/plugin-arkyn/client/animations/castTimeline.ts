@@ -112,8 +112,13 @@ export interface CastTimelineContext {
     totalDamage: number;
     /** Fired at t=0 — `flyingRunes` is mounted, HP locked. Plays cast SFX. */
     onStart: () => void;
-    /** Fired when the fly tween completes. Mounts dissolving runes + sets dissolveStartTime. */
-    onFlyComplete: () => void;
+    /** Fired when the fly tween completes. Mounts dissolving runes.
+     *  `dissolveDelayMs` is the wall-clock ms from NOW until the dissolve
+     *  should start — the caller sets `dissolveStartTime = performance.now() + dissolveDelayMs`
+     *  so the shader keeps runes intact until the right moment without
+     *  ever changing startTime mid-animation (which would re-trigger the
+     *  WebGL useEffect and hide the canvas). */
+    onFlyComplete: (dissolveDelayMs: number) => void;
     /** Fired when slots should raise. Sets raisedSlotIndices. */
     onRaiseStart: () => void;
     /** Fired after the raise transition completes. Mounts runeDamageBubbles. */
@@ -136,7 +141,7 @@ export interface CastTimelineContext {
      * shows "-".
      */
     onTotalReveal: (value: number) => void;
-    /** Fired at the end of the dissolve. Sets enemyDamageHit + unlocks HP. */
+    /** Fired after the total reveal. Sets enemyDamageHit + unlocks HP. */
     onImpact: () => void;
     /** Fired when the timeline finishes. Clears all animation state. */
     onComplete: () => void;
@@ -159,10 +164,6 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
     // Bubbles begin after the fly window, the settle hold, and the raise.
     const bubblesStartS = flyTotalS + SETTLE_DELAY_S + RAISE_DURATION_S;
 
-    // Dissolve begins after the slots have raised and the bubble cascade has
-    // played out — same instant the DissolveShader's RAF loop reads from its
-    // wall-clock `dissolveStartTime`. Computed below once `raiseHoldS` exists.
-
     // Total time the slots stay raised (including the bubble cascade).
     // Identical math to the legacy raiseHoldMs formula in arkynAnimations.ts,
     // expressed in seconds.
@@ -173,17 +174,22 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
             : BUBBLE_DURATION_S + BUBBLE_TAIL_BUFFER_S
     );
 
-    // Dissolve starts the moment the raise hold finishes — this matches the
-    // wall-clock `dissolveStartTime` set in arkynAnimations.ts so the SFX
-    // lands on the same frame the shader begins eating the runes.
-    const dissolveStartS = flyTotalS + SETTLE_DELAY_S + raiseHoldS;
+    // Total reveal starts shortly after the last bubble pops in — the
+    // player reads the number in ~300ms so we don't need to wait for the
+    // full 750ms fade-out. This keeps the sequence punchy.
+    const BUBBLE_READ_TIME_S = 0.3;
+    const totalRevealStartS = bubblesStartS + lastBubbleDelayS + BUBBLE_READ_TIME_S;
 
-    // Dissolve start (relative to fly-complete) is the same as the legacy
-    // computation: settle + raise hold + per-rune dissolve stagger + dissolve duration.
-    const impactAtS =
-        dissolveStartS +
-        Math.max(0, ctx.castRunesLength - 1) * DISSOLVE_STAGGER_S +
-        DISSOLVE_DURATION_S;
+    // Impact fires after the total reveal count-up finishes.
+    const TOTAL_REVEAL_DURATION_S = 0.35;
+    const impactAtS = totalRevealStartS + TOTAL_REVEAL_DURATION_S;
+
+    // Dissolve starts after a pause for the impact animation to play out
+    // (enemy floating damage + HP bar shake). The runes stay solid in the
+    // play area until this moment — the shader keeps them intact because
+    // dissolveStartTime is still in the future.
+    const POST_IMPACT_PAUSE_S = 0.9;
+    const dissolveStartS = impactAtS + POST_IMPACT_PAUSE_S;
 
     // ----- Build the timeline -----
 
@@ -206,8 +212,11 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
         ctx.onCountTick(ctx.spellBaseDamage);
     }, undefined, 0);
 
-    // Fly-complete: mount dissolving runes + set dissolveStartTime.
-    tl.call(ctx.onFlyComplete, undefined, flyTotalS);
+    // Fly-complete: mount dissolving runes. Pass the wall-clock delay (ms)
+    // from fly-complete to dissolve-start so the caller can set
+    // dissolveStartTime upfront — the shader keeps runes intact until then.
+    const dissolveDelayFromFlyMs = (dissolveStartS - flyTotalS) * 1000;
+    tl.call(() => ctx.onFlyComplete(dissolveDelayFromFlyMs), undefined, flyTotalS);
 
     // Place SFX staggered per contributing rune, starting at fly-complete.
     for (let i = 0; i < ctx.contributingCount; i++) {
@@ -284,16 +293,12 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
         tl.call(() => ctx.onCountTick(cumulativeAtEvent), undefined, e.timeS);
     }
 
-    // Total chip count-up reveal — Balatro-style. Starts at the dissolve
-    // moment (all rune ticks have completed by then, so the Base counter
-    // has reached its final value), then ramps from 0 → totalDamage in
-    // ~0.5s for a snappy "number go up" payoff. Lands well before the
-    // impact frame so the player sees the total before the floating
-    // enemy damage number flies up. The orchestrator's `onTotalReveal`
-    // callback writes each frame's value into `castTotalDamage`, and the
-    // Spell Preview switches the chip from "-" to the live tween value
-    // as soon as the first frame fires.
-    const TOTAL_REVEAL_DURATION_S = 0.5;
+    // Total chip count-up reveal — Balatro-style. Starts once all rune
+    // ticks have completed (raise hold finished), then ramps from 0 →
+    // totalDamage in ~0.5s for a snappy "number go up" payoff. The
+    // orchestrator's `onTotalReveal` callback writes each frame's value
+    // into `castTotalDamage`, and the Spell Preview switches the chip
+    // from "-" to the live tween value as soon as the first frame fires.
     tl.call(() => {
         const tweenObj = { value: 0 };
         gsap.to(tweenObj, {
@@ -310,23 +315,27 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
                 ctx.onTotalReveal(ctx.totalDamage);
             },
         });
-    }, undefined, dissolveStartS);
-
-    // Dissolve SFX — fires the instant the shader begins eating the runes.
-    tl.call(playDissolve, undefined, dissolveStartS);
+    }, undefined, totalRevealStartS);
 
     // Impact: enemy floating damage + bar shake + HP unlock + damage SFX.
+    // Fires after the total reveal count-up so the player sees the final
+    // number before the enemy reacts.
     tl.call(() => {
         playDamage();
         ctx.onImpact();
     }, undefined, impactAtS);
 
-    // Post-impact breather — hold 1s after the enemy HP bar hit before the
-    // timeline completes. This prevents the draw animation from overlapping
-    // the floating damage number + HP bar shake, giving the impact moment
-    // room to land.
-    const POST_IMPACT_PAUSE_S = 1;
-    tl.to({}, { duration: POST_IMPACT_PAUSE_S }, impactAtS);
+    // Dissolve SFX — fires the instant the shader begins eating the runes
+    // (after the impact animation has played out).
+    tl.call(playDissolve, undefined, dissolveStartS);
+
+    // Post-dissolve hold — wait for the dissolve animation to finish
+    // before the timeline completes and the draw phase begins.
+    const dissolveEndS =
+        dissolveStartS +
+        Math.max(0, ctx.castRunesLength - 1) * DISSOLVE_STAGGER_S +
+        DISSOLVE_DURATION_S;
+    tl.to({}, { duration: 0 }, dissolveEndS);
 
     currentCastTimeline = tl;
     return tl;

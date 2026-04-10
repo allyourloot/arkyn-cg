@@ -39,11 +39,7 @@ export {
     ENEMY_DAMAGE_HIT_MS,
 } from "./animations/timingConstants";
 import {
-    SETTLE_DELAY_MS,
-    RAISE_DURATION_MS,
-    BUBBLE_DURATION_MS,
     BUBBLE_STAGGER_MS,
-    BUBBLE_TAIL_BUFFER_MS,
 } from "./animations/timingConstants";
 
 // Fly / discard / draw durations live inside `animations/castTimeline.ts`
@@ -415,20 +411,6 @@ export function castSpell() {
         }
     }
 
-    // Dynamic raise hold: long enough for the slot raise transition to
-    // FIRST finish, then for the LAST staggered bubble to fully play out
-    // (plus a small tail beat) before the dissolve tears the runes apart.
-    // Identical math to what the timeline factory uses internally for SFX
-    // scheduling — we recompute it here only for the dissolve-start time
-    // that DissolveShader's wall-clock RAF loop reads.
-    const lastBubbleDelayMs = Math.max(0, contributing - 1) * BUBBLE_STAGGER_MS;
-    const raiseHoldMs =
-        RAISE_DURATION_MS + (
-            contributing > 0
-                ? lastBubbleDelayMs + BUBBLE_DURATION_MS + BUBBLE_TAIL_BUFFER_MS
-                : BUBBLE_DURATION_MS + BUBBLE_TAIL_BUFFER_MS
-        );
-
     // Build the cast timeline. The timeline owns SFX scheduling and the
     // store-state mutation callbacks; the per-flyer fly tweens live inside
     // CastAnimation.tsx (started in the same frame `flyingRunes` is set).
@@ -487,17 +469,18 @@ export function castSpell() {
             castTotalDamage = value;
             notify();
         },
-        onFlyComplete: () => {
+        onFlyComplete: (dissolveDelayMs: number) => {
             // Send the cast to the server (same instant as today — the
             // server's HP update arrives mid-animation but the bar stays
             // frozen via lockHpDisplay until the impact callback unlocks).
             sendArkynMessage(ARKYN_CAST, { selectedIndices: serverIndices });
             flyingRunes = [];
-            // Mount the dissolving runes statically. The shader keeps them
-            // intact through the settle + raise + bubble cascade because
-            // dissolveStartTime is in the future.
+            // Mount the dissolving runes statically. dissolveStartTime is
+            // set in the future by the delay the timeline computed, so the
+            // shader keeps them fully intact through the settle → raise →
+            // bubbles → impact sequence, then naturally starts dissolving.
             dissolvingRunes = castRunes;
-            dissolveStartTime = performance.now() + SETTLE_DELAY_MS + raiseHoldMs;
+            dissolveStartTime = performance.now() + dissolveDelayMs;
             notify();
         },
         onRaiseStart: () => {
