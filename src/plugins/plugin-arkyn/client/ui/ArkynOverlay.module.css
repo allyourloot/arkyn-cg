@@ -1,8 +1,8 @@
 /* ----- Fonts ----- */
 
 @font-face {
-    font-family: 'Sburbits';
-    src: url('../../../../../assets/fonts/sburbits.ttf') format('truetype');
+    font-family: 'Knightwood';
+    src: url('../../../../../assets/fonts/Knightwood.woff2') format('woff2');
     font-weight: normal;
     font-style: normal;
     font-display: block;
@@ -17,6 +17,22 @@
     display: flex;
     flex-direction: row;
     align-items: stretch;
+
+    /* ── Design tokens ──
+       Single source of truth for the game UI typeface and size scale.
+       Every child component reads these via var() — change once here to
+       update everywhere. Sizes are multiples of 8px at the default 16px
+       root for pixel-perfect Knightwood rendering. */
+    --font-family: 'Knightwood', system-ui, monospace;
+    --font-size-3xs: 0.625rem; /* 10px — smallest mobile labels */
+    --font-size-2xs: 0.75rem;  /* 12px — compact mobile labels */
+    --font-size-xs: 1rem;      /* 16px — labels, descriptions, small text */
+    --font-size-sm: 1.5rem;    /* 24px — tier text, secondary info */
+    --font-size-md: 2rem;      /* 32px — buttons, titles, enemy name */
+    --font-size-lg: 2.5rem;    /* 40px — spell name, prominent text */
+    --font-size-xl: 3rem;      /* 48px — damage values, gold counter */
+    --font-size-2xl: 4rem;     /* 64px — floating impact numbers */
+
     /* Horizontal padding = the larger of a viewport-relative clamp and the
        iOS safe-area inset (notch / Dynamic Island in landscape). This
        pushes the left and right panels inward on notched phones so they
@@ -26,7 +42,9 @@
     padding-bottom: 0;
     padding-left: max(clamp(8px, 2vw, 32px), env(safe-area-inset-left));
     padding-right: max(clamp(8px, 2vw, 32px), env(safe-area-inset-right));
-    font-family: 'Sburbits', system-ui, monospace;
+    font-family: var(--font-family);
+    -webkit-font-smoothing: none;
+    font-smooth: never;
 }
 
 /* Touch devices get extra breathing room beyond the safe area — the
@@ -54,9 +72,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Sburbits', system-ui, monospace;
+    --font-family: 'Knightwood', system-ui, monospace;
+    --font-size-md: 2rem;
+    font-family: var(--font-family);
+    -webkit-font-smoothing: none;
+    font-smooth: never;
     color: #d4a574;
-    font-size: 28px;
+    font-size: var(--font-size-md);
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
@@ -112,8 +134,8 @@
     }
 
     .handStack {
-        gap: clamp(6px, 1.2vh, 16px);
-        padding-bottom: clamp(6px, 1.5vh, 20px);
+        gap: clamp(2px, 0.4vh, 6px);
+        padding-bottom: clamp(4px, 1vh, 10px);
     }
 
     .rightSpacer {

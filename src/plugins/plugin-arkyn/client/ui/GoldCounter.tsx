@@ -6,7 +6,7 @@ import styles from "./GoldCounter.module.css";
 /**
  * Persistent currency HUD. Lives at the bottom of the SpellPreview
  * panel inside its own inner-frame chrome (the parent panel supplies
- * `--section-bg` via createPanelStyleVars). Uses warm gold Sburbits
+ * `--section-bg` via createPanelStyleVars). Uses warm gold
  * styling to match `RoundInfo` / `PouchCounter`.
  */
 export default function GoldCounter() {

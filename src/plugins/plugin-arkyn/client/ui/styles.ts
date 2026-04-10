@@ -35,8 +35,6 @@ export const ELEMENT_BG_COLORS: Record<string, string> = {
 
 export const TIER_LABELS = ["", "I", "II", "III", "IV", "V"];
 
-export const FONT_STACK = "'Sburbits', system-ui, monospace";
-
 // ----- Panel chrome -----
 
 /**

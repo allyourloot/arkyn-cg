@@ -20,8 +20,8 @@
 }
 
 .label {
-    font-size: clamp(24px, 3vw, 36px);
-    font-family: 'Sburbits', system-ui, monospace;
+    font-size: var(--font-size-md);
+
     font-weight: normal;
     color: #ffffff;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
@@ -38,6 +38,6 @@
     }
 
     .label {
-        font-size: clamp(16px, 2vw, 24px);
+        font-size: var(--font-size-xs);
     }
 }

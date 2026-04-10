@@ -3,7 +3,7 @@
 // fast power-out on the drop. Tweak these and the whole hand inherits.
 
 /** Pixels the card translates upward when selected. */
-export const SELECT_LIFT_PX = -24;
+export const SELECT_LIFT_PX = -16;
 /** Scale factor at the peak of the select tween (slight squash). */
 export const SELECT_SCALE = 1.04;
 /**

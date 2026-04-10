@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+    useCurrentRound,
     useLastRoundGoldBase,
     useLastRoundGoldHandsBonus,
     useLastRoundGoldHandsCount,
@@ -52,6 +53,7 @@ const buttonStyleVars = {
  * affordance.
  */
 export default function RoundEndOverlay() {
+    const currentRound = useCurrentRound();
     const baseGold = useLastRoundGoldBase();
     const handsBonus = useLastRoundGoldHandsBonus();
     const handsCount = useLastRoundGoldHandsCount();
@@ -174,7 +176,7 @@ export default function RoundEndOverlay() {
     return (
         <div className={styles.backdrop}>
             <div className={styles.panel} style={panelStyleVars}>
-                <span className={styles.title}>Round Complete</span>
+                <span className={styles.title}>Round {currentRound} Complete</span>
 
                 {/* Inner content frame — wraps the reward breakdown
                     (Enemy Defeated, Remaining Hands, Total Earned) so

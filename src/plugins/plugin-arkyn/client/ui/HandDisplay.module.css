@@ -67,3 +67,10 @@
     cursor: grabbing;
 }
 
+/* ── Landscape phone compact ── */
+@media (max-height: 500px) {
+    .handRow {
+        transform: translateY(clamp(2px, 0.5vh, 6px));
+    }
+}
+

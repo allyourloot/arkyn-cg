@@ -33,7 +33,7 @@
     align-items: center;
     gap: clamp(8px, 1.2vh, 14px);
     image-rendering: pixelated;
-    font-family: 'Sburbits', system-ui, monospace;
+
     animation: panelIn 300ms cubic-bezier(0.2, 1.2, 0.4, 1);
 }
 
@@ -45,7 +45,7 @@
 /* ----- Title ----- */
 
 .title {
-    font-size: clamp(32px, 4.2vw, 56px);
+    font-size: clamp(var(--font-size-md), 4.2vw, var(--font-size-xl));
     font-weight: normal;
     color: #ff4444;
     text-shadow: 0 0 16px rgba(255, 68, 68, 0.55), 3px 3px 0 rgba(0, 0, 0, 0.85);
@@ -87,7 +87,7 @@
 }
 
 .statLabel {
-    font-size: clamp(15px, 1.8vw, 22px);
+    font-size: var(--font-size-xs);
     font-weight: normal;
     color: #c4b097;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
@@ -98,7 +98,7 @@
 
 /* Default value — white text */
 .statValue {
-    font-size: clamp(17px, 2vw, 26px);
+    font-size: clamp(var(--font-size-xs), 2vw, var(--font-size-md));
     font-weight: normal;
     color: #ffffff;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
@@ -120,7 +120,7 @@
     position: absolute;
     top: clamp(-8px, -0.8vh, -4px);
     right: clamp(-4px, -0.4vw, 0px);
-    font-size: clamp(10px, 1.1vw, 14px);
+    font-size: var(--font-size-xs);
     font-weight: normal;
     color: #ffd700;
     background: rgba(180, 40, 40, 0.9);
@@ -150,10 +150,11 @@
     border-image: var(--btn-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
     background-color: transparent;
     color: #fff;
-    font-family: 'Sburbits', system-ui, monospace;
-    font-size: clamp(18px, 2.2vw, 26px);
+
+    font-family: inherit;
+    font-size: clamp(var(--font-size-xs), 2.2vw, var(--font-size-md));
     font-weight: normal;
-    letter-spacing: 4px;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
     cursor: pointer;
@@ -174,42 +175,54 @@
 
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
+    .backdrop {
+        justify-content: flex-end;
+        padding-right: clamp(8px, 2vw, 24px);
+    }
+
     .panel {
-        width: clamp(280px, 40vw, 480px);
+        width: clamp(240px, 38vw, 420px);
+        height: 95vh;
         border-width: 12px;
         border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-        padding: clamp(8px, 1.2vw, 14px) clamp(6px, 1vw, 12px);
-        gap: clamp(8px, 1.4vh, 16px);
+        padding: clamp(6px, 1vw, 12px) clamp(10px, 1.6vw, 20px) clamp(8px, 1.2vw, 14px);
+        gap: clamp(6px, 1vh, 10px);
     }
 
     .title {
-        font-size: clamp(24px, 3.2vw, 40px);
+        font-size: var(--font-size-sm);
+        letter-spacing: 2px;
+    }
+
+    .statsRow {
+        gap: clamp(4px, 0.6vw, 8px);
     }
 
     .statChip {
         border-width: 8px;
         border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
-        padding: clamp(2px, 0.4vh, 5px) clamp(6px, 0.8vw, 10px);
-        gap: clamp(3px, 0.4vw, 6px);
+        padding: clamp(2px, 0.4vh, 4px) clamp(4px, 0.6vw, 8px);
+        gap: clamp(2px, 0.3vw, 4px);
     }
 
     .statLabel {
-        font-size: clamp(12px, 1.4vw, 17px);
+        font-size: var(--font-size-2xs);
     }
 
     .statValue {
-        font-size: clamp(13px, 1.5vw, 19px);
-        padding: 2px clamp(4px, 0.6vw, 8px);
+        font-size: var(--font-size-2xs);
+        padding: 2px clamp(3px, 0.4vw, 6px);
     }
 
     .newBest {
-        font-size: clamp(8px, 0.9vw, 12px);
+        font-size: var(--font-size-3xs);
         top: clamp(-6px, -0.6vh, -3px);
         padding: 1px clamp(3px, 0.4vw, 6px);
     }
 
     .button {
-        font-size: clamp(14px, 1.8vw, 22px);
-        padding: clamp(6px, 1vh, 10px) clamp(16px, 2.4vw, 32px);
+        margin-top: auto;
+        font-size: var(--font-size-xs);
+        padding: clamp(4px, 0.8vh, 8px) clamp(16px, 2vw, 28px);
     }
 }

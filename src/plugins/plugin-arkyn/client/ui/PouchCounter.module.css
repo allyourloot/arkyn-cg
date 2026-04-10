@@ -50,8 +50,8 @@
     border-width: 8px;
     border-image: var(--panel-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
     padding: 2px 10px;
-    font-size: clamp(18px, 2vw, 24px);
-    font-family: 'Sburbits', system-ui, monospace;
+    font-size: var(--font-size-sm);
+
     font-weight: normal;
     color: #e8d4b8;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
@@ -76,6 +76,6 @@
         border-width: 6px;
         border-image: var(--panel-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
         padding: 1px 6px;
-        font-size: clamp(14px, 1.6vw, 18px);
+        font-size: var(--font-size-xs);
     }
 }

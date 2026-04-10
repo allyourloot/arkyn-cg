@@ -8,8 +8,8 @@
     bottom: 100%;
     pointer-events: none;
     user-select: none;
-    font-family: 'Sburbits', system-ui, monospace;
-    font-size: clamp(34px, 4vw, 52px);
+
+    font-size: clamp(var(--font-size-md), 4vw, var(--font-size-xl));
     font-weight: normal;
     line-height: 1;
     white-space: nowrap;

@@ -194,17 +194,44 @@ export default function SpellPreview() {
                     matches the contributing-runes list returned by
                     resolveSpell, so duplicate runes from a pair / triple
                     sit next to each other. */}
-                <div className={styles.runeRow}>
-                    {contributingRunes.map((rune, i) => (
-                        <div key={i} className={styles.rune}>
-                            <RuneImage
-                                rarity={rune.rarity}
-                                element={rune.element}
-                                className={styles.runeLayer}
-                            />
+                {spell.shape === "full_house" ? (
+                    <>
+                        <div className={styles.runeRow}>
+                            {contributingRunes.slice(0, 3).map((rune, i) => (
+                                <div key={i} className={styles.rune}>
+                                    <RuneImage
+                                        rarity={rune.rarity}
+                                        element={rune.element}
+                                        className={styles.runeLayer}
+                                    />
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
+                        <div className={styles.runeRow}>
+                            {contributingRunes.slice(3).map((rune, i) => (
+                                <div key={i + 3} className={styles.rune}>
+                                    <RuneImage
+                                        rarity={rune.rarity}
+                                        element={rune.element}
+                                        className={styles.runeLayer}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                ) : (
+                    <div className={styles.runeRow}>
+                        {contributingRunes.map((rune, i) => (
+                            <div key={i} className={styles.rune}>
+                                <RuneImage
+                                    rarity={rune.rarity}
+                                    element={rune.element}
+                                    className={styles.runeLayer}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 {spell.isCombo && spell.comboElements ? (
                     /* Combo spells: pass `colorRange` to BouncyText so each

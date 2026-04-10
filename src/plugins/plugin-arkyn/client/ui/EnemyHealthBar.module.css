@@ -19,8 +19,8 @@
    it also hosts the enemy header that EnemyPanel used to own, so the
    name styling lives here. */
 .name {
-    font-size: clamp(20px, 2.6vw, 36px);
-    font-family: 'Sburbits', system-ui, monospace;
+    font-size: clamp(var(--font-size-md), 2.6vw, var(--font-size-xl));
+
     font-weight: normal;
     color: #e8d4b8;
     text-align: center;
@@ -74,8 +74,7 @@
 }
 
 .affinityLabel {
-    font-size: clamp(11px, 1.4vw, 16px);
-    font-family: 'Sburbits', system-ui, monospace;
+    font-size: var(--font-size-xs);
     font-weight: normal;
     color: #b0a090;
     text-transform: uppercase;
@@ -112,8 +111,8 @@
     position: absolute;
     right: -10%;
     top: 50%;
-    font-family: 'Sburbits', system-ui, monospace;
-    font-size: clamp(44px, 5.5vw, 72px);
+
+    font-size: clamp(var(--font-size-xl), 5.5vw, var(--font-size-2xl));
     font-weight: normal;
     color: #ffffff;
     line-height: 1;
@@ -232,8 +231,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: clamp(18px, 2.2vw, 28px);
-    font-family: 'Sburbits', system-ui, monospace;
+    font-size: clamp(var(--font-size-xs), 2.2vw, var(--font-size-md));
+
     font-weight: normal;
     color: #fff;
     text-shadow:
@@ -252,7 +251,7 @@
     }
 
     .name {
-        font-size: clamp(14px, 1.8vw, 22px);
+        font-size: var(--font-size-sm);
     }
 
     .affinityContainer {
@@ -269,7 +268,7 @@
     }
 
     .affinityLabel {
-        font-size: clamp(8px, 1vw, 12px);
+        font-size: var(--font-size-2xs);
         letter-spacing: 1px;
     }
 
@@ -290,10 +289,10 @@
     }
 
     .barText {
-        font-size: clamp(14px, 1.6vw, 20px);
+        font-size: var(--font-size-xs);
     }
 
     .damageFloat {
-        font-size: clamp(32px, 4vw, 52px);
+        font-size: clamp(var(--font-size-md), 4vw, var(--font-size-xl));
     }
 }

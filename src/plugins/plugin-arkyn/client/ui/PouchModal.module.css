@@ -27,7 +27,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    font-family: 'Sburbits', system-ui, monospace;
+
     color: #e8d4b8;
     image-rendering: pixelated;
     /* Stop backdrop click from closing when clicking the modal body. */
@@ -37,11 +37,12 @@
 
 .header {
     box-sizing: border-box;
+    position: relative;
     background: transparent;
     border-style: solid;
     border-color: transparent;
-    border-width: 24px;
-    border-image: var(--section-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
     padding: 8px 12px;
     display: flex;
     align-items: center;
@@ -51,7 +52,7 @@
 }
 
 .title {
-    font-size: clamp(22px, 2.6vw, 32px);
+    font-size: var(--font-size-md);
     color: #ffffff;
     text-transform: uppercase;
     letter-spacing: 2px;
@@ -60,33 +61,63 @@
 }
 
 .subtitle {
-    font-size: clamp(13px, 1.4vw, 16px);
+    position: absolute;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: var(--font-size-xs);
     color: #b0a090;
     text-transform: uppercase;
     letter-spacing: 1px;
     line-height: 1;
+    pointer-events: none;
+}
+
+.subtitleRemaining {
+    color: #4ade80;
+}
+
+.subtitleDrawn {
+    color: #fbbf24;
+}
+
+.subtitleSpent {
+    color: #ef4444;
 }
 
 .closeButton {
     background: transparent;
-    border: 2px solid #b0a090;
-    color: #e8d4b8;
-    font-family: inherit;
-    font-size: clamp(16px, 1.8vw, 20px);
-    line-height: 1;
-    width: clamp(28px, 3vw, 36px);
-    height: clamp(28px, 3vw, 36px);
+    border: none;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     padding: 0;
-    transition: transform 0.1s ease, border-color 0.1s ease;
+    width: clamp(36px, 4vw, 52px);
+    height: clamp(36px, 4vw, 52px);
+    position: relative;
+    transition: transform 0.1s ease;
+}
+
+.closeIcon,
+.closeIconHover {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+.closeIconHover {
+    opacity: 0;
+}
+
+.closeButton:hover .closeIconHover {
+    opacity: 1;
+}
+
+.closeButton:hover .closeIcon {
+    opacity: 0;
 }
 
 .closeButton:hover {
-    border-color: #ffffff;
-    color: #ffffff;
     transform: scale(1.08);
 }
 
@@ -113,17 +144,15 @@
     background: transparent;
     border-style: solid;
     border-color: transparent;
-    border-width: 24px;
-    border-image: var(--section-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
-    padding: 6px 10px;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 4px 6px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
     image-rendering: pixelated;
     color: #e8d4b8;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: clamp(11px, 1.2vw, 14px);
+    font-size: var(--font-size-xs);
     line-height: 1;
 }
 
@@ -132,9 +161,9 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding: 3px 4px;
-    min-width: 76px;
+    gap: 4px;
+    padding: 2px 2px;
+    min-width: 0;
     transition: opacity 0.15s ease;
 }
 
@@ -142,16 +171,17 @@
     opacity: 0.32;
 }
 
-.elementLabel {
-    color: #e8d4b8;
-    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+.elementIcon {
+    width: clamp(20px, 2.4vw, 32px);
+    height: clamp(20px, 2.4vw, 32px);
+    image-rendering: pixelated;
 }
 
 .elementCount {
     color: #ffffff;
     font-variant-numeric: tabular-nums;
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
-    min-width: 14px;
+    min-width: 8px;
     text-align: right;
 }
 
@@ -166,8 +196,8 @@
     flex-wrap: wrap;
     justify-content: flex-start;
     align-content: flex-start;
-    padding: 8px 16px;
-    row-gap: 6px;
+    padding: 12px 20px;
+    row-gap: 12px;
 }
 
 .rune {
@@ -197,61 +227,104 @@
 
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
+    .backdrop {
+        justify-content: flex-end;
+        padding-right: clamp(8px, 2vw, 24px);
+    }
+
     .modal {
-        width: clamp(300px, 72vw, 640px);
-        max-height: 88vh;
+        width: clamp(340px, 48vw, 560px);
+        height: 95vh;
+        max-height: 95vh;
         border-width: 12px;
         border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
         padding: 4px 6px 8px;
-        gap: 6px;
+        gap: 4px;
     }
 
     .header {
-        border-width: 12px;
-        border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-        padding: 4px 8px;
-        gap: 8px;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        grid-template-rows: auto auto;
+        align-items: center;
+        border-width: 8px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 3px 8px;
+        gap: 2px 6px;
     }
 
     .title {
-        font-size: clamp(16px, 2vw, 24px);
+        grid-column: 1;
+        grid-row: 1;
     }
 
     .subtitle {
-        font-size: clamp(10px, 1.2vw, 14px);
+        position: static;
+        grid-column: 1 / -1;
+        grid-row: 2;
+        text-align: left;
+        pointer-events: auto;
+        font-size: var(--font-size-2xs);
     }
 
     .closeButton {
-        font-size: clamp(14px, 1.6vw, 18px);
-        width: clamp(22px, 2.6vw, 30px);
-        height: clamp(22px, 2.6vw, 30px);
+        grid-column: 3;
+        grid-row: 1 / -1;
+        align-self: center;
+        width: clamp(28px, 3.4vw, 38px);
+        height: clamp(28px, 3.4vw, 38px);
+    }
+
+    .title {
+        font-size: var(--font-size-xs);
+    }
+
+    .subtitle {
+        font-size: var(--font-size-2xs);
     }
 
     .body {
-        gap: 6px;
+        flex: 1;
+        min-height: 0;
+        gap: 4px;
+        flex-direction: column;
     }
 
     .elementColumn {
-        border-width: 12px;
-        border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-        padding: 3px 6px;
-        gap: 1px;
-        font-size: clamp(9px, 1vw, 12px);
+        flex: 0 0 auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        border-width: 4px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 4px 4px 4px 4px;
+        padding: 4px 8px;
+        gap: 2px 8px;
+        font-size: var(--font-size-3xs);
+        overflow: hidden;
+        order: 1;
+    }
+
+    .elementIcon {
+        width: clamp(18px, 2.4vw, 26px);
+        height: clamp(18px, 2.4vw, 26px);
     }
 
     .elementRow {
-        gap: 6px;
-        padding: 2px 2px;
-        min-width: 56px;
+        gap: 2px;
+        padding: 0;
     }
 
     .grid {
-        padding: 4px 8px;
-        row-gap: 3px;
+        order: 0;
+        flex: 1;
+        padding: 8px clamp(10px, 2.5vw, 24px);
+        row-gap: clamp(10px, 2vh, 18px);
+        justify-content: flex-start;
+        overflow-y: auto;
     }
 
     .rune {
-        width: clamp(36px, 4.6vw, 56px);
+        width: clamp(36px, 4.6vw, 54px);
         margin-left: clamp(-10px, -1vw, -6px);
         margin-right: clamp(-10px, -1vw, -6px);
     }

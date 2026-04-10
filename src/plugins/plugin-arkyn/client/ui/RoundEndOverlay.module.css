@@ -36,7 +36,7 @@
     align-items: center;
     gap: clamp(14px, 2.2vh, 26px);
     image-rendering: pixelated;
-    font-family: 'Sburbits', system-ui, monospace;
+
     animation: panelIn 260ms cubic-bezier(0.2, 1.2, 0.4, 1);
 }
 
@@ -48,7 +48,7 @@
 /* ----- Title ----- */
 
 .title {
-    font-size: clamp(28px, 3.8vw, 48px);
+    font-size: clamp(var(--font-size-md), 3.8vw, var(--font-size-xl));
     font-weight: normal;
     color: #ffd700;
     text-shadow: 0 0 16px rgba(255, 215, 0, 0.55), 3px 3px 0 rgba(0, 0, 0, 0.85);
@@ -106,7 +106,7 @@
 }
 
 .label {
-    font-size: clamp(18px, 2.2vw, 28px);
+    font-size: clamp(var(--font-size-xs), 2.2vw, var(--font-size-md));
     color: #e8d4b8;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
     line-height: 1;
@@ -190,7 +190,7 @@
 }
 
 .totalLabel {
-    font-size: clamp(20px, 2.4vw, 30px);
+    font-size: var(--font-size-md);
     color: #ffd700;
     text-shadow: 0 0 8px rgba(255, 215, 0, 0.45), 2px 2px 0 rgba(0, 0, 0, 0.85);
     text-transform: uppercase;
@@ -206,7 +206,7 @@
 }
 
 .totalAmount {
-    font-size: clamp(28px, 3.4vw, 44px);
+    font-size: clamp(var(--font-size-md), 3.4vw, var(--font-size-xl));
     color: #ffe680;
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.55), 2px 2px 0 rgba(0, 0, 0, 0.85);
     line-height: 1;
@@ -235,10 +235,11 @@
     border-image: var(--btn-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
     background-color: transparent;
     color: #fff;
-    font-family: 'Sburbits', system-ui, monospace;
-    font-size: clamp(18px, 2.2vw, 26px);
+
+    font-family: inherit;
+    font-size: clamp(var(--font-size-xs), 2.2vw, var(--font-size-md));
     font-weight: normal;
-    letter-spacing: 4px;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
     cursor: default;
@@ -263,4 +264,83 @@
 
 .buttonVisible:active {
     transform: translateY(2px);
+}
+
+/* ── Landscape phone compact ── */
+@media (max-height: 500px) {
+    .backdrop {
+        justify-content: flex-end;
+        padding-right: clamp(8px, 2vw, 24px);
+    }
+
+    .panel {
+        width: clamp(240px, 38vw, 420px);
+        height: 95vh;
+        border-width: 12px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+        padding: clamp(6px, 1vw, 12px) clamp(10px, 1.6vw, 20px) clamp(8px, 1.2vw, 14px);
+        gap: clamp(8px, 1.4vh, 16px);
+    }
+
+    .title {
+        font-size: var(--font-size-sm);
+        letter-spacing: 2px;
+    }
+
+    .contentFrame {
+        flex: 1;
+        justify-content: flex-start;
+        border-width: 12px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+        padding: clamp(6px, 1vh, 12px) clamp(8px, 1.2vw, 16px);
+        gap: clamp(8px, 1.4vh, 16px);
+    }
+
+    .rewards {
+        flex: 1;
+        gap: clamp(8px, 1.4vh, 14px);
+        min-height: 0;
+    }
+
+    .row {
+        gap: clamp(4px, 0.6vw, 8px);
+        min-height: clamp(22px, 3vh, 34px);
+    }
+
+    .label {
+        font-size: var(--font-size-2xs);
+    }
+
+    .coin {
+        width: clamp(18px, 2.2vw, 28px);
+        height: clamp(18px, 2.2vw, 28px);
+    }
+
+    .divider {
+        height: 2px;
+    }
+
+    .totalRow {
+        gap: clamp(4px, 0.6vw, 10px);
+    }
+
+    .totalLabel {
+        font-size: var(--font-size-xs);
+        letter-spacing: 2px;
+    }
+
+    .totalCoin {
+        width: clamp(22px, 2.8vw, 36px);
+        height: clamp(22px, 2.8vw, 36px);
+    }
+
+    .totalAmount {
+        font-size: var(--font-size-md);
+    }
+
+    .button {
+        margin-top: auto;
+        font-size: var(--font-size-xs);
+        padding: clamp(4px, 0.8vh, 8px) clamp(16px, 2vw, 28px);
+    }
 }

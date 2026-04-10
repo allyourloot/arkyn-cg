@@ -17,10 +17,10 @@
     background-color: transparent;
     image-rendering: pixelated;
     padding: 10px 18px;
-    font-size: clamp(20px, 2.4vw, 28px);
-    font-family: 'Sburbits', system-ui, monospace;
+    font-size: clamp(var(--font-size-xs), 2.4vw, var(--font-size-md));
+    font-family: inherit;
     font-weight: normal;
-    letter-spacing: 3px;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: #fff;
     cursor: pointer;
@@ -58,12 +58,36 @@
 @media (hover: none) {
     .button {
         padding: 6px 14px;
-        font-size: clamp(16px, 2vw, 22px);
+        font-size: var(--font-size-xs);
         letter-spacing: 2px;
     }
 
     .bar {
         gap: clamp(6px, 1.2vw, 12px);
         padding: clamp(6px, 1vw, 10px) 0 clamp(8px, 1.6vw, 16px);
+    }
+}
+
+/* ── Landscape phone compact ── */
+@media (max-height: 500px) {
+    .button {
+        padding: 4px 12px;
+        font-size: var(--font-size-xs);
+        letter-spacing: 1px;
+        border-width: 8px;
+        border-image: var(--btn-bg) 10 10 10 10 fill / 8px 8px 8px 8px;
+    }
+
+    .button:not(:disabled):hover {
+        border-image: var(--btn-bg-hover) 10 10 10 10 fill / 8px 8px 8px 8px;
+    }
+
+    .button:disabled {
+        border-image: var(--btn-bg-disabled) 10 10 10 10 fill / 8px 8px 8px 8px;
+    }
+
+    .bar {
+        gap: clamp(6px, 1vw, 10px);
+        padding: clamp(4px, 0.8vh, 8px) 0 clamp(10px, 2vh, 20px);
     }
 }

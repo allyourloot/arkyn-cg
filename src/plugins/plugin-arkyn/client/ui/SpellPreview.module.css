@@ -27,7 +27,6 @@
     align-items: stretch;
     gap: clamp(10px, 1.6vh, 20px);
     overflow: hidden;
-    font-family: 'Sburbits', system-ui, monospace;
     image-rendering: pixelated;
 }
 
@@ -71,8 +70,7 @@
     box-sizing: border-box;
     width: 100%;
     text-align: center;
-    font-size: clamp(12px, 1.3vw, 16px);
-    font-family: 'Sburbits', system-ui, monospace;
+    font-size: var(--font-size-xs);
     font-weight: normal;
     color: #c4a882;
     text-transform: uppercase;
@@ -113,8 +111,7 @@
 }
 
 .spellName {
-    font-size: clamp(20px, 2.2vw, 28px);
-    font-family: 'Sburbits', system-ui, monospace;
+    font-size: var(--font-size-lg);
     font-weight: normal;
     text-align: center;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
@@ -122,8 +119,7 @@
 }
 
 .tier {
-    font-size: clamp(16px, 1.8vw, 22px);
-    font-family: 'Sburbits', system-ui, monospace;
+    font-size: var(--font-size-sm);
     color: #c4a882;
     line-height: 1;
 }
@@ -176,8 +172,7 @@
 }
 
 .damageChipLabel {
-    font-size: clamp(12px, 1.3vw, 16px);
-    font-family: 'Sburbits', system-ui, monospace;
+    font-size: var(--font-size-xs);
     font-weight: normal;
     color: #c4a882;
     text-transform: uppercase;
@@ -214,8 +209,7 @@
 }
 
 .damageChipValue {
-    font-size: clamp(30px, 3.6vw, 48px);
-    font-family: 'Sburbits', system-ui, monospace;
+    font-size: clamp(var(--font-size-md), 3.6vw, var(--font-size-xl));
     font-weight: normal;
     color: #ffffff;
     text-shadow:
@@ -229,8 +223,7 @@
 }
 
 .description {
-    font-size: clamp(15px, 1.7vw, 20px);
-    font-family: 'Sburbits', system-ui, monospace;
+    font-size: var(--font-size-xs);
     color: #b0a090;
     text-align: center;
     line-height: 1.1;
@@ -238,8 +231,7 @@
 }
 
 .empty {
-    font-size: clamp(16px, 1.9vw, 22px);
-    font-family: 'Sburbits', system-ui, monospace;
+    font-size: var(--font-size-xs);
     color: #7a7a7a;
     text-align: center;
     line-height: 1.2;
@@ -255,19 +247,20 @@
         border-width: 12px;
         border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
         padding: 2px 2px;
-        gap: clamp(4px, 0.8vh, 10px);
+        gap: clamp(6px, 1.2vh, 14px);
     }
 
     .section {
-        min-height: 28vh;
-        border-width: 16px;
-        border-image: var(--section-bg) 24 24 24 24 fill / 16px 16px 16px 16px;
+        min-height: 0;
+        flex-shrink: 1;
+        border-width: 12px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
         padding: 4px 3px;
         gap: clamp(2px, 0.5vw, 6px);
     }
 
     .heading {
-        font-size: clamp(9px, 1.1vw, 13px);
+        font-size: var(--font-size-3xs);
         letter-spacing: 1px;
         margin-top: clamp(4px, 0.8vh, 10px);
     }
@@ -277,15 +270,15 @@
     }
 
     .rune {
-        width: clamp(28px, 3.4vw, 44px);
+        width: clamp(20px, 2.6vw, 32px);
     }
 
     .spellName {
-        font-size: clamp(14px, 1.7vw, 20px);
+        font-size: var(--font-size-xs);
     }
 
     .tier {
-        font-size: clamp(11px, 1.4vw, 16px);
+        font-size: var(--font-size-2xs);
     }
 
     .description {
@@ -293,12 +286,12 @@
     }
 
     .empty {
-        font-size: clamp(12px, 1.5vw, 16px);
+        font-size: var(--font-size-xs);
         padding: 0 6px;
     }
 
     .damageSection {
-        gap: clamp(3px, 0.6vh, 8px);
+        gap: clamp(6px, 1.2vh, 14px);
     }
 
     .damageRow {
@@ -306,7 +299,7 @@
     }
 
     .damageChipLabel {
-        font-size: clamp(9px, 1.1vw, 13px);
+        font-size: var(--font-size-3xs);
         letter-spacing: 1px;
     }
 
@@ -325,6 +318,6 @@
     }
 
     .damageChipValue {
-        font-size: clamp(20px, 2.6vw, 34px);
+        font-size: clamp(var(--font-size-xs), 2.6vw, var(--font-size-md));
     }
 }

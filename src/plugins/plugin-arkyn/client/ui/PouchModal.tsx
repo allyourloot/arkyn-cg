@@ -3,7 +3,10 @@ import { ELEMENT_TYPES, RUNES_PER_ELEMENT } from "../../shared";
 import { useHand, usePouchContents } from "../arkynStore";
 import { playMenuClose, playMenuOpen } from "../sfx";
 import RuneImage from "./RuneImage";
+import { getRuneImageUrl } from "./runeAssets";
 import { createPanelStyleVars } from "./styles";
+import closeIconUrl from "/assets/icons/close-64x64.png?url";
+import closeHoverIconUrl from "/assets/icons/close-hover-64x64.png?url";
 import styles from "./PouchModal.module.css";
 
 interface PouchModalProps {
@@ -17,23 +20,6 @@ const modalStyleVars = createPanelStyleVars();
 // dimmed so the player can see the entire deck composition at a glance.
 type SlotState = "pouch" | "drawn" | "spent";
 
-// Three-letter element abbreviations shown in the side column. Order matches
-// ELEMENT_TYPES so we can index by element name directly.
-const ELEMENT_LABELS: Record<string, string> = {
-    air: "AIR",
-    arcane: "ARC",
-    death: "DTH",
-    earth: "EAR",
-    fire: "FIR",
-    holy: "HOL",
-    ice: "ICE",
-    lightning: "LIG",
-    poison: "PSN",
-    psy: "PSY",
-    shadow: "SHD",
-    steel: "STL",
-    water: "WAT",
-};
 
 export default function PouchModal({ onClose }: PouchModalProps) {
     const pouchContents = usePouchContents();
@@ -85,17 +71,22 @@ export default function PouchModal({ onClose }: PouchModalProps) {
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className={styles.header}>
-                    <span className={styles.title}>Pouch</span>
+                    <span className={styles.title}>Spellbook</span>
                     <span className={styles.subtitle}>
-                        {totalPouch} remaining · {totalHand} drawn · {totalSpent} spent
+                        <span className={styles.subtitleRemaining}>{totalPouch} remaining</span>
+                        {" · "}
+                        <span className={styles.subtitleDrawn}>{totalHand} drawn</span>
+                        {" · "}
+                        <span className={styles.subtitleSpent}>{totalSpent} spent</span>
                     </span>
                     <button
                         type="button"
                         className={styles.closeButton}
                         onClick={closeWithSfx}
-                        aria-label="Close pouch"
+                        aria-label="Close spellbook"
                     >
-                        ×
+                        <img src={closeIconUrl} alt="" className={styles.closeIcon} />
+                        <img src={closeHoverIconUrl} alt="" className={styles.closeIconHover} />
                     </button>
                 </div>
 
@@ -111,9 +102,11 @@ export default function PouchModal({ onClose }: PouchModalProps) {
                                     key={element}
                                     className={`${styles.elementRow} ${empty ? styles.elementRowEmpty : ""}`}
                                 >
-                                    <span className={styles.elementLabel}>
-                                        {ELEMENT_LABELS[element] ?? element.slice(0, 3).toUpperCase()}
-                                    </span>
+                                    <img
+                                        src={getRuneImageUrl(element)}
+                                        alt={element}
+                                        className={styles.elementIcon}
+                                    />
                                     <span className={styles.elementCount}>{remaining}</span>
                                 </div>
                             );
