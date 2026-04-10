@@ -8,6 +8,7 @@ import {
     useEnemyName,
     useEnemyResistances,
     useEnemyWeaknesses,
+    BAR_SHAKE_FRAME_S,
 } from "../arkynStore";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
@@ -77,16 +78,16 @@ export default function EnemyHealthBar() {
             gsap.set(shake, { x: 0 });
             gsap.to(shake, {
                 keyframes: [
-                    { x: -7, duration: 0.036 },
-                    { x: 7, duration: 0.036 },
-                    { x: -6, duration: 0.036 },
-                    { x: 6, duration: 0.036 },
-                    { x: -4, duration: 0.036 },
-                    { x: 4, duration: 0.036 },
-                    { x: -2, duration: 0.036 },
-                    { x: 2, duration: 0.036 },
-                    { x: -1, duration: 0.036 },
-                    { x: 0, duration: 0.036 },
+                    { x: -7, duration: BAR_SHAKE_FRAME_S },
+                    { x: 7, duration: BAR_SHAKE_FRAME_S },
+                    { x: -6, duration: BAR_SHAKE_FRAME_S },
+                    { x: 6, duration: BAR_SHAKE_FRAME_S },
+                    { x: -4, duration: BAR_SHAKE_FRAME_S },
+                    { x: 4, duration: BAR_SHAKE_FRAME_S },
+                    { x: -2, duration: BAR_SHAKE_FRAME_S },
+                    { x: 2, duration: BAR_SHAKE_FRAME_S },
+                    { x: -1, duration: BAR_SHAKE_FRAME_S },
+                    { x: 0, duration: BAR_SHAKE_FRAME_S },
                 ],
                 ease: "power2.out",
                 overwrite: "auto",
@@ -189,10 +190,10 @@ export default function EnemyHealthBar() {
             {(resistances.length > 0 || weaknesses.length > 0) && (
                 <div className={styles.affinityContainer}>
                     {resistances.length > 0 && (
-                        <AffinitySection label="Resists" elements={resistances} />
+                        <AffinitySection label="Resists" labelClass={styles.affinityLabelResist} elements={resistances} />
                     )}
                     {weaknesses.length > 0 && (
-                        <AffinitySection label="Weak To" elements={weaknesses} />
+                        <AffinitySection label="Vulnerable" labelClass={styles.affinityLabelWeak} elements={weaknesses} />
                     )}
                 </div>
             )}
@@ -203,10 +204,10 @@ export default function EnemyHealthBar() {
 // Single inner-frame chip showing a label ("Resists" / "Weak To") above
 // a row of element rune icons. Lives inside EnemyHealthBar so the visual
 // chrome stays alongside the bar it describes.
-function AffinitySection({ label, elements }: { label: string; elements: readonly string[] }) {
+function AffinitySection({ label, labelClass, elements }: { label: string; labelClass?: string; elements: readonly string[] }) {
     return (
         <div className={styles.affinitySection}>
-            <span className={styles.affinityLabel}>{label}</span>
+            <span className={`${styles.affinityLabel} ${labelClass ?? ""}`}>{label}</span>
             <div className={styles.affinityIcons}>
                 {elements.map(element => {
                     const url = getRuneImageUrl(element);

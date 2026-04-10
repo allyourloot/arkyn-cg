@@ -17,6 +17,23 @@ import RuneImage from "./RuneImage";
 import BouncyText from "./BouncyText";
 import GoldCounter from "./GoldCounter";
 import RoundInfo from "./RoundInfo";
+/** Plays a scale pop (1.45 -> 1) when `value` increments during a cast. */
+function useCounterPop(
+    ref: RefObject<HTMLElement | null>,
+    value: number,
+    isCastAnimating: boolean,
+) {
+    useGSAP(() => {
+        if (!ref.current) return;
+        if (!isCastAnimating || value <= 0) return;
+        gsap.fromTo(
+            ref.current,
+            { scale: 1.45 },
+            { scale: 1, duration: 0.32, ease: "back.out(2.6)", overwrite: "auto" },
+        );
+    }, { dependencies: [value, isCastAnimating], scope: ref });
+}
+
 import innerFrameBlueUrl from "/assets/ui/inner-frame-blue.png?url";
 import innerFrameRedUrl from "/assets/ui/inner-frame-red.png?url";
 import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
@@ -122,42 +139,11 @@ export default function SpellPreview() {
         }
     }
 
-    // Pop the Base number every time the live counter increments. The
-    // first tick (counter goes from 0 → spellBase via the timeline's t=0
-    // tick) pops, then every subsequent rune impact pops again — building
-    // anticipation toward the final base total. Outside the cast window
-    // the dep doesn't change frequently, so the hook is a no-op for
-    // normal preview state.
-    useGSAP(() => {
-        if (!damageRef.current) return;
-        if (!isCastAnimating || castBaseCounter <= 0) return;
-        gsap.fromTo(
-            damageRef.current,
-            { scale: 1.45 },
-            {
-                scale: 1,
-                duration: 0.32,
-                ease: "back.out(2.6)",
-                overwrite: "auto",
-            },
-        );
-    }, { dependencies: [castBaseCounter, isCastAnimating], scope: damageRef });
-
-    // Pop the Total number every time the count-up tween increments it.
-    useGSAP(() => {
-        if (!totalRef.current) return;
-        if (!isCastAnimating || castTotalDamage <= 0) return;
-        gsap.fromTo(
-            totalRef.current,
-            { scale: 1.45 },
-            {
-                scale: 1,
-                duration: 0.32,
-                ease: "back.out(2.6)",
-                overwrite: "auto",
-            },
-        );
-    }, { dependencies: [castTotalDamage, isCastAnimating], scope: totalRef });
+    // Pop the Base / Total numbers every time their live counters
+    // increment during a cast. Each tick pops the chip for a Balatro-
+    // style "number go up" feel.
+    useCounterPop(damageRef, castBaseCounter, isCastAnimating);
+    useCounterPop(totalRef, castTotalDamage, isCastAnimating);
 
     if (!spell) {
         return (

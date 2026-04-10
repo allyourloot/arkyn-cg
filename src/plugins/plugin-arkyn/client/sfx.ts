@@ -14,6 +14,13 @@ import menuCloseUrl from "/assets/audio/sfx/menu-close.ogg?url";
 import roundWinUrl from "/assets/audio/sfx/round-win.ogg?url";
 import gameOverUrl from "/assets/audio/sfx/game-over.ogg?url";
 import typewriterUrl from "/assets/audio/sfx/typewriter.ogg?url";
+import { getAudioContext } from "./audioContext";
+
+// ---- Volume levels ----
+const VOL_MENU = 0.45;        // menu open/close
+const VOL_RUNE = 0.65;        // select/deselect/drop rune
+const VOL_TYPEWRITER = 0.85;  // typewriter loop
+const VOL_DEFAULT = 0.9;      // everything else (count, damage, cast, etc.)
 
 // Preload one Audio per sfx so the browser caches the buffer. Each play
 // clones the node so rapid plays can overlap without cutting each
@@ -34,14 +41,8 @@ function makeSfx(url: string, volume: number) {
 
 // Web Audio API sfx maker — uses AudioBufferSourceNode.detune for
 // proper pitch shifting (in cents) without affecting playback speed.
-// Lazily initializes the AudioContext on first play (browser autoplay
-// policy requires a user gesture before creating/resuming a context).
-let audioCtx: AudioContext | null = null;
-function getAudioCtx(): AudioContext {
-    if (!audioCtx) audioCtx = new AudioContext();
-    if (audioCtx.state === "suspended") audioCtx.resume();
-    return audioCtx;
-}
+// Uses the shared AudioContext from audioContext.ts so the entire
+// plugin runs on a single context (avoids Chrome's context limit).
 
 function makeDetuneSfx(url: string, volume: number) {
     let buffer: AudioBuffer | null = null;
@@ -49,13 +50,13 @@ function makeDetuneSfx(url: string, volume: number) {
     // by the time the first play call arrives.
     fetch(url)
         .then(res => res.arrayBuffer())
-        .then(arr => getAudioCtx().decodeAudioData(arr))
+        .then(arr => getAudioContext().decodeAudioData(arr))
         .then(decoded => { buffer = decoded; })
         .catch(() => { /* silent — sfx just won't play */ });
 
     return (detuneCents = 0) => {
         if (!buffer) return;
-        const ctx = getAudioCtx();
+        const ctx = getAudioContext();
         const source = ctx.createBufferSource();
         source.buffer = buffer;
         source.detune.value = detuneCents;
@@ -66,23 +67,23 @@ function makeDetuneSfx(url: string, volume: number) {
     };
 }
 
-const playRuneSfx = makeSfx(selectRuneUrl, 0.65);
+const playRuneSfx = makeSfx(selectRuneUrl, VOL_RUNE);
 export const playSelectRune = () => playRuneSfx(1.15);
 export const playDeselectRune = () => playRuneSfx(0.85);
 export const playPickupRune = () => playRuneSfx(1.3);
-export const playDropRune = makeDetuneSfx(dropRuneUrl, 0.65);
-export const playPlaceRune = makeSfx(placeRuneUrl, 0.9);
-export const playCount = makeSfx(countUrl, 0.9);
-export const playDamage = makeSfx(damageUrl, 0.9);
-export const playCast = makeSfx(castUrl, 0.9);
-export const playDissolve = makeSfx(dissolveUrl, 0.9);
-export const playCritical = makeSfx(criticalUrl, 0.9);
-export const playGold = makeSfx(goldUrl, 0.9);
-export const playGoldTotal = makeSfx(goldTotalUrl, 0.9);
-export const playMenuOpen = makeSfx(menuOpenUrl, 0.45);
-export const playMenuClose = makeSfx(menuCloseUrl, 0.45);
-export const playRoundWin = makeSfx(roundWinUrl, 0.9);
-export const playGameOver = makeSfx(gameOverUrl, 0.9);
+export const playDropRune = makeDetuneSfx(dropRuneUrl, VOL_RUNE);
+export const playPlaceRune = makeSfx(placeRuneUrl, VOL_DEFAULT);
+export const playCount = makeSfx(countUrl, VOL_DEFAULT);
+export const playDamage = makeSfx(damageUrl, VOL_DEFAULT);
+export const playCast = makeSfx(castUrl, VOL_DEFAULT);
+export const playDissolve = makeSfx(dissolveUrl, VOL_DEFAULT);
+export const playCritical = makeSfx(criticalUrl, VOL_DEFAULT);
+export const playGold = makeSfx(goldUrl, VOL_DEFAULT);
+export const playGoldTotal = makeSfx(goldTotalUrl, VOL_DEFAULT);
+export const playMenuOpen = makeSfx(menuOpenUrl, VOL_MENU);
+export const playMenuClose = makeSfx(menuCloseUrl, VOL_MENU);
+export const playRoundWin = makeSfx(roundWinUrl, VOL_DEFAULT);
+export const playGameOver = makeSfx(gameOverUrl, VOL_DEFAULT);
 
 // Typewriter SFX — needs to be startable + stoppable so the sound can
 // run for the duration of a single typewriter line and be cut off
@@ -93,7 +94,7 @@ export const playGameOver = makeSfx(gameOverUrl, 0.9);
 // start, so calling it once per line gives a clean per-line ratchet.
 const typewriterAudio = new Audio(typewriterUrl);
 typewriterAudio.preload = "auto";
-typewriterAudio.volume = 0.85;
+typewriterAudio.volume = VOL_TYPEWRITER;
 export function playTypewriter(): void {
     typewriterAudio.currentTime = 0;
     typewriterAudio.play().catch(() => {
@@ -109,7 +110,7 @@ export function stopTypewriter(): void {
 // `discard.mp3` at a slightly randomized playback rate so a multi-rune
 // discard doesn't read as N identical clicks. The ±8% range is subtle
 // enough that the sound stays recognisable but distinct per rune.
-const playDiscardSfx = makeSfx(discardUrl, 0.9);
+const playDiscardSfx = makeSfx(discardUrl, VOL_DEFAULT);
 export function playDiscard(): void {
     const pitch = 0.92 + Math.random() * 0.16; // 0.92..1.08
     playDiscardSfx(pitch);

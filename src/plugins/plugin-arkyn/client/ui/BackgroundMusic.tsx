@@ -1,22 +1,18 @@
 import { useEffect } from "react";
 import arkynThemeUrl from "/assets/audio/music/arkyn-theme.mp3?url";
+import { getAudioContext } from "../audioContext";
 
 // Web Audio nodes — uses AudioBufferSourceNode so we get access to both
 // playbackRate and detune AudioParams for proper pitch-shifting on game over.
-let ctx: AudioContext | null = null;
+// The AudioContext itself is shared with sfx.ts via audioContext.ts.
 let bgSource: AudioBufferSourceNode | null = null;
 let bgGain: GainNode | null = null;
 let bgBuffer: AudioBuffer | null = null;
 
-function getCtx(): AudioContext {
-    if (!ctx) ctx = new AudioContext();
-    if (ctx.state === "suspended") ctx.resume();
-    return ctx;
-}
-
 /** Start (or restart) the background music loop from the decoded buffer. */
 function startLoop() {
-    if (!bgBuffer || !ctx) return;
+    if (!bgBuffer) return;
+    const ctx = getAudioContext();
     if (bgSource) {
         try { bgSource.stop(); } catch { /* already stopped */ }
         bgSource.disconnect();
@@ -41,7 +37,8 @@ const FADE_DURATION = 0.3; // seconds for volume fade down/up
  * pitch/speed while quiet, then fade back up. Avoids audible pitch-bend.
  */
 export function setBgMusicPitch(rate: number, cents: number): void {
-    if (!bgSource || !bgGain || !ctx) return;
+    if (!bgSource || !bgGain) return;
+    const ctx = getAudioContext();
     const now = ctx.currentTime;
     const gain = bgGain.gain;
 
@@ -62,7 +59,7 @@ export default function BackgroundMusic() {
         let cancelled = false;
 
         const setup = async () => {
-            const audioCtx = getCtx();
+            const audioCtx = getAudioContext();
             const res = await fetch(arkynThemeUrl);
             const arr = await res.arrayBuffer();
             if (cancelled) return;
@@ -76,7 +73,7 @@ export default function BackgroundMusic() {
         });
 
         const handleInteraction = () => {
-            getCtx(); // ensures context is resumed
+            getAudioContext(); // ensures context is resumed
             if (!bgSource && bgBuffer) startLoop();
             else if (!bgBuffer) setup().catch(() => {});
             window.removeEventListener("pointerdown", handleInteraction);

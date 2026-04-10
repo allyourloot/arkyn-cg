@@ -1,9 +1,50 @@
+.handRow {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
 .hand {
     display: flex;
     justify-content: center;
     align-items: flex-end;
     padding: 0 clamp(8px, 1.5vw, 20px);
     touch-action: none;
+}
+
+.sortButton {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: clamp(8px, 1.2vw, 16px);
+    pointer-events: auto;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    opacity: 0.7;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.sortButton:not(:disabled):hover {
+    opacity: 1;
+}
+
+.sortButton:not(:disabled):active {
+    transform: scale(0.9);
+}
+
+.sortButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.3;
+}
+
+.sortIcon {
+    width: clamp(32px, 3.5vw, 48px);
+    height: clamp(32px, 3.5vw, 48px);
+    image-rendering: pixelated;
 }
 
 .cardSlot {

@@ -83,6 +83,14 @@
     line-height: 1;
 }
 
+.affinityLabelResist {
+    color: #ef4444;
+}
+
+.affinityLabelWeak {
+    color: #4ade80;
+}
+
 .affinityIcons {
     display: flex;
     gap: clamp(3px, 0.5vw, 6px);

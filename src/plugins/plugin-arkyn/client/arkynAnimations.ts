@@ -37,6 +37,11 @@ export {
     BUBBLE_STAGGER_MS,
     BUBBLE_TAIL_BUFFER_MS,
     ENEMY_DAMAGE_HIT_MS,
+    RAISE_LIFT_PX,
+    SLOT_RAISE_S,
+    SLOT_LOWER_S,
+    BAR_SHAKE_FRAME_S,
+    RUNE_SHAKE_FRAME_S,
 } from "./animations/timingConstants";
 import {
     BUBBLE_STAGGER_MS,

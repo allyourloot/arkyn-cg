@@ -42,3 +42,22 @@ export const BUBBLE_TAIL_BUFFER_MS = 150;
 
 // Duration of the enemy health-bar floating damage / shake animation.
 export const ENEMY_DAMAGE_HIT_MS = 900;
+
+// Slot raise lift distance (pixels). Used by PlayArea.tsx for the GSAP
+// y-tween. Lives here alongside RAISE_DURATION_MS so the two halves of
+// the slot-raise tween (how far + how long) are defined in one place.
+export const RAISE_LIFT_PX = -12;
+
+// Slot raise/lower durations in seconds. The raise uses a back-out
+// overshoot; the lower is a simpler power3.out. SLOT_RAISE_S is derived
+// from RAISE_DURATION_MS so the two stay in sync automatically.
+export const SLOT_RAISE_S = RAISE_DURATION_MS / 1000;
+export const SLOT_LOWER_S = 0.18;
+
+// Per-frame duration of the health-bar horizontal shake keyframes.
+// EnemyHealthBar.tsx uses this for all 10 shake stops.
+export const BAR_SHAKE_FRAME_S = 0.036;
+
+// Per-frame duration of the rune count-shake keyframes.
+// PlayArea.tsx uses this for all 5 shake stops.
+export const RUNE_SHAKE_FRAME_S = 0.056;

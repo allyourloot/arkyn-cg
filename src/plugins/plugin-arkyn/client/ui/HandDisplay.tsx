@@ -8,9 +8,13 @@ import {
     useIsDiscardAnimating,
     useDrawingRuneIds,
     useCastingRuneIds,
+    useGamePhase,
+    sortHand,
 } from "../arkynStore";
+import { playPlaceRune } from "../sfx";
 import RuneCard from "./RuneCard";
 import { useHandDragReorder } from "./hooks/useHandDragReorder";
+import sortIconUrl from "/assets/icons/sort-128x128.png?url";
 import styles from "./HandDisplay.module.css";
 
 export default function HandDisplay() {
@@ -20,6 +24,13 @@ export default function HandDisplay() {
     const isDiscardAnimating = useIsDiscardAnimating();
     const drawingRuneIds = useDrawingRuneIds();
     const castingRuneIds = useCastingRuneIds();
+    const gamePhase = useGamePhase();
+
+    const canSort = gamePhase === "playing" && hand.length > 1;
+    const handleSort = () => {
+        sortHand();
+        playPlaceRune();
+    };
 
     const containerRef = useRef<HTMLDivElement>(null);
     const animating = isCastAnimating || isDiscardAnimating;
@@ -198,46 +209,55 @@ export default function HandDisplay() {
     const startAngle = -maxFanAngle / 2;
 
     return (
-        <div ref={containerRef} className={styles.hand}>
-            {hand.map((rune, index) => {
-                const rotation = totalCards > 1 ? startAngle + angleStep * index : 0;
-                const isSelected = selectedIndices.includes(index);
-                const isHiddenForCast = animating && isSelected;
-                const isDrawingIn = drawingRuneIds.includes(rune.id);
-                // Runes mid-cast stay hidden in the hand for the entire
-                // sequence — the deferred server hand-sync would otherwise
-                // leave them visible until the dissolve completes.
-                const isCastingOut = castingRuneIds.includes(rune.id);
-                const isHidden = isHiddenForCast || isDrawingIn || isCastingOut;
-                const isDragging = dragInfo !== null && dragInfo.runeId === rune.id;
+        <div className={styles.handRow}>
+            <div ref={containerRef} className={styles.hand}>
+                {hand.map((rune, index) => {
+                    const rotation = totalCards > 1 ? startAngle + angleStep * index : 0;
+                    const isSelected = selectedIndices.includes(index);
+                    const isHiddenForCast = animating && isSelected;
+                    const isDrawingIn = drawingRuneIds.includes(rune.id);
+                    // Runes mid-cast stay hidden in the hand for the entire
+                    // sequence — the deferred server hand-sync would otherwise
+                    // leave them visible until the dissolve completes.
+                    const isCastingOut = castingRuneIds.includes(rune.id);
+                    const isHidden = isHiddenForCast || isDrawingIn || isCastingOut;
+                    const isDragging = dragInfo !== null && dragInfo.runeId === rune.id;
 
-                // Slot transform x is GSAP-driven (see useGSAP above and
-                // the quickTo follow inside useHandDragReorder). Only
-                // zIndex is React-controlled here.
-                const slotStyle: React.CSSProperties = {
-                    zIndex: isDragging ? 200 : isSelected ? 100 : index,
-                };
+                    // Slot transform x is GSAP-driven (see useGSAP above and
+                    // the quickTo follow inside useHandDragReorder). Only
+                    // zIndex is React-controlled here.
+                    const slotStyle: React.CSSProperties = {
+                        zIndex: isDragging ? 200 : isSelected ? 100 : index,
+                    };
 
-                return (
-                    <div
-                        key={rune.id}
-                        data-rune-index={index}
-                        data-rune-id={rune.id}
-                        className={`${styles.cardSlot} ${isHidden ? styles.hidden : ""} ${isDragging ? styles.dragging : ""}`}
-                        style={slotStyle}
-                        onPointerDown={(e) => onSlotPointerDown(e, rune.id, index)}
-                        onDragStart={(e) => e.preventDefault()}
-                    >
-                        <RuneCard
-                            rune={rune}
-                            isSelected={isSelected}
-                            index={index}
-                            rotation={rotation}
-                            tiltDisabled={dragInfo !== null}
-                        />
-                    </div>
-                );
-            })}
+                    return (
+                        <div
+                            key={rune.id}
+                            data-rune-index={index}
+                            data-rune-id={rune.id}
+                            className={`${styles.cardSlot} ${isHidden ? styles.hidden : ""} ${isDragging ? styles.dragging : ""}`}
+                            style={slotStyle}
+                            onPointerDown={(e) => onSlotPointerDown(e, rune.id, index)}
+                            onDragStart={(e) => e.preventDefault()}
+                        >
+                            <RuneCard
+                                rune={rune}
+                                isSelected={isSelected}
+                                index={index}
+                                rotation={rotation}
+                                tiltDisabled={dragInfo !== null}
+                            />
+                        </div>
+                    );
+                })}
+            </div>
+            <button
+                onClick={handleSort}
+                disabled={!canSort}
+                className={styles.sortButton}
+            >
+                <img src={sortIconUrl} alt="Sort" className={styles.sortIcon} />
+            </button>
         </div>
     );
 }

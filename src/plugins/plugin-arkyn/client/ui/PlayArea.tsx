@@ -8,14 +8,16 @@ import {
     useRuneDamageBubbles,
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,
+    RAISE_LIFT_PX,
+    SLOT_RAISE_S,
+    SLOT_LOWER_S,
+    RUNE_SHAKE_FRAME_S,
 } from "../arkynStore";
 import { MAX_PLAY } from "../../shared";
 import DissolveShader from "./DissolveShader";
 import RuneDamageBubble from "./RuneDamageBubble";
 import { getBaseRuneImageUrl } from "./runeAssets";
 import styles from "./PlayArea.module.css";
-
-const RAISE_LIFT_PX = -12;
 
 export default function PlayArea() {
     const dissolvingRunes = useDissolvingRunes();
@@ -41,7 +43,7 @@ export default function PlayArea() {
             const isRaised = raisedSlotIndices.includes(i);
             gsap.to(slot, {
                 y: isRaised ? RAISE_LIFT_PX : 0,
-                duration: isRaised ? 0.22 : 0.18,
+                duration: isRaised ? SLOT_RAISE_S : SLOT_LOWER_S,
                 ease: isRaised ? "back.out(1.7)" : "power3.out",
                 overwrite: "auto",
             });
@@ -65,11 +67,11 @@ export default function PlayArea() {
             gsap.set(wrapper, { x: 0, y: 0, rotation: 0, scale: 1 });
             gsap.to(wrapper, {
                 keyframes: [
-                    { x: -1.5, y: -0.5, rotation: -1, scale: 1.04, duration: 0.056 },
-                    { x: 1.5, y: 0.5, rotation: 1, scale: 1.06, duration: 0.056 },
-                    { x: -1, y: 0, rotation: -0.5, scale: 1.03, duration: 0.056 },
-                    { x: 0.5, y: 0, rotation: 0.25, scale: 1.01, duration: 0.056 },
-                    { x: 0, y: 0, rotation: 0, scale: 1, duration: 0.056 },
+                    { x: -1.5, y: -0.5, rotation: -1, scale: 1.04, duration: RUNE_SHAKE_FRAME_S },
+                    { x: 1.5, y: 0.5, rotation: 1, scale: 1.06, duration: RUNE_SHAKE_FRAME_S },
+                    { x: -1, y: 0, rotation: -0.5, scale: 1.03, duration: RUNE_SHAKE_FRAME_S },
+                    { x: 0.5, y: 0, rotation: 0.25, scale: 1.01, duration: RUNE_SHAKE_FRAME_S },
+                    { x: 0, y: 0, rotation: 0, scale: 1, duration: RUNE_SHAKE_FRAME_S },
                 ],
                 ease: "power2.out",
                 delay: bubble.delayMs / 1000,
