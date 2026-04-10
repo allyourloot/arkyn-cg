@@ -9,6 +9,7 @@ import {
     playGold,
     playGoldTotal,
     playMenuOpen,
+    playRoundWin,
     playTypewriter,
     stopTypewriter,
 } from "../sfx";
@@ -72,6 +73,7 @@ export default function RoundEndOverlay() {
     // Fire the menu-open stinger exactly once when the overlay mounts.
     useEffect(() => {
         playMenuOpen();
+        playRoundWin();
     }, []);
 
     useEffect(() => {
