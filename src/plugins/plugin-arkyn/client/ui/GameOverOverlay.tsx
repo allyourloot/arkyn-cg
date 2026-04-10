@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useCurrentRound, sendNewRun } from "../arkynStore";
-import { playMenuOpen } from "../sfx";
+import { playGameOver } from "../sfx";
+import { setBgMusicPlaybackRate } from "./BackgroundMusic";
 import { createPanelStyleVars } from "./styles";
 import buttonGreenUrl from "/assets/ui/button-green.png?url";
 import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
@@ -16,7 +17,9 @@ export default function GameOverOverlay() {
     const currentRound = useCurrentRound();
 
     useEffect(() => {
-        playMenuOpen();
+        playGameOver();
+        setBgMusicPlaybackRate(0.82);
+        return () => setBgMusicPlaybackRate(1);
     }, []);
 
     return (

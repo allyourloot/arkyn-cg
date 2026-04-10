@@ -10,6 +10,7 @@ import goldUrl from "/assets/audio/sfx/gold.ogg?url";
 import goldTotalUrl from "/assets/audio/sfx/gold-total.ogg?url";
 import menuOpenUrl from "/assets/audio/sfx/menu-open.ogg?url";
 import menuCloseUrl from "/assets/audio/sfx/menu-close.ogg?url";
+import gameOverUrl from "/assets/audio/sfx/game-over.ogg?url";
 import typewriterUrl from "/assets/audio/sfx/typewriter.ogg?url";
 
 // Preload one Audio per sfx so the browser caches the buffer. Each play
@@ -44,6 +45,7 @@ export const playGold = makeSfx(goldUrl, 0.9);
 export const playGoldTotal = makeSfx(goldTotalUrl, 0.9);
 export const playMenuOpen = makeSfx(menuOpenUrl, 0.9);
 export const playMenuClose = makeSfx(menuCloseUrl, 0.9);
+export const playGameOver = makeSfx(gameOverUrl, 0.9);
 
 // Typewriter SFX — needs to be startable + stoppable so the sound can
 // run for the duration of a single typewriter line and be cut off

@@ -129,25 +129,34 @@ export default function DissolveShader({ rune, startTime, duration }: Props) {
 
             if (t < 1) {
                 rafId = requestAnimationFrame(render);
+            } else {
+                // Dissolve complete — hide the canvas immediately so the
+                // cleared-to-white frame from an eventual loseContext()
+                // (or any stale repaint) never flashes on screen.
+                canvas.style.visibility = "hidden";
             }
         };
         rafId = requestAnimationFrame(render);
 
         return () => {
             cancelAnimationFrame(rafId);
+            // Immediately hide the canvas so no stale/cleared frame can
+            // paint while React removes the DOM node.
+            canvas.style.display = "none";
             // Stop pending image loads from touching a torn-down context.
             baseImg.onload = null;
             runeImg.onload = null;
-            gl.deleteTexture(baseTex);
-            gl.deleteTexture(runeTex);
-            gl.deleteBuffer(buffer);
-            gl.deleteProgram(program);
-            // Explicitly release the WebGL context. Without this each mount
-            // leaks a context and the browser eventually evicts the oldest
-            // (often the main Three.js renderer) once it crosses ~16 active
-            // contexts, causing the background to flash white.
-            const loseExt = gl.getExtension("WEBGL_lose_context");
-            if (loseExt) loseExt.loseContext();
+            // Defer GL resource cleanup to the next frame — by then React
+            // has already removed the DOM node, so the cleared buffer from
+            // loseContext() can never flash on screen.
+            requestAnimationFrame(() => {
+                gl.deleteTexture(baseTex);
+                gl.deleteTexture(runeTex);
+                gl.deleteBuffer(buffer);
+                gl.deleteProgram(program);
+                const loseExt = gl.getExtension("WEBGL_lose_context");
+                if (loseExt) loseExt.loseContext();
+            });
         };
     }, [rune.id, rune.element, rune.rarity, startTime, duration]);
 

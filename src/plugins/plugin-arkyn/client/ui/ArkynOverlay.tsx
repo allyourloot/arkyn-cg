@@ -41,6 +41,20 @@ export default function ArkynOverlay() {
         return () => clearTimeout(t);
     }, [gamePhase, isCastAnimating]);
 
+    // Same animation gate for the game-over overlay — wait for the final
+    // cast animation and damage hit to finish so the player sees their
+    // last spell's impact before the Game Over screen appears.
+    const [showGameOver, setShowGameOver] = useState(false);
+    useEffect(() => {
+        if (gamePhase !== "game_over") {
+            setShowGameOver(false);
+            return;
+        }
+        if (isCastAnimating) return;
+        const t = setTimeout(() => setShowGameOver(true), ENEMY_DAMAGE_HIT_MS);
+        return () => clearTimeout(t);
+    }, [gamePhase, isCastAnimating]);
+
     if (gamePhase === "waiting") {
         return (
             <>
@@ -101,7 +115,7 @@ export default function ArkynOverlay() {
 
             {/* Game Over overlay — shown when the player exhausts all
                 casts and discards without defeating the enemy. */}
-            {gamePhase === "game_over" && <GameOverOverlay />}
+            {showGameOver && <GameOverOverlay />}
 
             {/* Global pixel-art grain overlay — sits on top of every
                 other layer (z-index 9999, pointer-events: none) and
