@@ -5,12 +5,14 @@ import {
     ARKYN_CAST,
     ARKYN_DISCARD,
     ARKYN_READY,
+    ARKYN_NEW_RUN,
     ArkynState,
 } from "../shared";
 import { handleJoin } from "./systems/handleJoin";
 import { handleCast } from "./systems/handleCast";
 import { handleDiscard } from "./systems/handleDiscard";
 import { handleReady } from "./systems/handleReady";
+import { handleNewRun } from "./systems/handleNewRun";
 import { handleLeave } from "./systems/handleLeave";
 
 const logger = new Logger("ArkynServer");
@@ -41,6 +43,10 @@ export function PluginArkynServer(): ServerPlugin {
 
             runtime.onMessage(ARKYN_READY, (client: ServerClientRef) => {
                 handleReady(state, client);
+            });
+
+            runtime.onMessage(ARKYN_NEW_RUN, (client: ServerClientRef) => {
+                handleNewRun(state, client);
             });
 
             runtime.onClientLeave((client: ServerClientRef) => {

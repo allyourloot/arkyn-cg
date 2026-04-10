@@ -352,7 +352,7 @@ export function useLastRoundGoldHandsCount() { return useSyncExternalStore(subsc
 // ============================================================
 
 export { subscribe } from "./arkynStoreCore";
-export { setConnection, joinGame, sendReady } from "./arkynNetwork";
+export { setConnection, joinGame, sendReady, sendNewRun } from "./arkynNetwork";
 export {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,

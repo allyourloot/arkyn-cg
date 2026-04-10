@@ -11,6 +11,7 @@ import HandDisplay from "./HandDisplay";
 import ActionButtons from "./ActionButtons";
 import PouchCounter from "./PouchCounter";
 import RoundEndOverlay from "./RoundEndOverlay";
+import GameOverOverlay from "./GameOverOverlay";
 import CastAnimation from "./CastAnimation";
 import DiscardAnimation from "./DiscardAnimation";
 import DrawAnimation from "./DrawAnimation";
@@ -97,6 +98,10 @@ export default function ArkynOverlay() {
 
             {/* Round End overlay — animated reward breakdown */}
             {showRoundEnd && <RoundEndOverlay />}
+
+            {/* Game Over overlay — shown when the player exhausts all
+                casts and discards without defeating the enemy. */}
+            {gamePhase === "game_over" && <GameOverOverlay />}
 
             {/* Global pixel-art grain overlay — sits on top of every
                 other layer (z-index 9999, pointer-events: none) and

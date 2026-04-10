@@ -1,4 +1,4 @@
-import { ARKYN_JOIN, ARKYN_READY } from "../shared";
+import { ARKYN_JOIN, ARKYN_READY, ARKYN_NEW_RUN } from "../shared";
 
 /**
  * Network layer for Arkyn. Owns the connection sender and exposes
@@ -26,4 +26,8 @@ export function joinGame(): void {
 
 export function sendReady(): void {
     sendArkynMessage(ARKYN_READY, {});
+}
+
+export function sendNewRun(): void {
+    sendArkynMessage(ARKYN_NEW_RUN, {});
 }

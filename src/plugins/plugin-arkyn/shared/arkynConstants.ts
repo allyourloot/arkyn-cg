@@ -25,3 +25,4 @@ export const ARKYN_JOIN = "arkyn:join";
 export const ARKYN_CAST = "arkyn:cast";
 export const ARKYN_DISCARD = "arkyn:discard";
 export const ARKYN_READY = "arkyn:ready";
+export const ARKYN_NEW_RUN = "arkyn:new_run";

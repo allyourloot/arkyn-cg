@@ -1,0 +1,151 @@
+/* ----- Backdrop ----- */
+
+.backdrop {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.75);
+    z-index: 200;
+    pointer-events: auto;
+    animation: backdropFade 300ms ease-out;
+}
+
+@keyframes backdropFade {
+    from { background-color: rgba(0, 0, 0, 0); }
+    to { background-color: rgba(0, 0, 0, 0.75); }
+}
+
+/* ----- Panel ----- */
+
+.panel {
+    box-sizing: border-box;
+    width: clamp(320px, 44vw, 560px);
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    padding: clamp(18px, 2.4vw, 32px) clamp(24px, 3.2vw, 44px) clamp(20px, 2.6vw, 36px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(14px, 2.2vh, 26px);
+    image-rendering: pixelated;
+    font-family: 'Sburbits', system-ui, monospace;
+    animation: panelIn 300ms cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+@keyframes panelIn {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* ----- Title ----- */
+
+.title {
+    font-size: clamp(32px, 4.2vw, 56px);
+    font-weight: normal;
+    color: #ff4444;
+    text-shadow: 0 0 16px rgba(255, 68, 68, 0.55), 3px 3px 0 rgba(0, 0, 0, 0.85);
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    line-height: 1;
+    text-align: center;
+}
+
+/* ----- Content frame ----- */
+
+.contentFrame {
+    box-sizing: border-box;
+    width: 100%;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    padding: clamp(12px, 1.8vh, 20px) clamp(14px, 2vw, 24px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(6px, 1vh, 12px);
+    image-rendering: pixelated;
+}
+
+.stat {
+    font-size: clamp(18px, 2.2vw, 28px);
+    color: #e8d4b8;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+.statValue {
+    color: #ffd700;
+}
+
+/* ----- New Run button ----- */
+
+.button {
+    box-sizing: border-box;
+    margin-top: clamp(4px, 0.6vh, 10px);
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    border-image: var(--btn-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
+    background-color: transparent;
+    color: #fff;
+    font-family: 'Sburbits', system-ui, monospace;
+    font-size: clamp(18px, 2.2vw, 26px);
+    font-weight: normal;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    cursor: pointer;
+    image-rendering: pixelated;
+    line-height: 1;
+    padding: clamp(8px, 1.2vh, 14px) clamp(24px, 3vw, 40px);
+    pointer-events: auto;
+    transition: transform 0.1s ease;
+}
+
+.button:hover {
+    border-image: var(--btn-bg-hover) 10 10 10 10 fill / 10px 10px 10px 10px;
+}
+
+.button:active {
+    transform: translateY(2px);
+}
+
+/* ── Landscape phone compact ── */
+@media (max-height: 500px) {
+    .panel {
+        width: clamp(280px, 40vw, 480px);
+        border-width: 12px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+        padding: clamp(10px, 1.6vw, 20px) clamp(14px, 2vw, 28px);
+        gap: clamp(8px, 1.4vh, 16px);
+    }
+
+    .title {
+        font-size: clamp(24px, 3.2vw, 40px);
+    }
+
+    .contentFrame {
+        border-width: 12px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+        padding: clamp(8px, 1.2vh, 14px) clamp(10px, 1.4vw, 18px);
+        gap: clamp(4px, 0.6vh, 8px);
+    }
+
+    .stat {
+        font-size: clamp(14px, 1.8vw, 22px);
+    }
+
+    .button {
+        font-size: clamp(14px, 1.8vw, 22px);
+        padding: clamp(6px, 1vh, 10px) clamp(16px, 2.4vw, 32px);
+    }
+}

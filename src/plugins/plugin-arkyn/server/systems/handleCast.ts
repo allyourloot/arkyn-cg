@@ -85,4 +85,12 @@ export function handleCast(
 
     // Draw back to hand size
     refillHand(player, client.sessionId);
+
+    // If the player has exhausted all casts without killing the enemy,
+    // the run is over — discards can't deal damage so there's no way
+    // to finish the fight.
+    if (player.castsRemaining <= 0) {
+        state.gamePhase = "game_over";
+        logger.info(`Game over! Player ${client.sessionId} ran out of casts on round ${state.currentRound}.`);
+    }
 }

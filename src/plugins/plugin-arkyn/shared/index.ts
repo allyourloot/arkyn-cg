@@ -16,6 +16,7 @@ export {
     ARKYN_CAST,
     ARKYN_DISCARD,
     ARKYN_READY,
+    ARKYN_NEW_RUN,
 } from "./arkynConstants";
 
 export type {
