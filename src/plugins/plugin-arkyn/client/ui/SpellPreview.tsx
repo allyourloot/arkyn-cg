@@ -360,11 +360,12 @@ function DamageChips({
                         </BouncyText>
                     </div>
                 </div>
+                <span className={styles.damageMultSymbol}>×</span>
                 <div className={styles.damageChipColumn}>
                     <span className={styles.damageChipLabel}>Mult</span>
                     <div className={`${styles.damageChip} ${styles.damageChipMult}`}>
                         <BouncyText className={styles.damageChipValue}>
-                            {typeof mult === "number" ? `×${mult}` : mult}
+                            {mult}
                         </BouncyText>
                     </div>
                 </div>

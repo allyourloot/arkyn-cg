@@ -176,6 +176,21 @@
     align-items: stretch;
     justify-content: center;
     gap: clamp(6px, 1vw, 12px);
+    position: relative;
+}
+
+.damageMultSymbol {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -30%);
+    font-size: var(--font-size-lg);
+    font-weight: bold;
+    color: #ffffff;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+    z-index: 1;
+    pointer-events: none;
 }
 
 /* Column wrapper for one damage track — label above, framed value below.
@@ -330,6 +345,11 @@
 
     .damageRow {
         gap: clamp(3px, 0.6vw, 8px);
+    }
+
+    .damageMultSymbol {
+        font-size: var(--font-size-xs);
+        transform: translate(-50%, -10%);
     }
 
     .damageChipLabel {
