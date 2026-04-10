@@ -194,44 +194,55 @@ export default function SpellPreview() {
                     matches the contributing-runes list returned by
                     resolveSpell, so duplicate runes from a pair / triple
                     sit next to each other. */}
-                {spell.shape === "full_house" ? (
-                    <>
-                        <div className={styles.runeRow}>
-                            {contributingRunes.slice(0, 3).map((rune, i) => (
-                                <div key={i} className={styles.rune}>
-                                    <RuneImage
-                                        rarity={rune.rarity}
-                                        element={rune.element}
-                                        className={styles.runeLayer}
-                                    />
+                {(() => {
+                    const splitAt =
+                        spell.shape === "full_house" ? 3
+                        : spell.shape === "two_pair" ? 2
+                        : 0;
+                    if (splitAt > 0) {
+                        return (
+                            <div className={styles.runeGrid}>
+                                <div className={styles.runeRow}>
+                                    {contributingRunes.slice(0, splitAt).map((rune, i) => (
+                                        <div key={i} className={styles.rune}>
+                                            <RuneImage
+                                                rarity={rune.rarity}
+                                                element={rune.element}
+                                                className={styles.runeLayer}
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                        <div className={styles.runeRow}>
-                            {contributingRunes.slice(3).map((rune, i) => (
-                                <div key={i + 3} className={styles.rune}>
-                                    <RuneImage
-                                        rarity={rune.rarity}
-                                        element={rune.element}
-                                        className={styles.runeLayer}
-                                    />
+                                <div className={styles.runeRow}>
+                                    {contributingRunes.slice(splitAt).map((rune, i) => (
+                                        <div key={i + splitAt} className={styles.rune}>
+                                            <RuneImage
+                                                rarity={rune.rarity}
+                                                element={rune.element}
+                                                className={styles.runeLayer}
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                    </>
-                ) : (
-                    <div className={styles.runeRow}>
-                        {contributingRunes.map((rune, i) => (
-                            <div key={i} className={styles.rune}>
-                                <RuneImage
-                                    rarity={rune.rarity}
-                                    element={rune.element}
-                                    className={styles.runeLayer}
-                                />
                             </div>
-                        ))}
-                    </div>
-                )}
+                        );
+                    }
+                    return (
+                        <div className={styles.runeGrid}>
+                            <div className={styles.runeRow}>
+                                {contributingRunes.map((rune, i) => (
+                                    <div key={i} className={`${styles.rune} ${styles.runeLarge}`}>
+                                        <RuneImage
+                                            rarity={rune.rarity}
+                                            element={rune.element}
+                                            className={styles.runeLayer}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {spell.isCombo && spell.comboElements ? (
                     /* Combo spells: pass `colorRange` to BouncyText so each

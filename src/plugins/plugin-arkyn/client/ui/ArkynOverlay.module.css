@@ -139,7 +139,7 @@
     }
 
     .rightSpacer {
-        width: clamp(80px, 10vw, 160px);
+        width: clamp(120px, 16vw, 220px);
         margin-right: clamp(4px, 1vw, 12px);
     }
 }

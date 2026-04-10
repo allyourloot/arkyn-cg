@@ -44,7 +44,7 @@
        resolved spell — that would otherwise shove the damage chips and
        gold counter up and down. min-height includes the 24px border on
        both sides because `box-sizing: border-box`. */
-    min-height: 24vh;
+    min-height: 32vh;
     background: transparent;
     border-style: solid;
     border-color: transparent;
@@ -78,16 +78,29 @@
     line-height: 1;
 }
 
+/* Wrapper for rune recipe rows. Combo spells (Two Pair, Full House)
+   split runes across two centered rows; single-element spells use one.
+   No min-height here — the parent .section's min-height absorbs the
+   difference so the panel doesn't reflow. */
+.runeGrid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(2px, 0.4vw, 6px);
+    width: 100%;
+    height: calc(clamp(44px, 4.8vw, 64px) * 2 + clamp(2px, 0.4vw, 6px));
+}
+
 /* Row of contributing-rune tiles for the resolved spell — replaces the
    single primary-element icon badge so players can see the recipe
    (e.g. Hailstorm = 2 Ice + 1 Air) at a glance. Sized to fit up to 5
    rune tiles within the panel's inner width without wrapping. */
 .runeRow {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: center;
     gap: clamp(4px, 0.6vw, 8px);
-    width: 100%;
 }
 
 /* The recipe rune is a transparent positioning box that hosts the same
@@ -100,6 +113,10 @@
     aspect-ratio: 1;
     image-rendering: pixelated;
     flex-shrink: 0;
+}
+
+.runeLarge {
+    width: clamp(56px, 6vw, 80px);
 }
 
 .runeLayer {
@@ -122,6 +139,7 @@
     font-size: var(--font-size-sm);
     color: #c4a882;
     line-height: 1;
+    text-align: center;
 }
 
 /* Partial-rune indicator (e.g. "2/4 runes") shown when the player's
@@ -241,7 +259,7 @@
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
     .panel {
-        width: clamp(170px, 21vw, 300px);
+        width: clamp(190px, 24vw, 320px);
         height: 94vh;
         margin-left: clamp(6px, 1vw, 16px);
         border-width: 12px;
@@ -251,8 +269,9 @@
     }
 
     .section {
-        min-height: 0;
-        flex-shrink: 1;
+        height: 30vh;
+        flex-shrink: 0;
+        overflow: hidden;
         border-width: 12px;
         border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
         padding: 4px 3px;
@@ -265,6 +284,11 @@
         margin-top: clamp(4px, 0.8vh, 10px);
     }
 
+    .runeGrid {
+        height: calc(clamp(22px, 2.8vw, 34px) * 2 + clamp(2px, 0.4vw, 4px));
+        gap: clamp(2px, 0.4vw, 4px);
+    }
+
     .runeRow {
         gap: clamp(2px, 0.4vw, 5px);
     }
@@ -273,12 +297,22 @@
         width: clamp(20px, 2.6vw, 32px);
     }
 
+    .runeLarge {
+        width: clamp(22px, 2.8vw, 34px);
+    }
+
     .spellName {
         font-size: var(--font-size-xs);
     }
 
     .tier {
         font-size: var(--font-size-2xs);
+        text-align: center;
+    }
+
+    .partialRunes {
+        display: block;
+        text-align: center;
     }
 
     .description {

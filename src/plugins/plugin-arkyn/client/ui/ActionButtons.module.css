@@ -27,6 +27,7 @@
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.7);
     transition: transform 0.1s ease;
     line-height: 1;
+    filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35));
 }
 
 .button:not(:disabled):hover {
@@ -50,6 +51,24 @@
     cursor: not-allowed;
     color: #c8c8c8;
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.countBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.3em;
+    height: 1.3em;
+    margin-left: 0;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    image-rendering: pixelated;
+    font-size: 1em;
+    line-height: 1;
+    text-shadow: none;
+    vertical-align: middle;
+    padding-left: 1px;
 }
 
 /* Slightly compact the action buttons on touch devices — they don't need

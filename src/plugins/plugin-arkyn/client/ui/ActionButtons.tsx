@@ -12,6 +12,7 @@ import buttonGreenDisabledUrl from "/assets/ui/button-green-disabled.png?url";
 import buttonOrangeUrl from "/assets/ui/button-orange.png?url";
 import buttonOrangeHoverUrl from "/assets/ui/button-orange-hover.png?url";
 import buttonOrangeDisabledUrl from "/assets/ui/button-orange-disabled.png?url";
+import circleFrameUrl from "/assets/ui/circle-frame.png?url";
 import styles from "./ActionButtons.module.css";
 
 const castStateVars = {
@@ -45,7 +46,7 @@ export default function ActionButtons() {
                 className={`${styles.button} ${styles.cast}`}
                 style={castStateVars}
             >
-                Cast ({castsRemaining})
+                Cast <span className={styles.countBadge} style={{ backgroundImage: `url(${circleFrameUrl})` }}>{castsRemaining}</span>
             </button>
             <button
                 onClick={discardRunes}
@@ -53,7 +54,7 @@ export default function ActionButtons() {
                 className={`${styles.button} ${styles.discard}`}
                 style={discardStateVars}
             >
-                Discard ({discardsRemaining})
+                Discard <span className={styles.countBadge} style={{ backgroundImage: `url(${circleFrameUrl})` }}>{discardsRemaining}</span>
             </button>
         </div>
     );
