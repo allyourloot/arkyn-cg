@@ -1,0 +1,130 @@
+/* Center-column shop frame. Lives inside ArkynOverlay's .centerColumn
+   when the game phase is "shop" and fills most of the column's visible
+   area. Chrome pattern matches RoundEndOverlay's .panel so both foreground
+   frames feel like they come from the same family. */
+.panel {
+    pointer-events: auto;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: clamp(480px, 60vw, 860px);
+    height: 72vh;
+    align-self: center;
+    /* Auto margins on the flex main axis (vertical, since .centerColumn
+       is flex-direction: column) center the panel in the available
+       viewport height so the shop sits roughly mid-screen. */
+    margin-top: auto;
+    margin-bottom: auto;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    padding: clamp(18px, 2.4vw, 32px) clamp(24px, 3.2vw, 44px) clamp(20px, 2.6vw, 36px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(14px, 2.2vh, 26px);
+    image-rendering: pixelated;
+}
+
+.title {
+    font-size: clamp(var(--font-size-md), 3.8vw, var(--font-size-xl));
+    font-weight: normal;
+    color: #ffd700;
+    text-shadow: 0 0 16px rgba(255, 215, 0, 0.55), 3px 3px 0 rgba(0, 0, 0, 0.85);
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+/* Inner 9-sliced content frame — this is where the shop inventory will
+   eventually render. For now it holds a centered placeholder message so
+   the frame doesn't look empty. `flex: 1` so it absorbs whatever space
+   sits between the title and the Continue button. */
+.contentFrame {
+    box-sizing: border-box;
+    width: 100%;
+    flex: 1;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    padding: clamp(14px, 2vh, 24px) clamp(16px, 2.2vw, 28px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    image-rendering: pixelated;
+}
+
+.placeholder {
+    font-size: clamp(var(--font-size-xs), 2vw, var(--font-size-sm));
+    color: #b0a090;
+    text-align: center;
+    line-height: 1.2;
+    padding: 0 12px;
+}
+
+.button {
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    border-image: var(--btn-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
+    background-color: transparent;
+    color: #fff;
+    font-family: inherit;
+    font-size: clamp(var(--font-size-xs), 2.2vw, var(--font-size-md));
+    font-weight: normal;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    cursor: pointer;
+    image-rendering: pixelated;
+    line-height: 1;
+    padding: clamp(8px, 1.2vh, 14px) clamp(24px, 3vw, 40px);
+    transition: transform 80ms ease-out;
+}
+
+.button:hover {
+    border-image: var(--btn-bg-hover) 10 10 10 10 fill / 10px 10px 10px 10px;
+}
+
+.button:active {
+    transform: translateY(2px);
+}
+
+/* -- Landscape phone compact -- */
+@media (max-height: 500px) {
+    .panel {
+        max-width: clamp(320px, 66vw, 560px);
+        height: 80vh;
+        margin-top: auto;
+        margin-bottom: auto;
+        border-width: 12px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+        padding: clamp(6px, 1vw, 12px) clamp(10px, 1.6vw, 20px) clamp(8px, 1.2vw, 14px);
+        gap: clamp(6px, 1.2vh, 14px);
+    }
+
+    .title {
+        font-size: var(--font-size-sm);
+        letter-spacing: 2px;
+    }
+
+    .contentFrame {
+        border-width: 12px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+        padding: clamp(6px, 1vh, 12px) clamp(8px, 1.2vw, 16px);
+    }
+
+    .placeholder {
+        font-size: var(--font-size-2xs);
+    }
+
+    .button {
+        font-size: var(--font-size-xs);
+        padding: clamp(4px, 0.8vh, 8px) clamp(16px, 2vw, 28px);
+    }
+}

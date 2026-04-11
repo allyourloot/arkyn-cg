@@ -1,10 +1,10 @@
 import selectRuneUrl from "/assets/audio/sfx/select-rune.ogg?url";
 import dropRuneUrl from "/assets/audio/sfx/drop-rune.ogg?url";
-import placeRuneUrl from "/assets/audio/sfx/place-rune.mp3?url";
+import placeRuneUrl from "/assets/audio/sfx/place-rune.ogg?url";
 import countUrl from "/assets/audio/sfx/count.ogg?url";
-import damageUrl from "/assets/audio/sfx/damage.mp3?url";
-import castUrl from "/assets/audio/sfx/cast.mp3?url";
-import discardUrl from "/assets/audio/sfx/discard.mp3?url";
+import damageUrl from "/assets/audio/sfx/damage.ogg?url";
+import castUrl from "/assets/audio/sfx/cast.ogg?url";
+import discardUrl from "/assets/audio/sfx/discard.ogg?url";
 import dissolveUrl from "/assets/audio/sfx/dissolve.ogg?url";
 import criticalUrl from "/assets/audio/sfx/critical.ogg?url";
 import goldUrl from "/assets/audio/sfx/gold.ogg?url";
@@ -107,7 +107,7 @@ export function stopTypewriter(): void {
 }
 
 // Discard SFX with built-in pitch randomization. Plays one shot of
-// `discard.mp3` at a slightly randomized playback rate so a multi-rune
+// `discard.ogg` at a slightly randomized playback rate so a multi-rune
 // discard doesn't read as N identical clicks. The ±8% range is subtle
 // enough that the sound stays recognisable but distinct per rune.
 const playDiscardSfx = makeSfx(discardUrl, VOL_DEFAULT);

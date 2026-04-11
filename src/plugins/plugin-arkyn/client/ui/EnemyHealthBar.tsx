@@ -52,8 +52,17 @@ export default function EnemyHealthBar() {
     // shake share the exact same lifetime.
     const [activeHit, setActiveHit] = useState<ActiveHit | null>(null);
 
+    // Baseline the seq we last processed to whatever the global store holds
+    // at mount time. The store keeps the previous round's hit alive across
+    // shop transitions (this component unmounts in the shop), so without
+    // this guard the next round's first render would replay the previous
+    // round's damage bubble + critical SFX against the fresh enemy.
+    const lastProcessedSeqRef = useRef<number>(enemyDamageHit.seq);
+
     // Mount the active hit when a new damage event arrives.
     useEffect(() => {
+        if (enemyDamageHit.seq === lastProcessedSeqRef.current) return;
+        lastProcessedSeqRef.current = enemyDamageHit.seq;
         if (enemyDamageHit.seq === 0) return;
         setActiveHit({
             amount: enemyDamageHit.amount,

@@ -3,7 +3,7 @@ import { Logger } from "@core/shared/utils";
 import { clearArraySchema } from "../utils/clearArraySchema";
 import { initPlayerForRound } from "../utils/initPlayerForRound";
 import { removePouch } from "../resources/playerPouch";
-import { getEnemyForRound } from "../utils/enemyDefinitions";
+import { getEnemyForRound } from "../../shared/enemyDefinitions";
 import type { ArkynContext } from "../types/ArkynContext";
 import { initRunStats, removeRunStats } from "../resources/runStats";
 

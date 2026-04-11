@@ -9,6 +9,11 @@ precision highp float;
 
 uniform vec2 uResolution;
 uniform float uTime;
+// 0.0 = default purple/amber palette (menu + combat).
+// 1.0 = shop palette (deep navy / teal / seafoam / kelp).
+// Tweened on the JS side so the background recolors smoothly when the
+// player enters / leaves the shop.
+uniform float uShopMode;
 
 // --- Hash & noise ---
 
@@ -84,12 +89,32 @@ void main() {
     float fog = fbm(p * 2.5 + 3.5 * q);
 
     // ----- Palette -----
+    // Default (combat) palette — warm purples/amber/violet with teal accent.
     vec3 deepPurple = vec3(0.05, 0.03, 0.10);
     vec3 midPurple  = vec3(0.18, 0.08, 0.28);
     vec3 amber      = vec3(0.95, 0.55, 0.18);
     vec3 violet     = vec3(0.55, 0.20, 0.85);
     vec3 teal       = vec3(0.10, 0.60, 0.70);
     vec3 ember      = vec3(0.40, 0.10, 0.05);
+
+    // Shop palette — deep ocean blues and kelp greens. Each slot keeps the
+    // same role in the color accumulation below so the overall composition
+    // (fog motes / orb glow / vignette) stays visually identical; only the
+    // hues shift. mix() with uShopMode gives a smooth transition when the
+    // player walks into / out of the shop.
+    vec3 deepNavy   = vec3(0.02, 0.06, 0.12);
+    vec3 midTeal    = vec3(0.05, 0.18, 0.28);
+    vec3 seafoam    = vec3(0.30, 0.80, 0.75);
+    vec3 oceanBlue  = vec3(0.15, 0.40, 0.85);
+    vec3 kelp       = vec3(0.15, 0.65, 0.45);
+    vec3 abyss      = vec3(0.05, 0.15, 0.22);
+
+    deepPurple = mix(deepPurple, deepNavy,  uShopMode);
+    midPurple  = mix(midPurple,  midTeal,   uShopMode);
+    amber      = mix(amber,      seafoam,   uShopMode);
+    violet     = mix(violet,     oceanBlue, uShopMode);
+    teal       = mix(teal,       kelp,      uShopMode);
+    ember      = mix(ember,      abyss,     uShopMode);
 
     // Base atmospheric color modulated by fog density.
     vec3 color = mix(deepPurple, midPurple, fog);

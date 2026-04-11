@@ -12,6 +12,8 @@ import ActionButtons from "./ActionButtons";
 import PouchCounter from "./PouchCounter";
 import RoundEndOverlay from "./RoundEndOverlay";
 import GameOverOverlay from "./GameOverOverlay";
+import ShopPanel from "./ShopPanel";
+import ShopScreen from "./ShopScreen";
 import CastAnimation from "./CastAnimation";
 import DiscardAnimation from "./DiscardAnimation";
 import DrawAnimation from "./DrawAnimation";
@@ -76,6 +78,36 @@ export default function ArkynOverlay() {
                     Connecting...
                 </div>
             </>
+        );
+    }
+
+    if (gamePhase === "shop") {
+        return (
+            <div className={styles.root}>
+                {/* Background image (behind everything) — the shader reads
+                    `gamePhase` and tweens its palette toward the blue/green
+                    shop look while we're here. */}
+                <BackgroundShader />
+
+                {/* Left side panel: Shop variant of SpellPreview's shell. */}
+                <ShopPanel />
+
+                {/* Center column: shop frame sits alone — no enemy bar,
+                    no hand, no action buttons. */}
+                <div className={styles.centerColumn}>
+                    <ShopScreen />
+                </div>
+
+                {/* Right counterweight — keep in sync with SpellPreview's
+                    width so the center column stays centered. */}
+                <div className={styles.rightSpacer} aria-hidden="true" />
+
+                <BackgroundMusic />
+
+                {/* Global pixel-art grain overlay — mirrors the combat
+                    layout so the shop doesn't lose the UI grain texture. */}
+                <OverlayShader />
+            </div>
         );
     }
 

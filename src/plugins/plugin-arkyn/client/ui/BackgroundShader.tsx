@@ -1,7 +1,13 @@
 import { useEffect, useRef } from "react";
+import { useGamePhase } from "../arkynStore";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./BackgroundShader.frag";
 import { createProgram } from "./utils/glProgram";
 import styles from "./BackgroundShader.module.css";
+
+// Seconds to tween the shop-mode uniform between 0 and 1 when the player
+// enters / leaves the shop. Short enough to feel responsive, long enough
+// to read as a deliberate mood shift rather than a hard cut.
+const SHOP_MODE_TWEEN_S = 0.6;
 
 // Each rendered shader pixel becomes a PIXEL_SIZE x PIXEL_SIZE block on screen
 // after the CSS nearest-neighbor upscale. Larger = chunkier pixels and cheaper
@@ -23,6 +29,20 @@ const FRAME_INTERVAL_MS = HAS_HOVER ? 0 : 1000 / 30;
 
 export default function BackgroundShader() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const gamePhase = useGamePhase();
+    // Live-tweened shop-mode value written into the uShopMode uniform each
+    // frame by the render loop. `current` is the displayed value, `target`
+    // is where we're easing toward. Refs (not state) so updating them
+    // doesn't re-run the GL setup effect.
+    const shopModeRef = useRef({ current: 0, target: 0 });
+
+    // Flip the target whenever the game phase changes. The render loop
+    // picks up the new target and eases `current` toward it over
+    // SHOP_MODE_TWEEN_S; no GSAP / rAF plumbing needed because the
+    // background is already running its own rAF loop.
+    useEffect(() => {
+        shopModeRef.current.target = gamePhase === "shop" ? 1 : 0;
+    }, [gamePhase]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -55,6 +75,7 @@ export default function BackgroundShader() {
 
         const uResolution = gl.getUniformLocation(program, "uResolution");
         const uTime = gl.getUniformLocation(program, "uTime");
+        const uShopMode = gl.getUniformLocation(program, "uShopMode");
 
         // Render at 1/PIXEL_SIZE of the viewport size; CSS upscales the
         // canvas with nearest-neighbor for the chunky pixel-art look.
@@ -74,6 +95,7 @@ export default function BackgroundShader() {
         let running = true;
         const start = performance.now();
         let lastDrawAt = 0;
+        let lastFrameAt = start;
 
         // requestAnimationFrame still ticks at the display refresh rate,
         // but we skip drawing if we're inside the throttle window. On
@@ -85,11 +107,27 @@ export default function BackgroundShader() {
                 rafId = requestAnimationFrame(render);
                 return;
             }
+            // Ease the shop-mode value toward its target at a rate that
+            // covers the full 0→1 range in SHOP_MODE_TWEEN_S seconds.
+            // Linear is fine here — the shader's palette mix absorbs any
+            // would-be easing and the shift is brief.
+            const dtS = Math.max(0, (now - lastFrameAt) / 1000);
+            lastFrameAt = now;
+            const sm = shopModeRef.current;
+            if (sm.current !== sm.target) {
+                const step = dtS / SHOP_MODE_TWEEN_S;
+                if (sm.current < sm.target) {
+                    sm.current = Math.min(sm.target, sm.current + step);
+                } else {
+                    sm.current = Math.max(sm.target, sm.current - step);
+                }
+            }
             lastDrawAt = now;
             resize();
             const t = (now - start) / 1000;
             gl.uniform2f(uResolution, canvas.width, canvas.height);
             gl.uniform1f(uTime, t);
+            gl.uniform1f(uShopMode, sm.current);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             rafId = requestAnimationFrame(render);
         };
@@ -102,6 +140,10 @@ export default function BackgroundShader() {
                 cancelAnimationFrame(rafId);
             } else if (!running) {
                 running = true;
+                // Reset the frame timestamp so the tween dt doesn't include
+                // however long the tab was hidden — otherwise resuming
+                // would snap the shop-mode value to its target in one frame.
+                lastFrameAt = performance.now();
                 rafId = requestAnimationFrame(render);
             }
         };

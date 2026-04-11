@@ -31,7 +31,6 @@ import { playCast, playPlaceRune, playCount, playDamage, playDiscard, playDissol
 
 const FLY_DURATION_S = 0.3;
 const FLY_STAGGER_S = 0.06;
-const PLACE_SFX_STAGGER_S = 0.1;
 const DISCARD_FLY_DURATION_S = 0.4;
 const DISCARD_STAGGER_S = 0.04;
 const DRAW_FLY_DURATION_S = 0.45;
@@ -218,9 +217,12 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
     const dissolveDelayFromFlyMs = (dissolveStartS - flyTotalS) * 1000;
     tl.call(() => ctx.onFlyComplete(dissolveDelayFromFlyMs), undefined, flyTotalS);
 
-    // Place SFX staggered per contributing rune, starting at fly-complete.
-    for (let i = 0; i < ctx.contributingCount; i++) {
-        tl.call(playPlaceRune, undefined, flyTotalS + i * PLACE_SFX_STAGGER_S);
+    // Place SFX per flying rune — fires the moment each rune lands in its
+    // slot in the play area. Rune `i` starts flying at `i * FLY_STAGGER_S`
+    // and runs for `FLY_DURATION_S`, so it lands at the sum of those.
+    for (let i = 0; i < ctx.flyingCount; i++) {
+        const landAtS = i * FLY_STAGGER_S + FLY_DURATION_S;
+        tl.call(playPlaceRune, undefined, landAtS);
     }
 
     // Settle done: lift the valid slots.

@@ -10,6 +10,8 @@ export {
     MAX_PLAY,
     POUCH_SIZE,
     RUNES_PER_ELEMENT,
+    CASTS_PER_ROUND,
+    DISCARDS_PER_ROUND,
     ELEMENT_TYPES,
     RARITY_TYPES,
     ARKYN_JOIN,
@@ -44,3 +46,6 @@ export type { RuneDamageBreakdown, SpellDamageBreakdown } from "./calculateDamag
 
 export { SPELLBOOKS, DEFAULT_SPELLBOOK_ID } from "./spellbooks";
 export type { SpellbookId, SpellbookDefinition } from "./spellbooks";
+
+export { ENEMY_DEFINITIONS, getEnemyForRound } from "./enemyDefinitions";
+export type { EnemyDefinition } from "./enemyDefinitions";

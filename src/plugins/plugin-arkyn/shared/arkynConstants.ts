@@ -4,6 +4,11 @@ export const MAX_PLAY = 5;
 export const POUCH_SIZE = 52;
 export const RUNES_PER_ELEMENT = 4;
 
+// Per-round action budgets. These are the totals a player gets at the start
+// of each round; future shop items will add/subtract to the per-player total.
+export const CASTS_PER_ROUND = 3;
+export const DISCARDS_PER_ROUND = 3;
+
 export const ELEMENT_TYPES = [
     "air", "arcane", "death", "earth", "fire", "holy",
     "ice", "lightning", "poison", "psy", "shadow", "steel", "water",

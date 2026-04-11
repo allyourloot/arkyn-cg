@@ -1,4 +1,8 @@
-import { type ArkynPlayerState } from "../../shared";
+import {
+    CASTS_PER_ROUND,
+    DISCARDS_PER_ROUND,
+    type ArkynPlayerState,
+} from "../../shared";
 import { clearArraySchema } from "./clearArraySchema";
 import { createPouch } from "./createPouch";
 import { setPouch } from "../resources/playerPouch";
@@ -21,8 +25,8 @@ export function initPlayerForRound(player: ArkynPlayerState, sessionId: string):
     player.lastSpellName = "";
     player.lastSpellTier = 0;
     player.lastDamage = 0;
-    player.castsRemaining = 3;
-    player.discardsRemaining = 3;
+    player.castsRemaining = CASTS_PER_ROUND;
+    player.discardsRemaining = DISCARDS_PER_ROUND;
     // Clear the previous round's reward breakdown so the round-end overlay
     // never shows stale numbers if the next defeat happens before the
     // server has had a chance to set them. `gold` (the running total) is
