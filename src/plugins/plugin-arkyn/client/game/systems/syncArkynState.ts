@@ -36,6 +36,7 @@ import {
     getHandIndex,
     getIsCastAnimating,
     clearCastingRuneIds,
+    clearLastCastState,
     type RuneClientData,
 } from "../../arkynStore";
 
@@ -229,6 +230,13 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
 
         // Sync round and pouch
         if (state.currentRound !== prevRound) {
+            // On round transitions after the initial sync, wipe the
+            // Spell Preview's "Last Cast" state so the panel doesn't
+            // keep showing the previous round's final cast once the
+            // player leaves the shop.
+            if (prevRound >= 1) {
+                clearLastCastState();
+            }
             setCurrentRound(state.currentRound);
             prevRound = state.currentRound;
         }

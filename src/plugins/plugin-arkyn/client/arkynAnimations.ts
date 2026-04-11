@@ -242,6 +242,21 @@ export function clearCastingRuneIds(): void {
     notify();
 }
 
+/**
+ * Wipe the Spell Preview's "Last Cast" state so a new round starts with a
+ * clean preview panel. Called by the sync system when the round number
+ * increments (shop → next round). Without this, `lastCastRunes` from the
+ * previous round's final cast would keep the panel showing "Last Cast"
+ * until the player selects a new rune.
+ */
+export function clearLastCastState(): void {
+    lastCastBaseDamage = 0;
+    castBaseCounter = 0;
+    castTotalDamage = -1;
+    arkynStoreInternal.setLastCastRunes([]);
+    notify();
+}
+
 // ----- Orchestrators -----
 
 export function triggerDrawAnimation(newRunes: { rune: RuneClientData; handIndex: number }[]) {

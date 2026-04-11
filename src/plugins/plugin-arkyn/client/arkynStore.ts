@@ -406,6 +406,7 @@ export {
     discardRunes,
     getIsCastAnimating,
     clearCastingRuneIds,
+    clearLastCastState,
     useFlyingRunes,
     useIsCastAnimating,
     useCastingRuneIds,
