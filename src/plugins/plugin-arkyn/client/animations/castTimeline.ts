@@ -8,7 +8,7 @@ import {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,
 } from "./timingConstants";
-import { playCast, playPlaceRune, playCount, playDamage, playDiscard, playDissolve, playCritical } from "../sfx";
+import { playCastRune, playCount, playDamage, playDiscard, playDissolve, playCritical } from "../sfx";
 
 // ============================================================
 // GSAP timeline factories for the gameplay orchestrators
@@ -199,14 +199,14 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
         },
     });
 
-    // t=0: fire cast SFX, mount flying runes, lock HP, and snap the Base
-    // counter to spellBase so the SpellPreview chip reads the spell's tier
-    // base from the very first frame (Balatro's "hand-type chips appear
-    // instantly when you press play"). The fly tweens themselves live
-    // inside CastAnimation's useGSAP — they start in the same frame this
-    // callback fires.
+    // t=0: fire cast-rune SFX, mount flying runes, lock HP, and snap the
+    // Base counter to spellBase so the SpellPreview chip reads the spell's
+    // tier base from the very first frame (Balatro's "hand-type chips
+    // appear instantly when you press play"). The fly tweens themselves
+    // live inside CastAnimation's useGSAP — they start in the same frame
+    // this callback fires.
     tl.call(() => {
-        playCast();
+        playCastRune();
         ctx.onStart();
         ctx.onCountTick(ctx.spellBaseDamage);
     }, undefined, 0);
@@ -216,14 +216,6 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
     // dissolveStartTime upfront — the shader keeps runes intact until then.
     const dissolveDelayFromFlyMs = (dissolveStartS - flyTotalS) * 1000;
     tl.call(() => ctx.onFlyComplete(dissolveDelayFromFlyMs), undefined, flyTotalS);
-
-    // Place SFX per flying rune — fires the moment each rune lands in its
-    // slot in the play area. Rune `i` starts flying at `i * FLY_STAGGER_S`
-    // and runs for `FLY_DURATION_S`, so it lands at the sum of those.
-    for (let i = 0; i < ctx.flyingCount; i++) {
-        const landAtS = i * FLY_STAGGER_S + FLY_DURATION_S;
-        tl.call(playPlaceRune, undefined, landAtS);
-    }
 
     // Settle done: lift the valid slots.
     tl.call(ctx.onRaiseStart, undefined, flyTotalS + SETTLE_DELAY_S);
