@@ -27,7 +27,11 @@ interface ActiveHit {
     seq: number;
 }
 
-export default function EnemyHealthBar() {
+type EnemyHealthBarProps = {
+    ref?: React.Ref<HTMLDivElement>;
+};
+
+export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps = {}) {
     // The bar reads the "displayed" HP, which lags behind the server's
     // authoritative `enemyHp` during a cast animation so the damage
     // drops in sync with the dissolve finale (not when the cast is sent).
@@ -42,6 +46,17 @@ export default function EnemyHealthBar() {
     // target is the inner barShakeRef so the name above and the affinity
     // sections below stay rock-solid when the enemy gets hit.
     const wrapperRef = useRef<HTMLDivElement>(null);
+
+    // Merge our internal wrapperRef with the optional ref forwarded from
+    // ArkynOverlay (used to drive screen-transition slide animations).
+    const setWrapperRef = (el: HTMLDivElement | null) => {
+        wrapperRef.current = el;
+        if (typeof externalRef === "function") {
+            externalRef(el);
+        } else if (externalRef) {
+            (externalRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+        }
+    };
     const barShakeRef = useRef<HTMLDivElement>(null);
     const damageFloatRef = useRef<HTMLSpanElement>(null);
 
@@ -169,7 +184,7 @@ export default function EnemyHealthBar() {
     const damageFloatStyle = { "--stroke-color": damageStrokeColor } as CSSProperties;
 
     return (
-        <div ref={wrapperRef} className={styles.wrapper} style={wrapperStyleVars}>
+        <div ref={setWrapperRef} className={styles.wrapper} style={wrapperStyleVars}>
             {name && <span className={styles.name}>{name}</span>}
 
             <div ref={barShakeRef} className={styles.barShake}>

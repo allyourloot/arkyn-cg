@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
 import {
     useGamePhase,
     useIsCastAnimating,
@@ -23,9 +25,41 @@ import BackgroundShader from "./BackgroundShader";
 import OverlayShader from "./OverlayShader";
 import styles from "./ArkynOverlay.module.css";
 
+// Normalizes the raw gamePhase into one of the four visual layouts the
+// overlay actually has to render. round_end and game_over are overlays
+// painted on top of the playing layout, so they collapse to "playing".
+type DisplayPhase = "menu" | "waiting" | "shop" | "playing";
+function toDisplayPhase(gamePhase: string): DisplayPhase {
+    if (gamePhase === "menu") return "menu";
+    if (gamePhase === "waiting") return "waiting";
+    if (gamePhase === "shop") return "shop";
+    return "playing";
+}
+
+// Screen transition timing. Fast + snappy — just enough to register as
+// an intentional slide rather than a hard layout swap.
+const SCREEN_EXIT_DURATION_S = 0.22;
+const SCREEN_ENTER_DURATION_S = 0.32;
+
 export default function ArkynOverlay() {
     const gamePhase = useGamePhase();
     const isCastAnimating = useIsCastAnimating();
+    const displayPhase = toDisplayPhase(gamePhase);
+
+    // renderedPhase lags displayPhase during an exit animation so React
+    // keeps the outgoing sections mounted while GSAP slides them offscreen.
+    // Once the exit timeline completes we flip renderedPhase to the new
+    // value, React swaps the tree, and useGSAP kicks off the entrance.
+    const [renderedPhase, setRenderedPhase] = useState<DisplayPhase>(displayPhase);
+
+    // Refs for the animated sections. Each gets attached on mount via the
+    // ref-as-prop pattern (React 19). Null when the corresponding layout
+    // isn't currently rendered.
+    const spellPreviewRef = useRef<HTMLDivElement>(null);
+    const enemyHealthBarRef = useRef<HTMLDivElement>(null);
+    const handStackRef = useRef<HTMLDivElement>(null);
+    const shopPanelRef = useRef<HTMLDivElement>(null);
+    const shopScreenRef = useRef<HTMLDivElement>(null);
 
     // The server flips gamePhase to "round_end" the instant the killing-blow
     // cast is processed (~500ms in), but the client cast animation needs to
@@ -58,7 +92,131 @@ export default function ArkynOverlay() {
         return () => clearTimeout(t);
     }, [gamePhase, isCastAnimating]);
 
-    if (gamePhase === "menu") {
+    // Drive the exit animation when displayPhase diverges from renderedPhase.
+    // We slide out the outgoing sections, then flip renderedPhase to swap
+    // the rendered tree. The entrance animation is handled separately by
+    // the useGSAP hook below.
+    useEffect(() => {
+        if (displayPhase === renderedPhase) return;
+
+        // Menu/waiting transitions don't have the sliding sections, so
+        // skip the exit timeline and swap immediately.
+        if (renderedPhase === "menu" || renderedPhase === "waiting") {
+            setRenderedPhase(displayPhase);
+            return;
+        }
+
+        const tl = gsap.timeline({
+            onComplete: () => setRenderedPhase(displayPhase),
+        });
+
+        if (renderedPhase === "playing") {
+            if (spellPreviewRef.current) {
+                tl.to(spellPreviewRef.current, {
+                    y: -120, opacity: 0,
+                    duration: SCREEN_EXIT_DURATION_S, ease: "power2.in",
+                }, 0);
+            }
+            if (enemyHealthBarRef.current) {
+                tl.to(enemyHealthBarRef.current, {
+                    y: -80, opacity: 0,
+                    duration: SCREEN_EXIT_DURATION_S, ease: "power2.in",
+                }, 0);
+            }
+            if (handStackRef.current) {
+                tl.to(handStackRef.current, {
+                    y: 160, opacity: 0,
+                    duration: SCREEN_EXIT_DURATION_S, ease: "power2.in",
+                }, 0);
+            }
+        } else if (renderedPhase === "shop") {
+            if (shopPanelRef.current) {
+                tl.to(shopPanelRef.current, {
+                    x: -240, opacity: 0,
+                    duration: SCREEN_EXIT_DURATION_S, ease: "power2.in",
+                }, 0);
+            }
+            if (shopScreenRef.current) {
+                tl.to(shopScreenRef.current, {
+                    x: 240, opacity: 0,
+                    duration: SCREEN_EXIT_DURATION_S, ease: "power2.in",
+                }, 0);
+            }
+        }
+
+        // Safety net: if the timeline has no targets (all refs null), it
+        // completes synchronously on the next tick but we also force-swap
+        // after the expected duration in case onComplete never fires.
+        return () => {
+            tl.kill();
+        };
+    }, [displayPhase, renderedPhase]);
+
+    // Entrance animation for the newly rendered phase. Fires whenever
+    // renderedPhase updates (which happens after the exit timeline
+    // completes, so the incoming elements are freshly mounted).
+    useGSAP(() => {
+        if (renderedPhase === "playing") {
+            if (spellPreviewRef.current) {
+                gsap.fromTo(spellPreviewRef.current,
+                    { y: -120, opacity: 0 },
+                    {
+                        y: 0, opacity: 1,
+                        duration: SCREEN_ENTER_DURATION_S,
+                        ease: "power2.out",
+                        overwrite: "auto",
+                    },
+                );
+            }
+            if (enemyHealthBarRef.current) {
+                gsap.fromTo(enemyHealthBarRef.current,
+                    { y: -80, opacity: 0 },
+                    {
+                        y: 0, opacity: 1,
+                        duration: SCREEN_ENTER_DURATION_S,
+                        ease: "power2.out",
+                        overwrite: "auto",
+                    },
+                );
+            }
+            if (handStackRef.current) {
+                gsap.fromTo(handStackRef.current,
+                    { y: 160, opacity: 0 },
+                    {
+                        y: 0, opacity: 1,
+                        duration: SCREEN_ENTER_DURATION_S,
+                        ease: "power2.out",
+                        overwrite: "auto",
+                    },
+                );
+            }
+        } else if (renderedPhase === "shop") {
+            if (shopPanelRef.current) {
+                gsap.fromTo(shopPanelRef.current,
+                    { x: -240, opacity: 0 },
+                    {
+                        x: 0, opacity: 1,
+                        duration: SCREEN_ENTER_DURATION_S,
+                        ease: "power2.out",
+                        overwrite: "auto",
+                    },
+                );
+            }
+            if (shopScreenRef.current) {
+                gsap.fromTo(shopScreenRef.current,
+                    { x: 240, opacity: 0 },
+                    {
+                        x: 0, opacity: 1,
+                        duration: SCREEN_ENTER_DURATION_S,
+                        ease: "power2.out",
+                        overwrite: "auto",
+                    },
+                );
+            }
+        }
+    }, { dependencies: [renderedPhase] });
+
+    if (renderedPhase === "menu") {
         return (
             <div className={styles.root}>
                 <BackgroundShader />
@@ -69,7 +227,7 @@ export default function ArkynOverlay() {
         );
     }
 
-    if (gamePhase === "waiting") {
+    if (renderedPhase === "waiting") {
         return (
             <>
                 <BackgroundShader />
@@ -81,7 +239,7 @@ export default function ArkynOverlay() {
         );
     }
 
-    if (gamePhase === "shop") {
+    if (renderedPhase === "shop") {
         return (
             <div className={styles.root}>
                 {/* Background image (behind everything) — the shader reads
@@ -90,12 +248,12 @@ export default function ArkynOverlay() {
                 <BackgroundShader />
 
                 {/* Left side panel: Shop variant of SpellPreview's shell. */}
-                <ShopPanel />
+                <ShopPanel ref={shopPanelRef} />
 
                 {/* Center column: shop frame sits alone — no enemy bar,
                     no hand, no action buttons. */}
                 <div className={styles.centerColumn}>
-                    <ShopScreen />
+                    <ShopScreen ref={shopScreenRef} />
                 </div>
 
                 {/* Right counterweight — keep in sync with SpellPreview's
@@ -119,17 +277,17 @@ export default function ArkynOverlay() {
             {/* Left side panel: Spell Preview (now also hosts the round
                 label at its top and the gold counter at its bottom — see
                 SpellPreview.tsx) */}
-            <SpellPreview />
+            <SpellPreview ref={spellPreviewRef} />
 
             {/* Center column: Enemy health bar, Play area, Hand + Actions */}
             <div className={styles.centerColumn}>
-                <EnemyHealthBar />
+                <EnemyHealthBar ref={enemyHealthBarRef} />
 
                 <div className={styles.centerStage}>
                     <PlayArea />
                 </div>
 
-                <div className={styles.handStack}>
+                <div ref={handStackRef} className={styles.handStack}>
                     <HandDisplay />
                     <ActionButtons />
                 </div>

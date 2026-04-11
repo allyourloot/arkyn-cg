@@ -40,7 +40,11 @@ const panelStyleVars = {
  * — during the shop phase the server hasn't yet incremented the round, so
  * adding 1 gives us the enemy the player is about to face.
  */
-export default function ShopPanel() {
+type ShopPanelProps = {
+    ref?: React.Ref<HTMLDivElement>;
+};
+
+export default function ShopPanel({ ref }: ShopPanelProps = {}) {
     const currentRound = useCurrentRound();
     // Shop runs between rounds: currentRound is still the round that was
     // just completed, so +1 is the upcoming encounter.
@@ -50,7 +54,7 @@ export default function ShopPanel() {
     const elementIconUrl = getRuneImageUrl(nextEnemy.element);
 
     return (
-        <div className={styles.panel} style={panelStyleVars}>
+        <div ref={ref} className={styles.panel} style={panelStyleVars}>
             <div className={styles.shopChip}>
                 <BouncyText className={styles.shopChipLabel}>Shop</BouncyText>
             </div>

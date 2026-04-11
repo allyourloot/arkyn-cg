@@ -22,14 +22,18 @@ const buttonStyleVars = {
  *
  * Future shop items will live inside the .body region.
  */
-export default function ShopScreen() {
+type ShopScreenProps = {
+    ref?: React.Ref<HTMLDivElement>;
+};
+
+export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     const handleContinue = () => {
         playMenuOpen();
         sendReady();
     };
 
     return (
-        <div className={styles.panel} style={panelStyleVars}>
+        <div ref={ref} className={styles.panel} style={panelStyleVars}>
             <span className={styles.title}>Shop</span>
 
             <div className={styles.contentFrame}>

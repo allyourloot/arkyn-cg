@@ -50,7 +50,11 @@ const panelStyleVars = {
     ["--total-bg" as string]: `url(${innerFrameRedUrl})`,
 } as CSSProperties;
 
-export default function SpellPreview() {
+type SpellPreviewProps = {
+    ref?: React.Ref<HTMLDivElement>;
+};
+
+export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     const hand = useHand();
     const selectedIndices = useSelectedIndices();
     const lastCastRunes = useLastCastRunes();
@@ -147,7 +151,7 @@ export default function SpellPreview() {
 
     if (!spell) {
         return (
-            <div className={styles.panel} style={panelStyleVars}>
+            <div ref={ref} className={styles.panel} style={panelStyleVars}>
                 <RoundInfo />
                 <span className={styles.heading}>Spell Preview</span>
                 <div className={styles.section}>
@@ -175,7 +179,7 @@ export default function SpellPreview() {
             : "Last Cast";
 
     return (
-        <div className={styles.panel} style={panelStyleVars}>
+        <div ref={ref} className={styles.panel} style={panelStyleVars}>
             <RoundInfo />
             <span className={styles.heading}>{headingLabel}</span>
 
