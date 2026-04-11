@@ -195,10 +195,20 @@ export default function SpellPreview() {
                     resolveSpell, so duplicate runes from a pair / triple
                     sit next to each other. */}
                 {(() => {
-                    const splitAt =
-                        spell.shape === "full_house" ? 3
-                        : spell.shape === "two_pair" ? 2
-                        : 0;
+                    // Determine whether the recipe wraps into two rows.
+                    // Poker shapes have explicit split points; single-
+                    // element 4- and 5-of-a-kinds mirror them (2+2 and
+                    // 3+2) so each row stays within the panel width
+                    // and the layout reads as a balanced stack.
+                    // Rows of 1-3 runes render as a single row using
+                    // the larger rune size for visual impact.
+                    const count = contributingRunes.length;
+                    let splitAt = 0;
+                    if (spell.shape === "full_house") splitAt = 3;
+                    else if (spell.shape === "two_pair") splitAt = 2;
+                    else if (count === 5) splitAt = 3;
+                    else if (count === 4) splitAt = 2;
+
                     if (splitAt > 0) {
                         return (
                             <div className={styles.runeGrid}>

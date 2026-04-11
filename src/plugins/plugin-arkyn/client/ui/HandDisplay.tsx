@@ -8,14 +8,10 @@ import {
     useIsDiscardAnimating,
     useDrawingRuneIds,
     useCastingRuneIds,
-    useGamePhase,
-    sortHand,
 } from "../arkynStore";
 import { HAND_SIZE } from "../../shared";
-import { playPlaceRune } from "../sfx";
 import RuneCard from "./RuneCard";
 import { useHandDragReorder } from "./hooks/useHandDragReorder";
-import sortIconUrl from "/assets/icons/sort-128x128.png?url";
 import handFrameUrl from "/assets/ui/hand-frame.png?url";
 import styles from "./HandDisplay.module.css";
 
@@ -30,13 +26,6 @@ export default function HandDisplay() {
     const isDiscardAnimating = useIsDiscardAnimating();
     const drawingRuneIds = useDrawingRuneIds();
     const castingRuneIds = useCastingRuneIds();
-    const gamePhase = useGamePhase();
-
-    const canSort = gamePhase === "playing" && hand.length > 1;
-    const handleSort = () => {
-        sortHand();
-        playPlaceRune();
-    };
 
     const containerRef = useRef<HTMLDivElement>(null);
     const animating = isCastAnimating || isDiscardAnimating;
@@ -258,13 +247,6 @@ export default function HandDisplay() {
                 })}
             </div>
             <span className={styles.handSize}>{hand.length - castingRuneIds.length}/{HAND_SIZE}</span>
-            <button
-                onClick={handleSort}
-                disabled={!canSort}
-                className={styles.sortButton}
-            >
-                <img src={sortIconUrl} alt="Sort" className={styles.sortIcon} />
-            </button>
         </div>
     );
 }

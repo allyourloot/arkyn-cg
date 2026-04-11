@@ -12,6 +12,7 @@ import {
 } from "../arkynStore";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
+import { playCritical } from "../sfx";
 import criticalUrl from "/assets/ui/critical.png?url";
 import styles from "./EnemyHealthBar.module.css";
 
@@ -60,6 +61,12 @@ export default function EnemyHealthBar() {
             isCritical: enemyDamageHit.isCritical,
             seq: enemyDamageHit.seq,
         });
+        // Play the critical sfx in sync with the floating damage number
+        // on critical hits — matches the per-rune bubble behavior in the
+        // play area so the final impact feels just as punchy.
+        if (enemyDamageHit.isCritical) {
+            playCritical();
+        }
     }, [enemyDamageHit.seq, enemyDamageHit.amount, enemyDamageHit.spellElement, enemyDamageHit.isCritical]);
 
     // GSAP-driven shake + floating damage tween. Fires whenever activeHit
