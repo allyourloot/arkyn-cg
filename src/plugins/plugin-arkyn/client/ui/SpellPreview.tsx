@@ -13,6 +13,7 @@ import {
 import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
 import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT } from "../../shared";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars } from "./styles";
+import { useEnemyIsBoss } from "../arkynStore";
 import RuneImage from "./RuneImage";
 import BouncyText from "./BouncyText";
 import GoldCounter from "./GoldCounter";
@@ -37,17 +38,23 @@ function useCounterPop(
 import innerFrameBlueUrl from "/assets/ui/inner-frame-blue.png?url";
 import innerFrameRedUrl from "/assets/ui/inner-frame-red.png?url";
 import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
+import bossFrameUrl from "/assets/ui/boss-frame.png?url";
 import styles from "./SpellPreview.module.css";
 
 // Standard panel chrome (frame + section + heading) plus three custom
 // background variables for the damage section's Balatro-style chip row:
 // blue for Base, green for Mult, red for the post-mult Total. Each chip
 // reads as a distinct track at a glance.
-const panelStyleVars = {
+const basePanelStyleVars = {
     ...createPanelStyleVars(innerFrameBlueUrl),
     ["--base-bg" as string]: `url(${innerFrameBlueUrl})`,
     ["--mult-bg" as string]: `url(${innerFrameGreenUrl})`,
     ["--total-bg" as string]: `url(${innerFrameRedUrl})`,
+} as CSSProperties;
+
+const bossPanelStyleVars = {
+    ...basePanelStyleVars,
+    "--panel-bg": `url(${bossFrameUrl})`,
 } as CSSProperties;
 
 type SpellPreviewProps = {
@@ -59,6 +66,8 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     const selectedIndices = useSelectedIndices();
     const lastCastRunes = useLastCastRunes();
     const isCastAnimating = useIsCastAnimating();
+    const isBoss = useEnemyIsBoss();
+    const panelStyleVars = isBoss ? bossPanelStyleVars : basePanelStyleVars;
     const castBaseCounter = useCastBaseCounter();
     const castTotalDamage = useCastTotalDamage();
     const roundTotalDamage = useRoundTotalDamage();

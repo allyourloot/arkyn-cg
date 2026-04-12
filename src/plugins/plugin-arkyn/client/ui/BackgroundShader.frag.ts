@@ -14,6 +14,9 @@ uniform float uTime;
 // Tweened on the JS side so the background recolors smoothly when the
 // player enters / leaves the shop.
 uniform float uShopMode;
+// 0.0 = normal enemy.  1.0 = boss round.
+// Tweened on the JS side for a smooth palette shift into danger.
+uniform float uBossMode;
 
 // --- Hash & noise ---
 
@@ -47,6 +50,57 @@ float fbm(vec2 p) {
 // Soft radial glow falloff for the orbs.
 float orbGlow(vec2 p, vec2 center, float radius) {
     return exp(-length(p - center) / radius);
+}
+
+// ----- Lightning helpers (boss rounds only) -----
+// Each bolt is a vertical jagged line. We sample noise along the y axis
+// to displace x, then measure distance from the displaced center to get
+// a sharp bright core with soft falloff.
+
+float lightningBolt(vec2 p, float seed, float t) {
+    // Bolt anchored at a seeded x position, running top to bottom.
+    float boltX = (hash(vec2(seed, 0.0)) - 0.5) * 1.4;
+    // Walk down the bolt, displacing x with noise for a jagged shape.
+    float jag = 0.0;
+    float freq = 6.0;
+    float amp = 0.12;
+    for (int i = 0; i < 3; i++) {
+        jag += amp * (noise(vec2(p.y * freq + seed * 13.7, seed * 7.3)) - 0.5);
+        freq *= 2.2;
+        amp *= 0.5;
+    }
+    float dist = abs(p.x - boltX - jag);
+    // Sharp bright core with soft glow halo.
+    float core = exp(-dist * 80.0);
+    float glow = exp(-dist * 12.0) * 0.4;
+    // Fade out at top and bottom edges.
+    float yFade = smoothstep(-0.6, -0.2, p.y) * smoothstep(0.6, 0.2, p.y);
+    return (core + glow) * yFade;
+}
+
+// Returns the combined lightning intensity for the current frame.
+// Bolts fire in bursts: a bright flash that decays over ~0.15s,
+// repeating every 2-4 seconds with a randomized period.
+float bossLightning(vec2 p, float t) {
+    float total = 0.0;
+    // Two independent bolt channels with different periods.
+    for (int i = 0; i < 2; i++) {
+        float period = 6.0 + float(i) * 4.0;
+        float seed = floor(t / period) + float(i) * 100.0;
+        float phase = fract(t / period);
+        // Bolt visible in the first 15% of the cycle, then dark.
+        float flash = 1.0 - smoothstep(0.0, 0.15, phase);
+        // Double-strike flicker: a second weaker flash shortly after.
+        flash += (1.0 - smoothstep(0.08, 0.2, phase)) * 0.3
+               * step(0.06, phase);
+        if (flash > 0.01) {
+            total += lightningBolt(p, seed, t) * flash;
+            // Branch bolt — offset from the main bolt.
+            total += lightningBolt(p + vec2(0.08, 0.15), seed + 50.0, t)
+                   * flash * 0.35;
+        }
+    }
+    return total;
 }
 
 // 4x4 Bayer matrix — used for ordered dithering. Produces the classic
@@ -109,12 +163,27 @@ void main() {
     vec3 kelp       = vec3(0.15, 0.65, 0.45);
     vec3 abyss      = vec3(0.05, 0.15, 0.22);
 
+    // Boss palette — muted reds with hints of warm orange.
+    vec3 deepCrimson  = vec3(0.10, 0.03, 0.04);
+    vec3 midCrimson   = vec3(0.25, 0.06, 0.08);
+    vec3 bloodOrange  = vec3(0.85, 0.38, 0.12);
+    vec3 crimson      = vec3(0.72, 0.15, 0.15);
+    vec3 darkRuby     = vec3(0.48, 0.12, 0.12);
+    vec3 bloodEmber   = vec3(0.28, 0.07, 0.04);
+
     deepPurple = mix(deepPurple, deepNavy,  uShopMode);
     midPurple  = mix(midPurple,  midTeal,   uShopMode);
     amber      = mix(amber,      seafoam,   uShopMode);
     violet     = mix(violet,     oceanBlue, uShopMode);
     teal       = mix(teal,       kelp,      uShopMode);
     ember      = mix(ember,      abyss,     uShopMode);
+
+    deepPurple = mix(deepPurple, deepCrimson,  uBossMode);
+    midPurple  = mix(midPurple,  midCrimson,   uBossMode);
+    amber      = mix(amber,      bloodOrange,  uBossMode);
+    violet     = mix(violet,     crimson,      uBossMode);
+    teal       = mix(teal,       darkRuby,     uBossMode);
+    ember      = mix(ember,      bloodEmber,   uBossMode);
 
     // Base atmospheric color modulated by fog density.
     vec3 color = mix(deepPurple, midPurple, fog);
@@ -154,6 +223,18 @@ void main() {
     // Vignette to push focus toward the play area.
     float vig = 1.0 - smoothstep(0.5, 1.4, distFromCenter);
     color *= vig;
+
+    // ----- Boss lightning -----
+    // Periodic lightning strikes that flash across the background during
+    // boss rounds. Intensity scales with uBossMode so they tween in/out.
+    if (uBossMode > 0.01) {
+        float lightning = bossLightning(p, uTime);
+        vec3 boltColor = vec3(0.95, 0.70, 0.50);
+        color += boltColor * lightning * uBossMode * 0.35;
+        // Brief ambient flash that illuminates the whole scene on strike.
+        float ambientFlash = lightning * 0.04;
+        color += vec3(ambientFlash) * uBossMode;
+    }
 
     // Slight gamma lift for richer midtones.
     color = pow(color, vec3(0.92));

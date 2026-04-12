@@ -14,6 +14,8 @@ import {
 } from "../arkynStore";
 import { getDebuffById } from "../../shared";
 import innerFrameRedUrl from "/assets/ui/inner-frame-red.png?url";
+import innerFrameGoldUrl from "/assets/ui/inner-frame-gold.png?url";
+import bossFrameUrl from "/assets/ui/boss-frame.png?url";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import { playCritical } from "../sfx";
@@ -22,7 +24,11 @@ import styles from "./EnemyHealthBar.module.css";
 
 // `--panel-bg` (frame.png) drives the bar chrome; `--section-bg`
 // (inner-frame.png) drives the Resists / Weak To frames below the bar.
-const wrapperStyleVars = createPanelStyleVars();
+const baseStyleVars = createPanelStyleVars();
+const bossStyleVars = {
+    ...baseStyleVars,
+    "--panel-bg": `url(${bossFrameUrl})`,
+} as CSSProperties;
 
 interface ActiveHit {
     amount: number;
@@ -191,20 +197,28 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
     const damageFloatStyle = { "--stroke-color": damageStrokeColor } as CSSProperties;
 
     return (
-        <div ref={setWrapperRef} className={styles.wrapper} style={wrapperStyleVars}>
+        <div ref={setWrapperRef} className={styles.wrapper} style={isBoss ? bossStyleVars : baseStyleVars}>
             <div className={styles.nameContainer}>
-                {isBoss && <span className={styles.bossTag}>BOSS</span>}
+                {isBoss && (
+                    <div className={styles.bossRow}>
+                        <span
+                            className={styles.bossTag}
+                            style={{ "--boss-bg": `url(${innerFrameGoldUrl})` } as CSSProperties}
+                        >
+                            BOSS
+                        </span>
+                        {debuff && (
+                            <span
+                                className={styles.debuffChip}
+                                style={{ "--debuff-bg": `url(${innerFrameRedUrl})` } as CSSProperties}
+                            >
+                                {debuff.description}
+                            </span>
+                        )}
+                    </div>
+                )}
                 {name && <span className={styles.name}>{name}</span>}
             </div>
-
-            {debuff && (
-                <span
-                    className={styles.debuffChip}
-                    style={{ "--debuff-bg": `url(${innerFrameRedUrl})` } as CSSProperties}
-                >
-                    {debuff.description}
-                </span>
-            )}
 
             <div className={styles.barRow}>
                 {resistances.length > 0 ? (

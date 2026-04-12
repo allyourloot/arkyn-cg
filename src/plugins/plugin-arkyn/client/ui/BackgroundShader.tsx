@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useGamePhase } from "../arkynStore";
+import { useGamePhase, useEnemyIsBoss } from "../arkynStore";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./BackgroundShader.frag";
 import { createProgram } from "./utils/glProgram";
 import styles from "./BackgroundShader.module.css";
@@ -30,19 +30,25 @@ const FRAME_INTERVAL_MS = HAS_HOVER ? 0 : 1000 / 30;
 export default function BackgroundShader() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const gamePhase = useGamePhase();
-    // Live-tweened shop-mode value written into the uShopMode uniform each
-    // frame by the render loop. `current` is the displayed value, `target`
-    // is where we're easing toward. Refs (not state) so updating them
-    // doesn't re-run the GL setup effect.
+    const isBoss = useEnemyIsBoss();
+    // Live-tweened mode values written into uniforms each frame by the
+    // render loop. `current` is the displayed value, `target` is where
+    // we're easing toward. Refs (not state) so updating them doesn't
+    // re-run the GL setup effect.
     const shopModeRef = useRef({ current: 0, target: 0 });
+    const bossModeRef = useRef({ current: 0, target: 0 });
 
-    // Flip the target whenever the game phase changes. The render loop
-    // picks up the new target and eases `current` toward it over
-    // SHOP_MODE_TWEEN_S; no GSAP / rAF plumbing needed because the
-    // background is already running its own rAF loop.
+    // Flip the targets whenever the game phase / boss state changes.
     useEffect(() => {
         shopModeRef.current.target = gamePhase === "shop" ? 1 : 0;
     }, [gamePhase]);
+
+    useEffect(() => {
+        // Show boss palette during active play and on the game-over screen
+        // (so the red atmosphere persists if the player lost on a boss round).
+        const bossActive = isBoss && (gamePhase === "playing" || gamePhase === "round_end" || gamePhase === "game_over");
+        bossModeRef.current.target = bossActive ? 1 : 0;
+    }, [isBoss, gamePhase]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -76,6 +82,7 @@ export default function BackgroundShader() {
         const uResolution = gl.getUniformLocation(program, "uResolution");
         const uTime = gl.getUniformLocation(program, "uTime");
         const uShopMode = gl.getUniformLocation(program, "uShopMode");
+        const uBossMode = gl.getUniformLocation(program, "uBossMode");
 
         // Render at 1/PIXEL_SIZE of the viewport size; CSS upscales the
         // canvas with nearest-neighbor for the chunky pixel-art look.
@@ -122,12 +129,22 @@ export default function BackgroundShader() {
                     sm.current = Math.max(sm.target, sm.current - step);
                 }
             }
+            const bm = bossModeRef.current;
+            if (bm.current !== bm.target) {
+                const step = dtS / SHOP_MODE_TWEEN_S;
+                if (bm.current < bm.target) {
+                    bm.current = Math.min(bm.target, bm.current + step);
+                } else {
+                    bm.current = Math.max(bm.target, bm.current - step);
+                }
+            }
             lastDrawAt = now;
             resize();
             const t = (now - start) / 1000;
             gl.uniform2f(uResolution, canvas.width, canvas.height);
             gl.uniform1f(uTime, t);
             gl.uniform1f(uShopMode, sm.current);
+            gl.uniform1f(uBossMode, bm.current);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             rafId = requestAnimationFrame(render);
         };

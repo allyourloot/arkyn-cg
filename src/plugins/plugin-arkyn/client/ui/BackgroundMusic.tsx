@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import arkynThemeUrl from "/assets/audio/music/arkyn-theme.ogg?url";
 import shopThemeUrl from "/assets/audio/music/shop.ogg?url";
-import { useGamePhase } from "../arkynStore";
+import bossThemeUrl from "/assets/audio/music/boss.ogg?url";
+import { useGamePhase, useEnemyIsBoss } from "../arkynStore";
 import { getAudioContext } from "../audioContext";
 
 /**
@@ -15,12 +16,13 @@ import { getAudioContext } from "../audioContext";
  * to the appropriate track whenever `gamePhase` changes.
  */
 
-type TrackKey = "theme" | "shop";
+type TrackKey = "theme" | "shop" | "boss";
 
 // Shared with sfx.ts via audioContext.ts. Nodes live beyond component
 // lifecycles — we deliberately do NOT stop sources on unmount.
 let themeBuffer: AudioBuffer | null = null;
 let shopBuffer: AudioBuffer | null = null;
+let bossBuffer: AudioBuffer | null = null;
 
 // The currently-audible track. `activeSource` / `activeGain` point at
 // whichever track's gain is at (or ramping toward) BASE_VOLUME; a
@@ -48,10 +50,17 @@ async function loadBuffers(): Promise<void> {
         const arr = await res.arrayBuffer();
         shopBuffer = await ctx.decodeAudioData(arr);
     }
+    if (!bossBuffer) {
+        const res = await fetch(bossThemeUrl);
+        const arr = await res.arrayBuffer();
+        bossBuffer = await ctx.decodeAudioData(arr);
+    }
 }
 
 function getBuffer(key: TrackKey): AudioBuffer | null {
-    return key === "theme" ? themeBuffer : shopBuffer;
+    if (key === "shop") return shopBuffer;
+    if (key === "boss") return bossBuffer;
+    return themeBuffer;
 }
 
 /** Start a track immediately at BASE_VOLUME. Used for the first play. */
@@ -154,8 +163,15 @@ export function setBgMusicPitch(rate: number, cents: number): void {
     gain.linearRampToValueAtTime(BASE_VOLUME, snapTime + PITCH_FADE_DURATION);
 }
 
+function pickTrack(gamePhase: string, isBoss: boolean): TrackKey {
+    if (gamePhase === "shop") return "shop";
+    if (isBoss && (gamePhase === "playing" || gamePhase === "round_end" || gamePhase === "game_over")) return "boss";
+    return "theme";
+}
+
 export default function BackgroundMusic() {
     const gamePhase = useGamePhase();
+    const isBoss = useEnemyIsBoss();
 
     // One-time setup: decode both tracks and start whichever one is
     // currently appropriate. Deliberately does NOT stop audio on
@@ -171,7 +187,7 @@ export default function BackgroundMusic() {
                 await loadBuffers();
                 if (cancelled) return;
                 if (!activeSource) {
-                    startTrack(gamePhase === "shop" ? "shop" : "theme");
+                    startTrack(pickTrack(gamePhase, isBoss));
                 }
             } catch { /* will retry on interaction */ }
         };
@@ -186,7 +202,7 @@ export default function BackgroundMusic() {
                 loadBuffers()
                     .then(() => {
                         if (!activeSource) {
-                            startTrack(gamePhase === "shop" ? "shop" : "theme");
+                            startTrack(pickTrack(gamePhase, isBoss));
                         }
                     })
                     .catch(() => { /* noop */ });
@@ -208,16 +224,15 @@ export default function BackgroundMusic() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Phase-driven track switch. Whenever the game phase changes,
-    // crossfade to the appropriate track. Any phase that isn't "shop"
-    // plays the main Arkyn theme.
+    // Phase-driven track switch. Whenever the game phase or boss state
+    // changes, crossfade to the appropriate track.
     useEffect(() => {
-        const target: TrackKey = gamePhase === "shop" ? "shop" : "theme";
+        const target = pickTrack(gamePhase, isBoss);
         // If buffers haven't finished loading yet, crossfadeToTrack is a
-        // no-op and the setup effect's `startTrack(gamePhase === "shop"
-        // ? ...)` will pick the right track on first play.
+        // no-op and the setup effect's startTrack will pick the right
+        // track on first play.
         crossfadeToTrack(target);
-    }, [gamePhase]);
+    }, [gamePhase, isBoss]);
 
     return null;
 }

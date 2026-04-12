@@ -35,19 +35,35 @@
     white-space: nowrap;
 }
 
-.bossTag {
+/* Row that holds the BOSS label + debuff chip, absolutely positioned
+   above the enemy name so it doesn't shift content below. */
+.bossRow {
     position: absolute;
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
-    font-size: var(--font-size-3xs);
-    color: #fbbf24;
+    display: flex;
+    align-items: center;
+    gap: clamp(4px, 0.6vw, 8px);
+    margin-bottom: 4px;
+    white-space: nowrap;
+}
+
+.bossTag {
+    box-sizing: border-box;
+    font-size: var(--font-size-2xs);
+    color: #ffffff;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
-    letter-spacing: 3px;
+    letter-spacing: 2px;
     text-transform: uppercase;
     line-height: 1;
-    white-space: nowrap;
-    margin-bottom: 2px;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    border-image: var(--boss-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
+    padding: 2px 8px;
+    image-rendering: pixelated;
 }
 
 .debuffChip {
@@ -61,8 +77,8 @@
     background: transparent;
     border-style: solid;
     border-color: transparent;
-    border-width: 12px;
-    border-image: var(--debuff-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    border-width: 10px;
+    border-image: var(--debuff-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
     padding: 2px 8px;
     image-rendering: pixelated;
 }
@@ -86,6 +102,8 @@
     max-width: clamp(320px, 36vw, 520px);
     display: flex;
     justify-content: center;
+    position: relative;
+    z-index: 2;
 }
 
 /* Individual Resists / Vulnerable chip. Uses the `--panel-bg` frame.png
@@ -192,6 +210,7 @@
     position: absolute;
     right: -10%;
     top: 50%;
+    z-index: 20;
 
     font-size: clamp(var(--font-size-xl), 5.5vw, var(--font-size-2xl));
     font-weight: normal;
@@ -333,16 +352,24 @@
         font-size: var(--font-size-sm);
     }
 
+    .bossRow {
+        gap: clamp(2px, 0.4vw, 5px);
+        margin-bottom: 2px;
+    }
+
     .bossTag {
-        font-size: 7px;
-        letter-spacing: 2px;
+        font-size: 8px;
+        letter-spacing: 1px;
+        border-width: 6px;
+        border-image: var(--boss-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        padding: 1px 4px;
     }
 
     .debuffChip {
         font-size: 8px;
-        border-width: 8px;
-        border-image: var(--debuff-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
-        padding: 1px 5px;
+        border-width: 6px;
+        border-image: var(--debuff-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        padding: 1px 4px;
     }
 
     .barRow {
