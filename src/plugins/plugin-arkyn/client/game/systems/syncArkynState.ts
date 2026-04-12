@@ -150,6 +150,7 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (
             !getIsCastAnimating() &&
             state.gamePhase !== "round_end" &&
+            state.gamePhase !== "game_over" &&
             !runeArraysEqualById(player.hand, prevHand)
         ) {
             const handData = snapshotRunes(player.hand);
