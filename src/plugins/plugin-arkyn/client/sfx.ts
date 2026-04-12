@@ -1,4 +1,5 @@
 import selectRuneUrl from "/assets/audio/sfx/select-rune.ogg?url";
+import deselectRuneUrl from "/assets/audio/sfx/deselect-rune.ogg?url";
 import dropRuneUrl from "/assets/audio/sfx/drop-rune.ogg?url";
 import placeRuneUrl from "/assets/audio/sfx/place-rune.ogg?url";
 import countUrl from "/assets/audio/sfx/count.ogg?url";
@@ -73,8 +74,9 @@ export function playSelectRune(): void {
     playRuneSfx();
 }
 
+const playDeselectSfx = makeSfx(deselectRuneUrl, VOL_RUNE);
 export function playDeselectRune(): void {
-    playRuneSfx(0.85);
+    playDeselectSfx();
 }
 export const playPickupRune = () => playRuneSfx(1.3);
 export const playDropRune = makeDetuneSfx(dropRuneUrl, VOL_RUNE);
