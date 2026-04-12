@@ -67,37 +67,32 @@
     image-rendering: pixelated;
 }
 
+/* Horizontal row: [Resists] — [Health Bar] — [Vulnerable].
+   The bar sits in the center with affinity chips flanking it. */
+.barRow {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(8px, 1.2vw, 16px);
+}
+
 /* The shake target. GSAP applies a translateX shake here on every enemy
    damage hit (see EnemyHealthBar.tsx useGSAP). The wrapper above stays
    still so the name and affinity frames don't jitter along with the bar. */
 .barShake {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-}
-
-/* Row of inner-frame chips below the bar. Each child is an
-   .affinitySection (Resists / Weak To). Wraps to a second line on
-   ultra-narrow viewports rather than overflowing. */
-.affinityContainer {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: flex-start;
-    gap: clamp(8px, 1.4vw, 18px);
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     max-width: clamp(320px, 36vw, 520px);
-    margin-top: clamp(2px, 0.4vh, 6px);
+    display: flex;
+    justify-content: center;
 }
 
-/* Individual Resists / Weak To chip. Uses the `--panel-bg` frame.png
-   9-slice (the same chrome the outer panels use) — rendered at 12px
-   on screen so the chip stays compact while leaving room for slightly
-   bigger element icons. `--panel-bg` is in scope here because it's
-   set on the EnemyHealthBar wrapper via createPanelStyleVars(). */
+/* Individual Resists / Vulnerable chip. Uses the `--panel-bg` frame.png
+   9-slice (the same chrome the outer panels use). */
 .affinitySection {
     box-sizing: border-box;
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     background: transparent;
     border-style: solid;
     border-color: transparent;
@@ -109,6 +104,13 @@
     align-items: center;
     gap: clamp(2px, 0.3vw, 4px);
     image-rendering: pixelated;
+}
+
+/* Invisible spacer that matches affinitySection's approximate width
+   so the bar stays centered when only one side has affinities. */
+.affinitySpacer {
+    flex: 0 0 auto;
+    width: clamp(60px, 8vw, 110px);
 }
 
 .affinityLabel {
@@ -135,10 +137,51 @@
     justify-content: center;
 }
 
+.affinityIconWrap {
+    position: relative;
+    display: inline-flex;
+    pointer-events: auto;
+    cursor: default;
+}
+
 .affinityIcon {
     width: clamp(30px, 3.4vw, 48px);
     height: clamp(30px, 3.4vw, 48px);
     image-rendering: pixelated;
+}
+
+.tooltip {
+    box-sizing: border-box;
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    transform: translateX(-50%);
+    margin-top: 6px;
+    padding: 4px 8px;
+    font-size: var(--font-size-2xs);
+    color: #ffffff;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    white-space: nowrap;
+    line-height: 1;
+    letter-spacing: 0.5px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
+    image-rendering: pixelated;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 10;
+}
+
+.tooltipMult {
+    font-weight: normal;
+}
+
+.affinityIconWrap:hover .tooltip {
+    opacity: 1;
 }
 
 /* The .barShake shake (translateX) and the floating damage number's pop /
@@ -184,7 +227,6 @@
 .barAnchor {
     position: relative;
     width: 100%;
-    max-width: clamp(320px, 36vw, 520px);
     display: flex;
     justify-content: center;
 }
@@ -192,7 +234,6 @@
 .barOuter {
     box-sizing: border-box;
     width: 100%;
-    max-width: clamp(320px, 36vw, 520px);
     min-width: 0;
     height: clamp(40px, 4.5vw, 60px);
     /* 9-slice frame.png as the bar's chrome — sample 24px corner slices but
@@ -304,10 +345,8 @@
         padding: 1px 5px;
     }
 
-    .affinityContainer {
-        gap: clamp(4px, 0.8vw, 10px);
-        max-width: clamp(240px, 30vw, 400px);
-        margin-top: clamp(1px, 0.2vh, 3px);
+    .barRow {
+        gap: clamp(4px, 0.6vw, 8px);
     }
 
     .affinitySection {
@@ -315,6 +354,10 @@
         border-image: var(--panel-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
         padding: clamp(1px, 0.2vw, 3px) clamp(4px, 0.8vw, 10px);
         gap: clamp(1px, 0.2vw, 2px);
+    }
+
+    .affinitySpacer {
+        width: clamp(40px, 6vw, 80px);
     }
 
     .affinityLabel {
@@ -327,12 +370,19 @@
         height: clamp(20px, 2.4vw, 32px);
     }
 
-    .barAnchor {
+    .tooltip {
+        font-size: var(--font-size-3xs);
+        margin-top: 4px;
+        padding: 2px 4px;
+        border-width: 8px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+    }
+
+    .barShake {
         max-width: clamp(240px, 30vw, 400px);
     }
 
     .barOuter {
-        max-width: clamp(240px, 30vw, 400px);
         height: clamp(28px, 3.5vw, 44px);
         border-width: 6px;
         border-image: var(--panel-bg) 24 24 24 24 fill / 6px 6px 6px 6px;

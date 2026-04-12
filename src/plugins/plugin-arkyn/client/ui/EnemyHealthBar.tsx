@@ -206,47 +206,50 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
                 </span>
             )}
 
-            <div ref={barShakeRef} className={styles.barShake}>
-                <div className={styles.barAnchor}>
-                    <div className={styles.barOuter}>
-                        <div
-                            className={styles.barFill}
-                            style={{ width: `${pct}%`, backgroundColor: barColor }}
-                        />
-                        <span className={styles.barText}>
-                            {hp} / {maxHp}
-                        </span>
-                    </div>
-                    {activeHit && (
-                        <span
-                            ref={damageFloatRef}
-                            key={activeHit.seq}
-                            className={styles.damageFloat}
-                            style={damageFloatStyle}
-                        >
-                            {activeHit.isCritical && (
-                                <img
-                                    src={criticalUrl}
-                                    alt=""
-                                    className={styles.criticalBg}
-                                />
-                            )}
-                            -{activeHit.amount}
-                        </span>
-                    )}
-                </div>
-            </div>
+            <div className={styles.barRow}>
+                {resistances.length > 0 ? (
+                    <AffinitySection label="Resists" labelClass={styles.affinityLabelResist} elements={resistances} multiplier="0.5x" multiplierColor="#ef4444" />
+                ) : (
+                    <div className={styles.affinitySpacer} />
+                )}
 
-            {(resistances.length > 0 || weaknesses.length > 0) && (
-                <div className={styles.affinityContainer}>
-                    {resistances.length > 0 && (
-                        <AffinitySection label="Resists" labelClass={styles.affinityLabelResist} elements={resistances} />
-                    )}
-                    {weaknesses.length > 0 && (
-                        <AffinitySection label="Vulnerable" labelClass={styles.affinityLabelWeak} elements={weaknesses} />
-                    )}
+                <div ref={barShakeRef} className={styles.barShake}>
+                    <div className={styles.barAnchor}>
+                        <div className={styles.barOuter}>
+                            <div
+                                className={styles.barFill}
+                                style={{ width: `${pct}%`, backgroundColor: barColor }}
+                            />
+                            <span className={styles.barText}>
+                                {hp} / {maxHp}
+                            </span>
+                        </div>
+                        {activeHit && (
+                            <span
+                                ref={damageFloatRef}
+                                key={activeHit.seq}
+                                className={styles.damageFloat}
+                                style={damageFloatStyle}
+                            >
+                                {activeHit.isCritical && (
+                                    <img
+                                        src={criticalUrl}
+                                        alt=""
+                                        className={styles.criticalBg}
+                                    />
+                                )}
+                                -{activeHit.amount}
+                            </span>
+                        )}
+                    </div>
                 </div>
-            )}
+
+                {weaknesses.length > 0 ? (
+                    <AffinitySection label="Vulnerable" labelClass={styles.affinityLabelWeak} elements={weaknesses} multiplier="2x" multiplierColor="#4ade80" />
+                ) : (
+                    <div className={styles.affinitySpacer} />
+                )}
+            </div>
         </div>
     );
 }
@@ -254,7 +257,7 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
 // Single inner-frame chip showing a label ("Resists" / "Weak To") above
 // a row of element rune icons. Lives inside EnemyHealthBar so the visual
 // chrome stays alongside the bar it describes.
-function AffinitySection({ label, labelClass, elements }: { label: string; labelClass?: string; elements: readonly string[] }) {
+function AffinitySection({ label, labelClass, elements, multiplier, multiplierColor }: { label: string; labelClass?: string; elements: readonly string[]; multiplier: string; multiplierColor: string }) {
     return (
         <div className={styles.affinitySection}>
             <span className={`${styles.affinityLabel} ${labelClass ?? ""}`}>{label}</span>
@@ -262,13 +265,21 @@ function AffinitySection({ label, labelClass, elements }: { label: string; label
                 {elements.map(element => {
                     const url = getRuneImageUrl(element);
                     if (!url) return null;
+                    const displayName = element.charAt(0).toUpperCase() + element.slice(1);
                     return (
-                        <img
-                            key={element}
-                            src={url}
-                            alt={element}
-                            className={styles.affinityIcon}
-                        />
+                        <span key={element} className={styles.affinityIconWrap}>
+                            <img
+                                src={url}
+                                alt={element}
+                                className={styles.affinityIcon}
+                            />
+                            <span className={styles.tooltip}>
+                                <span className={styles.tooltipMult} style={{ color: multiplierColor }}>
+                                    {multiplier}
+                                </span>
+                                {` damage from ${displayName}`}
+                            </span>
+                        </span>
                     );
                 })}
             </div>
