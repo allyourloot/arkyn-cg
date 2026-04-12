@@ -9,6 +9,9 @@ import {
     setEnemyElement,
     setEnemyResistances,
     setEnemyWeaknesses,
+    setEnemyIsBoss,
+    setEnemyDebuff,
+    setHandSize,
     setGamePhase,
     setLastSpellName,
     setLastSpellTier,
@@ -93,6 +96,9 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevEnemyMaxHp = -1;
     let prevEnemyName = "";
     let prevEnemyElement = "";
+    let prevEnemyIsBoss = false;
+    let prevEnemyDebuff = "";
+    let prevHandSize = -1;
     let prevSpellName = "";
     let prevSpellTier = -1;
     let prevDamage = -1;
@@ -217,6 +223,14 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
                 prevWeak = Array.from(state.enemy.weaknesses);
                 setEnemyWeaknesses(prevWeak);
             }
+            if (state.enemy.isBoss !== prevEnemyIsBoss) {
+                setEnemyIsBoss(state.enemy.isBoss);
+                prevEnemyIsBoss = state.enemy.isBoss;
+            }
+            if (state.enemy.debuff !== prevEnemyDebuff) {
+                setEnemyDebuff(state.enemy.debuff);
+                prevEnemyDebuff = state.enemy.debuff;
+            }
         }
 
         // Sync spell info
@@ -254,6 +268,10 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (!runeArraysEqualById(player.pouch, prevPouch)) {
             prevPouch = snapshotRunes(player.pouch);
             setPouchContents(prevPouch);
+        }
+        if (player.handSize !== prevHandSize) {
+            setHandSize(player.handSize);
+            prevHandSize = player.handSize;
         }
         if (player.castsRemaining !== prevCasts) {
             setCastsRemaining(player.castsRemaining);

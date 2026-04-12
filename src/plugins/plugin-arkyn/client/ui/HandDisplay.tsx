@@ -8,8 +8,8 @@ import {
     useIsDiscardAnimating,
     useDrawingRuneIds,
     useCastingRuneIds,
+    useHandSize,
 } from "../arkynStore";
-import { HAND_SIZE } from "../../shared";
 import RuneCard from "./RuneCard";
 import { useHandDragReorder } from "./hooks/useHandDragReorder";
 import handFrameUrl from "/assets/ui/hand-frame.png?url";
@@ -26,6 +26,7 @@ export default function HandDisplay() {
     const isDiscardAnimating = useIsDiscardAnimating();
     const drawingRuneIds = useDrawingRuneIds();
     const castingRuneIds = useCastingRuneIds();
+    const maxHandSize = useHandSize();
 
     const containerRef = useRef<HTMLDivElement>(null);
     const animating = isCastAnimating || isDiscardAnimating;
@@ -293,7 +294,7 @@ export default function HandDisplay() {
                     );
                 })}
             </div>
-            <span className={styles.handSize}>{hand.length - castingRuneIds.length}/{HAND_SIZE}</span>
+            <span className={styles.handSize}>{hand.length - castingRuneIds.length}/{maxHandSize}</span>
         </div>
     );
 }

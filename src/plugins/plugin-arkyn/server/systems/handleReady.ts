@@ -1,7 +1,7 @@
 import { type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
 import { initPlayerForRound } from "../utils/initPlayerForRound";
-import { spawnEnemy } from "./handleJoin";
+import { spawnEnemy, applyBossDebuff } from "./handleJoin";
 
 const logger = new Logger("ArkynReady");
 
@@ -28,15 +28,22 @@ export function handleReady(
     }
 
     if (state.gamePhase === "round_end") {
+        // Pre-spawn the next enemy so the shop panel can show boss/debuff
+        // info as part of the "Next Enemy" preview. The round counter
+        // hasn't incremented yet, so pass currentRound + 1 explicitly.
+        spawnEnemy(state, state.currentRound + 1);
         state.gamePhase = "shop";
-        logger.info(`Player ${client.sessionId} entered shop`);
+        const bossTag = state.enemy.isBoss ? ` [BOSS - ${state.enemy.debuff}]` : "";
+        logger.info(`Player ${client.sessionId} entered shop. Next enemy: ${state.enemy.name} (HP: ${state.enemy.maxHp})${bossTag}`);
         return;
     }
 
     if (state.gamePhase === "shop") {
         state.currentRound++;
+        // Enemy already spawned on shop entry — just init the player
+        // and apply any boss debuff modifiers.
         initPlayerForRound(player, client.sessionId);
-        spawnEnemy(state);
+        applyBossDebuff(state, player);
         state.gamePhase = "playing";
         logger.info(`Round ${state.currentRound} started. Enemy: ${state.enemy.name} (HP: ${state.enemy.maxHp})`);
         return;

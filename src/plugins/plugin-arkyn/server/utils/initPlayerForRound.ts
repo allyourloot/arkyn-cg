@@ -1,4 +1,5 @@
 import {
+    HAND_SIZE,
     CASTS_PER_ROUND,
     DISCARDS_PER_ROUND,
     type ArkynPlayerState,
@@ -25,6 +26,7 @@ export function initPlayerForRound(player: ArkynPlayerState, sessionId: string):
     player.lastSpellName = "";
     player.lastSpellTier = 0;
     player.lastDamage = 0;
+    player.handSize = HAND_SIZE;
     player.castsRemaining = CASTS_PER_ROUND;
     player.discardsRemaining = DISCARDS_PER_ROUND;
     // Clear the previous round's reward breakdown so the round-end overlay

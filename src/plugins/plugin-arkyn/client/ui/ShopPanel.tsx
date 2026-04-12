@@ -2,9 +2,19 @@ import { useRef, type CSSProperties } from "react";
 import {
     CASTS_PER_ROUND,
     DISCARDS_PER_ROUND,
-    getEnemyForRound,
+    getDebuffById,
 } from "../../shared";
-import { useCurrentRound, useGamePhase } from "../arkynStore";
+import {
+    useCurrentRound,
+    useGamePhase,
+    useEnemyName,
+    useEnemyMaxHp,
+    useEnemyElement,
+    useEnemyResistances,
+    useEnemyWeaknesses,
+    useEnemyIsBoss,
+    useEnemyDebuff,
+} from "../arkynStore";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import BouncyText from "./BouncyText";
@@ -32,13 +42,14 @@ const panelStyleVars = {
  * Layout, top to bottom:
  *   1. Shop header chip (orange inner-frame)
  *   2. "NEXT ENEMY" heading label
- *   3. Next-enemy preview: big element rune + name + HP + resist/weak chips
+ *   3. Next-enemy preview: element rune + name + HP + debuff + resist/weak
  *   4. Hands (green) + Discards (orange) total chips
  *   5. Gold counter pinned to the bottom
  *
- * The next-enemy preview reads from `getEnemyForRound(currentRound + 1)`
- * — during the shop phase the server hasn't yet incremented the round, so
- * adding 1 gives us the enemy the player is about to face.
+ * The next enemy is pre-spawned on the server when entering the shop
+ * phase, so we read all enemy info — including boss debuff — from the
+ * live synced state. The round counter hasn't been incremented yet,
+ * so we still display `currentRound + 1` for the round label.
  */
 type ShopPanelProps = {
     ref?: React.Ref<HTMLDivElement>;
@@ -56,11 +67,21 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
     if (gamePhase === "shop") {
         snapshotRoundRef.current = currentRound;
     }
-
     const nextRound = Math.max(1, snapshotRoundRef.current + 1);
-    const nextEnemy = getEnemyForRound(nextRound);
-    const elementColor = ELEMENT_COLORS[nextEnemy.element] ?? "#c4a882";
-    const elementIconUrl = getRuneImageUrl(nextEnemy.element);
+
+    // Read from the live synced enemy state (pre-spawned on shop entry)
+    // so boss debuff info and fortified HP are accurate.
+    const enemyName = useEnemyName();
+    const enemyMaxHp = useEnemyMaxHp();
+    const enemyElement = useEnemyElement();
+    const resistances = useEnemyResistances();
+    const weaknesses = useEnemyWeaknesses();
+    const isBoss = useEnemyIsBoss();
+    const debuffId = useEnemyDebuff();
+    const debuff = debuffId ? getDebuffById(debuffId) : undefined;
+
+    const elementColor = ELEMENT_COLORS[enemyElement] ?? "#c4a882";
+    const elementIconUrl = getRuneImageUrl(enemyElement);
 
     return (
         <div ref={ref} className={styles.panel} style={panelStyleVars}>
@@ -74,7 +95,7 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
                 {elementIconUrl && (
                     <img
                         src={elementIconUrl}
-                        alt={nextEnemy.element}
+                        alt={enemyElement}
                         className={styles.enemyIcon}
                     />
                 )}
@@ -82,29 +103,39 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
                     className={styles.enemyName}
                     style={{ color: elementColor }}
                 >
-                    {nextEnemy.name}
+                    {enemyName}
                 </BouncyText>
                 <span className={styles.enemyRound}>
                     <BouncyText>{`Round ${nextRound}`}</BouncyText>
                 </span>
+                {isBoss && (
+                    <span className={styles.bossWarning}>
+                        <BouncyText>Boss Round</BouncyText>
+                    </span>
+                )}
                 <span className={styles.enemyHp}>
-                    <BouncyText>{`${nextEnemy.hp} HP`}</BouncyText>
+                    <BouncyText>{`${enemyMaxHp} HP`}</BouncyText>
                 </span>
+                {debuff && (
+                    <span className={styles.debuffChip}>
+                        <BouncyText>{debuff.description}</BouncyText>
+                    </span>
+                )}
 
-                {(nextEnemy.resistances.length > 0 || nextEnemy.weaknesses.length > 0) && (
+                {(resistances.length > 0 || weaknesses.length > 0) && (
                     <div className={styles.affinityContainer}>
-                        {nextEnemy.resistances.length > 0 && (
+                        {resistances.length > 0 && (
                             <AffinitySection
                                 label="Resists"
                                 labelClass={styles.affinityLabelResist}
-                                elements={nextEnemy.resistances}
+                                elements={resistances}
                             />
                         )}
-                        {nextEnemy.weaknesses.length > 0 && (
+                        {weaknesses.length > 0 && (
                             <AffinitySection
                                 label="Vulnerable"
                                 labelClass={styles.affinityLabelWeak}
-                                elements={nextEnemy.weaknesses}
+                                elements={weaknesses}
                             />
                         )}
                     </div>

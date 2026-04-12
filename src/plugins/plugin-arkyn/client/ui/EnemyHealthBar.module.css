@@ -27,6 +27,29 @@
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
     line-height: 1;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: clamp(6px, 0.8vw, 12px);
+}
+
+.bossTag {
+    font-size: var(--font-size-2xs);
+    color: #fbbf24;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: rgba(251, 191, 36, 0.15);
+    padding: 2px 8px;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
+.debuffChip {
+    font-size: var(--font-size-2xs);
+    color: #f87171;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 1;
 }
 
 /* The shake target. GSAP applies a translateX shake here on every enemy
@@ -252,6 +275,16 @@
 
     .name {
         font-size: var(--font-size-sm);
+        gap: clamp(3px, 0.5vw, 8px);
+    }
+
+    .bossTag {
+        font-size: 8px;
+        padding: 1px 5px;
+    }
+
+    .debuffChip {
+        font-size: 8px;
     }
 
     .affinityContainer {

@@ -4,6 +4,7 @@ import { clearArraySchema } from "../utils/clearArraySchema";
 import { initPlayerForRound } from "../utils/initPlayerForRound";
 import { removePouch } from "../resources/playerPouch";
 import { getEnemyForRound } from "../../shared/enemyDefinitions";
+import { isBossRound, pickRandomDebuff } from "../../shared/bossDebuffs";
 import type { ArkynContext } from "../types/ArkynContext";
 import { initRunStats, removeRunStats } from "../resources/runStats";
 
@@ -40,23 +41,22 @@ export function handleJoin(
     }
 
     // Spawn enemy for round 1
+    state.currentRound = 1;
     spawnEnemy(state);
+    applyBossDebuff(state, player);
 
     // Set game state
-    state.currentRound = 1;
     state.gamePhase = "playing";
 
     logger.info(`Player ${client.sessionId} joined. Hand: ${player.hand.length}, Pouch: ${player.pouchSize}`);
 }
 
-function spawnEnemy(state: ArkynState): void {
-    const round = Math.max(state.currentRound, 1);
+function spawnEnemy(state: ArkynState, roundOverride?: number): void {
+    const round = roundOverride ?? Math.max(state.currentRound, 1);
     const def = getEnemyForRound(round);
 
     const enemy = new EnemyState();
     enemy.name = def.name;
-    enemy.maxHp = def.hp;
-    enemy.currentHp = def.hp;
     enemy.element = def.element;
 
     // Clear and set resistances/weaknesses
@@ -65,7 +65,48 @@ function spawnEnemy(state: ArkynState): void {
     for (const r of def.resistances) enemy.resistances.push(r);
     for (const w of def.weaknesses) enemy.weaknesses.push(w);
 
+    // Boss rounds: assign a random debuff. The "fortified" debuff boosts
+    // HP here; other debuffs modify the player state in applyBossDebuff.
+    let hp = def.hp;
+    if (isBossRound(round)) {
+        const debuff = pickRandomDebuff();
+        enemy.isBoss = true;
+        enemy.debuff = debuff.id;
+        if (debuff.id === "fortified") {
+            hp = Math.round(hp * 1.5);
+        }
+    }
+
+    enemy.maxHp = hp;
+    enemy.currentHp = hp;
     state.enemy = enemy;
 }
 
-export { spawnEnemy };
+/**
+ * Apply boss debuff effects that modify the player (not the enemy).
+ * Called after both spawnEnemy and initPlayerForRound so the player's
+ * fresh-round budgets are set before we subtract from them.
+ */
+function applyBossDebuff(state: ArkynState, player: ArkynPlayerState): void {
+    const { debuff } = state.enemy;
+    if (!debuff) return;
+
+    switch (debuff) {
+        case "reduced_hand":
+            player.handSize--;
+            // Remove the last rune drawn so the hand matches the new cap.
+            if (player.hand.length > player.handSize) {
+                player.hand.pop();
+            }
+            break;
+        case "exhausting":
+            player.castsRemaining = Math.max(1, player.castsRemaining - 1);
+            break;
+        case "unyielding":
+            player.discardsRemaining = Math.max(0, player.discardsRemaining - 1);
+            break;
+        // "fortified" is handled in spawnEnemy (HP boost).
+    }
+}
+
+export { spawnEnemy, applyBossDebuff };

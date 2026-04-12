@@ -52,3 +52,6 @@ export type { SpellbookId, SpellbookDefinition } from "./spellbooks";
 
 export { ENEMY_DEFINITIONS, getEnemyForRound } from "./enemyDefinitions";
 export type { EnemyDefinition } from "./enemyDefinitions";
+
+export { BOSS_DEBUFFS, isBossRound, pickRandomDebuff, getDebuffById } from "./bossDebuffs";
+export type { BossDebuff } from "./bossDebuffs";

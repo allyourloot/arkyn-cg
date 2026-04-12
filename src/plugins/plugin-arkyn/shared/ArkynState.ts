@@ -15,6 +15,8 @@ export class EnemyState extends Schema {
     @type("string") element = "";
     @type(["string"]) resistances = new ArraySchema<string>();
     @type(["string"]) weaknesses = new ArraySchema<string>();
+    @type("boolean") isBoss = false;
+    @type("string") debuff = "";
 }
 
 export class ArkynPlayerState extends Schema {
@@ -22,6 +24,7 @@ export class ArkynPlayerState extends Schema {
     @type([RuneInstance]) playedRunes = new ArraySchema<RuneInstance>();
     @type([RuneInstance]) pouch = new ArraySchema<RuneInstance>();
     @type("number") pouchSize = 0;
+    @type("number") handSize = 8;
     @type("string") lastSpellName = "";
     @type("number") lastSpellTier = 0;
     @type("number") lastDamage = 0;

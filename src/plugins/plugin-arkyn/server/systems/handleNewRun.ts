@@ -2,7 +2,7 @@ import { ArkynPlayerState, type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
 import { removePouch } from "../resources/playerPouch";
 import { initPlayerForRound } from "../utils/initPlayerForRound";
-import { spawnEnemy } from "./handleJoin";
+import { spawnEnemy, applyBossDebuff } from "./handleJoin";
 import type { ArkynContext } from "../types/ArkynContext";
 import { initRunStats } from "../resources/runStats";
 import { finalizeRun } from "../utils/finalizeRun";
@@ -47,6 +47,7 @@ export function handleNewRun(
     // Reset to round 1 with a new enemy
     state.currentRound = 1;
     spawnEnemy(state);
+    applyBossDebuff(state, player);
 
     state.gamePhase = "playing";
 

@@ -8,8 +8,11 @@ import {
     useEnemyName,
     useEnemyResistances,
     useEnemyWeaknesses,
+    useEnemyIsBoss,
+    useEnemyDebuff,
     BAR_SHAKE_FRAME_S,
 } from "../arkynStore";
+import { getDebuffById } from "../../shared";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import { playCritical } from "../sfx";
@@ -41,6 +44,9 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
     const name = useEnemyName();
     const resistances = useEnemyResistances();
     const weaknesses = useEnemyWeaknesses();
+    const isBoss = useEnemyIsBoss();
+    const debuffId = useEnemyDebuff();
+    const debuff = debuffId ? getDebuffById(debuffId) : undefined;
 
     // wrapperRef scopes the GSAP context for cleanup; the actual shake
     // target is the inner barShakeRef so the name above and the affinity
@@ -185,7 +191,18 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
 
     return (
         <div ref={setWrapperRef} className={styles.wrapper} style={wrapperStyleVars}>
-            {name && <span className={styles.name}>{name}</span>}
+            {name && (
+                <span className={styles.name}>
+                    {isBoss && <span className={styles.bossTag}>BOSS</span>}
+                    {name}
+                </span>
+            )}
+
+            {debuff && (
+                <span className={styles.debuffChip}>
+                    {debuff.description}
+                </span>
+            )}
 
             <div ref={barShakeRef} className={styles.barShake}>
                 <div className={styles.barAnchor}>
