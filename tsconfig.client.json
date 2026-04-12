@@ -29,5 +29,5 @@
       "@plugins/*": ["./src/plugins/*"]
     }
   },
-  "include": ["./vite.config.ts", "./src/client.tsx", "./src/**/client/*.ts", "./src/**/client/*.tsx", "./src/**/shared/*.ts"]
+  "include": ["./vite.config.ts", "./src/client.tsx", "./src/**/client/**/*.ts", "./src/**/client/**/*.tsx", "./src/**/shared/**/*.ts"]
 }

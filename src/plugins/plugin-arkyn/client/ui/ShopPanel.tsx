@@ -1,10 +1,10 @@
-import type { CSSProperties } from "react";
+import { useRef, type CSSProperties } from "react";
 import {
     CASTS_PER_ROUND,
     DISCARDS_PER_ROUND,
     getEnemyForRound,
 } from "../../shared";
-import { useCurrentRound } from "../arkynStore";
+import { useCurrentRound, useGamePhase } from "../arkynStore";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import BouncyText from "./BouncyText";
@@ -46,9 +46,18 @@ type ShopPanelProps = {
 
 export default function ShopPanel({ ref }: ShopPanelProps = {}) {
     const currentRound = useCurrentRound();
-    // Shop runs between rounds: currentRound is still the round that was
-    // just completed, so +1 is the upcoming encounter.
-    const nextRound = Math.max(1, currentRound + 1);
+    const gamePhase = useGamePhase();
+
+    // Snapshot the round while we're in the shop phase. Once the server
+    // flips to "playing" (and increments currentRound), the panel is still
+    // mounted during the exit animation — using the live currentRound would
+    // flash the *next* next enemy. Freezing on the snapshot avoids that.
+    const snapshotRoundRef = useRef(currentRound);
+    if (gamePhase === "shop") {
+        snapshotRoundRef.current = currentRound;
+    }
+
+    const nextRound = Math.max(1, snapshotRoundRef.current + 1);
     const nextEnemy = getEnemyForRound(nextRound);
     const elementColor = ELEMENT_COLORS[nextEnemy.element] ?? "#c4a882";
     const elementIconUrl = getRuneImageUrl(nextEnemy.element);
