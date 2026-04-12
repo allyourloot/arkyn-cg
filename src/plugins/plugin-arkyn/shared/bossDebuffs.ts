@@ -1,8 +1,11 @@
 /**
  * Boss debuff definitions. Every 5th round is a boss round — the enemy
- * gains a single randomly-chosen debuff that hampers the player for that
- * fight. Debuffs are re-rolled each run so no two runs feel identical.
+ * gains a single debuff that hampers the player for that fight. The
+ * debuff is chosen deterministically from the run seed so replaying
+ * the same seed always produces the same boss debuff sequence.
  */
+
+import { createRoundRng } from "./seededRandom";
 
 export interface BossDebuff {
     id: string;
@@ -38,9 +41,14 @@ export function isBossRound(round: number): boolean {
     return round > 0 && round % 5 === 0;
 }
 
-/** Pick a random debuff from the pool. */
-export function pickRandomDebuff(): BossDebuff {
-    return BOSS_DEBUFFS[Math.floor(Math.random() * BOSS_DEBUFFS.length)];
+/**
+ * Deterministically pick a debuff for a boss round using the run seed.
+ * Uses a separate RNG namespace (round + 50000) to avoid correlation
+ * with the enemy pick for the same round.
+ */
+export function pickDebuffForRound(round: number, seed: number): BossDebuff {
+    const rng = createRoundRng(seed, round + 50000);
+    return BOSS_DEBUFFS[Math.floor(rng() * BOSS_DEBUFFS.length)];
 }
 
 /** Look up display info for a debuff ID. Returns undefined for non-boss enemies. */

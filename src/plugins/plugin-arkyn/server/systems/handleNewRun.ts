@@ -3,6 +3,7 @@ import { Logger } from "@core/shared/utils";
 import { removePouch } from "../resources/playerPouch";
 import { initPlayerForRound } from "../utils/initPlayerForRound";
 import { spawnEnemy, applyBossDebuff } from "./handleJoin";
+import { generateRunSeed } from "../../shared/seededRandom";
 import type { ArkynContext } from "../types/ArkynContext";
 import { initRunStats } from "../resources/runStats";
 import { finalizeRun } from "../utils/finalizeRun";
@@ -44,12 +45,13 @@ export function handleNewRun(
         player.bestSingleCast = saveData.lifetime.highestSingleCastDamage;
     }
 
-    // Reset to round 1 with a new enemy
+    // Fresh seed + round 1 enemy
+    state.runSeed = generateRunSeed();
     state.currentRound = 1;
     spawnEnemy(state);
     applyBossDebuff(state, player);
 
     state.gamePhase = "playing";
 
-    logger.info(`Player ${client.sessionId} started a new run.`);
+    logger.info(`Player ${client.sessionId} started a new run. Seed: ${state.runSeed}`);
 }

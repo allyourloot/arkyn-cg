@@ -43,7 +43,7 @@ export interface RuneDamageBreakdown {
  *
  * `spellBase` and `mult` are flat per-tier constants from spellTable.ts;
  * each rune's contribution is RUNE_BASE_DAMAGE[rarity] modified per-rune
- * by enemy weakness (×1.5 → critical) or resistance (×0.5 → resisted).
+ * by enemy weakness (×2.0 → critical) or resistance (×0.5 → resisted).
  */
 export interface SpellDamageBreakdown {
     /** Per-tier flat base from SPELL_TIER_BASE_DAMAGE[spell.tier]. */
@@ -101,7 +101,7 @@ export function calculateSpellDamage(
         const preMod = RUNE_BASE_DAMAGE[rarity] ?? RUNE_BASE_DAMAGE.common;
         const crit = weaknesses.includes(element);
         const resist = !crit && resistances.includes(element);
-        const mod = crit ? 1.5 : resist ? 0.5 : 1.0;
+        const mod = crit ? 2.0 : resist ? 0.5 : 1.0;
         const post = Math.round(preMod * mod);
 
         runeBasePreModifier[i] = preMod;

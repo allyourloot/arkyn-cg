@@ -60,5 +60,6 @@ export class ArkynState extends PluginState {
 
     @type(EnemyState) enemy = new EnemyState();
     @type("number") currentRound = 0;
+    @type("number") runSeed = 0;
     @type("string") gamePhase = "waiting";
 }

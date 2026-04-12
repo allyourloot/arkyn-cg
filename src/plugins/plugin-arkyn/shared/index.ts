@@ -50,8 +50,13 @@ export type { RuneDamageBreakdown, SpellDamageBreakdown } from "./calculateDamag
 export { SPELLBOOKS, DEFAULT_SPELLBOOK_ID } from "./spellbooks";
 export type { SpellbookId, SpellbookDefinition } from "./spellbooks";
 
-export { ENEMY_DEFINITIONS, getEnemyForRound } from "./enemyDefinitions";
+export { getEnemyForRound, getHpForRound } from "./enemyDefinitions";
 export type { EnemyDefinition } from "./enemyDefinitions";
 
-export { BOSS_DEBUFFS, isBossRound, pickRandomDebuff, getDebuffById } from "./bossDebuffs";
+export { ENEMY_BANK } from "./enemyBank";
+export type { EnemyTemplate } from "./enemyBank";
+
+export { seededRandom, createRoundRng, generateRunSeed } from "./seededRandom";
+
+export { BOSS_DEBUFFS, isBossRound, pickDebuffForRound, getDebuffById } from "./bossDebuffs";
 export type { BossDebuff } from "./bossDebuffs";

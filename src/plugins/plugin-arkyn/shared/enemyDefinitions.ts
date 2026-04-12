@@ -1,19 +1,25 @@
 /**
- * Round-indexed enemy stat definitions. Each entry is the enemy a player
- * fights when `state.currentRound` lands on that index (1-based — round 1
- * is `ENEMY_DEFINITIONS[0]`).
+ * Seeded enemy generation. Each run gets a seed; combining it with the
+ * round number deterministically picks an enemy from the bank. HP is
+ * fixed per round (difficulty curve), not per enemy.
+ *
+ * Two runs with the same seed face the same enemies in the same order.
  *
  * Damage model recap (`shared/calculateDamage.ts`):
  *     baseTotal   = SPELL_TIER_BASE_DAMAGE[tier] + Σ runeBase × elementalMod
  *     finalDamage = baseTotal × SPELL_TIER_MULT[tier]
  *     elementalMod = 0.5 (resist) / 1.0 (neutral) / 1.5 (weak)
  *
- * HP tuned for the Base + Mult curve. Reference damage outputs (common):
- *   T1 = 12 neutral / 16 weak     T2 = 48 / 64
- *   T3 = 108 / 144                T4 = 192 / 256
- *   T5 = 300 / 400
+ * Reference damage outputs (common rune base = 8):
+ *   T1 = 12 neutral / 20 weak     T2 = 48 / 80
+ *   T3 = 108 / 180                T4 = 192 / 320
+ *   T5 = 300 / 500
  * Player has 3 casts per round with 8 runes in hand.
  */
+
+import { ENEMY_BANK, type EnemyTemplate } from "./enemyBank";
+import { createRoundRng } from "./seededRandom";
+
 export interface EnemyDefinition {
     name: string;
     hp: number;
@@ -22,84 +28,58 @@ export interface EnemyDefinition {
     weaknesses: string[];
 }
 
-export const ENEMY_DEFINITIONS: EnemyDefinition[] = [
-    // ----- Warm-up: one good cast should do it. -----
-    {
-        name: "Goblin Scout",
-        hp: 60,
-        element: "earth",
-        resistances: ["earth"],
-        weaknesses: ["fire", "lightning"],
-    },
-    {
-        name: "Forest Imp",
-        hp: 100,
-        element: "shadow",
-        resistances: ["shadow"],
-        weaknesses: ["holy", "fire"],
-    },
-    // ----- Getting real: need 2 decent casts. -----
-    {
-        name: "Stone Golem",
-        hp: 175,
-        element: "earth",
-        resistances: ["earth", "steel"],
-        weaknesses: ["water", "lightning"],
-    },
-    {
-        name: "Shadow Wraith",
-        hp: 300,
-        element: "shadow",
-        resistances: ["shadow", "death"],
-        weaknesses: ["holy", "fire"],
-    },
-    // ----- Hard fights: need strong hands + weakness exploitation. -----
-    {
-        name: "Fire Drake",
-        hp: 450,
-        element: "fire",
-        resistances: ["fire"],
-        weaknesses: ["water", "ice"],
-    },
-    {
-        name: "Ice Elemental",
-        hp: 625,
-        element: "ice",
-        resistances: ["ice", "water"],
-        weaknesses: ["fire", "lightning"],
-    },
-    {
-        name: "Dark Sorcerer",
-        hp: 800,
-        element: "arcane",
-        resistances: ["arcane", "shadow"],
-        weaknesses: ["holy", "psy"],
-    },
-    // ----- Boss: need to maximize every cast. -----
-    {
-        name: "Ancient Wyrm",
-        hp: 1000,
-        element: "death",
-        resistances: ["death", "fire", "ice"],
-        weaknesses: ["holy", "lightning"],
-    },
+/**
+ * Static HP curve by round. Tuned for the Base + Mult damage model.
+ * Past the end of this table the last value scales by 25% per extra round.
+ */
+const HP_CURVE: readonly number[] = [
+    60,   // round 1  — warm-up
+    100,  // round 2
+    175,  // round 3
+    300,  // round 4
+    450,  // round 5  (boss)
+    625,  // round 6
+    800,  // round 7
+    1000, // round 8
 ];
 
-/**
- * Look up the enemy definition for a given round number. Past the end of
- * the table, the last enemy's HP is scaled by ~25% per additional round so
- * the game keeps escalating instead of looping back to round-1 difficulty.
- */
-export function getEnemyForRound(round: number): EnemyDefinition {
+/** Get the HP value for a given round number. */
+export function getHpForRound(round: number): number {
     const r = Math.max(1, round);
-    if (r <= ENEMY_DEFINITIONS.length) {
-        return ENEMY_DEFINITIONS[r - 1];
+    if (r <= HP_CURVE.length) {
+        return HP_CURVE[r - 1];
     }
-    const last = ENEMY_DEFINITIONS[ENEMY_DEFINITIONS.length - 1];
-    const extraRounds = r - ENEMY_DEFINITIONS.length;
+    const last = HP_CURVE[HP_CURVE.length - 1];
+    const extra = r - HP_CURVE.length;
+    return Math.round(last * Math.pow(1.25, extra));
+}
+
+/**
+ * Deterministically pick an enemy for a round using the run seed.
+ * The same seed + round always produces the same enemy. Consecutive
+ * rounds avoid picking the same enemy template back-to-back.
+ */
+export function getEnemyForRound(round: number, seed: number): EnemyDefinition {
+    const rng = createRoundRng(seed, round);
+    const hp = getHpForRound(round);
+
+    // Pick from the bank. To avoid back-to-back duplicates, also compute
+    // what the previous round picked and re-roll once if they collide.
+    let idx = Math.floor(rng() * ENEMY_BANK.length);
+    if (round > 1) {
+        const prevRng = createRoundRng(seed, round - 1);
+        const prevIdx = Math.floor(prevRng() * ENEMY_BANK.length);
+        if (idx === prevIdx) {
+            idx = (idx + 1 + Math.floor(rng() * (ENEMY_BANK.length - 1))) % ENEMY_BANK.length;
+        }
+    }
+
+    const template: EnemyTemplate = ENEMY_BANK[idx];
     return {
-        ...last,
-        name: `${last.name} +${extraRounds}`,
-        hp: Math.round(last.hp * Math.pow(1.25, extraRounds)),
+        name: template.name,
+        hp,
+        element: template.element,
+        resistances: [...template.resistances],
+        weaknesses: [...template.weaknesses],
     };
 }

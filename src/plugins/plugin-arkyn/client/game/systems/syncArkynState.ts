@@ -12,6 +12,7 @@ import {
     setEnemyIsBoss,
     setEnemyDebuff,
     setHandSize,
+    setRunSeed,
     setGamePhase,
     setLastSpellName,
     setLastSpellTier,
@@ -99,6 +100,7 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevEnemyIsBoss = false;
     let prevEnemyDebuff = "";
     let prevHandSize = -1;
+    let prevRunSeed = -1;
     let prevSpellName = "";
     let prevSpellTier = -1;
     let prevDamage = -1;
@@ -245,6 +247,12 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (player.lastDamage !== prevDamage) {
             setLastDamage(player.lastDamage);
             prevDamage = player.lastDamage;
+        }
+
+        // Sync run seed
+        if (state.runSeed !== prevRunSeed) {
+            setRunSeed(state.runSeed);
+            prevRunSeed = state.runSeed;
         }
 
         // Sync round and pouch

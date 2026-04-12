@@ -4,7 +4,8 @@ import { clearArraySchema } from "../utils/clearArraySchema";
 import { initPlayerForRound } from "../utils/initPlayerForRound";
 import { removePouch } from "../resources/playerPouch";
 import { getEnemyForRound } from "../../shared/enemyDefinitions";
-import { isBossRound, pickRandomDebuff } from "../../shared/bossDebuffs";
+import { isBossRound, pickDebuffForRound } from "../../shared/bossDebuffs";
+import { generateRunSeed } from "../../shared/seededRandom";
 import type { ArkynContext } from "../types/ArkynContext";
 import { initRunStats, removeRunStats } from "../resources/runStats";
 
@@ -40,7 +41,8 @@ export function handleJoin(
         player.bestSingleCast = saveData.lifetime.highestSingleCastDamage;
     }
 
-    // Spawn enemy for round 1
+    // Generate a fresh run seed and spawn enemy for round 1
+    state.runSeed = generateRunSeed();
     state.currentRound = 1;
     spawnEnemy(state);
     applyBossDebuff(state, player);
@@ -48,12 +50,12 @@ export function handleJoin(
     // Set game state
     state.gamePhase = "playing";
 
-    logger.info(`Player ${client.sessionId} joined. Hand: ${player.hand.length}, Pouch: ${player.pouchSize}`);
+    logger.info(`Player ${client.sessionId} joined. Seed: ${state.runSeed}. Hand: ${player.hand.length}, Pouch: ${player.pouchSize}`);
 }
 
 function spawnEnemy(state: ArkynState, roundOverride?: number): void {
     const round = roundOverride ?? Math.max(state.currentRound, 1);
-    const def = getEnemyForRound(round);
+    const def = getEnemyForRound(round, state.runSeed);
 
     const enemy = new EnemyState();
     enemy.name = def.name;
@@ -65,11 +67,11 @@ function spawnEnemy(state: ArkynState, roundOverride?: number): void {
     for (const r of def.resistances) enemy.resistances.push(r);
     for (const w of def.weaknesses) enemy.weaknesses.push(w);
 
-    // Boss rounds: assign a random debuff. The "fortified" debuff boosts
+    // Boss rounds: pick a seeded debuff. The "fortified" debuff boosts
     // HP here; other debuffs modify the player state in applyBossDebuff.
     let hp = def.hp;
     if (isBossRound(round)) {
-        const debuff = pickRandomDebuff();
+        const debuff = pickDebuffForRound(round, state.runSeed);
         enemy.isBoss = true;
         enemy.debuff = debuff.id;
         if (debuff.id === "fortified") {
