@@ -13,6 +13,7 @@ import {
     BAR_SHAKE_FRAME_S,
 } from "../arkynStore";
 import { getDebuffById } from "../../shared";
+import innerFrameRedUrl from "/assets/ui/inner-frame-red.png?url";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import { playCritical } from "../sfx";
@@ -191,15 +192,16 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
 
     return (
         <div ref={setWrapperRef} className={styles.wrapper} style={wrapperStyleVars}>
-            {name && (
-                <span className={styles.name}>
-                    {isBoss && <span className={styles.bossTag}>BOSS</span>}
-                    {name}
-                </span>
-            )}
+            <div className={styles.nameContainer}>
+                {isBoss && <span className={styles.bossTag}>BOSS</span>}
+                {name && <span className={styles.name}>{name}</span>}
+            </div>
 
             {debuff && (
-                <span className={styles.debuffChip}>
+                <span
+                    className={styles.debuffChip}
+                    style={{ "--debuff-bg": `url(${innerFrameRedUrl})` } as CSSProperties}
+                >
                     {debuff.description}
                 </span>
             )}

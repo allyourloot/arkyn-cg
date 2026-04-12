@@ -66,6 +66,8 @@ export interface RuneDamageBubble {
     spellElement: string;
     /** Whether this rune hit a weakness — shows the critical burst behind the number. */
     isCritical: boolean;
+    /** Whether this rune hit a resistance — tints the number light red. */
+    isResisted: boolean;
     /** Monotonically increasing — used as a React key so re-casts re-trigger CSS animation. */
     seq: number;
     /**
@@ -422,6 +424,7 @@ export function castSpell() {
                 baseAmount: initialDisplay,
                 spellElement,
                 isCritical,
+                isResisted,
                 seq: ++bubbleSeqCounter,
                 // Each successive contributing rune's bubble waits its turn
                 // so the Base counter reads like a counter ticking up.

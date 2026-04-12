@@ -126,6 +126,7 @@ export default function PlayArea() {
                                 baseAmount={damageBubble.baseAmount}
                                 spellElement={damageBubble.spellElement}
                                 isCritical={damageBubble.isCritical}
+                                isResisted={damageBubble.isResisted}
                                 seq={damageBubble.seq}
                                 delayMs={damageBubble.delayMs}
                             />

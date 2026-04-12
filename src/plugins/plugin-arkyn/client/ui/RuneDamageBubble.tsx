@@ -14,6 +14,8 @@ interface Props {
     spellElement: string;
     /** Whether this rune hit a weakness — shows the critical burst behind the number. */
     isCritical: boolean;
+    /** Whether this rune hit a resistance — tints the number light red. */
+    isResisted: boolean;
     /**
      * Monotonically increasing per-cast sequence number. Used as a React
      * key so casting two spells in a row remounts the bubble and replays
@@ -28,9 +30,10 @@ interface Props {
     delayMs: number;
 }
 
-const BASE_COLOR = "#ffffff";
+const NORMAL_COLOR = "#ffffff";
+const RESISTED_COLOR = "#f87171";
 
-export default function RuneDamageBubble({ amount, baseAmount, spellElement, isCritical, seq, delayMs }: Props) {
+export default function RuneDamageBubble({ amount, baseAmount, spellElement, isCritical, isResisted, seq, delayMs }: Props) {
     const bubbleRef = useRef<HTMLSpanElement>(null);
     const textRef = useRef<HTMLSpanElement>(null);
     const criticalRef = useRef<HTMLImageElement>(null);
@@ -42,7 +45,7 @@ export default function RuneDamageBubble({ amount, baseAmount, spellElement, isC
         const critEl = criticalRef.current;
         if (!el) return;
         if (textEl) textEl.textContent = String(baseAmount);
-        gsap.set(el, { xPercent: -50, y: 6, scale: 0.55, opacity: 0, color: BASE_COLOR });
+        gsap.set(el, { xPercent: -50, y: 6, scale: 0.55, opacity: 0, color: isResisted ? RESISTED_COLOR : NORMAL_COLOR });
         if (critEl) gsap.set(critEl, { opacity: 0, scale: 0.5, xPercent: -50, yPercent: -50 });
 
         const tl = gsap.timeline({ delay: delayMs / 1000 });

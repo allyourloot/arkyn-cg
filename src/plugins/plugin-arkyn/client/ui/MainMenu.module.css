@@ -54,7 +54,7 @@
     font-family: inherit;
     font-size: clamp(var(--font-size-md), 3.5vw, var(--font-size-xl));
     font-weight: normal;
-    letter-spacing: 8px;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: #f4ffe8;
     cursor: pointer;

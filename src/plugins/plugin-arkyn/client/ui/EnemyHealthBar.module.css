@@ -15,41 +15,56 @@
     position: relative;
 }
 
-/* Enemy name above the bar. The wrapper used to render only the bar; now
-   it also hosts the enemy header that EnemyPanel used to own, so the
-   name styling lives here. */
+/* Wrapper around the name + boss tag. position: relative anchors the
+   absolutely-placed BOSS label above the name without shifting content. */
+.nameContainer {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Enemy name above the bar. */
 .name {
     font-size: clamp(var(--font-size-md), 2.6vw, var(--font-size-xl));
-
     font-weight: normal;
     color: #e8d4b8;
     text-align: center;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
     line-height: 1;
     white-space: nowrap;
-    display: flex;
-    align-items: center;
-    gap: clamp(6px, 0.8vw, 12px);
 }
 
 .bossTag {
-    font-size: var(--font-size-2xs);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: var(--font-size-3xs);
     color: #fbbf24;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     text-transform: uppercase;
-    background: rgba(251, 191, 36, 0.15);
-    padding: 2px 8px;
-    border: 1px solid rgba(251, 191, 36, 0.4);
+    line-height: 1;
+    white-space: nowrap;
+    margin-bottom: 2px;
 }
 
 .debuffChip {
+    box-sizing: border-box;
     font-size: var(--font-size-2xs);
-    color: #f87171;
+    color: #ffffff;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
     letter-spacing: 1px;
     text-transform: uppercase;
     line-height: 1;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--debuff-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 2px 8px;
+    image-rendering: pixelated;
 }
 
 /* The shake target. GSAP applies a translateX shake here on every enemy
@@ -275,16 +290,18 @@
 
     .name {
         font-size: var(--font-size-sm);
-        gap: clamp(3px, 0.5vw, 8px);
     }
 
     .bossTag {
-        font-size: 8px;
-        padding: 1px 5px;
+        font-size: 7px;
+        letter-spacing: 2px;
     }
 
     .debuffChip {
         font-size: 8px;
+        border-width: 8px;
+        border-image: var(--debuff-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 1px 5px;
     }
 
     .affinityContainer {
