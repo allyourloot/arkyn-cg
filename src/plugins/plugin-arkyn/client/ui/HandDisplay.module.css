@@ -10,6 +10,10 @@
     display: flex;
     justify-content: center;
     align-items: flex-end;
+    /* Fixed frame size — never grows or shrinks regardless of card count.
+       Cards overlap more when there are many, spread when few. The JS
+       layer sets --card-overlap on the container to control packing. */
+    width: clamp(460px, 52vw, 760px);
     padding: clamp(10px, 1.4vh, 18px) clamp(14px, 2vw, 28px);
     touch-action: none;
 }
@@ -45,10 +49,14 @@
        and useHandDragReorder.ts quickTo for the dragged slot). Opacity stays
        on CSS for the cast/discard hide. */
     transition: opacity 0.1s ease;
+    flex-shrink: 0;
 }
 
 .cardSlot:not(:first-child) {
-    margin-left: clamp(-22px, -1.7vw, -6px);
+    /* Dynamic overlap — set by HandDisplay.tsx based on card count so all
+       cards fit inside the fixed-width frame. Falls back to the reference
+       8-card overlap if the variable isn't set. */
+    margin-left: var(--card-overlap, clamp(-22px, -1.7vw, -6px));
 }
 
 .hidden {
@@ -65,5 +73,8 @@
     .handRow {
         transform: translateY(clamp(2px, 0.5vh, 6px));
     }
-}
 
+    .hand {
+        width: clamp(300px, 44vw, 500px);
+    }
+}

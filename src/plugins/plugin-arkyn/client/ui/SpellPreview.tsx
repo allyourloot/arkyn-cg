@@ -8,7 +8,6 @@ import {
     useIsCastAnimating,
     useCastBaseCounter,
     useCastTotalDamage,
-    useLastCastBaseDamage,
     useRoundTotalDamage,
 } from "../arkynStore";
 import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
@@ -62,7 +61,6 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     const isCastAnimating = useIsCastAnimating();
     const castBaseCounter = useCastBaseCounter();
     const castTotalDamage = useCastTotalDamage();
-    const lastCastBaseDamage = useLastCastBaseDamage();
     const roundTotalDamage = useRoundTotalDamage();
 
     const damageRef = useRef<HTMLSpanElement>(null);
@@ -74,14 +72,16 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
         ? resolveSpell(selectedRunes.map(r => ({ element: r.element })))
         : null;
 
-    // Fall back to the most recent cast when nothing is currently selected.
-    // Re-resolve from the stored cast runes so we have element/description/combo info.
-    const lastCastSpell = !previewSpell && lastCastRunes.length > 0
+    // During a cast animation the selection is cleared, so fall back to
+    // lastCastRunes to keep the spell info visible while Base/Mult tick.
+    // Once the animation ends, the panel returns to the empty state
+    // instead of lingering on "Last Cast".
+    const castingSpell = !previewSpell && isCastAnimating && lastCastRunes.length > 0
         ? resolveSpell(lastCastRunes.map(r => ({ element: r.element })))
         : null;
 
     const isLive = previewSpell !== null;
-    const spell = previewSpell ?? lastCastSpell;
+    const spell = previewSpell ?? castingSpell;
 
     // Partial-rune indicator: how many of the rune cards backing this
     // spell will actually contribute. For non-synergistic mismatches
@@ -111,8 +111,8 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     //     tween (already offset by prior round total).
     //   - Live preview: Base shows spell tier base, Total shows round
     //     accumulator (or "-" if no casts yet).
-    //   - Last cast: Base from snapshot, Total shows round accumulator.
-    //   - Empty (no spell): all chips "-".
+    //   - Empty (no spell): all chips show "-" except Total which shows
+    //     the round accumulator if any casts have landed.
     let displayBase: number | string = "-";
     let displayMult: number | string = "-";
     let displayTotal: number | string = roundTotalDamage > 0 ? roundTotalDamage : "-";
@@ -129,10 +129,8 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
             displayTotal = castTotalDamage >= 0
                 ? castTotalDamage
                 : (roundTotalDamage > 0 ? roundTotalDamage : "-");
-        } else if (isLive) {
-            displayBase = spellTierBase;
         } else {
-            displayBase = lastCastBaseDamage;
+            displayBase = spellTierBase;
         }
     }
 
@@ -165,11 +163,7 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
 
     const elementColor = ELEMENT_COLORS[spell.element] ?? "#aaa";
 
-    const headingLabel = isCastAnimating
-        ? "Casting"
-        : isLive
-            ? "Spell Preview"
-            : "Last Cast";
+    const headingLabel = isCastAnimating ? "Casting" : "Spell Preview";
 
     return (
         <div ref={ref} className={styles.panel} style={panelStyleVars}>

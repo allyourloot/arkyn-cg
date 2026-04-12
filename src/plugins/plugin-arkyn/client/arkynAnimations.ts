@@ -61,15 +61,11 @@ import {
 export interface RuneDamageBubble {
     /** Final per-rune damage AFTER the elemental modifier (resistance / weakness). */
     amount: number;
-    /**
-     * Per-rune damage BEFORE the elemental modifier — i.e. what the number
-     * would be against a neutral target. When `baseAmount === amount`, the
-     * bubble pops once normally. When `baseAmount !== amount`, the bubble
-     * pops with `baseAmount` first, then pops AGAIN to `amount` with a
-     * yellow flash to highlight the weakness bonus damage.
-     */
+    /** Display value — always equals `amount` (kept for API compat). */
     baseAmount: number;
     spellElement: string;
+    /** Whether this rune hit a weakness — shows the critical burst behind the number. */
+    isCritical: boolean;
     /** Monotonically increasing — used as a React key so re-casts re-trigger CSS animation. */
     seq: number;
     /**
@@ -407,7 +403,7 @@ export function castSpell() {
     // sync with whatever bubbles are visible at any moment. `isResisted`
     // tells the timeline to pitch the count SFX down on the appearance
     // event so resisted runes audibly read as weak hits.
-    const runeBreakdown: { base: number; final: number; isResisted: boolean }[] = [];
+    const runeBreakdown: { base: number; final: number; isResisted: boolean; isCritical: boolean }[] = [];
     if (breakdown) {
         for (let i = 0; i < contributingIndices.length; i++) {
             const slotIdx = contributingIndices[i];
@@ -417,14 +413,15 @@ export function castSpell() {
             const isResisted = breakdown.isResisted[i];
             const preModifier = breakdown.runeBasePreModifier[i];
             const postModifier = breakdown.runeBaseContributions[i];
-            // Bubble's initial display: full pre-modifier value for criticals
-            // (so they pop 8 → 12 yellow), or the post-modifier value
-            // directly for neutral / resisted runes (no misleading "pop down").
-            const initialDisplay = isCritical ? preModifier : postModifier;
+            // Bubble's initial display: always the post-modifier value.
+            // Criticals show the boosted number (e.g. 12) directly with
+            // the crit burst — no redundant base-then-bonus two-pop.
+            const initialDisplay = postModifier;
             bubbles[slotIdx] = {
                 amount: postModifier,
                 baseAmount: initialDisplay,
                 spellElement,
+                isCritical,
                 seq: ++bubbleSeqCounter,
                 // Each successive contributing rune's bubble waits its turn
                 // so the Base counter reads like a counter ticking up.
@@ -434,6 +431,7 @@ export function castSpell() {
                 base: initialDisplay,
                 final: postModifier,
                 isResisted,
+                isCritical,
             });
         }
     }

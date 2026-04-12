@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
@@ -15,7 +15,7 @@ import { useHandDragReorder } from "./hooks/useHandDragReorder";
 import handFrameUrl from "/assets/ui/hand-frame.png?url";
 import styles from "./HandDisplay.module.css";
 
-const handStyleVars = {
+const handStyleVarsBase = {
     "--hand-bg": `url(${handFrameUrl})`,
 } as React.CSSProperties;
 
@@ -29,6 +29,50 @@ export default function HandDisplay() {
 
     const containerRef = useRef<HTMLDivElement>(null);
     const animating = isCastAnimating || isDiscardAnimating;
+
+    // ── Fixed frame, dynamic overlap ──
+    // The hand frame has a fixed CSS width. We measure its inner content
+    // width (minus padding) and a single card's width once on mount via
+    // a ref callback, then compute the negative margin needed to fit N
+    // cards into that fixed space.
+    const [frameDims, setFrameDims] = useState<{ innerW: number; cardW: number } | null>(null);
+    const measuredRef = useRef(false);
+    const containerCallbackRef = useCallback((el: HTMLDivElement | null) => {
+        // Wire up the imperative ref that the rest of the component uses.
+        (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+        if (!el || measuredRef.current) return;
+        // Measure after a frame so layout is settled.
+        requestAnimationFrame(() => {
+            const cs = getComputedStyle(el);
+            const padL = parseFloat(cs.paddingLeft) || 0;
+            const padR = parseFloat(cs.paddingRight) || 0;
+            const innerW = el.clientWidth - padL - padR;
+            const firstCard = el.querySelector<HTMLElement>("[data-rune-index]");
+            const cardW = firstCard ? firstCard.offsetWidth : 0;
+            if (innerW > 0 && cardW > 0) {
+                setFrameDims({ innerW, cardW });
+                measuredRef.current = true;
+            }
+        });
+    }, []);
+
+    // Compute the overlap needed to fit `hand.length` cards into the
+    // fixed inner width. For <= reference count, use the CSS default.
+    let handStyle: React.CSSProperties = handStyleVarsBase;
+    if (frameDims && hand.length > 1) {
+        const { innerW, cardW } = frameDims;
+        // Total width of N cards without overlap = N * cardW.
+        // We need: cardW + (N-1) * (cardW + overlap) = innerW
+        //   => overlap = (innerW - N * cardW) / (N - 1)
+        const neededOverlap = (innerW - hand.length * cardW) / (hand.length - 1);
+        // Only apply when we need to compress (negative overlap).
+        // Clamp so cards never overlap more than 80% (stay readable).
+        const clamped = Math.max(-cardW * 0.8, neededOverlap);
+        handStyle = {
+            ...handStyleVarsBase,
+            "--card-overlap": `${Math.round(clamped)}px`,
+        } as React.CSSProperties;
+    }
 
     const { dragInfo, onSlotPointerDown } = useHandDragReorder({
         hand,
@@ -205,7 +249,7 @@ export default function HandDisplay() {
 
     return (
         <div className={styles.handRow}>
-            <div ref={containerRef} className={styles.hand} style={handStyleVars}>
+            <div ref={containerCallbackRef} className={styles.hand} style={handStyle}>
                 {hand.map((rune, index) => {
                     const rotation = totalCards > 1 ? startAngle + angleStep * index : 0;
                     const isSelected = selectedIndices.includes(index);
@@ -220,9 +264,12 @@ export default function HandDisplay() {
 
                     // Slot transform x is GSAP-driven (see useGSAP above and
                     // the quickTo follow inside useHandDragReorder). Only
-                    // zIndex is React-controlled here.
+                    // zIndex is React-controlled here. Selected cards keep
+                    // their natural stacking order so they don't cover the
+                    // clickable area of neighboring cards — the lift animation
+                    // (translateY) provides enough visual separation.
                     const slotStyle: React.CSSProperties = {
-                        zIndex: isDragging ? 200 : isSelected ? 100 : index,
+                        zIndex: isDragging ? 200 : index,
                     };
 
                     return (

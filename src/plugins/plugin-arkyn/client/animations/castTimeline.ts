@@ -36,14 +36,6 @@ const DISCARD_STAGGER_S = 0.04;
 const DRAW_FLY_DURATION_S = 0.45;
 const DRAW_STAGGER_S = 0.06;
 
-// Wall-clock offset (relative to a bubble's first appearance) at which the
-// "Critical" bonus pop fires inside RuneDamageBubble's GSAP timeline:
-//   pop-in (130ms) + settle (70ms) + base hold (80ms) = 280ms.
-// The orchestrator schedules the cumulative-bonus count tick + critical
-// SFX at this same offset so the side counter and SFX land EXACTLY on the
-// bubble's text-swap frame.
-const BONUS_POP_OFFSET_S = 0.28;
-
 /**
  * Total wall-clock time the orchestrator timeline must wait for an N-flyer
  * staggered fly tween to fully complete. The last flyer starts at
@@ -77,22 +69,16 @@ export interface CastTimelineContext {
     castRunesLength: number;
     /**
      * Per-contributing-rune damage breakdown — `base` is the value the
-     * bubble first shows on appearance; `final` is the value it ends on.
-     * For neutral and resisted runes the two are equal (single pop). For
-     * critical runes `final > base` and the bubble's GSAP timeline pops a
-     * second time to the boosted value at `BONUS_POP_OFFSET_S`.
+     * bubble shows (post-modifier for all runes). `final` equals `base`
+     * (the two-pop bonus sequence has been removed).
      *
-     * `isResisted` flags runes whose element is in the enemy's resistance
-     * list — used here to pitch the count SFX down on the appearance event
-     * so resisted runes audibly read as "weak hits".
+     * `isResisted` / `isCritical` flag the rune's elemental modifier so
+     * the timeline plays the right SFX: pitched-down count for resists,
+     * critical stinger for weakness hits.
      *
-     * The orchestrator builds an interleaved tick-event timeline from this
-     * (sorted by wall-clock time) so the SpellPreview Base counter and SFX
-     * stay in lockstep with whatever the bubbles are currently showing,
-     * even when a rune's bonus pop falls between two later bubble
-     * appearances. Length === contributingCount.
+     * Length === contributingCount.
      */
-    runeBreakdown: readonly { base: number; final: number; isResisted: boolean }[];
+    runeBreakdown: readonly { base: number; final: number; isResisted: boolean; isCritical: boolean }[];
     /**
      * Spell-tier base damage (SPELL_TIER_BASE_DAMAGE[tier]) — added to the
      * Base counter at t=0 so the chip starts at the spell's tier base and
@@ -123,12 +109,9 @@ export interface CastTimelineContext {
     /** Fired after the raise transition completes. Mounts runeDamageBubbles. */
     onBubblesStart: () => void;
     /**
-     * Fired in lockstep with each bubble's pop. For neutral casts: once per
-     * contributing rune at the bubble's first appearance. For critical
-     * casts: TWICE per rune — once at first appearance with the cumulative
-     * BASE total, then again at `BONUS_POP_OFFSET_S` later with the
-     * cumulative BONUS total (matching the bubble's text swap from base →
-     * boosted). SpellPreview pops its damage number on every call.
+     * Fired once per contributing rune at its bubble's appearance, with the
+     * running cumulative Base total. SpellPreview pops its damage number
+     * on every call.
      */
     onCountTick: (cumulative: number) => void;
     /**
@@ -224,45 +207,10 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
     // delayMs (set by the orchestrator) staggers them in the DOM.
     tl.call(ctx.onBubblesStart, undefined, bubblesStartS);
 
-    // Schedule the per-bubble SFX + count-tick callbacks via an
-    // interleaved event timeline. For each contributing rune we emit:
-    //   - An "appearance" event at `tickAt[i]` adding the bubble's base
-    //     display value to the running cumulative (count SFX).
-    //   - A "bonus" event at `tickAt[i] + BONUS_POP_OFFSET_S` if the rune
-    //     is a critical, adding the (final - base) delta (critical SFX).
-    //
-    // The events are then sorted by time so a critical's bonus pop can
-    // correctly fire BETWEEN two later bubbles' appearances — e.g. for
-    // a Flash Freeze cast where 1 water rune crits and 3 ice runes
-    // don't, the water bubble's bonus tick lands at t=280ms, AFTER the
-    // ice bubble at t=180ms but BEFORE the next ice bubble at t=360ms.
-    // Computing cumulative across the sorted events ensures the side
-    // counter always matches the sum of what's visible on screen.
-    type EventKind = "normal" | "resisted" | "critical";
-    interface RawEvent {
-        timeS: number;
-        delta: number;
-        kind: EventKind;
-    }
-    const rawEvents: RawEvent[] = [];
-    for (let i = 0; i < ctx.contributingCount; i++) {
-        const tickAt = bubblesStartS + i * BUBBLE_STAGGER_S;
-        const item = ctx.runeBreakdown[i];
-        if (!item) continue;
-        rawEvents.push({
-            timeS: tickAt,
-            delta: item.base,
-            kind: item.isResisted ? "resisted" : "normal",
-        });
-        if (item.final > item.base) {
-            rawEvents.push({
-                timeS: tickAt + BONUS_POP_OFFSET_S,
-                delta: item.final - item.base,
-                kind: "critical",
-            });
-        }
-    }
-    rawEvents.sort((a, b) => a.timeS - b.timeS);
+    // Schedule the per-bubble SFX + count-tick callbacks. One event per
+    // contributing rune at its staggered appearance time. Critical runes
+    // play the critical stinger; resisted runes play a pitched-down count;
+    // neutral runes play the normal count SFX.
 
     // Pitch for the count SFX on resisted appearance events. ~35% lower
     // playback rate gives a deep "thud" feel that clearly reads as a
@@ -274,17 +222,20 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
     // first per-rune event needs to add its delta on top of that, not
     // start fresh from zero.
     let runningCumulative = ctx.spellBaseDamage;
-    for (const e of rawEvents) {
-        runningCumulative += e.delta;
+    for (let i = 0; i < ctx.contributingCount; i++) {
+        const tickAt = bubblesStartS + i * BUBBLE_STAGGER_S;
+        const item = ctx.runeBreakdown[i];
+        if (!item) continue;
+        runningCumulative += item.base;
         const cumulativeAtEvent = runningCumulative;
-        if (e.kind === "critical") {
-            tl.call(playCritical, undefined, e.timeS);
-        } else if (e.kind === "resisted") {
-            tl.call(() => playCount(RESISTED_COUNT_PITCH), undefined, e.timeS);
+        if (item.isCritical) {
+            tl.call(playCritical, undefined, tickAt);
+        } else if (item.isResisted) {
+            tl.call(() => playCount(RESISTED_COUNT_PITCH), undefined, tickAt);
         } else {
-            tl.call(playCount, undefined, e.timeS);
+            tl.call(playCount, undefined, tickAt);
         }
-        tl.call(() => ctx.onCountTick(cumulativeAtEvent), undefined, e.timeS);
+        tl.call(() => ctx.onCountTick(cumulativeAtEvent), undefined, tickAt);
     }
 
     // Total chip count-up reveal — Balatro-style. Starts once all rune
