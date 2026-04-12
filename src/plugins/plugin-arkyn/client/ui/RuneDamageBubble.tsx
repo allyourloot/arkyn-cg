@@ -32,21 +32,27 @@ interface Props {
 
 const NORMAL_COLOR = "#ffffff";
 const RESISTED_COLOR = "#f87171";
+const CRITICAL_COLOR = "#fbbf24";
 
 export default function RuneDamageBubble({ amount, baseAmount, spellElement, isCritical, isResisted, seq, delayMs }: Props) {
     const bubbleRef = useRef<HTMLSpanElement>(null);
     const textRef = useRef<HTMLSpanElement>(null);
     const criticalRef = useRef<HTMLImageElement>(null);
+    const labelRef = useRef<HTMLSpanElement>(null);
     const strokeColor = ELEMENT_COLORS[spellElement] ?? "#ffffff";
+
+    const hasLabel = isCritical || isResisted;
 
     useGSAP(() => {
         const el = bubbleRef.current;
         const textEl = textRef.current;
         const critEl = criticalRef.current;
+        const labelEl = labelRef.current;
         if (!el) return;
         if (textEl) textEl.textContent = String(baseAmount);
         gsap.set(el, { xPercent: -50, y: 6, scale: 0.55, opacity: 0, color: isResisted ? RESISTED_COLOR : NORMAL_COLOR });
         if (critEl) gsap.set(critEl, { opacity: 0, scale: 0.5, xPercent: -50, yPercent: -50 });
+        if (labelEl) gsap.set(labelEl, { opacity: 0, y: 0, scale: 0.6 });
 
         const tl = gsap.timeline({ delay: delayMs / 1000 });
 
@@ -69,13 +75,31 @@ export default function RuneDamageBubble({ amount, baseAmount, spellElement, isC
             }, "<");
         }
 
+        // Descriptor label pops in with the number, then floats up and fades.
+        if (labelEl && hasLabel) {
+            tl.to(labelEl, {
+                opacity: 1,
+                y: -4,
+                scale: 1,
+                duration: 0.12,
+                ease: "back.out(2)",
+            }, "<");
+            // Drift up and fade out
+            tl.to(labelEl, {
+                y: -22,
+                opacity: 0,
+                duration: 0.5,
+                ease: "power1.out",
+            }, ">+0.15");
+        }
+
         // Phase 2: settle (70ms)
         tl.to(el, {
             y: -14,
             scale: isCritical ? 1.12 : 1,
             duration: 0.07,
             ease: "power2.out",
-        });
+        }, hasLabel ? 0.13 + delayMs / 1000 : ">");
 
         // Phase 3: hold so the number lingers, then drift away.
         tl.to({}, { duration: 0.15 });
@@ -97,6 +121,15 @@ export default function RuneDamageBubble({ amount, baseAmount, spellElement, isC
             className={styles.bubble}
             style={style}
         >
+            {hasLabel && (
+                <span
+                    ref={labelRef}
+                    className={styles.descriptorLabel}
+                    style={{ color: isCritical ? CRITICAL_COLOR : RESISTED_COLOR }}
+                >
+                    {isCritical ? "CRITICAL!" : "RESIST!"}
+                </span>
+            )}
             {isCritical && (
                 <img
                     ref={criticalRef}

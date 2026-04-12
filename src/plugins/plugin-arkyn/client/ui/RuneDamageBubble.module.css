@@ -22,6 +22,27 @@
         0 0 10px rgba(0, 0, 0, 0.6);
 }
 
+/* Descriptor label ("CRITICAL!" / "RESIST!") that sits above the damage
+   number. Starts hidden; GSAP pops it in with the number and then drifts
+   it upward with a fade. */
+.descriptorLabel {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 100%;
+    margin-bottom: 2px;
+    font-size: clamp(var(--font-size-3xs), 1.6vw, var(--font-size-xs));
+    font-weight: normal;
+    letter-spacing: 2px;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+    text-shadow:
+        2px 2px 0 rgba(0, 0, 0, 0.9),
+        0 0 8px rgba(0, 0, 0, 0.6);
+    will-change: transform, opacity;
+}
+
 /* Spiky burst graphic behind the per-rune damage number on critical
    (weakness) hits. Starts hidden; GSAP pops it in sync with the bonus
    yellow flash so the burst and the color change land together. */
