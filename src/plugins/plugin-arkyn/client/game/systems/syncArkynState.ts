@@ -179,6 +179,11 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
 
         // Sync game phase
         if (state.gamePhase !== prevPhase) {
+            // New run: game_over → playing. Clear stale cast state so the
+            // Spell Preview doesn't show the previous game's last cast.
+            if (state.gamePhase === "playing" && prevPhase === "game_over") {
+                clearLastCastState();
+            }
             setGamePhase(state.gamePhase);
             prevPhase = state.gamePhase;
         }

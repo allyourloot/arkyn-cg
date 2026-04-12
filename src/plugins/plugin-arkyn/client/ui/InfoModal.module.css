@@ -1,0 +1,579 @@
+/* ── Backdrop ── */
+.backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    pointer-events: auto;
+    animation: fade-in 0.15s ease-out;
+}
+
+/* ── Modal shell — vertical: header then sidebar|content ── */
+.modal {
+    box-sizing: border-box;
+    width: clamp(560px, 90vw, 1100px);
+    height: min(88vh, 860px);
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    padding: 8px 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: #e8d4b8;
+    image-rendering: pixelated;
+    cursor: default;
+    animation: scale-in 0.18s cubic-bezier(0.2, 0.8, 0.4, 1);
+}
+
+/* ── Header bar ── */
+.header {
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    image-rendering: pixelated;
+}
+
+.title {
+    font-size: var(--font-size-md);
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+}
+
+/* ── Body: horizontal split — sidebar | content ── */
+.body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
+/* ── Left sidebar (tabs only) ── */
+.sidebar {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    width: clamp(160px, 16vw, 220px);
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 10px 10px;
+    display: flex;
+    flex-direction: column;
+    image-rendering: pixelated;
+}
+
+/* ── Close button ── */
+.closeButton {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: clamp(32px, 3.6vw, 44px);
+    height: clamp(32px, 3.6vw, 44px);
+    position: relative;
+    transition: transform 0.1s ease;
+    flex-shrink: 0;
+}
+
+.closeIcon,
+.closeIconHover {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+.closeIconHover {
+    opacity: 0;
+}
+
+.closeButton:hover .closeIconHover {
+    opacity: 1;
+}
+
+.closeButton:hover .closeIcon {
+    opacity: 0;
+}
+
+.closeButton:hover {
+    transform: scale(1.08);
+}
+
+.closeButton:active {
+    transform: scale(0.94);
+}
+
+/* ── Tab navigation ── */
+.tabList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tab {
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    border-image: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    color: #6a5a4a;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 4px 6px;
+    text-align: left;
+    transition: color 0.12s ease, transform 0.1s ease;
+    line-height: 1;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+    image-rendering: pixelated;
+}
+
+.tab:hover {
+    color: #c8b89a;
+}
+
+.tab:active {
+    transform: scale(0.97);
+}
+
+.tab.tabActive {
+    color: #ffffff;
+    border-image: var(--tab-active-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
+}
+
+/* ── Right content area ── */
+.content {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.scrollArea {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-right: 4px;
+}
+
+/* Scrollbar styling */
+.scrollArea::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scrollArea::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.scrollArea::-webkit-scrollbar-thumb {
+    background: rgba(212, 165, 116, 0.4);
+    border-radius: 3px;
+}
+
+.scrollArea::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 165, 116, 0.6);
+}
+
+/* ── Section blocks ── */
+.section {
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 12px 14px;
+    image-rendering: pixelated;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sectionHeading {
+    font-size: var(--font-size-md);
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+}
+
+.sectionIntro,
+.sectionText {
+    font-size: var(--font-size-sm);
+    color: #c8b89a;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.sectionNote {
+    font-size: var(--font-size-sm);
+    color: #8a7a6a;
+    line-height: 1.4;
+    font-style: italic;
+    margin: 0;
+}
+
+.highlight {
+    color: #fbbf24;
+}
+
+/* ── Synergies Tab ── */
+.synergyList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.synergyRow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 6px 8px;
+    border-radius: 2px;
+    transition: background 0.1s ease;
+}
+
+.synergyRow:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.synergyPair {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* Rune icon container — stacks base rarity + element glyph via RuneImage */
+.runeSlot {
+    position: relative;
+    width: clamp(40px, 4.2vw, 56px);
+    aspect-ratio: 1;
+    image-rendering: pixelated;
+}
+
+.runeLayer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+.synergyPlus {
+    font-size: var(--font-size-sm);
+    color: #6a5a4a;
+    line-height: 1;
+}
+
+.synergyInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.synergyElements {
+    font-size: var(--font-size-sm);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+    line-height: 1;
+}
+
+.synergySpells {
+    font-size: var(--font-size-xs);
+    color: #8a7a6a;
+    line-height: 1.3;
+}
+
+.synergyShape {
+    color: #d4a574;
+    margin-right: 4px;
+}
+
+.synergyDivider {
+    color: #4a3a2a;
+    margin: 0 6px;
+}
+
+/* ── Spell Tiers Tab ── */
+.tierTable {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tierHeader {
+    display: grid;
+    grid-template-columns: 80px 80px 1fr 1fr;
+    gap: 10px;
+    padding: 6px 10px;
+    font-size: var(--font-size-xs);
+    color: #8a7a6a;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
+.tierRow {
+    display: grid;
+    grid-template-columns: 80px 80px 1fr 1fr;
+    gap: 10px;
+    padding: 6px 10px;
+    font-size: var(--font-size-sm);
+    color: #e8d4b8;
+    line-height: 1;
+    border-radius: 2px;
+    transition: background 0.1s ease;
+}
+
+.tierRow:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.tierLabel {
+    color: #fbbf24;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.tierColBase {
+    color: #60a5fa;
+}
+
+.tierColMult {
+    color: #4ade80;
+}
+
+/* ── Combo shapes list ── */
+.comboList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.comboEntry {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.comboShape {
+    font-size: var(--font-size-sm);
+    color: #d4a574;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+    line-height: 1;
+}
+
+.comboDesc {
+    font-size: var(--font-size-xs);
+    color: #c8b89a;
+    line-height: 1.4;
+}
+
+/* ── Damage formula ── */
+.formula {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    font-size: var(--font-size-sm);
+    color: #e8d4b8;
+    line-height: 1;
+}
+
+.formulaOp {
+    color: #8a7a6a;
+    font-size: var(--font-size-sm);
+}
+
+.baseChip {
+    color: #60a5fa;
+    font-weight: normal;
+}
+
+.multChip {
+    color: #4ade80;
+    font-weight: normal;
+}
+
+.totalChip {
+    color: #ef4444;
+    font-weight: normal;
+}
+
+/* ── Animations ── */
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scale-in {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* ── Landscape phone compact ── */
+@media (max-height: 500px) {
+    /* Right-align the modal like the Pouch modal */
+    .backdrop {
+        justify-content: flex-end;
+        padding-right: clamp(8px, 2vw, 24px);
+    }
+
+    .modal {
+        width: clamp(340px, 48vw, 560px);
+        height: 95vh;
+        max-height: 95vh;
+        border-width: 12px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+        padding: 4px 6px 8px;
+        gap: 4px;
+    }
+
+    .header {
+        border-width: 8px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 3px 8px;
+    }
+
+    .title {
+        font-size: var(--font-size-xs);
+    }
+
+    .closeButton {
+        width: clamp(28px, 3.4vw, 38px);
+        height: clamp(28px, 3.4vw, 38px);
+    }
+
+    /* Collapse sidebar + content into a vertical stack so tabs
+       sit as a horizontal row above the scrollable content. */
+    .body {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .sidebar {
+        width: auto;
+        flex: 0 0 auto;
+        border-width: 8px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 4px 6px;
+    }
+
+    .tabList {
+        flex-direction: row;
+        gap: 4px;
+    }
+
+    .tab {
+        font-size: var(--font-size-xs);
+        border-width: 8px;
+        padding: 2px 6px;
+        flex: 1;
+        text-align: center;
+    }
+
+    .tabActive {
+        border-image: var(--tab-active-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+    }
+
+    .section {
+        border-width: 8px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 8px 8px;
+        gap: 6px;
+    }
+
+    .sectionHeading {
+        font-size: var(--font-size-xs);
+    }
+
+    .sectionIntro,
+    .sectionText,
+    .sectionNote {
+        font-size: var(--font-size-2xs);
+    }
+
+    .runeSlot {
+        width: clamp(28px, 3.6vw, 40px);
+    }
+
+    .synergyPlus {
+        font-size: var(--font-size-xs);
+    }
+
+    .synergyElements {
+        font-size: var(--font-size-2xs);
+    }
+
+    .synergySpells {
+        font-size: var(--font-size-3xs);
+    }
+
+    .synergyRow {
+        gap: 8px;
+        padding: 3px 6px;
+    }
+
+    .synergyList {
+        gap: 2px;
+    }
+
+    .tierHeader {
+        grid-template-columns: 56px 56px 1fr 1fr;
+        font-size: var(--font-size-3xs);
+        padding: 4px 6px;
+    }
+
+    .tierRow {
+        grid-template-columns: 56px 56px 1fr 1fr;
+        font-size: var(--font-size-2xs);
+        padding: 4px 6px;
+    }
+
+    .formula {
+        font-size: var(--font-size-2xs);
+        gap: 6px;
+        padding: 4px 6px;
+    }
+
+    .comboShape {
+        font-size: var(--font-size-2xs);
+    }
+
+    .comboDesc {
+        font-size: var(--font-size-3xs);
+    }
+
+    .comboList {
+        gap: 8px;
+    }
+}

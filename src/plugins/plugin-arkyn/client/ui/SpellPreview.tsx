@@ -9,6 +9,7 @@ import {
     useCastBaseCounter,
     useCastTotalDamage,
     useLastCastBaseDamage,
+    useRoundTotalDamage,
 } from "../arkynStore";
 import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
 import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT } from "../../shared";
@@ -62,6 +63,7 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     const castBaseCounter = useCastBaseCounter();
     const castTotalDamage = useCastTotalDamage();
     const lastCastBaseDamage = useLastCastBaseDamage();
+    const roundTotalDamage = useRoundTotalDamage();
 
     const damageRef = useRef<HTMLSpanElement>(null);
     const totalRef = useRef<HTMLSpanElement>(null);
@@ -101,27 +103,19 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     const isPartial = contributingCount > 0 && contributingCount < totalSourceRunes;
 
     // Base + Mult + Total display source:
-    //   - During a cast (`isCastAnimating`): the live Base counter ticks
-    //     up with each bubble (started at the spell's tier base by the
-    //     timeline's t=0 tick). Mult is read directly from the resolved
-    //     spell's tier — it's a constant for the whole cast. Total is
-    //     gated behind the GSAP count-up reveal that fires after all
-    //     rune ticks complete: while `castTotalDamage` is the sentinel
-    //     `-1` the chip shows "-", then the tween ramps it from 0 → final
-    //     post-mult damage in ~0.5s for a Balatro-style dopamine reveal.
-    //   - Live preview (selected runes form a spell, no cast in progress):
-    //     Base shows just the spell tier's flat base (matching the cast
-    //     counter's t=0 starting value); Total stays "-" so the player
-    //     has to commit to the cast to see the actual damage. Showing
-    //     the would-be post-cast values here would spoil the reveal.
-    //   - Last cast (no current selection): Base reads from
-    //     `lastCastBaseDamage` (snapshotted on the client when the cast
-    //     resolved); Total = that snapshot × mult — the static post-cast
-    //     value the player just dealt.
-    //   - Empty branch (no spell at all): handled below — all chips "-".
+    //   - Total is cumulative across the round. `castTotalDamage` already
+    //     includes prior round damage (the animation layer offsets the
+    //     tween), so we display it directly during a cast. When idle,
+    //     `roundTotalDamage` holds the final accumulated value.
+    //   - During a cast: Base ticks up per-rune, Total shows the live
+    //     tween (already offset by prior round total).
+    //   - Live preview: Base shows spell tier base, Total shows round
+    //     accumulator (or "-" if no casts yet).
+    //   - Last cast: Base from snapshot, Total shows round accumulator.
+    //   - Empty (no spell): all chips "-".
     let displayBase: number | string = "-";
     let displayMult: number | string = "-";
-    let displayTotal: number | string = "-";
+    let displayTotal: number | string = roundTotalDamage > 0 ? roundTotalDamage : "-";
     if (spell) {
         const mult = SPELL_TIER_MULT[spell.tier] ?? 0;
         const spellTierBase = SPELL_TIER_BASE_DAMAGE[spell.tier] ?? 0;
@@ -129,17 +123,16 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
 
         if (isCastAnimating) {
             displayBase = castBaseCounter;
-            // Total stays "-" until the timeline's count-up reveal kicks
-            // in. The orchestrator resets `castTotalDamage` to -1 in
-            // onStart and the GSAP tween writes 0+ once the rune ticks
-            // are done (see castTimeline.ts).
-            displayTotal = castTotalDamage >= 0 ? castTotalDamage : "-";
+            // castTotalDamage already includes prior round damage (offset
+            // in the animation layer), so display it directly. Before the
+            // tween starts (sentinel -1), show the standing round total.
+            displayTotal = castTotalDamage >= 0
+                ? castTotalDamage
+                : (roundTotalDamage > 0 ? roundTotalDamage : "-");
         } else if (isLive) {
             displayBase = spellTierBase;
-            displayTotal = "-";
         } else {
             displayBase = lastCastBaseDamage;
-            displayTotal = lastCastBaseDamage * mult;
         }
     }
 

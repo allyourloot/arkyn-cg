@@ -68,8 +68,14 @@ function makeDetuneSfx(url: string, volume: number) {
 }
 
 const playRuneSfx = makeSfx(selectRuneUrl, VOL_RUNE);
-export const playSelectRune = () => playRuneSfx(1.15);
-export const playDeselectRune = () => playRuneSfx(0.85);
+
+export function playSelectRune(): void {
+    playRuneSfx();
+}
+
+export function playDeselectRune(): void {
+    playRuneSfx(0.85);
+}
 export const playPickupRune = () => playRuneSfx(1.3);
 export const playDropRune = makeDetuneSfx(dropRuneUrl, VOL_RUNE);
 export const playPlaceRune = makeSfx(placeRuneUrl, VOL_DEFAULT);

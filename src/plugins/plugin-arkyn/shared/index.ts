@@ -31,6 +31,9 @@ export {
     SPELL_TIER_BASE_DAMAGE,
     SPELL_TIER_MULT,
     RUNE_BASE_DAMAGE,
+    SYNERGY_PAIRS,
+    TWO_PAIR_TABLE,
+    FULL_HOUSE_TABLE,
 } from "./spellTable";
 export type { SpellInfo } from "./spellTable";
 

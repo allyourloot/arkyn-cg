@@ -154,13 +154,16 @@ let drawingRunes: DrawingRune[] = [];
 // SpellPreview computes it from the resolved spell directly.
 let castBaseCounter = 0;
 
-// Live TOTAL counter for the Spell Preview's red TOTAL chip. `-1` is the
-// sentinel meaning "not yet revealed" — while it's negative, SpellPreview
-// shows "-" so the player doesn't see the final post-mult damage until
-// AFTER all the rune ticks have finished landing on the Base counter.
-// The cast timeline then kicks off a GSAP count-up tween that ramps this
-// from 0 → totalDamage in ~0.5s for a Balatro-style dopamine reveal.
+// Live TOTAL counter for the current cast's GSAP count-up tween. `-1` is
+// the sentinel meaning "not yet revealed" — while it's negative, the
+// tween hasn't started yet. The cast timeline ramps this from 0 → the
+// cast's finalDamage in ~0.5s for a Balatro-style dopamine reveal.
 let castTotalDamage = -1;
+
+// Cumulative damage dealt across all casts in the current round. The
+// Spell Preview's red TOTAL chip shows this so the player can track
+// progress toward the enemy's HP. Reset to 0 on round transitions.
+let roundTotalDamage = 0;
 
 // Snapshot of the last resolved cast's BASE total (spellBase + Σ rune
 // contributions). Set when a cast resolves so the Spell Preview's "Last
@@ -215,6 +218,9 @@ export function useCastTotalDamage() {
 export function useLastCastBaseDamage() {
     return useSyncExternalStore(subscribe, () => lastCastBaseDamage);
 }
+export function useRoundTotalDamage() {
+    return useSyncExternalStore(subscribe, () => roundTotalDamage);
+}
 
 // ----- Helpers -----
 
@@ -253,6 +259,7 @@ export function clearLastCastState(): void {
     lastCastBaseDamage = 0;
     castBaseCounter = 0;
     castTotalDamage = -1;
+    roundTotalDamage = 0;
     arkynStoreInternal.setLastCastRunes([]);
     notify();
 }
@@ -431,6 +438,12 @@ export function castSpell() {
         }
     }
 
+    // Snapshot the round accumulator BEFORE this cast so the total reveal
+    // tween can offset its values. This avoids the double-counting window
+    // that would occur if the display added roundTotalDamage + castTotalDamage
+    // while onImpact has already bumped roundTotalDamage.
+    const previousRoundTotal = roundTotalDamage;
+
     // Build the cast timeline. The timeline owns SFX scheduling and the
     // store-state mutation callbacks; the per-flyer fly tweens live inside
     // CastAnimation.tsx (started in the same frame `flyingRunes` is set).
@@ -486,7 +499,10 @@ export function castSpell() {
             notify();
         },
         onTotalReveal: (value) => {
-            castTotalDamage = value;
+            // Offset by the prior round total so castTotalDamage already
+            // includes cumulative round damage — SpellPreview can display
+            // it directly without adding roundTotalDamage on top.
+            castTotalDamage = previousRoundTotal + value;
             notify();
         },
         onFlyComplete: (dissolveDelayMs: number) => {
@@ -518,6 +534,10 @@ export function castSpell() {
                 isCritical: hasCritical,
                 seq: ++enemyDamageSeqCounter,
             };
+            // Set the round accumulator to the final cumulative value.
+            // Uses the snapshot + this cast's damage (same value the tween
+            // landed on) so there's no double-counting window.
+            roundTotalDamage = previousRoundTotal + totalDamage;
             // Release the HP bar lock and snap the displayed value to
             // whatever the server currently says.
             arkynStoreInternal.unlockHpDisplayAndSyncToServer();

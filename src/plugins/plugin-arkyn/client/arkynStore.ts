@@ -422,6 +422,7 @@ export {
     useCastBaseCounter,
     useCastTotalDamage,
     useLastCastBaseDamage,
+    useRoundTotalDamage,
 } from "./arkynAnimations";
 export type {
     RuneDamageBubble,

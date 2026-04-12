@@ -105,7 +105,7 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
             <div className={styles.statsSection}>
                 <div className={styles.statsRow}>
                     <div className={styles.statColumn}>
-                        <span className={styles.statLabel}>Hands</span>
+                        <span className={styles.statLabel}>Casts</span>
                         <div className={`${styles.statChip} ${styles.statChipHands}`}>
                             <BouncyText className={styles.statChipValue}>
                                 {CASTS_PER_ROUND}

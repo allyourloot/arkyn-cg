@@ -20,6 +20,7 @@ import CastAnimation from "./CastAnimation";
 import DiscardAnimation from "./DiscardAnimation";
 import DrawAnimation from "./DrawAnimation";
 import MainMenu from "./MainMenu";
+import InfoButton from "./InfoButton";
 import BackgroundMusic from "./BackgroundMusic";
 import BackgroundShader from "./BackgroundShader";
 import OverlayShader from "./OverlayShader";
@@ -303,6 +304,10 @@ export default function ArkynOverlay() {
                 bounding box, so it sits in a stable spot regardless of how
                 many cards are currently in the hand. */}
             <PouchCounter />
+
+            {/* Info button — top-right corner, opens a modal with synergy
+                and spell tier reference information. */}
+            <InfoButton />
 
             {/* Animation layers */}
             <CastAnimation />
