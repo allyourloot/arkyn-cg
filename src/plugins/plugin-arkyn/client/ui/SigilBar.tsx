@@ -5,9 +5,9 @@ import { MAX_SIGILS } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { useSigils, sendSellSigil, useActiveSigilShake } from "../arkynStore";
 import { RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
-import { getSigilImageUrl } from "./sigilAssets";
+import SigilScene from "./SigilScene";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
-import innerFrameUrl from "/assets/ui/inner-frame.png?url";
+import handFrameUrl from "/assets/ui/hand-frame.png?url";
 import styles from "./SigilBar.module.css";
 
 const RARITY_COLORS: Record<string, string> = {
@@ -18,28 +18,32 @@ const RARITY_COLORS: Record<string, string> = {
 };
 
 const frameStyleVars = {
-    "--sigil-frame-bg": `url(${innerFrameUrl})`,
+    "--sigil-frame-bg": `url(${handFrameUrl})`,
 } as CSSProperties;
+
+const HOVER_POP_SCALE = 1.1;
+
+// Touch-device detection (same as RuneCard.tsx)
+const HAS_HOVER =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(hover: hover)").matches;
 
 export default function SigilBar() {
     const sigils = useSigils();
     const activeSigilShake = useActiveSigilShake();
     const barRef = useRef<HTMLDivElement>(null);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const labelRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
     // Sigil shake animation — fires when activeSigilShake changes
     useGSAP(() => {
         if (!activeSigilShake) return;
         const { sigilId } = activeSigilShake;
-        // Find which slot has this sigil
         const slotIndex = sigils.indexOf(sigilId);
         if (slotIndex < 0) return;
         const el = slotRefs.current[slotIndex];
-        const labelEl = labelRefs.current[slotIndex];
         if (!el) return;
 
-        // Shake the sigil icon (same style as rune shake)
         gsap.set(el, { x: 0, y: 0, rotation: 0, scale: 1 });
         gsap.to(el, {
             keyframes: [
@@ -52,27 +56,19 @@ export default function SigilBar() {
             ease: "power2.out",
             overwrite: "auto",
         });
-
-        // Proc label: pop in below the sigil, then drift down + fade out
-        if (labelEl) {
-            gsap.killTweensOf(labelEl);
-            const tl = gsap.timeline();
-            tl.set(labelEl, { opacity: 0, y: 0, scale: 0.7 });
-            tl.to(labelEl, {
-                opacity: 1,
-                y: 2,
-                scale: 1,
-                duration: 0.12,
-                ease: "back.out(2)",
-            });
-            tl.to(labelEl, {
-                opacity: 0,
-                y: 14,
-                duration: 0.45,
-                ease: "power1.out",
-            }, "+=0.2");
-        }
     }, { dependencies: [activeSigilShake], scope: barRef });
+
+    // Hover pop handlers — GSAP scale on the slot wrapper
+    const handlePointerEnter = (i: number) => {
+        const el = slotRefs.current[i];
+        if (!el) return;
+        gsap.to(el, { scale: HOVER_POP_SCALE, duration: 0.08, ease: "power4.out", overwrite: "auto" });
+    };
+    const handlePointerLeave = (i: number) => {
+        const el = slotRefs.current[i];
+        if (!el) return;
+        gsap.to(el, { scale: 1, duration: 0.12, ease: "power3.out", overwrite: "auto" });
+    };
 
     return (
         <div ref={barRef} className={styles.wrapper}>
@@ -86,7 +82,6 @@ export default function SigilBar() {
                     const def = SIGIL_DEFINITIONS[sigilId];
                     if (!def) return <div key={i} className={styles.emptySlot} />;
 
-                    const imageUrl = getSigilImageUrl(sigilId, 64);
                     const rarityColor = RARITY_COLORS[def.rarity] ?? "#b0b0b0";
 
                     return (
@@ -94,23 +89,10 @@ export default function SigilBar() {
                             key={sigilId}
                             ref={(el) => { slotRefs.current[i] = el; }}
                             className={styles.filledSlot}
+                            onPointerEnter={HAS_HOVER ? () => handlePointerEnter(i) : undefined}
+                            onPointerLeave={HAS_HOVER ? () => handlePointerLeave(i) : undefined}
                         >
-                            {imageUrl && (
-                                <img
-                                    src={imageUrl}
-                                    alt={def.name}
-                                    className={styles.sigilImage}
-                                    draggable={false}
-                                />
-                            )}
-                            {/* Proc label — animated by GSAP on proc */}
-                            <span
-                                ref={(el) => { labelRefs.current[i] = el; }}
-                                className={styles.procLabel}
-                                style={{ opacity: 0 }}
-                            >
-                                {def.name}
-                            </span>
+                            <SigilScene sigilId={sigilId} index={i} />
                             {/* Tooltip on hover */}
                             <div className={styles.tooltip}>
                                 <span

@@ -2,7 +2,7 @@
 
 .wrapper {
     position: absolute;
-    top: clamp(6px, 1.2vh, 14px);
+    top: clamp(12px, 2.4vh, 28px);
     left: 50%;
     transform: translateX(-50%);
     z-index: 20;
@@ -12,7 +12,9 @@
     align-items: flex-end;
 }
 
-/* 9-slice frame containing the sigil slots */
+/* 9-slice frame — fixed height, sigil images overflow it vertically.
+   The frame is sized to hold the empty-slot footprint; filled slots are
+   larger and visually protrude above/below the frame. */
 .frame {
     box-sizing: border-box;
     background: transparent;
@@ -22,8 +24,11 @@
     border-image: var(--sigil-frame-bg) 24 24 24 24 fill / 14px 14px 14px 14px;
     image-rendering: pixelated;
     display: flex;
-    gap: clamp(3px, 0.5vw, 8px);
-    padding: clamp(2px, 0.3vw, 4px) clamp(4px, 0.6vw, 8px);
+    align-items: center;
+    gap: clamp(4px, 0.6vw, 10px);
+    padding: clamp(2px, 0.3vw, 4px) clamp(6px, 0.8vw, 12px);
+    height: clamp(48px, 5.6vw, 68px);
+    overflow: visible;
 }
 
 /* Sigil count label — bottom right, outside the frame */
@@ -36,49 +41,31 @@
     margin-right: clamp(2px, 0.4vw, 6px);
 }
 
-/* Each sigil slot — fixed size, shows image or empty placeholder */
-.slot {
-    position: relative;
-    width: clamp(32px, 4.2vw, 48px);
-    height: clamp(32px, 4.2vw, 48px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
+/* Empty slot — small, sits inside the frame naturally */
 .emptySlot {
-    composes: slot;
-    border: 2px dashed rgba(180, 170, 150, 0.12);
-    border-radius: 4px;
+    position: relative;
+    width: clamp(26px, 3vw, 36px);
+    height: clamp(26px, 3vw, 36px);
+    flex-shrink: 0;
 }
 
+/* Filled slot — larger, overflows the frame vertically */
 .filledSlot {
-    composes: slot;
+    position: relative;
+    width: clamp(52px, 6.4vw, 76px);
+    height: clamp(52px, 6.4vw, 76px);
+    flex-shrink: 0;
     cursor: pointer;
 }
 
-/* Sigil image inside a filled slot */
-.sigilImage {
-    width: 100%;
-    height: 100%;
-    image-rendering: pixelated;
-    object-fit: contain;
-    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
-}
-
-/* Proc name label — pops below the sigil icon on proc, then fades out */
-.procLabel {
+/* Three.js canvas — fills the sigil slot with rounded corners */
+.sigilCanvas {
     position: absolute;
-    bottom: -2px;
-    left: 50%;
-    transform: translateX(-50%) translateY(100%);
-    white-space: nowrap;
-    font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
-    color: #ffd700;
-    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.9);
-    pointer-events: none;
-    letter-spacing: 1px;
-    text-transform: uppercase;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: clamp(6px, 0.8vw, 10px);
+    pointer-events: auto;
 }
 
 /* ----- Tooltip — appears below the sigil on hover ----- */
@@ -88,7 +75,7 @@
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    margin-top: 6px;
+    margin-top: 8px;
     background: rgba(14, 10, 6, 0.94);
     border: 1px solid rgba(180, 170, 150, 0.25);
     border-radius: 4px;
