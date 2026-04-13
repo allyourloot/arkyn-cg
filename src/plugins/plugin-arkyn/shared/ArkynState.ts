@@ -1,6 +1,13 @@
 import { ArraySchema, MapSchema, Schema, type } from "@colyseus/schema";
 import { PluginState } from "@core/shared";
 
+export class ShopItemState extends Schema {
+    @type("string") itemType = "";
+    @type("string") element = "";
+    @type("number") cost = 0;
+    @type("boolean") purchased = false;
+}
+
 export class RuneInstance extends Schema {
     @type("string") id = "";
     @type("string") element = "";
@@ -52,6 +59,16 @@ export class ArkynPlayerState extends Schema {
     // Personal bests — loaded from save data on join.
     @type("number") bestRound = 0;
     @type("number") bestSingleCast = 0;
+
+    // Scroll upgrade levels per element — how many scrolls of each element
+    // the player has purchased this run. Drives the per-element Base/Mult
+    // bonus in calculateSpellDamage. Resets on new run (fresh schema).
+    @type({ map: "number" }) scrollLevels = new MapSchema<number>();
+
+    // Current shop inventory — populated on entering the shop phase and
+    // synced to the client for rendering. Each entry tracks whether the
+    // item has been purchased so the client can grey it out.
+    @type([ShopItemState]) shopItems = new ArraySchema<ShopItemState>();
 }
 
 export class ArkynState extends PluginState {

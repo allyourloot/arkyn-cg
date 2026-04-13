@@ -1,5 +1,5 @@
-import type { ArraySchema } from "@colyseus/schema";
-import type { ArkynState, RuneInstance } from "../../../shared";
+import type { ArraySchema, MapSchema } from "@colyseus/schema";
+import type { ArkynState, RuneInstance, ShopItemState } from "../../../shared";
 import {
     setHand,
     setPlayedRunes,
@@ -35,6 +35,8 @@ import {
     setRunGoldEarned,
     setBestRound,
     setBestSingleCast,
+    setScrollLevels,
+    setShopItems,
     clearSelectedIndices,
     triggerDrawAnimation,
     getHandIndex,
@@ -73,6 +75,36 @@ function stringArraysEqual(
     if (schemaArr.length !== prev.length) return false;
     for (let i = 0; i < schemaArr.length; i++) {
         if (schemaArr[i] !== prev[i]) return false;
+    }
+    return true;
+}
+
+function scrollLevelsEqual(
+    schemaMap: MapSchema<number>,
+    prev: Map<string, number>,
+): boolean {
+    if (schemaMap.size !== prev.size) return false;
+    let equal = true;
+    schemaMap.forEach((value, key) => {
+        if (prev.get(key) !== value) equal = false;
+    });
+    return equal;
+}
+
+function shopItemsEqual(
+    schemaArr: ArraySchema<ShopItemState>,
+    prev: { itemType: string; element: string; cost: number; purchased: boolean }[],
+): boolean {
+    if (schemaArr.length !== prev.length) return false;
+    for (let i = 0; i < schemaArr.length; i++) {
+        const s = schemaArr[i];
+        const p = prev[i];
+        if (
+            s.itemType !== p.itemType ||
+            s.element !== p.element ||
+            s.cost !== p.cost ||
+            s.purchased !== p.purchased
+        ) return false;
     }
     return true;
 }
@@ -121,6 +153,8 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevRunGoldEarned = -1;
     let prevBestRound = -1;
     let prevBestSingleCast = -1;
+    let prevScrollLevels: Map<string, number> = new Map();
+    let prevShopItems: { itemType: string; element: string; cost: number; purchased: boolean }[] = [];
 
     return () => {
         const player = state.players.get(sessionId);
@@ -347,6 +381,26 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (player.bestSingleCast !== prevBestSingleCast) {
             setBestSingleCast(player.bestSingleCast);
             prevBestSingleCast = player.bestSingleCast;
+        }
+
+        // Sync scroll levels
+        if (!scrollLevelsEqual(player.scrollLevels, prevScrollLevels)) {
+            const next = new Map<string, number>();
+            player.scrollLevels.forEach((value, key) => { next.set(key, value); });
+            setScrollLevels(next);
+            prevScrollLevels = next;
+        }
+
+        // Sync shop items
+        if (!shopItemsEqual(player.shopItems, prevShopItems)) {
+            const next = Array.from(player.shopItems).map(item => ({
+                itemType: item.itemType,
+                element: item.element,
+                cost: item.cost,
+                purchased: item.purchased,
+            }));
+            setShopItems(next);
+            prevShopItems = next;
         }
     };
 }

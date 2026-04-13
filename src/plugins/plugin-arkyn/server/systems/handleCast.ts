@@ -42,7 +42,7 @@ export function handleCast(
 
     // Calculate damage — each contributing rune is evaluated against the
     // enemy's resistances/weaknesses individually, then summed.
-    const damage = calculateDamage(spell, selectedRunes, state.enemy);
+    const damage = calculateDamage(spell, selectedRunes, state.enemy, player.scrollLevels);
 
     // Move selected runes to played area
     while (player.playedRunes.length > 0) player.playedRunes.pop();

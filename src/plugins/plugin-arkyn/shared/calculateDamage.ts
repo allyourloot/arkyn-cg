@@ -3,6 +3,7 @@ import {
     SPELL_TIER_MULT,
     RUNE_BASE_DAMAGE,
 } from "./spellTable";
+import { SCROLL_RUNE_BONUS } from "./arkynConstants";
 import type { RarityType } from "./arkynConstants";
 import type { ResolvedSpell, RuneData } from "./resolveSpell";
 
@@ -16,7 +17,7 @@ import type { ResolvedSpell, RuneData } from "./resolveSpell";
  * tick the Spell Preview's Base counter, so on-screen numbers and the
  * applied damage always agree.
  *
- * In the new Base + Mult model, `baseAmount` and `amount` represent the
+ * In the Base + Mult model, `baseAmount` and `amount` represent the
  * rune's CONTRIBUTION TO THE BASE COUNTER (not its share of the final
  * post-mult damage). The post-mult final lives only in the
  * `SpellDamageBreakdown.finalDamage` field on the parent breakdown.
@@ -42,8 +43,10 @@ export interface RuneDamageBreakdown {
  *   finalDamage = baseTotal × mult
  *
  * `spellBase` and `mult` are flat per-tier constants from spellTable.ts;
- * each rune's contribution is RUNE_BASE_DAMAGE[rarity] modified per-rune
- * by enemy weakness (×2.0 → critical) or resistance (×0.5 → resisted).
+ * each rune's contribution is (RUNE_BASE_DAMAGE[rarity] + scrollBonus)
+ * modified per-rune by enemy weakness (×2.0) or resistance (×0.5).
+ * Scroll bonuses increase a rune's flat base damage, so they compound
+ * with weakness/resistance and the tier multiplier naturally.
  */
 export interface SpellDamageBreakdown {
     /** Per-tier flat base from SPELL_TIER_BASE_DAMAGE[spell.tier]. */
@@ -64,17 +67,19 @@ export interface SpellDamageBreakdown {
     isResisted: boolean[];
 }
 
+/** Scroll levels accessor — works with Map (client) and MapSchema (server). */
+type ScrollLevelsLike = ReadonlyMap<string, number> | { get(key: string): number | undefined };
+
 /**
  * Compute the full Base + Mult breakdown for a resolved spell. Pure
  * function — server and client both call this with the same inputs and
  * get identical numbers.
  *
- * `contributingRuneRarities` runs in parallel with `contributingRunes`
- * (same length, same order) so the formula can look up each rune's base
- * damage by rarity. We pass it as a parallel array rather than embedding
- * rarity into `RuneData` because `RuneData` is a minimal type used by
- * `resolveSpell`/`getContributingRuneIndices` that intentionally only
- * carries `element`.
+ * `scrollLevels` maps element name → number of scrolls purchased for
+ * that element. Each scroll adds SCROLL_RUNE_BONUS (+2) to the flat
+ * per-rune base damage of runes matching that element. The bonus is
+ * applied per-rune BEFORE resist/weak modifiers, so it compounds with
+ * weakness (×2) and the tier multiplier naturally.
  */
 export function calculateSpellDamage(
     spell: ResolvedSpell,
@@ -82,9 +87,10 @@ export function calculateSpellDamage(
     contributingRuneRarities: readonly RarityType[],
     resistances: readonly string[],
     weaknesses: readonly string[],
+    scrollLevels?: ScrollLevelsLike,
 ): SpellDamageBreakdown {
     const spellBase = SPELL_TIER_BASE_DAMAGE[spell.tier] ?? 0;
-    const mult = SPELL_TIER_MULT[spell.tier] ?? 1;
+    const mult = SPELL_TIER_MULT[spell.tier] ?? 0;
 
     const count = contributingRunes.length;
     const runeBaseContributions: number[] = new Array(count);
@@ -95,10 +101,12 @@ export function calculateSpellDamage(
     let runeBaseSum = 0;
     for (let i = 0; i < count; i++) {
         const element = contributingRunes[i].element;
-        // Defensive fallback to common — keeps the formula safe if a
-        // future rune slips through without a recognized rarity.
         const rarity = contributingRuneRarities[i] ?? "common";
-        const preMod = RUNE_BASE_DAMAGE[rarity] ?? RUNE_BASE_DAMAGE.common;
+        const runeBase = RUNE_BASE_DAMAGE[rarity] ?? RUNE_BASE_DAMAGE.common;
+        const scrollBonus = scrollLevels
+            ? (scrollLevels.get(element) ?? 0) * SCROLL_RUNE_BONUS
+            : 0;
+        const preMod = runeBase + scrollBonus;
         const crit = weaknesses.includes(element);
         const resist = !crit && resistances.includes(element);
         const mod = crit ? 2.0 : resist ? 0.5 : 1.0;
@@ -127,11 +135,7 @@ export function calculateSpellDamage(
 }
 
 /**
- * Backwards-compatible per-rune view of the breakdown — `baseAmount` is
- * the pre-modifier rune base, `amount` is the post-modifier contribution
- * to the Base counter. Used by `RuneDamageBubble` (which still wants the
- * base→boosted swap on criticals) and the cast animation orchestrator
- * for its event timeline.
+ * Backwards-compatible per-rune view of the breakdown.
  */
 export function calculateRuneDamageBreakdown(
     spell: ResolvedSpell,
@@ -139,6 +143,7 @@ export function calculateRuneDamageBreakdown(
     contributingRuneRarities: readonly RarityType[],
     resistances: readonly string[],
     weaknesses: readonly string[],
+    scrollLevels?: ScrollLevelsLike,
 ): RuneDamageBreakdown[] {
     const breakdown = calculateSpellDamage(
         spell,
@@ -146,6 +151,7 @@ export function calculateRuneDamageBreakdown(
         contributingRuneRarities,
         resistances,
         weaknesses,
+        scrollLevels,
     );
     const out: RuneDamageBreakdown[] = new Array(contributingRunes.length);
     for (let i = 0; i < contributingRunes.length; i++) {
@@ -160,10 +166,7 @@ export function calculateRuneDamageBreakdown(
 }
 
 /**
- * Final post-mult damage applied to the enemy. Same formula as the
- * authoritative server-side path — handleCast.ts calls this and decrements
- * `enemy.currentHp` by the result, while the client uses it to populate
- * the floating enemy damage number on the impact frame.
+ * Final post-mult damage applied to the enemy.
  */
 export function calculateDamage(
     spell: ResolvedSpell,
@@ -171,6 +174,7 @@ export function calculateDamage(
     contributingRuneRarities: readonly RarityType[],
     resistances: readonly string[],
     weaknesses: readonly string[],
+    scrollLevels?: ScrollLevelsLike,
 ): number {
     return calculateSpellDamage(
         spell,
@@ -178,5 +182,6 @@ export function calculateDamage(
         contributingRuneRarities,
         resistances,
         weaknesses,
+        scrollLevels,
     ).finalDamage;
 }

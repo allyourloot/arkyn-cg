@@ -1,3 +1,4 @@
+import type { MapSchema } from "@colyseus/schema";
 import {
     calculateDamage as sharedCalculateDamage,
     getContributingRuneIndices,
@@ -9,23 +10,14 @@ import type { RarityType } from "../../shared/arkynConstants";
 
 // Server-side wrapper that adapts EnemyState's ArraySchema fields into plain
 // arrays, derives the contributing runes from the player's selection, and
-// delegates to the shared Base + Mult formula. Each contributing rune is
-// evaluated against the enemy's resistances/weaknesses individually — so a
-// combo spell only crits the runes whose specific element matches a
-// weakness, not the whole spell.
-//
-// The shared version runs on the client too (driving the per-rune damage
-// bubbles + the Spell Preview Base counter), so server and client always
-// agree on the displayed and applied damage.
-//
-// We build a parallel `contributingRuneRarities` array here so the shared
-// formula can look up each rune's RUNE_BASE_DAMAGE by rarity. RuneData
-// (the type the shared formula consumes) deliberately only carries
-// `element`, so rarity rides alongside rather than embedded.
+// delegates to the shared damage formula. Scroll bonuses are applied per-rune
+// inside the shared formula — each rune's element is looked up in the
+// scrollLevels map to add flat base damage from purchased scrolls.
 export function calculateDamage(
     spell: ResolvedSpell,
     selectedRunes: readonly RuneInstance[],
     enemy: EnemyState,
+    scrollLevels?: MapSchema<number>,
 ): number {
     const resistances = Array.from(enemy.resistances);
     const weaknesses = Array.from(enemy.weaknesses);
@@ -42,5 +34,6 @@ export function calculateDamage(
         contributingRuneRarities,
         resistances,
         weaknesses,
+        scrollLevels,
     );
 }

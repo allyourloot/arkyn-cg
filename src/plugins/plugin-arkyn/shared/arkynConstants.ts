@@ -25,9 +25,15 @@ export type CombinableElement = (typeof COMBINABLE_ELEMENTS)[number];
 export const RARITY_TYPES = ["common", "uncommon", "rare", "legendary"] as const;
 export type RarityType = (typeof RARITY_TYPES)[number];
 
+// Scroll item configuration
+export const SCROLL_COST = 2;
+export const SCROLL_RUNE_BONUS = 2;   // +2 per-rune base damage per scroll
+export const SHOP_SCROLL_COUNT = 2;   // scroll slots shown per shop visit
+
 // Messages (client -> server)
 export const ARKYN_JOIN = "arkyn:join";
 export const ARKYN_CAST = "arkyn:cast";
 export const ARKYN_DISCARD = "arkyn:discard";
 export const ARKYN_READY = "arkyn:ready";
 export const ARKYN_NEW_RUN = "arkyn:new_run";
+export const ARKYN_BUY_ITEM = "arkyn:buy_item";

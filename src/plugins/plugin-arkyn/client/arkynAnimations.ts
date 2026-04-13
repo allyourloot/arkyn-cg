@@ -381,6 +381,7 @@ export function castSpell() {
             contributingRuneRarities,
             arkynStoreInternal.getEnemyResistances(),
             arkynStoreInternal.getEnemyWeaknesses(),
+            arkynStoreInternal.getScrollLevels(),
         )
         : null;
     // Final post-mult damage applied to the enemy on the impact frame.

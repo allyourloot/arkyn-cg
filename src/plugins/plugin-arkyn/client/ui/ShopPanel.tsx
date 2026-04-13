@@ -1,9 +1,11 @@
-import { useRef, type CSSProperties } from "react";
+import { useRef, useState, useEffect, type CSSProperties } from "react";
 import {
     CASTS_PER_ROUND,
     DISCARDS_PER_ROUND,
     getDebuffById,
+    RUNE_BASE_DAMAGE,
 } from "../../shared";
+import { SCROLL_RUNE_BONUS } from "../../shared/arkynConstants";
 import {
     useCurrentRound,
     useGamePhase,
@@ -14,19 +16,17 @@ import {
     useEnemyWeaknesses,
     useEnemyIsBoss,
     useEnemyDebuff,
+    useScrollUpgradeDisplay,
 } from "../arkynStore";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
+import RuneImage from "./RuneImage";
 import BouncyText from "./BouncyText";
 import GoldCounter from "./GoldCounter";
 import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
 import innerFrameOrangeUrl from "/assets/ui/inner-frame-orange.png?url";
 import styles from "./ShopPanel.module.css";
 
-// Panel chrome (frame + section) plus two custom inner-frame variables
-// for the Hands (green) and Discards (orange) stat chips below. Pattern
-// mirrors SpellPreview's damage chip wiring so the shop panel reads as
-// a sibling of the preview panel.
 const panelStyleVars = {
     ...createPanelStyleVars(),
     ["--hands-bg" as string]: `url(${innerFrameGreenUrl})`,
@@ -34,23 +34,6 @@ const panelStyleVars = {
     ["--shop-chip-bg" as string]: `url(${innerFrameOrangeUrl})`,
 } as CSSProperties;
 
-/**
- * Left-side panel shown in place of SpellPreview while the player is in
- * the Shop phase. Matches SpellPreview's outer shell (width, height,
- * 9-slice frame chrome) so it reads as a variant of the same panel.
- *
- * Layout, top to bottom:
- *   1. Shop header chip (orange inner-frame)
- *   2. "NEXT ENEMY" heading label
- *   3. Next-enemy preview: element rune + name + HP + debuff + resist/weak
- *   4. Hands (green) + Discards (orange) total chips
- *   5. Gold counter pinned to the bottom
- *
- * The next enemy is pre-spawned on the server when entering the shop
- * phase, so we read all enemy info — including boss debuff — from the
- * live synced state. The round counter hasn't been incremented yet,
- * so we still display `currentRound + 1` for the round label.
- */
 type ShopPanelProps = {
     ref?: React.Ref<HTMLDivElement>;
 };
@@ -58,19 +41,14 @@ type ShopPanelProps = {
 export default function ShopPanel({ ref }: ShopPanelProps = {}) {
     const currentRound = useCurrentRound();
     const gamePhase = useGamePhase();
+    const upgradeDisplay = useScrollUpgradeDisplay();
 
-    // Snapshot the round while we're in the shop phase. Once the server
-    // flips to "playing" (and increments currentRound), the panel is still
-    // mounted during the exit animation — using the live currentRound would
-    // flash the *next* next enemy. Freezing on the snapshot avoids that.
     const snapshotRoundRef = useRef(currentRound);
     if (gamePhase === "shop") {
         snapshotRoundRef.current = currentRound;
     }
     const nextRound = Math.max(1, snapshotRoundRef.current + 1);
 
-    // Read from the live synced enemy state (pre-spawned on shop entry)
-    // so boss debuff info and fortified HP are accurate.
     const enemyName = useEnemyName();
     const enemyMaxHp = useEnemyMaxHp();
     const enemyElement = useEnemyElement();
@@ -85,6 +63,7 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
 
     return (
         <div ref={ref} className={styles.panel} style={panelStyleVars}>
+            {/* --- Top: Shop chip + enemy preview --- */}
             <div className={styles.shopChip}>
                 <BouncyText className={styles.shopChipLabel}>Shop</BouncyText>
             </div>
@@ -142,35 +121,102 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
                 )}
             </div>
 
-            <div className={styles.statsSection}>
-                <div className={styles.statsRow}>
-                    <div className={styles.statColumn}>
-                        <span className={styles.statLabel}>Casts</span>
-                        <div className={`${styles.statChip} ${styles.statChipHands}`}>
-                            <BouncyText className={styles.statChipValue}>
-                                {CASTS_PER_ROUND}
-                            </BouncyText>
+            {/* --- Middle: Upgrade display area (flex: 1) --- */}
+            <div className={styles.upgradeArea}>
+                {upgradeDisplay && (
+                    <UpgradeSection
+                        element={upgradeDisplay.element}
+                        oldLevel={upgradeDisplay.oldLevel}
+                        newLevel={upgradeDisplay.newLevel}
+                    />
+                )}
+            </div>
+
+            {/* --- Bottom: Stats + Gold (pinned via margin-top: auto) --- */}
+            <div className={styles.bottomSection}>
+                <div className={styles.statsSection}>
+                    <div className={styles.statsRow}>
+                        <div className={styles.statColumn}>
+                            <span className={styles.statLabel}>Casts</span>
+                            <div className={`${styles.statChip} ${styles.statChipHands}`}>
+                                <BouncyText className={styles.statChipValue}>
+                                    {CASTS_PER_ROUND}
+                                </BouncyText>
+                            </div>
                         </div>
-                    </div>
-                    <div className={styles.statColumn}>
-                        <span className={styles.statLabel}>Discards</span>
-                        <div className={`${styles.statChip} ${styles.statChipDiscards}`}>
-                            <BouncyText className={styles.statChipValue}>
-                                {DISCARDS_PER_ROUND}
-                            </BouncyText>
+                        <div className={styles.statColumn}>
+                            <span className={styles.statLabel}>Discards</span>
+                            <div className={`${styles.statChip} ${styles.statChipDiscards}`}>
+                                <BouncyText className={styles.statChipValue}>
+                                    {DISCARDS_PER_ROUND}
+                                </BouncyText>
+                            </div>
                         </div>
                     </div>
                 </div>
+                <GoldCounter />
             </div>
-
-            <GoldCounter />
         </div>
     );
 }
 
-// Inline resist/weakness chip — stripped-down version of EnemyHealthBar's
-// AffinitySection sized for the narrower shop panel. Uses a plain element
-// rune icon row with an uppercase label above.
+/**
+ * Upgrade info shown in the middle area after buying a scroll.
+ * Shows the rune image with its base damage changing from old → new.
+ */
+function UpgradeSection({
+    element,
+    oldLevel,
+    newLevel,
+}: {
+    element: string;
+    oldLevel: number;
+    newLevel: number;
+}) {
+    // Rune base damage before and after this scroll purchase
+    const runeBase = RUNE_BASE_DAMAGE.common; // all runes are common for now
+    const oldScrollCount = oldLevel - 1;
+    const newScrollCount = newLevel - 1;
+    const oldRuneDamage = runeBase + oldScrollCount * SCROLL_RUNE_BONUS;
+    const newRuneDamage = runeBase + newScrollCount * SCROLL_RUNE_BONUS;
+
+    // Animate from old → new after a delay
+    const [showUpgraded, setShowUpgraded] = useState(false);
+    useEffect(() => {
+        setShowUpgraded(false);
+        const t = setTimeout(() => setShowUpgraded(true), 600);
+        return () => clearTimeout(t);
+    }, [element, oldLevel, newLevel]);
+
+    const displayDamage = showUpgraded ? newRuneDamage : oldRuneDamage;
+
+    return (
+        <div className={styles.upgradeContent}>
+            <div className={styles.upgradeRow}>
+                <div className={styles.upgradeRuneIcon}>
+                    <RuneImage rarity="common" element={element} className={styles.upgradeRuneImg} />
+                </div>
+                <div className={styles.upgradeRuneInfo}>
+                    <span className={styles.upgradeRuneDamageLabel}>Base Damage</span>
+                    <div className={styles.upgradeRuneDamageRow}>
+                        <BouncyText className={styles.upgradeRuneDamageOld}>
+                            {`${oldRuneDamage}`}
+                        </BouncyText>
+                        {showUpgraded && (
+                            <span className={styles.upgradeRuneDamageResult}>
+                                <span className={styles.upgradeRuneDamageArrow}>→</span>
+                                <BouncyText className={styles.upgradeRuneDamageNew}>
+                                    {`${newRuneDamage}`}
+                                </BouncyText>
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function AffinitySection({
     label,
     labelClass,

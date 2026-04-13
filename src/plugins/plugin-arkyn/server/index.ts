@@ -8,6 +8,7 @@ import {
     ARKYN_DISCARD,
     ARKYN_READY,
     ARKYN_NEW_RUN,
+    ARKYN_BUY_ITEM,
     ArkynState,
 } from "../shared";
 import { createArkynContext } from "./types/ArkynContext";
@@ -16,6 +17,7 @@ import { handleCast } from "./systems/handleCast";
 import { handleDiscard } from "./systems/handleDiscard";
 import { handleReady } from "./systems/handleReady";
 import { handleNewRun } from "./systems/handleNewRun";
+import { handleBuyItem } from "./systems/handleBuyItem";
 import { handleLeave } from "./systems/handleLeave";
 
 const logger = new Logger("ArkynServer");
@@ -50,6 +52,10 @@ export function PluginArkynServer(): ServerPlugin {
 
             runtime.onMessage(ARKYN_READY, (client: ServerClientRef) => {
                 handleReady(state, client);
+            });
+
+            runtime.onMessage(ARKYN_BUY_ITEM, (client: ServerClientRef, payload: unknown) => {
+                handleBuyItem(state, client, payload);
             });
 
             runtime.onMessage(ARKYN_NEW_RUN, (client: ServerClientRef) => {

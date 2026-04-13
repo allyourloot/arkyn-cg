@@ -9,9 +9,11 @@ import {
     useCastBaseCounter,
     useCastTotalDamage,
     useRoundTotalDamage,
+    useScrollLevels,
 } from "../arkynStore";
 import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
-import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT } from "../../shared";
+import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT, calculateSpellDamage } from "../../shared";
+import type { RarityType } from "../../shared/arkynConstants";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars } from "./styles";
 import { useEnemyIsBoss } from "../arkynStore";
 import RuneImage from "./RuneImage";
@@ -71,6 +73,7 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     const castBaseCounter = useCastBaseCounter();
     const castTotalDamage = useCastTotalDamage();
     const roundTotalDamage = useRoundTotalDamage();
+    const scrollLevels = useScrollLevels();
 
     const damageRef = useRef<HTMLSpanElement>(null);
     const totalRef = useRef<HTMLSpanElement>(null);
@@ -118,8 +121,8 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     //     `roundTotalDamage` holds the final accumulated value.
     //   - During a cast: Base ticks up per-rune, Total shows the live
     //     tween (already offset by prior round total).
-    //   - Live preview: Base shows spell tier base, Total shows round
-    //     accumulator (or "-" if no casts yet).
+    //   - Live preview: Base shows spell tier base (no per-rune yet),
+    //     Total shows round accumulator (or "-" if no casts yet).
     //   - Empty (no spell): all chips show "-" except Total which shows
     //     the round accumulator if any casts have landed.
     let displayBase: number | string = "-";
@@ -132,9 +135,6 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
 
         if (isCastAnimating) {
             displayBase = castBaseCounter;
-            // castTotalDamage already includes prior round damage (offset
-            // in the animation layer), so display it directly. Before the
-            // tween starts (sentinel -1), show the standing round total.
             displayTotal = castTotalDamage >= 0
                 ? castTotalDamage
                 : (roundTotalDamage > 0 ? roundTotalDamage : "-");

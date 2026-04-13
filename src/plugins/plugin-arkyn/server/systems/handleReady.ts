@@ -1,4 +1,6 @@
-import { type ArkynState } from "../../shared";
+import { type ArkynState, ShopItemState } from "../../shared";
+import { SCROLL_COST } from "../../shared/arkynConstants";
+import { generateShopScrolls } from "../../shared/shopGeneration";
 import { Logger } from "@core/shared/utils";
 import { initPlayerForRound } from "../utils/initPlayerForRound";
 import { spawnEnemy, applyBossDebuff } from "./handleJoin";
@@ -32,9 +34,25 @@ export function handleReady(
         // info as part of the "Next Enemy" preview. The round counter
         // hasn't incremented yet, so pass currentRound + 1 explicitly.
         spawnEnemy(state, state.currentRound + 1);
+
+        // Generate seeded shop inventory for this visit. The scroll
+        // elements are deterministic given the run seed + round, so
+        // replaying the same seed yields the same shop offerings.
+        const nextRound = state.currentRound + 1;
+        const scrollElements = generateShopScrolls(state.runSeed, nextRound);
+        while (player.shopItems.length > 0) player.shopItems.pop();
+        for (const element of scrollElements) {
+            const item = new ShopItemState();
+            item.itemType = "scroll";
+            item.element = element;
+            item.cost = SCROLL_COST;
+            item.purchased = false;
+            player.shopItems.push(item);
+        }
+
         state.gamePhase = "shop";
         const bossTag = state.enemy.isBoss ? ` [BOSS - ${state.enemy.debuff}]` : "";
-        logger.info(`Player ${client.sessionId} entered shop. Next enemy: ${state.enemy.name} (HP: ${state.enemy.maxHp})${bossTag}`);
+        logger.info(`Player ${client.sessionId} entered shop. Scrolls: [${scrollElements.join(", ")}]. Next enemy: ${state.enemy.name} (HP: ${state.enemy.maxHp})${bossTag}`);
         return;
     }
 

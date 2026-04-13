@@ -147,6 +147,14 @@
    typically a non-synergistic poker shape like 2 Fire + 2 Water that
    falls back to single-element fire. Tinted muted-red so it reads as
    a soft warning without screaming at the player. */
+/* Spell level indicator — shown when scroll upgrades have boosted
+   this element. Warm gold to match the shop upgrade overlay. */
+.spellLevel {
+    color: #ffd700;
+    font-size: 0.85em;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
 .partialRunes {
     color: #d4836b;
     font-size: 0.85em;
@@ -323,6 +331,10 @@
     .tier {
         font-size: var(--font-size-2xs);
         text-align: center;
+    }
+
+    .spellLevel {
+        display: inline;
     }
 
     .partialRunes {

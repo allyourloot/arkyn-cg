@@ -124,6 +124,21 @@
     pointer-events: none;
 }
 
+/* Flying scroll image — fixed-position overlay for the purchase animation.
+   GSAP drives position/size/opacity; this just sets the rendering mode
+   and stacking context. */
+.flyingScroll {
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    image-rendering: pixelated;
+    z-index: 100;
+    object-fit: contain;
+    filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.4));
+    will-change: transform, opacity, filter;
+}
+
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
     .centerColumn {

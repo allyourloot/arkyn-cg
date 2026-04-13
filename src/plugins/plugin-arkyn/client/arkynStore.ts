@@ -116,6 +116,16 @@ let lastRoundGoldHandsCount = 0;
 // (element / description / combo info that the server doesn't sync).
 let lastCastRunes: RuneClientData[] = [];
 
+// Scroll upgrade levels per element and current shop inventory.
+export type ShopItemClientData = {
+    itemType: string;
+    element: string;
+    cost: number;
+    purchased: boolean;
+};
+let scrollLevels: Map<string, number> = new Map();
+let shopItems: ShopItemClientData[] = [];
+
 // Run stats — synced from server for the game-over screen.
 let runTotalDamage = 0;
 let runTotalCasts = 0;
@@ -254,6 +264,36 @@ export function setLastRoundGoldBase(g: number) { lastRoundGoldBase = g; notify(
 export function setLastRoundGoldHandsBonus(g: number) { lastRoundGoldHandsBonus = g; notify(); }
 export function setLastRoundGoldHandsCount(c: number) { lastRoundGoldHandsCount = c; notify(); }
 
+// Scroll / shop setters
+export function setScrollLevels(levels: Map<string, number>) { scrollLevels = levels; notify(); }
+export function setShopItems(items: ShopItemClientData[]) { shopItems = items; notify(); }
+
+// Scroll purchase event — lightweight pub-sub. ShopScreen fires this on
+// buy; ArkynOverlay orchestrates the fly/shake/dissolve animation and
+// ShopPanel shows the upgrade display.
+export type ScrollPurchaseEvent = {
+    element: string;
+    oldLevel: number;
+    newLevel: number;
+    fromRect: DOMRect; // bounding rect of the scroll image in the shop card
+};
+
+// Active upgrade display — set by the animation orchestrator at the right
+// moment in the GSAP timeline so ShopPanel renders the upgrade section.
+export type ScrollUpgradeDisplayData = { element: string; oldLevel: number; newLevel: number } | null;
+let scrollUpgradeDisplay: ScrollUpgradeDisplayData = null;
+export function setScrollUpgradeDisplay(d: ScrollUpgradeDisplayData) { scrollUpgradeDisplay = d; notify(); }
+export function useScrollUpgradeDisplay() { return useSyncExternalStore(subscribe, () => scrollUpgradeDisplay); }
+type ScrollPurchaseListener = (e: ScrollPurchaseEvent) => void;
+const scrollPurchaseListeners = new Set<ScrollPurchaseListener>();
+export function onScrollPurchase(fn: ScrollPurchaseListener) {
+    scrollPurchaseListeners.add(fn);
+    return () => { scrollPurchaseListeners.delete(fn); };
+}
+export function emitScrollPurchase(e: ScrollPurchaseEvent) {
+    scrollPurchaseListeners.forEach(fn => fn(e));
+}
+
 // Run stats setters
 export function setRunTotalDamage(d: number) { runTotalDamage = d; notify(); }
 export function setRunTotalCasts(c: number) { runTotalCasts = c; notify(); }
@@ -308,6 +348,7 @@ export const arkynStoreInternal = {
     getEnemyHp: () => enemyHp,
     getEnemyResistances: () => enemyResistances,
     getEnemyWeaknesses: () => enemyWeaknesses,
+    getScrollLevels: () => scrollLevels,
 
     // Mutators (caller is responsible for calling notify() once per batch)
     clearSelection() {
@@ -380,6 +421,10 @@ export function useLastRoundGoldBase() { return useSyncExternalStore(subscribe, 
 export function useLastRoundGoldHandsBonus() { return useSyncExternalStore(subscribe, () => lastRoundGoldHandsBonus); }
 export function useLastRoundGoldHandsCount() { return useSyncExternalStore(subscribe, () => lastRoundGoldHandsCount); }
 
+// Scroll / shop hooks
+export function useScrollLevels() { return useSyncExternalStore(subscribe, () => scrollLevels); }
+export function useShopItems() { return useSyncExternalStore(subscribe, () => shopItems); }
+
 // Run stats hooks
 export function useRunTotalDamage() { return useSyncExternalStore(subscribe, () => runTotalDamage); }
 export function useRunTotalCasts() { return useSyncExternalStore(subscribe, () => runTotalCasts); }
@@ -399,7 +444,7 @@ export function useBestSingleCast() { return useSyncExternalStore(subscribe, () 
 // ============================================================
 
 export { subscribe } from "./arkynStoreCore";
-export { setConnection, joinGame, sendReady, sendNewRun } from "./arkynNetwork";
+export { setConnection, joinGame, sendReady, sendNewRun, sendBuyItem } from "./arkynNetwork";
 export {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,

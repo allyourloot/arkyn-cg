@@ -217,9 +217,123 @@
     image-rendering: pixelated;
 }
 
-/* Stats section — two labeled chips in a row (Hands + Discards). Pattern
-   mirrors SpellPreview's .damageSection / .damageRow but without the
-   `×` multiplier glyph between them. */
+/* --- Middle: Upgrade display area --- */
+/* Flexible area between the enemy section and the bottom stats that
+   shows scroll upgrade info when a purchase is made. */
+.upgradeArea {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.upgradeContent {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    animation: upgradeSlideIn 350ms ease-out;
+}
+
+@keyframes upgradeSlideIn {
+    from { transform: translateY(12px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Rune upgrade display — rune image left, damage info right */
+.upgradeRow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(12px, 1.8vw, 24px);
+    width: 100%;
+    padding: clamp(6px, 1vh, 14px) clamp(6px, 1vw, 14px);
+    box-sizing: border-box;
+}
+
+.upgradeRuneIcon {
+    position: relative;
+    width: clamp(56px, 8vw, 96px);
+    height: clamp(56px, 8vw, 96px);
+    flex-shrink: 0;
+}
+
+.upgradeRuneImg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    object-fit: contain;
+}
+
+.upgradeRuneInfo {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(4px, 0.6vh, 8px);
+}
+
+.upgradeRuneDamageLabel {
+    font-size: clamp(var(--font-size-2xs), 1.4vw, var(--font-size-xs));
+    color: #a09888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
+.upgradeRuneDamageRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.upgradeRuneDamageOld {
+    font-size: clamp(var(--font-size-md), 3.4vw, var(--font-size-lg));
+    color: #ffffff;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+}
+
+/* Arrow + new value appear together with a slide-in animation */
+.upgradeRuneDamageResult {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    animation: upgradeValueSlideIn 300ms ease-out;
+}
+
+@keyframes upgradeValueSlideIn {
+    from { transform: translateX(-6px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.upgradeRuneDamageArrow {
+    font-size: clamp(var(--font-size-sm), 2.4vw, var(--font-size-md));
+    color: #a09888;
+    line-height: 1;
+}
+
+.upgradeRuneDamageNew {
+    font-size: clamp(var(--font-size-md), 3.4vw, var(--font-size-lg));
+    color: #4ade80;
+    text-shadow: 0 0 8px rgba(74, 222, 128, 0.3), 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+}
+
+/* --- Bottom section: stats + gold pinned to bottom --- */
+.bottomSection {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: clamp(6px, 1vh, 12px);
+    width: 100%;
+}
+
+/* Stats section — two labeled chips in a row (Hands + Discards). */
 .statsSection {
     box-sizing: border-box;
     width: 100%;

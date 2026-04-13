@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
     useGamePhase,
     useIsCastAnimating,
+    onScrollPurchase,
+    setScrollUpgradeDisplay,
 } from "../arkynStore";
+import type { ScrollPurchaseEvent } from "../arkynStore";
 import { ENEMY_DAMAGE_HIT_MS } from "../arkynAnimations";
 import EnemyHealthBar from "./EnemyHealthBar";
 import SpellPreview from "./SpellPreview";
@@ -24,6 +27,7 @@ import InfoButton from "./InfoButton";
 import BackgroundMusic from "./BackgroundMusic";
 import BackgroundShader from "./BackgroundShader";
 import OverlayShader from "./OverlayShader";
+import { getScrollImageUrl } from "./scrollAssets";
 import styles from "./ArkynOverlay.module.css";
 
 // Normalizes the raw gamePhase into one of the four visual layouts the
@@ -42,6 +46,15 @@ function toDisplayPhase(gamePhase: string): DisplayPhase {
 const SCREEN_EXIT_DURATION_S = 0.22;
 const SCREEN_ENTER_DURATION_S = 0.32;
 
+/** Data for the flying scroll animation overlay. */
+interface FlyingScroll {
+    element: string;
+    imageUrl: string;
+    fromRect: DOMRect;
+    oldLevel: number;
+    newLevel: number;
+}
+
 export default function ArkynOverlay() {
     const gamePhase = useGamePhase();
     const isCastAnimating = useIsCastAnimating();
@@ -49,25 +62,19 @@ export default function ArkynOverlay() {
 
     // renderedPhase lags displayPhase during an exit animation so React
     // keeps the outgoing sections mounted while GSAP slides them offscreen.
-    // Once the exit timeline completes we flip renderedPhase to the new
-    // value, React swaps the tree, and useGSAP kicks off the entrance.
     const [renderedPhase, setRenderedPhase] = useState<DisplayPhase>(displayPhase);
 
-    // Refs for the animated sections. Each gets attached on mount via the
-    // ref-as-prop pattern (React 19). Null when the corresponding layout
-    // isn't currently rendered.
+    // Refs for the animated sections.
     const spellPreviewRef = useRef<HTMLDivElement>(null);
     const enemyHealthBarRef = useRef<HTMLDivElement>(null);
     const handStackRef = useRef<HTMLDivElement>(null);
     const shopPanelRef = useRef<HTMLDivElement>(null);
     const shopScreenRef = useRef<HTMLDivElement>(null);
 
-    // The server flips gamePhase to "round_end" the instant the killing-blow
-    // cast is processed (~500ms in), but the client cast animation needs to
-    // finish — settle, raise, bubbles, dissolve, then the enemy floating
-    // damage hit — before the "Enemy Defeated!" overlay appears. We hold the
-    // overlay until isCastAnimating clears (which fires the damage hit) and
-    // wait one more ENEMY_DAMAGE_HIT_MS for the floating number to play out.
+    // Flying scroll overlay — for the scroll purchase animation.
+    const [flyingScroll, setFlyingScroll] = useState<FlyingScroll | null>(null);
+    const flyingScrollRef = useRef<HTMLImageElement>(null);
+
     const [showRoundEnd, setShowRoundEnd] = useState(false);
     useEffect(() => {
         if (gamePhase !== "round_end") {
@@ -79,9 +86,6 @@ export default function ArkynOverlay() {
         return () => clearTimeout(t);
     }, [gamePhase, isCastAnimating]);
 
-    // Same animation gate for the game-over overlay — wait for the final
-    // cast animation and damage hit to finish so the player sees their
-    // last spell's impact before the Game Over screen appears.
     const [showGameOver, setShowGameOver] = useState(false);
     useEffect(() => {
         if (gamePhase !== "game_over") {
@@ -93,15 +97,101 @@ export default function ArkynOverlay() {
         return () => clearTimeout(t);
     }, [gamePhase, isCastAnimating]);
 
+    // Listen for scroll purchases and orchestrate the animation.
+    useEffect(() => {
+        return onScrollPurchase((e: ScrollPurchaseEvent) => {
+            const imageUrl = getScrollImageUrl(e.element);
+            if (!imageUrl) return;
+            setFlyingScroll({
+                element: e.element,
+                imageUrl,
+                fromRect: e.fromRect,
+                oldLevel: e.oldLevel,
+                newLevel: e.newLevel,
+            });
+        });
+    }, []);
+
+    // Clear animation state when leaving shop
+    useEffect(() => {
+        if (gamePhase !== "shop") {
+            setFlyingScroll(null);
+            setScrollUpgradeDisplay(null);
+        }
+    }, [gamePhase]);
+
+    // GSAP timeline for the flying scroll animation. Fires when
+    // flyingScroll mounts and the img ref is available.
+    useGSAP(() => {
+        const el = flyingScrollRef.current;
+        if (!el || !flyingScroll) return;
+
+        const { fromRect, oldLevel, newLevel, element } = flyingScroll;
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        const targetSize = Math.min(window.innerWidth, window.innerHeight) * 0.18;
+
+        // Set initial position at the card's scroll image location
+        gsap.set(el, {
+            x: fromRect.left + fromRect.width / 2 - targetSize / 2,
+            y: fromRect.top + fromRect.height / 2 - targetSize / 2,
+            width: fromRect.width,
+            height: fromRect.height,
+            opacity: 1,
+        });
+
+        const tl = gsap.timeline();
+
+        // Phase 1: Fly to center + scale up (0.4s)
+        tl.to(el, {
+            x: centerX - targetSize / 2,
+            y: centerY - targetSize / 2,
+            width: targetSize,
+            height: targetSize,
+            duration: 0.4,
+            ease: "power2.out",
+        });
+
+        // Phase 2: Shake (0.35s)
+        tl.to(el, {
+            keyframes: [
+                { rotation: -6, duration: 0.05 },
+                { rotation: 6, duration: 0.05 },
+                { rotation: -4, duration: 0.05 },
+                { rotation: 4, duration: 0.05 },
+                { rotation: -2, duration: 0.05 },
+                { rotation: 2, duration: 0.05 },
+                { rotation: 0, duration: 0.05 },
+            ],
+        });
+
+        // Phase 3: Show upgrade display in ShopPanel
+        tl.call(() => {
+            setScrollUpgradeDisplay({ element, oldLevel, newLevel });
+        });
+
+        // Phase 4: Hold (0.8s) — let the player read the upgrade info
+        tl.to(el, { duration: 0.8 });
+
+        // Phase 5: Dissolve — scale down + fade + blur
+        tl.to(el, {
+            opacity: 0,
+            scale: 0.6,
+            filter: "blur(8px) brightness(2)",
+            duration: 0.5,
+            ease: "power2.in",
+            onComplete: () => {
+                setFlyingScroll(null);
+            },
+        });
+
+        return () => { tl.kill(); };
+    }, { dependencies: [flyingScroll] });
+
     // Drive the exit animation when displayPhase diverges from renderedPhase.
-    // We slide out the outgoing sections, then flip renderedPhase to swap
-    // the rendered tree. The entrance animation is handled separately by
-    // the useGSAP hook below.
     useEffect(() => {
         if (displayPhase === renderedPhase) return;
 
-        // Menu/waiting transitions don't have the sliding sections, so
-        // skip the exit timeline and swap immediately.
         if (renderedPhase === "menu" || renderedPhase === "waiting") {
             setRenderedPhase(displayPhase);
             return;
@@ -145,73 +235,41 @@ export default function ArkynOverlay() {
             }
         }
 
-        // Safety net: if the timeline has no targets (all refs null), it
-        // completes synchronously on the next tick but we also force-swap
-        // after the expected duration in case onComplete never fires.
-        return () => {
-            tl.kill();
-        };
+        return () => { tl.kill(); };
     }, [displayPhase, renderedPhase]);
 
-    // Entrance animation for the newly rendered phase. Fires whenever
-    // renderedPhase updates (which happens after the exit timeline
-    // completes, so the incoming elements are freshly mounted).
+    // Entrance animation for the newly rendered phase.
     useGSAP(() => {
         if (renderedPhase === "playing") {
             if (spellPreviewRef.current) {
                 gsap.fromTo(spellPreviewRef.current,
                     { y: -120, opacity: 0 },
-                    {
-                        y: 0, opacity: 1,
-                        duration: SCREEN_ENTER_DURATION_S,
-                        ease: "power2.out",
-                        overwrite: "auto",
-                    },
+                    { y: 0, opacity: 1, duration: SCREEN_ENTER_DURATION_S, ease: "power2.out", overwrite: "auto" },
                 );
             }
             if (enemyHealthBarRef.current) {
                 gsap.fromTo(enemyHealthBarRef.current,
                     { y: -80, opacity: 0 },
-                    {
-                        y: 0, opacity: 1,
-                        duration: SCREEN_ENTER_DURATION_S,
-                        ease: "power2.out",
-                        overwrite: "auto",
-                    },
+                    { y: 0, opacity: 1, duration: SCREEN_ENTER_DURATION_S, ease: "power2.out", overwrite: "auto" },
                 );
             }
             if (handStackRef.current) {
                 gsap.fromTo(handStackRef.current,
                     { y: 160, opacity: 0 },
-                    {
-                        y: 0, opacity: 1,
-                        duration: SCREEN_ENTER_DURATION_S,
-                        ease: "power2.out",
-                        overwrite: "auto",
-                    },
+                    { y: 0, opacity: 1, duration: SCREEN_ENTER_DURATION_S, ease: "power2.out", overwrite: "auto" },
                 );
             }
         } else if (renderedPhase === "shop") {
             if (shopPanelRef.current) {
                 gsap.fromTo(shopPanelRef.current,
                     { x: -240, opacity: 0 },
-                    {
-                        x: 0, opacity: 1,
-                        duration: SCREEN_ENTER_DURATION_S,
-                        ease: "power2.out",
-                        overwrite: "auto",
-                    },
+                    { x: 0, opacity: 1, duration: SCREEN_ENTER_DURATION_S, ease: "power2.out", overwrite: "auto" },
                 );
             }
             if (shopScreenRef.current) {
                 gsap.fromTo(shopScreenRef.current,
                     { x: 240, opacity: 0 },
-                    {
-                        x: 0, opacity: 1,
-                        duration: SCREEN_ENTER_DURATION_S,
-                        ease: "power2.out",
-                        overwrite: "auto",
-                    },
+                    { x: 0, opacity: 1, duration: SCREEN_ENTER_DURATION_S, ease: "power2.out", overwrite: "auto" },
                 );
             }
         }
@@ -243,28 +301,24 @@ export default function ArkynOverlay() {
     if (renderedPhase === "shop") {
         return (
             <div className={styles.root}>
-                {/* Background image (behind everything) — the shader reads
-                    `gamePhase` and tweens its palette toward the blue/green
-                    shop look while we're here. */}
                 <BackgroundShader />
-
-                {/* Left side panel: Shop variant of SpellPreview's shell. */}
                 <ShopPanel ref={shopPanelRef} />
-
-                {/* Center column: shop frame sits alone — no enemy bar,
-                    no hand, no action buttons. */}
                 <div className={styles.centerColumn}>
                     <ShopScreen ref={shopScreenRef} />
                 </div>
-
-                {/* Right counterweight — keep in sync with SpellPreview's
-                    width so the center column stays centered. */}
                 <div className={styles.rightSpacer} aria-hidden="true" />
 
-                <BackgroundMusic />
+                {/* Flying scroll animation overlay */}
+                {flyingScroll && (
+                    <img
+                        ref={flyingScrollRef}
+                        src={flyingScroll.imageUrl}
+                        alt=""
+                        className={styles.flyingScroll}
+                    />
+                )}
 
-                {/* Global pixel-art grain overlay — mirrors the combat
-                    layout so the shop doesn't lose the UI grain texture. */}
+                <BackgroundMusic />
                 <OverlayShader />
             </div>
         );
@@ -272,62 +326,27 @@ export default function ArkynOverlay() {
 
     return (
         <div className={styles.root}>
-            {/* Background image (behind everything) */}
             <BackgroundShader />
-
-            {/* Left side panel: Spell Preview (now also hosts the round
-                label at its top and the gold counter at its bottom — see
-                SpellPreview.tsx) */}
             <SpellPreview ref={spellPreviewRef} />
-
-            {/* Center column: Enemy health bar, Play area, Hand + Actions */}
             <div className={styles.centerColumn}>
                 <EnemyHealthBar ref={enemyHealthBarRef} />
-
                 <div className={styles.centerStage}>
                     <PlayArea />
                 </div>
-
                 <div ref={handStackRef} className={styles.handStack}>
                     <HandDisplay />
                     <ActionButtons />
                 </div>
             </div>
-
-            {/* Right-side counterweight — mirrors SpellPreview's width so the
-                centerColumn (flex:1 between two equal-width side columns)
-                stays centered on the viewport now that EnemyPanel is gone. */}
             <div className={styles.rightSpacer} aria-hidden="true" />
-
-            {/* Spellbook / pouch counter — anchored to the viewport's right
-                edge at roughly hand level rather than tied to the hand's
-                bounding box, so it sits in a stable spot regardless of how
-                many cards are currently in the hand. */}
             <PouchCounter />
-
-            {/* Info button — top-right corner, opens a modal with synergy
-                and spell tier reference information. */}
             <InfoButton />
-
-            {/* Animation layers */}
             <CastAnimation />
             <DiscardAnimation />
             <DrawAnimation />
-
-            {/* Background music */}
             <BackgroundMusic />
-
-            {/* Round End overlay — animated reward breakdown */}
             {showRoundEnd && <RoundEndOverlay />}
-
-            {/* Game Over overlay — shown when the player exhausts all
-                casts and discards without defeating the enemy. */}
             {showGameOver && <GameOverOverlay />}
-
-            {/* Global pixel-art grain overlay — sits on top of every
-                other layer (z-index 9999, pointer-events: none) and
-                composites over the UI via mix-blend-mode: soft-light.
-                Mounted last so it's the topmost child of .root. */}
             <OverlayShader />
         </div>
     );
