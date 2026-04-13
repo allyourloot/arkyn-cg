@@ -6,6 +6,7 @@ import {
     useDissolveStartTime,
     useRaisedSlotIndices,
     useRuneDamageBubbles,
+    useProcDamageBubbles,
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,
     RAISE_LIFT_PX,
@@ -24,6 +25,7 @@ export default function PlayArea() {
     const dissolveStartTime = useDissolveStartTime();
     const raisedSlotIndices = useRaisedSlotIndices();
     const runeDamageBubbles = useRuneDamageBubbles();
+    const procDamageBubbles = useProcDamageBubbles();
 
     const areaRef = useRef<HTMLDivElement>(null);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -54,37 +56,51 @@ export default function PlayArea() {
     // the shake on each contributing rune wrapper at its bubble's delayMs
     // offset. The shake is intentionally subtle (small translate, gentle
     // rotate, tiny scale) so it reads as "the rune flinched" rather than
-    // a wobble.
+    // a wobble. Proc bubbles get their own shake at their delay.
     useGSAP(() => {
         for (let i = 0; i < MAX_PLAY; i++) {
-            const bubble = runeDamageBubbles[i];
-            if (!bubble) continue;
             const wrapper = shakeRefs.current[i];
             if (!wrapper) continue;
-            // Reset to clean rest state, then play the shake. `keyframes`
-            // matches the shape of the previous CSS @keyframes runeCountShake
-            // (5 stops, peaking around the 40% mark).
-            gsap.set(wrapper, { x: 0, y: 0, rotation: 0, scale: 1 });
-            gsap.to(wrapper, {
-                keyframes: [
-                    { x: -1.5, y: -0.5, rotation: -1, scale: 1.04, duration: RUNE_SHAKE_FRAME_S },
-                    { x: 1.5, y: 0.5, rotation: 1, scale: 1.06, duration: RUNE_SHAKE_FRAME_S },
-                    { x: -1, y: 0, rotation: -0.5, scale: 1.03, duration: RUNE_SHAKE_FRAME_S },
-                    { x: 0.5, y: 0, rotation: 0.25, scale: 1.01, duration: RUNE_SHAKE_FRAME_S },
-                    { x: 0, y: 0, rotation: 0, scale: 1, duration: RUNE_SHAKE_FRAME_S },
-                ],
-                ease: "power2.out",
-                delay: bubble.delayMs / 1000,
-                overwrite: "auto",
-            });
+
+            const bubble = runeDamageBubbles[i];
+            const procBubble = procDamageBubbles[i];
+            if (!bubble && !procBubble) continue;
+
+            const shakeKeyframes = [
+                { x: -1.5, y: -0.5, rotation: -1, scale: 1.04, duration: RUNE_SHAKE_FRAME_S },
+                { x: 1.5, y: 0.5, rotation: 1, scale: 1.06, duration: RUNE_SHAKE_FRAME_S },
+                { x: -1, y: 0, rotation: -0.5, scale: 1.03, duration: RUNE_SHAKE_FRAME_S },
+                { x: 0.5, y: 0, rotation: 0.25, scale: 1.01, duration: RUNE_SHAKE_FRAME_S },
+                { x: 0, y: 0, rotation: 0, scale: 1, duration: RUNE_SHAKE_FRAME_S },
+            ];
+
+            // Normal bubble shake
+            if (bubble) {
+                gsap.set(wrapper, { x: 0, y: 0, rotation: 0, scale: 1 });
+                gsap.to(wrapper, {
+                    keyframes: shakeKeyframes,
+                    ease: "power2.out",
+                    delay: bubble.delayMs / 1000,
+                    overwrite: "auto",
+                });
+            }
+            // Proc bubble shake — replays the shake at the proc's delay
+            if (procBubble) {
+                gsap.to(wrapper, {
+                    keyframes: shakeKeyframes,
+                    ease: "power2.out",
+                    delay: procBubble.delayMs / 1000,
+                });
+            }
         }
-    }, { dependencies: [runeDamageBubbles], scope: areaRef });
+    }, { dependencies: [runeDamageBubbles, procDamageBubbles], scope: areaRef });
 
     return (
         <div ref={areaRef} className={styles.area}>
             {Array.from({ length: MAX_PLAY }, (_, i) => {
                 const dissolving = dissolvingRunes[i];
                 const damageBubble = runeDamageBubbles[i] ?? null;
+                const procBubble = procDamageBubbles[i] ?? null;
 
                 return (
                     <div
@@ -129,6 +145,17 @@ export default function PlayArea() {
                                 isResisted={damageBubble.isResisted}
                                 seq={damageBubble.seq}
                                 delayMs={damageBubble.delayMs}
+                            />
+                        )}
+                        {procBubble && (
+                            <RuneDamageBubble
+                                amount={procBubble.amount}
+                                baseAmount={procBubble.baseAmount}
+                                spellElement={procBubble.spellElement}
+                                isCritical={procBubble.isCritical}
+                                isResisted={procBubble.isResisted}
+                                seq={procBubble.seq}
+                                delayMs={procBubble.delayMs}
                             />
                         )}
                     </div>

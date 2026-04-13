@@ -41,8 +41,19 @@ export function handleCast(
     }
 
     // Calculate damage — each contributing rune is evaluated against the
-    // enemy's resistances/weaknesses individually, then summed.
-    const damage = calculateDamage(spell, selectedRunes, state.enemy, player.scrollLevels);
+    // enemy's resistances/weaknesses individually, then summed. Sigil procs
+    // (e.g. Voltage) are applied inside calculateDamage using a deterministic
+    // RNG that the client mirrors for animation accuracy.
+    const damage = calculateDamage(
+        spell,
+        selectedRunes,
+        state.enemy,
+        player.scrollLevels,
+        player.sigils,
+        state.runSeed,
+        state.currentRound,
+        player.castsRemaining,
+    );
 
     // Move selected runes to played area
     while (player.playedRunes.length > 0) player.playedRunes.pop();

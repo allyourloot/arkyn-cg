@@ -1,4 +1,5 @@
 import { type ArkynState } from "../../shared";
+import { MAX_SIGILS } from "../../shared/arkynConstants";
 import { Logger } from "@core/shared/utils";
 
 const logger = new Logger("ArkynBuyItem");
@@ -49,6 +50,25 @@ export function handleBuyItem(
         logger.info(
             `Player ${client.sessionId} bought ${item.element} scroll ` +
             `(level ${currentLevel + 1}). Gold remaining: ${player.gold}`,
+        );
+    } else if (item.itemType === "sigil") {
+        if (player.sigils.length >= MAX_SIGILS) {
+            logger.warn(`Buy rejected: sigil slots full (${MAX_SIGILS})`);
+            // Refund — the gold was already deducted above
+            player.gold += item.cost;
+            item.purchased = false;
+            return;
+        }
+        if (Array.from(player.sigils).includes(item.element)) {
+            logger.warn(`Buy rejected: player already owns sigil "${item.element}"`);
+            player.gold += item.cost;
+            item.purchased = false;
+            return;
+        }
+        player.sigils.push(item.element);
+        logger.info(
+            `Player ${client.sessionId} bought sigil "${item.element}". ` +
+            `Gold remaining: ${player.gold}`,
         );
     }
 }

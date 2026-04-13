@@ -7,9 +7,11 @@ import {
     useScrollLevels,
     emitScrollPurchase,
 } from "../arkynStore";
+import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { playMenuOpen } from "../sfx";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getScrollImageUrl } from "./scrollAssets";
+import { getSigilImageUrl } from "./sigilAssets";
 import BouncyText from "./BouncyText";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import frameUrl from "/assets/ui/frame.png?url";
@@ -18,6 +20,13 @@ import buttonGreenUrl from "/assets/ui/button-green.png?url";
 import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
 import buttonGreenDisabledUrl from "/assets/ui/button-green-disabled.png?url";
 import styles from "./ShopScreen.module.css";
+
+const RARITY_COLORS: Record<string, string> = {
+    common: "#b0b0b0",
+    uncommon: "#4ade80",
+    rare: "#60a5fa",
+    legendary: "#fbbf24",
+};
 
 const panelStyleVars = createPanelStyleVars();
 const buttonStyleVars = {
@@ -62,6 +71,9 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     };
 
     // Split items by type for section rendering
+    const sigilItems = shopItems
+        .map((item, idx) => ({ ...item, shopIndex: idx }))
+        .filter(item => item.itemType === "sigil" && !item.purchased);
     const scrollItems = shopItems
         .map((item, idx) => ({ ...item, shopIndex: idx }))
         .filter(item => item.itemType === "scroll" && !item.purchased);
@@ -73,16 +85,65 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             <span className={styles.sectionLabel}>Sigils</span>
             <div className={styles.section}>
                 <div className={styles.itemGrid}>
-                    <div className={styles.placeholderCard}>
-                        <BouncyText className={styles.placeholderText}>
-                            Coming Soon
-                        </BouncyText>
-                    </div>
-                    <div className={styles.placeholderCard}>
-                        <BouncyText className={styles.placeholderText}>
-                            Coming Soon
-                        </BouncyText>
-                    </div>
+                    {sigilItems.length > 0 ? sigilItems.map(item => {
+                        const def = SIGIL_DEFINITIONS[item.element];
+                        if (!def) return null;
+                        const sigilUrl = getSigilImageUrl(item.element, 128);
+                        const canAfford = gold >= item.cost;
+                        const rarityColor = RARITY_COLORS[def.rarity] ?? "#b0b0b0";
+
+                        return (
+                            <div
+                                key={item.shopIndex}
+                                className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""}`}
+                                style={{ ...cardStyleVars } as CSSProperties}
+                            >
+                                <div className={styles.priceChip}>
+                                    <img src={goldIconUrl} alt="Gold" className={styles.priceIcon} />
+                                    <span className={styles.priceValue}>{item.cost}</span>
+                                </div>
+                                <div className={styles.cardImageWrap}>
+                                    {sigilUrl && (
+                                        <img
+                                            src={sigilUrl}
+                                            alt={def.name}
+                                            className={styles.itemImage}
+                                        />
+                                    )}
+                                </div>
+                                <button
+                                    type="button"
+                                    className={styles.buyButton}
+                                    style={buttonStyleVars}
+                                    onClick={() => sendBuyItem(item.shopIndex)}
+                                    disabled={!canAfford}
+                                >
+                                    Buy
+                                </button>
+                                <div className={styles.tooltip}>
+                                    <span className={styles.tooltipDesc} style={{ color: rarityColor, fontWeight: "normal" }}>
+                                        {def.name} <span style={{ opacity: 0.7, textTransform: "uppercase", fontSize: "0.85em" }}>({def.rarity})</span>
+                                    </span>
+                                    <span className={styles.tooltipDesc}>
+                                        {def.description}
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    }) : (
+                        <>
+                            <div className={styles.placeholderCard}>
+                                <BouncyText className={styles.placeholderText}>
+                                    Sold Out
+                                </BouncyText>
+                            </div>
+                            <div className={styles.placeholderCard}>
+                                <BouncyText className={styles.placeholderText}>
+                                    Sold Out
+                                </BouncyText>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 

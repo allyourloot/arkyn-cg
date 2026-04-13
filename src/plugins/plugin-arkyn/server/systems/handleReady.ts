@@ -1,6 +1,7 @@
 import { type ArkynState, ShopItemState } from "../../shared";
 import { SCROLL_COST } from "../../shared/arkynConstants";
-import { generateShopScrolls } from "../../shared/shopGeneration";
+import { generateShopScrolls, generateShopSigils } from "../../shared/shopGeneration";
+import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { Logger } from "@core/shared/utils";
 import { initPlayerForRound } from "../utils/initPlayerForRound";
 import { spawnEnemy, applyBossDebuff } from "./handleJoin";
@@ -40,7 +41,23 @@ export function handleReady(
         // replaying the same seed yields the same shop offerings.
         const nextRound = state.currentRound + 1;
         const scrollElements = generateShopScrolls(state.runSeed, nextRound);
+        const ownedSigils = Array.from(player.sigils);
+        const sigilIds = generateShopSigils(state.runSeed, nextRound, ownedSigils);
         while (player.shopItems.length > 0) player.shopItems.pop();
+
+        // Sigil items first (top section in shop UI)
+        for (const sigilId of sigilIds) {
+            const def = SIGIL_DEFINITIONS[sigilId];
+            if (!def) continue;
+            const item = new ShopItemState();
+            item.itemType = "sigil";
+            item.element = sigilId; // polymorphic: sigil ID for sigils
+            item.cost = def.cost;
+            item.purchased = false;
+            player.shopItems.push(item);
+        }
+
+        // Scroll items (bottom section)
         for (const element of scrollElements) {
             const item = new ShopItemState();
             item.itemType = "scroll";
@@ -52,7 +69,7 @@ export function handleReady(
 
         state.gamePhase = "shop";
         const bossTag = state.enemy.isBoss ? ` [BOSS - ${state.enemy.debuff}]` : "";
-        logger.info(`Player ${client.sessionId} entered shop. Scrolls: [${scrollElements.join(", ")}]. Next enemy: ${state.enemy.name} (HP: ${state.enemy.maxHp})${bossTag}`);
+        logger.info(`Player ${client.sessionId} entered shop. Sigils: [${sigilIds.join(", ")}], Scrolls: [${scrollElements.join(", ")}]. Next enemy: ${state.enemy.name} (HP: ${state.enemy.maxHp})${bossTag}`);
         return;
     }
 

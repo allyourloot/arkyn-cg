@@ -23,6 +23,7 @@ import CastAnimation from "./CastAnimation";
 import DiscardAnimation from "./DiscardAnimation";
 import DrawAnimation from "./DrawAnimation";
 import MainMenu from "./MainMenu";
+import SigilBar from "./SigilBar";
 import InfoButton from "./InfoButton";
 import BackgroundMusic from "./BackgroundMusic";
 import BackgroundShader from "./BackgroundShader";
@@ -347,6 +348,7 @@ export default function ArkynOverlay() {
                     <ShopScreen ref={shopScreenRef} />
                 </div>
                 <div className={styles.rightSpacer} aria-hidden="true" />
+                <SigilBar />
 
                 {/* Flying scroll animation overlay */}
                 {flyingScroll && (
@@ -400,6 +402,7 @@ export default function ArkynOverlay() {
             </div>
             <div className={styles.rightSpacer} aria-hidden="true" />
             <PouchCounter />
+            <SigilBar />
             <InfoButton />
             <CastAnimation />
             <DiscardAnimation />

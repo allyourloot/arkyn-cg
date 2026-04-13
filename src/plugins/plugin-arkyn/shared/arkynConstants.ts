@@ -30,6 +30,14 @@ export const SCROLL_COST = 2;
 export const SCROLL_RUNE_BONUS = 2;   // +2 per-rune base damage per scroll
 export const SHOP_SCROLL_COUNT = 2;   // scroll slots shown per shop visit
 
+// Sigil item configuration
+export const MAX_SIGILS = 6;          // max sigils a player can hold
+export const SHOP_SIGIL_COUNT = 2;    // sigil slots shown per shop visit
+
+// Voltage sigil proc
+export const VOLTAGE_PROC_CHANCE = 0.25;   // 1 in 4 chance per Lightning rune
+export const VOLTAGE_RNG_OFFSET = 300000;  // RNG namespace offset for proc rolls
+
 // Messages (client -> server)
 export const ARKYN_JOIN = "arkyn:join";
 export const ARKYN_CAST = "arkyn:cast";
@@ -37,3 +45,4 @@ export const ARKYN_DISCARD = "arkyn:discard";
 export const ARKYN_READY = "arkyn:ready";
 export const ARKYN_NEW_RUN = "arkyn:new_run";
 export const ARKYN_BUY_ITEM = "arkyn:buy_item";
+export const ARKYN_SELL_SIGIL = "arkyn:sell_sigil";

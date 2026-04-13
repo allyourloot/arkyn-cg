@@ -78,7 +78,7 @@ export interface CastTimelineContext {
      *
      * Length === contributingCount.
      */
-    runeBreakdown: readonly { base: number; final: number; isResisted: boolean; isCritical: boolean }[];
+    runeBreakdown: readonly { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean }[];
     /**
      * Spell-tier base damage (SPELL_TIER_BASE_DAMAGE[tier]) — added to the
      * Base counter at t=0 so the chip starts at the spell's tier base and
@@ -125,6 +125,8 @@ export interface CastTimelineContext {
     onTotalReveal: (value: number) => void;
     /** Fired after the total reveal. Sets enemyDamageHit + unlocks HP. */
     onImpact: () => void;
+    /** Fired when a sigil proc event occurs — shakes the sigil in the SigilBar. */
+    onSigilShake?: (sigilId: string) => void;
     /** Fired when the timeline finishes. Clears all animation state. */
     onComplete: () => void;
 }
@@ -236,6 +238,10 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
             tl.call(playCount, undefined, tickAt);
         }
         tl.call(() => ctx.onCountTick(cumulativeAtEvent), undefined, tickAt);
+        // Proc events trigger a sigil shake in the SigilBar
+        if (item.isProc && ctx.onSigilShake) {
+            tl.call(() => ctx.onSigilShake!("voltage"), undefined, tickAt);
+        }
     }
 
     // Total chip count-up reveal — Balatro-style. Starts once all rune

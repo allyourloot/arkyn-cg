@@ -126,6 +126,9 @@ export type ShopItemClientData = {
 let scrollLevels: Map<string, number> = new Map();
 let shopItems: ShopItemClientData[] = [];
 
+// Sigils owned this run — array of sigil IDs.
+let sigils: string[] = [];
+
 // Run stats — synced from server for the game-over screen.
 let runTotalDamage = 0;
 let runTotalCasts = 0;
@@ -268,6 +271,9 @@ export function setLastRoundGoldHandsCount(c: number) { lastRoundGoldHandsCount 
 export function setScrollLevels(levels: Map<string, number>) { scrollLevels = levels; notify(); }
 export function setShopItems(items: ShopItemClientData[]) { shopItems = items; notify(); }
 
+// Sigil setters
+export function setSigils(s: string[]) { sigils = s; notify(); }
+
 // Scroll purchase event — lightweight pub-sub. ShopScreen fires this on
 // buy; ArkynOverlay orchestrates the fly/shake/dissolve animation and
 // ShopPanel shows the upgrade display.
@@ -349,6 +355,10 @@ export const arkynStoreInternal = {
     getEnemyResistances: () => enemyResistances,
     getEnemyWeaknesses: () => enemyWeaknesses,
     getScrollLevels: () => scrollLevels,
+    getSigils: () => sigils,
+    getCastsRemaining: () => castsRemaining,
+    getCurrentRound: () => currentRound,
+    getRunSeed: () => runSeed,
 
     // Mutators (caller is responsible for calling notify() once per batch)
     clearSelection() {
@@ -425,6 +435,9 @@ export function useLastRoundGoldHandsCount() { return useSyncExternalStore(subsc
 export function useScrollLevels() { return useSyncExternalStore(subscribe, () => scrollLevels); }
 export function useShopItems() { return useSyncExternalStore(subscribe, () => shopItems); }
 
+// Sigil hooks
+export function useSigils() { return useSyncExternalStore(subscribe, () => sigils); }
+
 // Run stats hooks
 export function useRunTotalDamage() { return useSyncExternalStore(subscribe, () => runTotalDamage); }
 export function useRunTotalCasts() { return useSyncExternalStore(subscribe, () => runTotalCasts); }
@@ -444,7 +457,7 @@ export function useBestSingleCast() { return useSyncExternalStore(subscribe, () 
 // ============================================================
 
 export { subscribe } from "./arkynStoreCore";
-export { setConnection, joinGame, sendReady, sendNewRun, sendBuyItem } from "./arkynNetwork";
+export { setConnection, joinGame, sendReady, sendNewRun, sendBuyItem, sendSellSigil } from "./arkynNetwork";
 export {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,
@@ -480,6 +493,8 @@ export {
     useCastTotalDamage,
     useLastCastBaseDamage,
     useRoundTotalDamage,
+    useProcDamageBubbles,
+    useActiveSigilShake,
 } from "./arkynAnimations";
 export type {
     RuneDamageBubble,

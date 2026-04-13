@@ -37,6 +37,7 @@ import {
     setBestSingleCast,
     setScrollLevels,
     setShopItems,
+    setSigils,
     clearSelectedIndices,
     triggerDrawAnimation,
     getHandIndex,
@@ -155,6 +156,7 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevBestSingleCast = -1;
     let prevScrollLevels: Map<string, number> = new Map();
     let prevShopItems: { itemType: string; element: string; cost: number; purchased: boolean }[] = [];
+    let prevSigils: string[] = [];
 
     return () => {
         const player = state.players.get(sessionId);
@@ -401,6 +403,12 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
             }));
             setShopItems(next);
             prevShopItems = next;
+        }
+
+        // Sync sigils
+        if (!stringArraysEqual(player.sigils, prevSigils)) {
+            prevSigils = Array.from(player.sigils);
+            setSigils(prevSigils);
         }
     };
 }

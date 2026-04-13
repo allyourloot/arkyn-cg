@@ -4,11 +4,15 @@ import {
     MAX_PLAY,
     ARKYN_CAST,
     ARKYN_DISCARD,
+    CASTS_PER_ROUND,
+    VOLTAGE_PROC_CHANCE,
+    VOLTAGE_RNG_OFFSET,
     resolveSpell,
     calculateSpellDamage,
     getContributingRuneIndices,
 } from "../shared";
 import type { RarityType } from "../shared/arkynConstants";
+import { createRoundRng } from "../shared/seededRandom";
 import { subscribe, notify, type RuneClientData } from "./arkynStoreCore";
 import { sendArkynMessage } from "./arkynNetwork";
 // `arkynStoreInternal` is the data store's internal mutator/getter object.
@@ -170,6 +174,16 @@ let roundTotalDamage = 0;
 // can be derived as `lastCastBaseDamage × mult` from the resolved spell.
 let lastCastBaseDamage = 0;
 
+// ----- Sigil proc state -----
+// Proc damage bubbles — same structure as runeDamageBubbles, indexed by slot.
+// Non-proc slots are null. Populated when a sigil (e.g. Voltage) procs
+// during a cast, then rendered alongside the normal bubbles in PlayArea.
+let procDamageBubbles: (RuneDamageBubble | null)[] = [];
+// Monotonic seq for sigil shake events — forces remount on every proc.
+let sigilShakeSeq = 0;
+// Active sigil shake event — SigilBar reads this to animate the matching icon.
+let activeSigilShake: { sigilId: string; seq: number } | null = null;
+
 // ----- Hooks -----
 export function useDissolvingRunes() {
     return useSyncExternalStore(subscribe, () => dissolvingRunes);
@@ -219,6 +233,12 @@ export function useLastCastBaseDamage() {
 export function useRoundTotalDamage() {
     return useSyncExternalStore(subscribe, () => roundTotalDamage);
 }
+export function useProcDamageBubbles() {
+    return useSyncExternalStore(subscribe, () => procDamageBubbles);
+}
+export function useActiveSigilShake() {
+    return useSyncExternalStore(subscribe, () => activeSigilShake);
+}
 
 // ----- Helpers -----
 
@@ -258,6 +278,8 @@ export function clearLastCastState(): void {
     castBaseCounter = 0;
     castTotalDamage = -1;
     roundTotalDamage = 0;
+    procDamageBubbles = [];
+    activeSigilShake = null;
     arkynStoreInternal.setLastCastRunes([]);
     notify();
 }
@@ -388,9 +410,9 @@ export function castSpell() {
     // Falls back to 0 if the spell didn't resolve (defensive — castSpell
     // bails on selectedRuneIds.length === 0 above, so this only matters
     // if a future hand passes the gate without resolving).
-    const totalDamage = breakdown?.finalDamage ?? 0;
+    let totalDamage = breakdown?.finalDamage ?? 0;
     const spellBaseDamage = breakdown?.spellBase ?? 0;
-    const baseTotal = breakdown?.baseTotal ?? 0;
+    let baseTotal = breakdown?.baseTotal ?? 0;
     const hasCritical = breakdown?.isCritical.some(Boolean) ?? false;
 
     // The spell's primary element drives the outline color of every bubble
@@ -398,15 +420,50 @@ export function castSpell() {
     // colorway reads as one cohesive spell impact.
     const spellElement = resolvedSpell?.element ?? "";
     const bubbles: (RuneDamageBubble | null)[] = new Array(MAX_PLAY).fill(null);
-    // Per-rune breakdown handed to the cast timeline. `base` is the value
-    // the bubble first shows on appearance; `final` is its end value. They
-    // differ only for critical (weakness) runes — the timeline factory
-    // emits an extra "bonus" event at BONUS_POP_OFFSET_S for those, sorted
-    // into the running cumulative timeline so the side counter stays in
-    // sync with whatever bubbles are visible at any moment. `isResisted`
-    // tells the timeline to pitch the count SFX down on the appearance
-    // event so resisted runes audibly read as weak hits.
-    const runeBreakdown: { base: number; final: number; isResisted: boolean; isCritical: boolean }[] = [];
+    const procBubblesForCast: (RuneDamageBubble | null)[] = new Array(MAX_PLAY).fill(null);
+
+    // ----- Voltage proc check -----
+    // Deterministic RNG shared with the server so both sides agree on which
+    // Lightning runes hit twice. Only consumes rolls for Lightning runes.
+    const ownedSigils = arkynStoreInternal.getSigils();
+    const hasVoltage = ownedSigils.includes("voltage");
+    const procFlags: boolean[] = []; // per-contributing-rune
+    let procDamageTotal = 0;
+    if (hasVoltage && breakdown) {
+        const castNumber = CASTS_PER_ROUND - arkynStoreInternal.getCastsRemaining();
+        const runSeed = arkynStoreInternal.getRunSeed();
+        const round = arkynStoreInternal.getCurrentRound();
+        const procRng = createRoundRng(runSeed, VOLTAGE_RNG_OFFSET + round * 10 + castNumber);
+        for (let i = 0; i < contributingIndices.length; i++) {
+            const rune = castRunes[contributingIndices[i]];
+            if (rune && rune.element === "lightning") {
+                const procs = procRng() < VOLTAGE_PROC_CHANCE;
+                procFlags.push(procs);
+                if (procs) {
+                    procDamageTotal += breakdown.runeBaseContributions[i] * breakdown.mult;
+                }
+            } else {
+                procFlags.push(false);
+            }
+        }
+    } else {
+        for (let i = 0; i < contributingIndices.length; i++) procFlags.push(false);
+    }
+    const hasAnyProc = procFlags.some(Boolean);
+    totalDamage += procDamageTotal;
+    // Adjust baseTotal to include proc contributions (for lastCastBaseDamage)
+    if (breakdown && hasAnyProc) {
+        for (let i = 0; i < procFlags.length; i++) {
+            if (procFlags[i]) baseTotal += breakdown.runeBaseContributions[i];
+        }
+    }
+
+    // ----- Build bubble arrays and extended runeBreakdown -----
+    // The extended breakdown interleaves proc entries after their parent rune
+    // so the timeline staggers them naturally. Each event in the array gets
+    // one BUBBLE_STAGGER_MS slot.
+    const runeBreakdown: { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean }[] = [];
+    let eventIdx = 0;
     if (breakdown) {
         for (let i = 0; i < contributingIndices.length; i++) {
             const slotIdx = contributingIndices[i];
@@ -414,11 +471,7 @@ export function castSpell() {
             if (!rune) continue;
             const isCritical = breakdown.isCritical[i];
             const isResisted = breakdown.isResisted[i];
-            const preModifier = breakdown.runeBasePreModifier[i];
             const postModifier = breakdown.runeBaseContributions[i];
-            // Bubble's initial display: always the post-modifier value.
-            // Criticals show the boosted number (e.g. 12) directly with
-            // the crit burst — no redundant base-then-bonus two-pop.
             const initialDisplay = postModifier;
             bubbles[slotIdx] = {
                 amount: postModifier,
@@ -427,16 +480,37 @@ export function castSpell() {
                 isCritical,
                 isResisted,
                 seq: ++bubbleSeqCounter,
-                // Each successive contributing rune's bubble waits its turn
-                // so the Base counter reads like a counter ticking up.
-                delayMs: i * BUBBLE_STAGGER_MS,
+                delayMs: eventIdx * BUBBLE_STAGGER_MS,
             };
             runeBreakdown.push({
                 base: initialDisplay,
                 final: postModifier,
                 isResisted,
                 isCritical,
+                isProc: false,
             });
+            eventIdx++;
+
+            // Interleave proc bubble right after the parent rune
+            if (procFlags[i]) {
+                procBubblesForCast[slotIdx] = {
+                    amount: postModifier,
+                    baseAmount: postModifier,
+                    spellElement,
+                    isCritical: false,
+                    isResisted: false,
+                    seq: ++bubbleSeqCounter,
+                    delayMs: eventIdx * BUBBLE_STAGGER_MS,
+                };
+                runeBreakdown.push({
+                    base: postModifier,
+                    final: postModifier,
+                    isResisted: false,
+                    isCritical: false,
+                    isProc: true,
+                });
+                eventIdx++;
+            }
         }
     }
 
@@ -452,9 +526,14 @@ export function castSpell() {
     // `flyingCount` lets the timeline size its fly window to cover the
     // full staggered fly tween — without it, the trailing flyers would
     // be unmounted while still mid-flight.
+    // The extended event count includes proc entries interleaved after their
+    // parent runes. The timeline uses this for timing the bubble cascade
+    // and the total reveal.
+    const extendedEventCount = runeBreakdown.length;
+
     buildCastTimeline({
         flyingCount: flying.length,
-        contributingCount: contributing,
+        contributingCount: extendedEventCount,
         castRunesLength: castRunes.length,
         runeBreakdown,
         spellBaseDamage,
@@ -527,8 +606,13 @@ export function castSpell() {
         },
         onBubblesStart: () => {
             runeDamageBubbles = bubbles;
+            procDamageBubbles = procBubblesForCast;
             notify();
         },
+        onSigilShake: hasAnyProc ? (sigilId: string) => {
+            activeSigilShake = { sigilId, seq: ++sigilShakeSeq };
+            notify();
+        } : undefined,
         onImpact: () => {
             enemyDamageHit = {
                 amount: totalDamage,
@@ -550,6 +634,8 @@ export function castSpell() {
             dissolveStartTime = 0;
             raisedSlotIndices = [];
             runeDamageBubbles = [];
+            procDamageBubbles = [];
+            activeSigilShake = null;
             isCastAnimating = false;
             // NOTE: `castingRuneIds` is intentionally NOT cleared here. The
             // sync system clears it atomically with `setHand` so the

@@ -65,6 +65,10 @@ export class ArkynPlayerState extends Schema {
     // bonus in calculateSpellDamage. Resets on new run (fresh schema).
     @type({ map: "number" }) scrollLevels = new MapSchema<number>();
 
+    // Sigils owned this run — up to MAX_SIGILS (6). Each entry is a sigil
+    // ID (e.g. "voltage"). Resets on new run (fresh schema).
+    @type(["string"]) sigils = new ArraySchema<string>();
+
     // Current shop inventory — populated on entering the shop phase and
     // synced to the client for rendering. Each entry tracks whether the
     // item has been purchased so the client can grey it out.
