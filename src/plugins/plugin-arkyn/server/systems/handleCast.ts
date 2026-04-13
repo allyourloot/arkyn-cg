@@ -45,17 +45,10 @@ export function handleCast(
         return;
     }
 
-    // Count Psy runes held in hand (not played) for Synapse sigil mult bonus.
-    const selectedSet = new Set(indices);
-    let heldPsyCount = 0;
-    for (let i = 0; i < player.hand.length; i++) {
-        if (!selectedSet.has(i) && player.hand[i]?.element === "psy") heldPsyCount++;
-    }
-
     // Calculate damage — each contributing rune is evaluated against the
-    // enemy's resistances/weaknesses individually, then summed. Sigil procs
-    // (e.g. Voltage) are applied inside calculateDamage using a deterministic
-    // RNG that the client mirrors for animation accuracy.
+    // enemy's resistances/weaknesses individually, then summed. Sigil effects
+    // (Voltage procs, Synapse hand-mult, etc.) are applied inside
+    // calculateDamage using the sigil effect registries.
     const damage = calculateDamage(
         spell,
         selectedRunes,
@@ -65,7 +58,8 @@ export function handleCast(
         state.runSeed,
         state.currentRound,
         player.castsRemaining,
-        heldPsyCount,
+        player.hand,
+        indices,
     );
 
     // Move selected runes to played area

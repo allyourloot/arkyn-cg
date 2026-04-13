@@ -20,9 +20,6 @@ export {
     SHOP_SCROLL_COUNT,
     MAX_SIGILS,
     SHOP_SIGIL_COUNT,
-    VOLTAGE_PROC_CHANCE,
-    VOLTAGE_RNG_OFFSET,
-    SYNAPSE_MULT_PER_PSY,
     ARKYN_JOIN,
     ARKYN_CAST,
     ARKYN_DISCARD,
@@ -73,6 +70,25 @@ export { generateShopScrolls, generateShopSigils } from "./shopGeneration";
 
 export { SIGIL_DEFINITIONS, SIGIL_IDS } from "./sigils";
 export type { SigilDefinition } from "./sigils";
+
+export {
+    SIGIL_STAT_MODIFIERS,
+    SIGIL_PROCS,
+    SIGIL_HAND_MULT,
+    SIGIL_LIFECYCLE_HOOKS,
+    getPlayerStatDeltas,
+    getHandMultBonus,
+    iterateProcs,
+} from "./sigilEffects";
+export type {
+    PlayerStatDeltas,
+    ProcEffect,
+    ProcDefinition,
+    ProcEvent,
+    HandMultEffect,
+    HandMultEntry,
+    SigilLifecycleHooks,
+} from "./sigilEffects";
 
 export { BOSS_DEBUFFS, isBossRound, pickDebuffForRound, getDebuffById } from "./bossDebuffs";
 export type { BossDebuff } from "./bossDebuffs";

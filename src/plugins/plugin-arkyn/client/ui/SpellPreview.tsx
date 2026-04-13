@@ -14,7 +14,7 @@ import {
 } from "../arkynStore";
 import { useCastMultCounter } from "../arkynAnimations";
 import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
-import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT, SYNAPSE_MULT_PER_PSY, calculateSpellDamage } from "../../shared";
+import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT, calculateSpellDamage } from "../../shared";
 import type { RarityType } from "../../shared/arkynConstants";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars } from "./styles";
 import { useEnemyIsBoss } from "../arkynStore";
@@ -137,26 +137,17 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
         const baseMult = SPELL_TIER_MULT[spell.tier] ?? 0;
         const spellTierBase = SPELL_TIER_BASE_DAMAGE[spell.tier] ?? 0;
 
-        // Synapse sigil — count held Psy runes (in hand, not played/selected)
-        let synapseMult = 0;
-        if (activeSigils.includes("synapse")) {
-            const selected = new Set(selectedIndices);
-            for (let i = 0; i < hand.length; i++) {
-                if (!selected.has(i) && hand[i]?.element === "psy") synapseMult += SYNAPSE_MULT_PER_PSY;
-            }
-        }
-
         if (isCastAnimating) {
-            // During cast: use live mult counter if synapse is ticking,
-            // otherwise show the tier mult. Synapse bonus ticks up in
-            // real time as each held Psy rune's bubble appears.
+            // During cast: use live mult counter if a hand-mult sigil is
+            // ticking (Synapse et al.), otherwise show the tier mult.
+            // The bonus ticks up in real time as each held rune's bubble appears.
             displayMult = castMultCounter >= 0 ? castMultCounter : baseMult;
             displayBase = castBaseCounter;
             displayTotal = castTotalDamage >= 0
                 ? castTotalDamage
                 : (roundTotalDamage > 0 ? roundTotalDamage : "-");
         } else {
-            // Live preview shows tier mult only — Synapse bonus is
+            // Live preview shows tier mult only — hand-mult bonuses are
             // revealed during the cast animation, not before.
             displayMult = baseMult;
             displayBase = spellTierBase;

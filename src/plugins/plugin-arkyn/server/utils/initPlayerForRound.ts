@@ -2,6 +2,7 @@ import {
     HAND_SIZE,
     CASTS_PER_ROUND,
     DISCARDS_PER_ROUND,
+    getPlayerStatDeltas,
     type ArkynPlayerState,
 } from "../../shared";
 import { clearArraySchema } from "./clearArraySchema";
@@ -26,10 +27,12 @@ export function initPlayerForRound(player: ArkynPlayerState, sessionId: string):
     player.lastSpellName = "";
     player.lastSpellTier = 0;
     player.lastDamage = 0;
-    player.handSize = HAND_SIZE;
-    player.castsRemaining = CASTS_PER_ROUND
-        + (Array.from(player.sigils).includes("caster") ? 1 : 0);
-    player.discardsRemaining = DISCARDS_PER_ROUND;
+    // Apply stat deltas from all owned sigils (Caster +1 cast, future
+    // +1 discard / +1 hand size / etc.). Additive across sigils.
+    const statDeltas = getPlayerStatDeltas(Array.from(player.sigils));
+    player.handSize = HAND_SIZE + statDeltas.handSize;
+    player.castsRemaining = CASTS_PER_ROUND + statDeltas.castsPerRound;
+    player.discardsRemaining = DISCARDS_PER_ROUND + statDeltas.discardsPerRound;
     // Clear the previous round's reward breakdown so the round-end overlay
     // never shows stale numbers if the next defeat happens before the
     // server has had a chance to set them. `gold` (the running total) is

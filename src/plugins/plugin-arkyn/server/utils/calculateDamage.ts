@@ -2,13 +2,14 @@ import type { ArraySchema, MapSchema } from "@colyseus/schema";
 import {
     calculateSpellDamage as sharedCalculateSpellDamage,
     getContributingRuneIndices,
+    getHandMultBonus,
+    iterateProcs,
     type ResolvedSpell,
     type RuneInstance,
     type EnemyState,
 } from "../../shared";
 import type { RarityType } from "../../shared/arkynConstants";
-import { CASTS_PER_ROUND, VOLTAGE_PROC_CHANCE, VOLTAGE_RNG_OFFSET, SYNAPSE_MULT_PER_PSY } from "../../shared/arkynConstants";
-import { createRoundRng } from "../../shared/seededRandom";
+import { CASTS_PER_ROUND } from "../../shared/arkynConstants";
 
 // Server-side wrapper that adapts EnemyState's ArraySchema fields into plain
 // arrays, derives the contributing runes from the player's selection, and
@@ -16,10 +17,10 @@ import { createRoundRng } from "../../shared/seededRandom";
 // inside the shared formula — each rune's element is looked up in the
 // scrollLevels map to add flat base damage from purchased scrolls.
 //
-// When the player owns the "voltage" sigil, a deterministic proc check runs
-// for each contributing Lightning rune. Proc'd runes add their base
-// contribution a second time, then the full total is multiplied by the tier
-// mult — matching the client's animation breakdown identically.
+// Sigil effects are applied generically via the registries in `sigilEffects.ts`:
+// - Hand-based mult bonuses (Synapse-style): via `getHandMultBonus()`
+// - RNG procs on played runes (Voltage-style): via `iterateProcs()`
+// Both use deterministic RNG that the client mirrors for animation accuracy.
 export function calculateDamage(
     spell: ResolvedSpell,
     selectedRunes: readonly RuneInstance[],
@@ -29,7 +30,8 @@ export function calculateDamage(
     runSeed?: number,
     currentRound?: number,
     castsRemaining?: number,
-    heldPsyCount?: number,
+    hand?: readonly RuneInstance[],
+    selectedIndices?: readonly number[],
 ): number {
     const resistances = Array.from(enemy.resistances);
     const weaknesses = Array.from(enemy.weaknesses);
@@ -43,10 +45,11 @@ export function calculateDamage(
         i => selectedRunes[i].rarity as RarityType,
     );
 
-    // Synapse sigil — held Psy runes add flat mult bonus
-    const synapseMult = (
-        activeSigils?.includes("synapse") && heldPsyCount
-    ) ? heldPsyCount * SYNAPSE_MULT_PER_PSY : 0;
+    // Hand-based mult bonus from Synapse-style sigils (held runes add mult).
+    // Iterates SIGIL_HAND_MULT generically — no sigil-specific branching.
+    const handMultBonus = (activeSigils && hand && selectedIndices)
+        ? getHandMultBonus(activeSigils, hand, selectedIndices).total
+        : 0;
 
     const breakdown = sharedCalculateSpellDamage(
         spell,
@@ -55,27 +58,32 @@ export function calculateDamage(
         resistances,
         weaknesses,
         scrollLevels,
-        synapseMult,
+        handMultBonus,
     );
 
     let totalDamage = breakdown.finalDamage;
 
-    // Voltage proc — deterministic RNG shared with the client
+    // Apply proc effects from all owned proc-style sigils. `iterateProcs`
+    // walks SIGIL_PROCS, rolls the deterministic RNG for each matching rune,
+    // and yields proc events in a stable order (client mirrors this exactly).
     if (
-        sigils &&
+        activeSigils &&
         runSeed !== undefined &&
         currentRound !== undefined &&
-        castsRemaining !== undefined &&
-        Array.from(sigils).includes("voltage")
+        castsRemaining !== undefined
     ) {
         const castNumber = CASTS_PER_ROUND - castsRemaining;
-        const procRng = createRoundRng(runSeed, VOLTAGE_RNG_OFFSET + currentRound * 10 + castNumber);
-        for (let i = 0; i < contributingRunes.length; i++) {
-            if (contributingRunes[i].element === "lightning") {
-                if (procRng() < VOLTAGE_PROC_CHANCE) {
-                    // Proc adds the rune's base contribution again, then mult
-                    totalDamage += breakdown.runeBaseContributions[i] * breakdown.mult;
-                }
+        for (const proc of iterateProcs(
+            activeSigils,
+            contributingRunes.map(r => r.element),
+            runSeed,
+            currentRound,
+            castNumber,
+        )) {
+            if (proc.effect.type === "double_damage") {
+                // Adds the rune's base contribution again, multiplied by the
+                // cast's final mult — matches legacy Voltage behavior.
+                totalDamage += breakdown.runeBaseContributions[proc.runeIdx] * breakdown.mult;
             }
         }
     }

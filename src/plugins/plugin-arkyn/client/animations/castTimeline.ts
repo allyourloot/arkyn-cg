@@ -78,7 +78,17 @@ export interface CastTimelineContext {
      *
      * Length === contributingCount.
      */
-    runeBreakdown: readonly { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean; isSynapse?: boolean; multDelta?: number }[];
+    runeBreakdown: readonly {
+        base: number;
+        final: number;
+        isResisted: boolean;
+        isCritical: boolean;
+        isProc: boolean;
+        isSynapse?: boolean;
+        multDelta?: number;
+        /** Sigil ID that fired this event (procs + synapse). Drives onSigilShake dispatch. */
+        sigilId?: string;
+    }[];
     /**
      * Spell-tier base damage (SPELL_TIER_BASE_DAMAGE[tier]) — added to the
      * Base counter at t=0 so the chip starts at the spell's tier base and
@@ -234,14 +244,16 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
         const item = ctx.runeBreakdown[i];
         if (!item) continue;
 
-        // Synapse events don't tick the Base counter — they add to Mult
-        // (already baked into finalDamage). Play SFX + sigil shake + mult tick.
+        // Hand-mult events (Synapse-style) don't tick the Base counter —
+        // they add to Mult (already baked into finalDamage). Play SFX +
+        // sigil shake + mult tick. sigilId drives dispatch generically.
         if (item.isSynapse) {
             runningMult += item.multDelta ?? 0;
             const multAtEvent = runningMult;
+            const sigilId = item.sigilId;
             tl.call(playCount, undefined, tickAt);
-            if (ctx.onSigilShake) {
-                tl.call(() => ctx.onSigilShake!("synapse"), undefined, tickAt);
+            if (ctx.onSigilShake && sigilId) {
+                tl.call(() => ctx.onSigilShake!(sigilId), undefined, tickAt);
             }
             if (ctx.onMultTick) {
                 tl.call(() => ctx.onMultTick!(multAtEvent), undefined, tickAt);
@@ -259,9 +271,11 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
             tl.call(playCount, undefined, tickAt);
         }
         tl.call(() => ctx.onCountTick(cumulativeAtEvent), undefined, tickAt);
-        // Proc events trigger a sigil shake in the SigilBar
-        if (item.isProc && ctx.onSigilShake) {
-            tl.call(() => ctx.onSigilShake!("voltage"), undefined, tickAt);
+        // Proc events trigger a sigil shake in the SigilBar — sigilId
+        // comes from the breakdown entry so dispatch is generic.
+        if (item.isProc && ctx.onSigilShake && item.sigilId) {
+            const sigilId = item.sigilId;
+            tl.call(() => ctx.onSigilShake!(sigilId), undefined, tickAt);
         }
     }
 

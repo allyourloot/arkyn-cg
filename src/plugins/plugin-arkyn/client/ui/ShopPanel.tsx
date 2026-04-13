@@ -4,6 +4,7 @@ import {
     CASTS_PER_ROUND,
     DISCARDS_PER_ROUND,
     getDebuffById,
+    getPlayerStatDeltas,
     RUNE_BASE_DAMAGE,
 } from "../../shared";
 import { SCROLL_RUNE_BONUS } from "../../shared/arkynConstants";
@@ -60,7 +61,9 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
     const debuffId = useEnemyDebuff();
     const debuff = debuffId ? getDebuffById(debuffId) : undefined;
     const sigils = useSigils();
-    const effectiveCasts = CASTS_PER_ROUND + (sigils.includes("caster") ? 1 : 0);
+    const statDeltas = getPlayerStatDeltas(sigils);
+    const effectiveCasts = CASTS_PER_ROUND + statDeltas.castsPerRound;
+    const effectiveDiscards = DISCARDS_PER_ROUND + statDeltas.discardsPerRound;
 
     // "+1" flash when effectiveCasts increases (e.g. Caster sigil bought).
     // Briefly swaps the chip text to "+1" in the same style, then shows
@@ -182,7 +185,7 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
                             <span className={styles.statLabel}>Discards</span>
                             <div className={`${styles.statChip} ${styles.statChipDiscards}`}>
                                 <BouncyText className={styles.statChipValue}>
-                                    {DISCARDS_PER_ROUND}
+                                    {effectiveDiscards}
                                 </BouncyText>
                             </div>
                         </div>

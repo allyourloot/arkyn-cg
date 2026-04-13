@@ -34,12 +34,9 @@ export const SHOP_SCROLL_COUNT = 2;   // scroll slots shown per shop visit
 export const MAX_SIGILS = 6;          // max sigils a player can hold
 export const SHOP_SIGIL_COUNT = 2;    // sigil slots shown per shop visit
 
-// Voltage sigil proc
-export const VOLTAGE_PROC_CHANCE = 0.25;   // 1 in 4 chance per Lightning rune
-export const VOLTAGE_RNG_OFFSET = 300000;  // RNG namespace offset for proc rolls
-
-// Synapse sigil — held Psy runes add flat mult bonus per rune
-export const SYNAPSE_MULT_PER_PSY = 2;
+// Sigil effect values (proc chances, RNG offsets, mult bonuses, etc.)
+// live in their category-specific registries in `shared/sigilEffects.ts`.
+// See: SIGIL_PROCS (Voltage), SIGIL_HAND_MULT (Synapse), etc.
 
 // Messages (client -> server)
 export const ARKYN_JOIN = "arkyn:join";

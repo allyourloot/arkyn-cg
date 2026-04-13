@@ -50,11 +50,35 @@ export default function BackgroundShader() {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const gl = canvas.getContext("webgl", { antialias: false, alpha: false });
+        // `alpha: true` so the canvas is transparent where WebGL doesn't
+        // paint — critical for graceful degradation. If the browser's
+        // WebGL context limit is exceeded elsewhere (e.g. many sigil
+        // ItemScenes + dissolve canvases during a cast) and this context
+        // is evicted, the canvas becomes transparent and the CSS
+        // `background-color: #1a1530` fallback shows through instead of
+        // flashing to default white.
+        const gl = canvas.getContext("webgl", { antialias: false, alpha: true });
         if (!gl) {
             console.warn("WebGL not available; background shader disabled.");
             return;
         }
+
+        // Pause the render loop when the context is lost so we don't spam
+        // the console with errors. The canvas's CSS fallback takes over
+        // visually. If the context is later restored, we don't currently
+        // re-initialize — a reload or phase change would fix it.
+        let contextLost = false;
+        const onContextLost = (e: Event) => {
+            e.preventDefault();
+            contextLost = true;
+            console.warn("BackgroundShader: WebGL context lost — using CSS fallback background.");
+        };
+        const onContextRestored = () => {
+            contextLost = false;
+            console.info("BackgroundShader: WebGL context restored.");
+        };
+        canvas.addEventListener("webglcontextlost", onContextLost, false);
+        canvas.addEventListener("webglcontextrestored", onContextRestored, false);
 
         const program = createProgram(gl, VERTEX_SHADER, FRAGMENT_SHADER, "background");
         if (!program) return;
@@ -94,6 +118,13 @@ export default function BackgroundShader() {
         // ~33ms which gives a stable 30fps cap.
         const render = (now: number) => {
             if (!running) return;
+            // Skip drawing while the context is lost — the CSS fallback
+            // background covers the canvas until the context is restored
+            // or the component remounts.
+            if (contextLost) {
+                rafId = requestAnimationFrame(render);
+                return;
+            }
             if (FRAME_INTERVAL_MS > 0 && now - lastDrawAt < FRAME_INTERVAL_MS) {
                 rafId = requestAnimationFrame(render);
                 return;
@@ -155,8 +186,12 @@ export default function BackgroundShader() {
             cancelAnimationFrame(rafId);
             window.removeEventListener("resize", resize);
             document.removeEventListener("visibilitychange", onVisibility);
-            gl.deleteBuffer(buffer);
-            gl.deleteProgram(program);
+            canvas.removeEventListener("webglcontextlost", onContextLost);
+            canvas.removeEventListener("webglcontextrestored", onContextRestored);
+            if (!contextLost) {
+                gl.deleteBuffer(buffer);
+                gl.deleteProgram(program);
+            }
         };
     }, []);
 

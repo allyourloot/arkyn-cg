@@ -6,6 +6,12 @@
     pointer-events: none;
     z-index: -1;
     display: block;
+    /* Fallback background color that shows through if/when the WebGL
+       context is lost (too many active contexts elsewhere on the page).
+       Matches the darkest tone of the shader so a lost-context state
+       reads as "shader dimmed" instead of "flash of white". Requires
+       `alpha: true` on the renderer context (see BackgroundShader.tsx). */
+    background-color: #1a1530;
     /* Nearest-neighbor upscale: the canvas renders at a low internal
        resolution (see PIXEL_SIZE in BackgroundShader.tsx) and CSS blows it
        up so each shader pixel becomes a chunky block, matching the pixel
