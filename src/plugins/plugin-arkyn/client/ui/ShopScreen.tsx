@@ -13,7 +13,7 @@ import { playMenuOpen } from "../sfx";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getScrollImageUrl } from "./scrollAssets";
 import BouncyText from "./BouncyText";
-import SigilScene from "./SigilScene";
+import ItemScene from "./ItemScene";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import frameUrl from "/assets/ui/frame.png?url";
 import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
@@ -103,8 +103,8 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                     <span className={styles.priceValue}>{item.cost}</span>
                                 </div>
                                 <div className={styles.cardImageWrap}>
-                                    <SigilScene
-                                        sigilId={item.element}
+                                    <ItemScene
+                                        itemId={item.element}
                                         index={i}
                                         className={styles.sigilCanvas}
                                     />
@@ -144,7 +144,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             <span className={styles.sectionLabel}>Scrolls</span>
             <div className={styles.section}>
                 <div className={styles.itemGrid}>
-                    {scrollItems.map(item => {
+                    {scrollItems.map((item, i) => {
                         const elementColor = ELEMENT_COLORS[item.element] ?? "#aaa";
                         const scrollUrl = getScrollImageUrl(item.element);
                         const canAfford = gold >= item.cost;
@@ -164,13 +164,12 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
 
                                 {/* Scroll image — centered in remaining space */}
                                 <div className={styles.cardImageWrap}>
-                                    {scrollUrl && (
-                                        <img
-                                            src={scrollUrl}
-                                            alt={`${elementName} Scroll`}
-                                            className={styles.itemImage}
-                                        />
-                                    )}
+                                    <ItemScene
+                                        itemId={item.element}
+                                        index={sigilItems.length + i}
+                                        imageUrl={scrollUrl}
+                                        className={styles.sigilCanvas}
+                                    />
                                 </div>
 
                                 {/* Hover buy button */}

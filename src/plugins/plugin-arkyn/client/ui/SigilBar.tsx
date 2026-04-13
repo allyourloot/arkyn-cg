@@ -5,7 +5,7 @@ import { MAX_SIGILS } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { useSigils, sendSellSigil, useActiveSigilShake, registerSigilSlot } from "../arkynStore";
 import { RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
-import SigilScene from "./SigilScene";
+import ItemScene from "./ItemScene";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import handFrameUrl from "/assets/ui/hand-frame.png?url";
 import frameUrl from "/assets/ui/frame.png?url";
@@ -114,7 +114,7 @@ export default function SigilBar() {
                         onPointerEnter={HAS_HOVER ? () => handlePointerEnter(i) : undefined}
                         onPointerLeave={HAS_HOVER ? () => handlePointerLeave(i) : undefined}
                     >
-                        <SigilScene sigilId={sigilId} index={i} />
+                        <ItemScene itemId={sigilId} index={i} />
                         {/* Tooltip — centered below */}
                         <div className={styles.tooltip}>
                             <span className={styles.tooltipName}>

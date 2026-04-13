@@ -79,15 +79,18 @@ const HAS_HOVER =
 
 // ----- Component -----
 
-interface SigilSceneProps {
-    sigilId: string;
-    /** Index in the bar — offsets the float phase so sigils bob out of sync. */
+interface ItemSceneProps {
+    /** Item ID — used to resolve a sigil image when no imageUrl is provided. */
+    itemId: string;
+    /** Index — offsets the idle float phase so items bob out of sync. */
     index: number;
     /** Optional CSS class for the canvas element. Defaults to SigilBar's sigilCanvas. */
     className?: string;
+    /** Optional image URL — if provided, uses this instead of getSigilImageUrl(itemId). */
+    imageUrl?: string;
 }
 
-export default function SigilScene({ sigilId, index, className }: SigilSceneProps) {
+export default function ItemScene({ itemId, index, className, imageUrl: imageUrlProp }: ItemSceneProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const tiltTargetRef = useRef({ x: 0, y: 0 });
     const tiltCurrentRef = useRef({ x: 0, y: 0 });
@@ -115,7 +118,7 @@ export default function SigilScene({ sigilId, index, className }: SigilSceneProp
         camera.position.z = 2;
 
         // ── Texture ──
-        const imageUrl = getSigilImageUrl(sigilId, 128);
+        const imageUrl = imageUrlProp || getSigilImageUrl(itemId, 128);
         const texture = new THREE.TextureLoader().load(imageUrl, () => {
             renderer.render(scene, camera);
         });
@@ -200,7 +203,7 @@ export default function SigilScene({ sigilId, index, className }: SigilSceneProp
             texture.dispose();
             renderer.dispose();
         };
-    }, [sigilId, index]);
+    }, [itemId, index, imageUrlProp]);
 
     // ----- Pointer handlers (tilt only — hover pop is GSAP in SigilBar) -----
 
