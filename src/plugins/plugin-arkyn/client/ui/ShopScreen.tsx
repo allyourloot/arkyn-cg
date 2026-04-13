@@ -12,6 +12,8 @@ import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getScrollImageUrl } from "./scrollAssets";
 import BouncyText from "./BouncyText";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
+import frameUrl from "/assets/ui/frame.png?url";
+import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
 import buttonGreenUrl from "/assets/ui/button-green.png?url";
 import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
 import buttonGreenDisabledUrl from "/assets/ui/button-green-disabled.png?url";
@@ -22,6 +24,10 @@ const buttonStyleVars = {
     "--btn-bg": `url(${buttonGreenUrl})`,
     "--btn-bg-hover": `url(${buttonGreenHoverUrl})`,
     "--btn-bg-disabled": `url(${buttonGreenDisabledUrl})`,
+} as CSSProperties;
+const cardStyleVars = {
+    "--card-bg": `url(${frameUrl})`,
+    "--buy-bg": `url(${innerFrameGreenUrl})`,
 } as CSSProperties;
 
 type ShopScreenProps = {
@@ -58,15 +64,14 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     // Split items by type for section rendering
     const scrollItems = shopItems
         .map((item, idx) => ({ ...item, shopIndex: idx }))
-        .filter(item => item.itemType === "scroll");
+        .filter(item => item.itemType === "scroll" && !item.purchased);
 
     return (
-        <div ref={ref} className={styles.panel} style={panelStyleVars}>
-            <span className={styles.title}>Shop</span>
-
-            {/* Sigils section — placeholder for future implementation */}
+        <div ref={ref} className={styles.wrapper}>
+        <div className={styles.panel} style={panelStyleVars}>
+            {/* Sigils section */}
+            <span className={styles.sectionLabel}>Sigils</span>
             <div className={styles.section}>
-                <span className={styles.sectionTitle}>Sigils</span>
                 <div className={styles.itemGrid}>
                     <div className={styles.placeholderCard}>
                         <BouncyText className={styles.placeholderText}>
@@ -82,8 +87,8 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             </div>
 
             {/* Scrolls section */}
+            <span className={styles.sectionLabel}>Scrolls</span>
             <div className={styles.section}>
-                <span className={styles.sectionTitle}>Scrolls</span>
                 <div className={styles.itemGrid}>
                     {scrollItems.map(item => {
                         const elementColor = ELEMENT_COLORS[item.element] ?? "#aaa";
@@ -94,20 +99,17 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         return (
                             <div
                                 key={item.shopIndex}
-                                className={`${styles.itemCard} ${item.purchased ? styles.itemCardSold : ""} ${!canAfford && !item.purchased ? styles.itemCardCantAfford : ""}`}
-                                style={{
-                                    "--element-color": elementColor,
-                                    "--element-bg": elementColor + "33",
-                                } as CSSProperties}
+                                className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""}`}
+                                style={{ ...cardStyleVars } as CSSProperties}
                             >
-                                {/* Price chip — anchored to top edge */}
+                                {/* Gold price at top of card */}
                                 <div className={styles.priceChip}>
                                     <img src={goldIconUrl} alt="Gold" className={styles.priceIcon} />
                                     <span className={styles.priceValue}>{item.cost}</span>
                                 </div>
 
-                                {/* Card body */}
-                                <div className={styles.cardBody}>
+                                {/* Scroll image — centered in remaining space */}
+                                <div className={styles.cardImageWrap}>
                                     {scrollUrl && (
                                         <img
                                             src={scrollUrl}
@@ -115,53 +117,40 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                             className={styles.itemImage}
                                         />
                                     )}
-                                    <span className={styles.itemName} style={{ color: elementColor }}>
-                                        {elementName}
-                                    </span>
                                 </div>
 
-                                {/* Hover buy button — right side */}
-                                {!item.purchased && (
-                                    <button
-                                        type="button"
-                                        className={styles.buyButton}
-                                        style={buttonStyleVars}
-                                        onClick={(e) => handleBuy(item.shopIndex, item.element, e)}
-                                        disabled={!canAfford}
-                                    >
-                                        Buy
-                                    </button>
-                                )}
+                                {/* Hover buy button */}
+                                <button
+                                    type="button"
+                                    className={styles.buyButton}
+                                    style={buttonStyleVars}
+                                    onClick={(e) => handleBuy(item.shopIndex, item.element, e)}
+                                    disabled={!canAfford}
+                                >
+                                    Buy
+                                </button>
 
                                 {/* Tooltip — visible on hover */}
-                                {!item.purchased && (
-                                    <div className={styles.tooltip}>
-                                        <span className={styles.tooltipDesc}>
-                                            +2 base damage to all {elementName} runes.
-                                        </span>
-                                    </div>
-                                )}
-
-                                {/* Sold overlay */}
-                                {item.purchased && (
-                                    <div className={styles.soldOverlay}>
-                                        <span className={styles.soldLabel}>Sold</span>
-                                    </div>
-                                )}
+                                <div className={styles.tooltip}>
+                                    <span className={styles.tooltipDesc}>
+                                        +2 base damage to all {elementName} runes.
+                                    </span>
+                                </div>
                             </div>
                         );
                     })}
                 </div>
             </div>
 
-            <button
-                type="button"
-                onClick={handleContinue}
-                className={styles.continueButton}
-                style={buttonStyleVars}
-            >
-                Next Round
-            </button>
+        </div>
+        <button
+            type="button"
+            onClick={handleContinue}
+            className={styles.continueButton}
+            style={buttonStyleVars}
+        >
+            Next Round
+        </button>
         </div>
     );
 }

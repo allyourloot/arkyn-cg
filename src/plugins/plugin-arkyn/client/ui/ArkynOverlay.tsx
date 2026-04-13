@@ -28,6 +28,8 @@ import BackgroundMusic from "./BackgroundMusic";
 import BackgroundShader from "./BackgroundShader";
 import OverlayShader from "./OverlayShader";
 import { getScrollImageUrl } from "./scrollAssets";
+import ScrollDissolveShader from "./ScrollDissolveShader";
+import { playCount, playDissolve } from "../sfx";
 import styles from "./ArkynOverlay.module.css";
 
 // Normalizes the raw gamePhase into one of the four visual layouts the
@@ -75,6 +77,19 @@ export default function ArkynOverlay() {
     const [flyingScroll, setFlyingScroll] = useState<FlyingScroll | null>(null);
     const flyingScrollRef = useRef<HTMLImageElement>(null);
 
+    // Dissolve phase — replaces the img with a WebGL dissolve canvas.
+    const [dissolveData, setDissolveData] = useState<{
+        element: string;
+        startTime: number;
+        x: number;
+        y: number;
+        size: number;
+    } | null>(null);
+    const DISSOLVE_DURATION_MS = 550;
+
+    // "UPGRADE!" label — shown above the scroll after it reaches center.
+    const [showUpgradeLabel, setShowUpgradeLabel] = useState(false);
+
     const [showRoundEnd, setShowRoundEnd] = useState(false);
     useEffect(() => {
         if (gamePhase !== "round_end") {
@@ -116,6 +131,8 @@ export default function ArkynOverlay() {
     useEffect(() => {
         if (gamePhase !== "shop") {
             setFlyingScroll(null);
+            setDissolveData(null);
+            setShowUpgradeLabel(false);
             setScrollUpgradeDisplay(null);
         }
     }, [gamePhase]);
@@ -152,6 +169,9 @@ export default function ArkynOverlay() {
             ease: "power2.out",
         });
 
+        // Show "UPGRADE!" label above the scroll
+        tl.call(() => { setShowUpgradeLabel(true); });
+
         // Phase 2: Shake (0.35s)
         tl.to(el, {
             keyframes: [
@@ -165,23 +185,43 @@ export default function ArkynOverlay() {
             ],
         });
 
-        // Phase 3: Show upgrade display in ShopPanel
+        // Phase 3: Show upgrade display in ShopPanel + 3× count SFX
         tl.call(() => {
             setScrollUpgradeDisplay({ element, oldLevel, newLevel });
+            playCount(1.0);
+        });
+        tl.call(() => { playCount(1.15); }, [], "+=0.15");
+        tl.call(() => { playCount(1.3); }, [], "+=0.15");
+
+        // Phase 4: Hold (0.5s) — let the player read the upgrade info
+        tl.to(el, { duration: 0.5 });
+
+        // Phase 5: Swap img for WebGL dissolve shader
+        tl.call(() => {
+            const targetSize = Math.min(window.innerWidth, window.innerHeight) * 0.18;
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight / 2;
+            playDissolve();
+            setShowUpgradeLabel(false);
+            setDissolveData({
+                element,
+                startTime: performance.now(),
+                x: cx - targetSize / 2,
+                y: cy - targetSize / 2,
+                size: targetSize,
+            });
+            // Hide the img — the dissolve canvas takes over
+            el.style.visibility = "hidden";
         });
 
-        // Phase 4: Hold (0.8s) — let the player read the upgrade info
-        tl.to(el, { duration: 0.8 });
-
-        // Phase 5: Dissolve — scale down + fade + blur
+        // Wait for dissolve to finish, then clean up. Extra 100ms buffer
+        // so the canvas has fully hidden itself before React unmounts it
+        // — prevents a white flash from the GL context teardown.
         tl.to(el, {
-            opacity: 0,
-            scale: 0.6,
-            filter: "blur(8px) brightness(2)",
-            duration: 0.5,
-            ease: "power2.in",
+            duration: DISSOLVE_DURATION_MS / 1000 + 0.1,
             onComplete: () => {
                 setFlyingScroll(null);
+                requestAnimationFrame(() => setDissolveData(null));
             },
         });
 
@@ -315,6 +355,26 @@ export default function ArkynOverlay() {
                         src={flyingScroll.imageUrl}
                         alt=""
                         className={styles.flyingScroll}
+                    />
+                )}
+
+                {/* "UPGRADE!" label above the centered scroll */}
+                {showUpgradeLabel && (
+                    <span className={styles.upgradeLabel}>Upgrade!</span>
+                )}
+
+                {/* WebGL dissolve canvas — replaces the img for the final phase */}
+                {dissolveData && (
+                    <ScrollDissolveShader
+                        element={dissolveData.element}
+                        startTime={dissolveData.startTime}
+                        duration={DISSOLVE_DURATION_MS}
+                        size={dissolveData.size}
+                        className={styles.flyingScroll}
+                        style={{
+                            left: dissolveData.x,
+                            top: dissolveData.y,
+                        }}
                     />
                 )}
 

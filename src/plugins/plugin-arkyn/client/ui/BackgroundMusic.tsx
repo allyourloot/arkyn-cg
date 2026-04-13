@@ -163,9 +163,8 @@ export function setBgMusicPitch(rate: number, cents: number): void {
     gain.linearRampToValueAtTime(BASE_VOLUME, snapTime + PITCH_FADE_DURATION);
 }
 
-function pickTrack(gamePhase: string, isBoss: boolean): TrackKey {
+function pickTrack(gamePhase: string, _isBoss: boolean): TrackKey {
     if (gamePhase === "shop") return "shop";
-    if (isBoss && (gamePhase === "playing" || gamePhase === "round_end" || gamePhase === "game_over")) return "boss";
     return "theme";
 }
 

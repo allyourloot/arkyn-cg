@@ -1,15 +1,20 @@
-/* Center-column shop frame. Lives inside ArkynOverlay's .centerColumn
-   when the game phase is "shop". Contains Sigils and Scrolls sections
-   with a Next Round button at the bottom. */
+/* Outer wrapper — centers the panel + button as a group in the
+   centerColumn via the parent's justify-content: center. */
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(12px, 2vh, 24px);
+    width: 100%;
+    max-width: clamp(480px, 60vw, 860px);
+}
+
+/* Shop frame containing the item sections. */
 .panel {
     pointer-events: auto;
     box-sizing: border-box;
     width: 100%;
-    max-width: clamp(480px, 60vw, 860px);
     height: 72vh;
-    align-self: center;
-    margin-top: auto;
-    margin-bottom: auto;
     background: transparent;
     border-style: solid;
     border-color: transparent;
@@ -23,14 +28,15 @@
     image-rendering: pixelated;
 }
 
-.title {
-    font-size: clamp(var(--font-size-md), 3.8vw, var(--font-size-xl));
-    font-weight: normal;
-    color: #ffd700;
-    text-shadow: 0 0 16px rgba(255, 215, 0, 0.55), 3px 3px 0 rgba(0, 0, 0, 0.85);
-    letter-spacing: 5px;
+/* --- Section label — sits outside the section frame, top-left aligned --- */
+.sectionLabel {
+    align-self: flex-start;
+    font-size: clamp(var(--font-size-2xs), 1.6vw, var(--font-size-xs));
+    color: #d4c8b0;
     text-transform: uppercase;
+    letter-spacing: 3px;
     line-height: 1;
+    margin-left: clamp(4px, 0.6vw, 12px);
 }
 
 /* --- Section containers (Sigils / Scrolls) --- */
@@ -39,38 +45,29 @@
     width: 100%;
     flex: 1;
     min-height: 0;
+    position: relative;
     background: transparent;
     border-style: solid;
     border-color: transparent;
     border-width: 24px;
     border-image: var(--section-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
-    padding: clamp(16px, 2vh, 26px) clamp(12px, 1.6vw, 22px) clamp(8px, 1.2vh, 16px);
+    padding: 2px 4px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(6px, 1vh, 12px);
     image-rendering: pixelated;
     overflow: visible;
-}
-
-.sectionTitle {
-    font-size: clamp(var(--font-size-2xs), 1.6vw, var(--font-size-xs));
-    color: #d4c8b0;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    line-height: 1;
 }
 
 /* --- Item grid: 2 items side by side --- */
 .itemGrid {
     display: flex;
-    gap: clamp(12px, 1.8vw, 24px);
+    gap: clamp(16px, 2.4vw, 32px);
     justify-content: center;
     align-items: stretch;
     width: 100%;
     flex: 1;
     min-height: 0;
-    overflow: visible;
 }
 
 /* --- Placeholder card (Sigils coming soon) --- */
@@ -78,13 +75,13 @@
     box-sizing: border-box;
     flex: 1;
     max-width: 200px;
+    height: 100%;
     background: rgba(0, 0, 0, 0.2);
     border: 2px dashed rgba(180, 170, 150, 0.25);
     border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 0;
 }
 
 .placeholderText {
@@ -94,50 +91,44 @@
 }
 
 /* ================================================================
-   Scroll item card — vertical card layout
+   Scroll item card — tall playing-card with frame.png 9-slice.
+   Uses absolute positioning so the card extends beyond the section
+   frame, giving it its own visual space.
    ================================================================ */
 .itemCard {
     position: relative;
     box-sizing: border-box;
-    flex: 1;
-    max-width: 200px;
-    background: linear-gradient(
-        180deg,
-        rgba(40, 35, 50, 0.7) 0%,
-        rgba(25, 20, 35, 0.85) 100%
-    );
-    border: 2px solid rgba(180, 170, 150, 0.2);
-    border-radius: 8px;
+    background: transparent;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 16px;
+    border-image: var(--card-bg) 24 24 24 24 fill / 16px 16px 16px 16px;
+    image-rendering: pixelated;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 0;
+    justify-content: center;
+    padding: clamp(4px, 0.6vh, 8px) clamp(2px, 0.4vw, 6px);
     font-family: inherit;
     color: #fff;
-    transition: transform 100ms ease-out, border-color 150ms ease-out,
-                box-shadow 150ms ease-out;
-    min-height: 0;
+    transition: transform 100ms ease-out;
     overflow: visible;
 }
 
-.itemCard:hover:not(.itemCardSold):not(.itemCardCantAfford) {
-    border-color: var(--element-color, rgba(180, 170, 150, 0.5));
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.06);
-    transform: translateY(-2px);
+.itemCard:hover:not(.itemCardCantAfford) {
+    transform: translateY(-4px);
+    z-index: 5;
 }
 
 .itemCardCantAfford {
     opacity: 0.45;
 }
 
-.itemCardSold {
-    /* no transform, handled by overlay */
-}
-
-/* --- Price chip — anchored to top edge of card --- */
+/* --- Gold price — absolute, centered on top edge of card frame --- */
 .priceChip {
     position: absolute;
-    top: 0;
+    top: -16px;
     left: 50%;
     transform: translate(-50%, -50%);
     display: flex;
@@ -146,96 +137,72 @@
     background: rgba(14, 10, 6, 0.9);
     border: 1px solid rgba(255, 215, 0, 0.3);
     border-radius: 4px;
-    padding: 3px 10px;
+    padding: 4px 10px;
     z-index: 2;
     white-space: nowrap;
 }
 
 .priceIcon {
-    width: clamp(14px, 1.6vw, 20px);
-    height: clamp(14px, 1.6vw, 20px);
+    width: clamp(18px, 2vw, 26px);
+    height: clamp(18px, 2vw, 26px);
     image-rendering: pixelated;
 }
 
 .priceValue {
-    font-size: clamp(var(--font-size-3xs), 1.2vw, var(--font-size-2xs));
+    font-size: clamp(var(--font-size-xs), 1.8vw, var(--font-size-sm));
     color: #ffd700;
     font-weight: normal;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
 }
 
-/* --- Card body (image + name) --- */
-.cardBody {
+/* --- Scroll image — centered in remaining card space --- */
+.cardImageWrap {
+    flex: 1;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: clamp(4px, 0.6vh, 8px);
-    padding: clamp(18px, 2.6vh, 30px) clamp(8px, 1vw, 16px) clamp(8px, 1.2vh, 14px);
-    flex: 1;
     min-height: 0;
 }
 
-/* --- Scroll image --- */
 .itemImage {
-    width: clamp(56px, 8vw, 96px);
-    height: clamp(56px, 8vw, 96px);
+    width: clamp(80px, 12vw, 140px);
+    height: clamp(80px, 12vw, 140px);
     image-rendering: pixelated;
     object-fit: contain;
-    flex-shrink: 0;
-}
-
-/* --- Element name --- */
-.itemName {
-    font-size: clamp(var(--font-size-2xs), 1.4vw, var(--font-size-xs));
-    font-weight: normal;
-    text-transform: capitalize;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.7);
-    line-height: 1;
 }
 
 /* ================================================================
-   Buy button — appears on the right side on hover
+   Buy button — appears on hover, inner-frame-green 9-slice
    ================================================================ */
 .buyButton {
     position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translate(40%, -50%) scale(0.85);
+    bottom: -16px;
+    left: 50%;
+    transform: translate(-50%, 50%);
     box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 10px;
-    border-image: var(--btn-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
-    background-color: transparent;
+    background: #2d9e2d;
+    border: 2px solid #1a7a1a;
+    border-radius: 4px;
     color: #fff;
     font-family: inherit;
-    font-size: clamp(var(--font-size-3xs), 1.2vw, var(--font-size-2xs));
+    font-size: clamp(var(--font-size-xs), 1.8vw, var(--font-size-sm));
     font-weight: normal;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
     cursor: pointer;
-    image-rendering: pixelated;
     line-height: 1;
-    padding: clamp(4px, 0.6vh, 8px) clamp(10px, 1.4vw, 18px);
+    padding: clamp(2px, 0.4vh, 6px) clamp(10px, 1.4vw, 18px);
     z-index: 4;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 100ms ease-out, transform 100ms ease-out;
-}
-
-.itemCard:hover:not(.itemCardSold):not(.itemCardCantAfford) .buyButton {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translate(40%, -50%) scale(1);
+    transition: transform 80ms ease-out, background 80ms ease-out;
 }
 
 .buyButton:hover {
-    border-image: var(--btn-bg-hover) 10 10 10 10 fill / 10px 10px 10px 10px;
+    background: #3ab83a;
 }
 
 .buyButton:active {
-    transform: translate(40%, -50%) scale(0.95) !important;
+    transform: translate(-50%, 50%) scale(0.93);
 }
 
 .buyButton:disabled {
@@ -245,13 +212,13 @@
 }
 
 /* ================================================================
-   Tooltip — appears below card on hover
+   Tooltip — appears on the left side of the card on hover
    ================================================================ */
 .tooltip {
     position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translate(-50%, calc(100% + 6px));
+    left: -16px;
+    top: 50%;
+    transform: translate(-100%, -50%);
     background: rgba(14, 10, 6, 0.92);
     border: 1px solid rgba(180, 170, 150, 0.25);
     border-radius: 4px;
@@ -267,7 +234,7 @@
     gap: 4px;
 }
 
-.itemCard:hover:not(.itemCardSold) .tooltip {
+.itemCard:hover .tooltip {
     opacity: 1;
 }
 
@@ -275,28 +242,6 @@
     font-size: clamp(var(--font-size-3xs), 1vw, var(--font-size-2xs));
     color: #c8c0b0;
     line-height: 1.2;
-}
-
-/* ================================================================
-   Sold overlay
-   ================================================================ */
-.soldOverlay {
-    position: absolute;
-    inset: -1px;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    z-index: 3;
-}
-
-.soldLabel {
-    font-size: clamp(var(--font-size-xs), 2vw, var(--font-size-sm));
-    color: #e05050;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
 }
 
 /* ================================================================
@@ -322,6 +267,7 @@
     padding: clamp(8px, 1.2vh, 14px) clamp(24px, 3vw, 40px);
     transition: transform 80ms ease-out;
     flex-shrink: 0;
+    pointer-events: auto;
 }
 
 .continueButton:hover {
