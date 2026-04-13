@@ -78,7 +78,7 @@ export interface CastTimelineContext {
      *
      * Length === contributingCount.
      */
-    runeBreakdown: readonly { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean }[];
+    runeBreakdown: readonly { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean; isSynapse?: boolean; multDelta?: number }[];
     /**
      * Spell-tier base damage (SPELL_TIER_BASE_DAMAGE[tier]) — added to the
      * Base counter at t=0 so the chip starts at the spell's tier base and
@@ -127,6 +127,10 @@ export interface CastTimelineContext {
     onImpact: () => void;
     /** Fired when a sigil proc event occurs — shakes the sigil in the SigilBar. */
     onSigilShake?: (sigilId: string) => void;
+    /** Fired when a Synapse event ticks the Mult counter. */
+    onMultTick?: (mult: number) => void;
+    /** Starting mult value (tier mult) — used to compute cumulative mult ticks. */
+    baseMult?: number;
     /** Fired when the timeline finishes. Clears all animation state. */
     onComplete: () => void;
 }
@@ -224,10 +228,27 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
     // first per-rune event needs to add its delta on top of that, not
     // start fresh from zero.
     let runningCumulative = ctx.spellBaseDamage;
+    let runningMult = ctx.baseMult ?? 0;
     for (let i = 0; i < ctx.contributingCount; i++) {
         const tickAt = bubblesStartS + i * BUBBLE_STAGGER_S;
         const item = ctx.runeBreakdown[i];
         if (!item) continue;
+
+        // Synapse events don't tick the Base counter — they add to Mult
+        // (already baked into finalDamage). Play SFX + sigil shake + mult tick.
+        if (item.isSynapse) {
+            runningMult += item.multDelta ?? 0;
+            const multAtEvent = runningMult;
+            tl.call(playCount, undefined, tickAt);
+            if (ctx.onSigilShake) {
+                tl.call(() => ctx.onSigilShake!("synapse"), undefined, tickAt);
+            }
+            if (ctx.onMultTick) {
+                tl.call(() => ctx.onMultTick!(multAtEvent), undefined, tickAt);
+            }
+            continue;
+        }
+
         runningCumulative += item.base;
         const cumulativeAtEvent = runningCumulative;
         if (item.isCritical) {

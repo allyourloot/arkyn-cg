@@ -27,7 +27,8 @@ export function initPlayerForRound(player: ArkynPlayerState, sessionId: string):
     player.lastSpellTier = 0;
     player.lastDamage = 0;
     player.handSize = HAND_SIZE;
-    player.castsRemaining = CASTS_PER_ROUND;
+    player.castsRemaining = CASTS_PER_ROUND
+        + (Array.from(player.sigils).includes("caster") ? 1 : 0);
     player.discardsRemaining = DISCARDS_PER_ROUND;
     // Clear the previous round's reward breakdown so the round-end overlay
     // never shows stale numbers if the next defeat happens before the

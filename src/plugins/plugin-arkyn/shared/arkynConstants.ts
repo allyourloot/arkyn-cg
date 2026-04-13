@@ -38,6 +38,9 @@ export const SHOP_SIGIL_COUNT = 2;    // sigil slots shown per shop visit
 export const VOLTAGE_PROC_CHANCE = 0.25;   // 1 in 4 chance per Lightning rune
 export const VOLTAGE_RNG_OFFSET = 300000;  // RNG namespace offset for proc rolls
 
+// Synapse sigil — held Psy runes add flat mult bonus per rune
+export const SYNAPSE_MULT_PER_PSY = 2;
+
 // Messages (client -> server)
 export const ARKYN_JOIN = "arkyn:join";
 export const ARKYN_CAST = "arkyn:cast";

@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, type CSSProperties } from "react";
+import { gsap } from "gsap";
 import {
     CASTS_PER_ROUND,
     DISCARDS_PER_ROUND,
@@ -17,6 +18,7 @@ import {
     useEnemyIsBoss,
     useEnemyDebuff,
     useScrollUpgradeDisplay,
+    useSigils,
 } from "../arkynStore";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
@@ -57,6 +59,35 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
     const isBoss = useEnemyIsBoss();
     const debuffId = useEnemyDebuff();
     const debuff = debuffId ? getDebuffById(debuffId) : undefined;
+    const sigils = useSigils();
+    const effectiveCasts = CASTS_PER_ROUND + (sigils.includes("caster") ? 1 : 0);
+
+    // "+1" flash when effectiveCasts increases (e.g. Caster sigil bought).
+    // Briefly swaps the chip text to "+1" in the same style, then shows
+    // the new total.
+    const prevCastsRef = useRef(effectiveCasts);
+    const [castsDisplay, setCastsDisplay] = useState<string>(String(effectiveCasts));
+    const chipRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const prev = prevCastsRef.current;
+        prevCastsRef.current = effectiveCasts;
+        if (effectiveCasts <= prev) {
+            setCastsDisplay(String(effectiveCasts));
+            return;
+        }
+
+        // Flash "+1" then update to new total
+        setCastsDisplay(`+${effectiveCasts - prev}`);
+        if (chipRef.current) {
+            gsap.fromTo(chipRef.current,
+                { scale: 1 },
+                { scale: 1.15, duration: 0.12, ease: "power2.out", yoyo: true, repeat: 1 },
+            );
+        }
+        const t = setTimeout(() => setCastsDisplay(String(effectiveCasts)), 500);
+        return () => clearTimeout(t);
+    }, [effectiveCasts]);
 
     const elementColor = ELEMENT_COLORS[enemyElement] ?? "#c4a882";
     const elementIconUrl = getRuneImageUrl(enemyElement);
@@ -138,9 +169,12 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
                     <div className={styles.statsRow}>
                         <div className={styles.statColumn}>
                             <span className={styles.statLabel}>Casts</span>
-                            <div className={`${styles.statChip} ${styles.statChipHands}`}>
+                            <div
+                                ref={chipRef}
+                                className={`${styles.statChip} ${styles.statChipHands}`}
+                            >
                                 <BouncyText className={styles.statChipValue}>
-                                    {CASTS_PER_ROUND}
+                                    {castsDisplay}
                                 </BouncyText>
                             </div>
                         </div>

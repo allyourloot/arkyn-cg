@@ -7,6 +7,8 @@ import {
     CASTS_PER_ROUND,
     VOLTAGE_PROC_CHANCE,
     VOLTAGE_RNG_OFFSET,
+    SYNAPSE_MULT_PER_PSY,
+    SPELL_TIER_MULT,
     resolveSpell,
     calculateSpellDamage,
     getContributingRuneIndices,
@@ -152,8 +154,10 @@ let drawingRunes: DrawingRune[] = [];
 // reads this and pops its Base number on every increment for a Balatro-
 // style "number go up" effect. Reset to 0 at the start of every cast.
 //
-// The MULT counter is NOT stored here — it's purely tier-derived and
-// SpellPreview computes it from the resolved spell directly.
+// The MULT counter ticks up during synapse events (held Psy runes adding
+// +2 Mult each). Starts at the spell's tier mult, then increments per
+// synapse bubble. `-1` is the sentinel meaning "use static tier mult".
+let castMultCounter = -1;
 let castBaseCounter = 0;
 
 // Live TOTAL counter for the current cast's GSAP count-up tween. `-1` is
@@ -183,6 +187,15 @@ let procDamageBubbles: (RuneDamageBubble | null)[] = [];
 let sigilShakeSeq = 0;
 // Active sigil shake event — SigilBar reads this to animate the matching icon.
 let activeSigilShake: { sigilId: string; seq: number } | null = null;
+
+// Synapse sigil — mult bubbles shown on held Psy runes in the hand during cast.
+// Indexed by HAND INDEX (not slot). Non-Psy or played runes are null.
+export interface HandMultBubble {
+    amount: number;     // e.g. 2 for "+2 Mult"
+    seq: number;
+    delayMs: number;
+}
+let handMultBubbles: (HandMultBubble | null)[] = [];
 
 // ----- Hooks -----
 export function useDissolvingRunes() {
@@ -224,6 +237,9 @@ export function useDrawingRunes() {
 export function useCastBaseCounter() {
     return useSyncExternalStore(subscribe, () => castBaseCounter);
 }
+export function useCastMultCounter() {
+    return useSyncExternalStore(subscribe, () => castMultCounter);
+}
 export function useCastTotalDamage() {
     return useSyncExternalStore(subscribe, () => castTotalDamage);
 }
@@ -238,6 +254,9 @@ export function useProcDamageBubbles() {
 }
 export function useActiveSigilShake() {
     return useSyncExternalStore(subscribe, () => activeSigilShake);
+}
+export function useHandMultBubbles() {
+    return useSyncExternalStore(subscribe, () => handMultBubbles);
 }
 
 // ----- Helpers -----
@@ -276,9 +295,11 @@ export function clearCastingRuneIds(): void {
 export function clearLastCastState(): void {
     lastCastBaseDamage = 0;
     castBaseCounter = 0;
+    castMultCounter = -1;
     castTotalDamage = -1;
     roundTotalDamage = 0;
     procDamageBubbles = [];
+    handMultBubbles = [];
     activeSigilShake = null;
     arkynStoreInternal.setLastCastRunes([]);
     notify();
@@ -387,8 +408,9 @@ export function castSpell() {
     // the enemy's resistances/weaknesses individually, so the per-rune
     // bubbles, the Spell Preview Base counter, and the floating enemy
     // damage number all read identical numbers from this single breakdown.
-    const resolvedSpell = resolveSpell(castRunes.map(r => ({ element: r.element })));
-    const contributingIndices = getContributingRuneIndices(castRunes);
+    const ownedSigils = arkynStoreInternal.getSigils();
+    const resolvedSpell = resolveSpell(castRunes.map(r => ({ element: r.element })), ownedSigils);
+    const contributingIndices = getContributingRuneIndices(castRunes, ownedSigils);
     const contributing = contributingIndices.length;
     const contributingRuneData = contributingIndices.map(i => ({ element: castRunes[i].element }));
     // Parallel rarity array — runs alongside contributingRuneData so
@@ -396,6 +418,18 @@ export function castSpell() {
     const contributingRuneRarities: RarityType[] = contributingIndices.map(
         i => castRunes[i].rarity as RarityType,
     );
+
+    // Synapse sigil — count held Psy runes (in hand, not played)
+    const hasSynapse = ownedSigils.includes("synapse");
+    const selectedSet = new Set(sortedSelected);
+    const heldPsyIndices: number[] = [];
+    if (hasSynapse) {
+        for (let i = 0; i < hand.length; i++) {
+            if (!selectedSet.has(i) && hand[i]?.element === "psy") heldPsyIndices.push(i);
+        }
+    }
+    const synapseMult = heldPsyIndices.length * SYNAPSE_MULT_PER_PSY;
+
     const breakdown = resolvedSpell
         ? calculateSpellDamage(
             resolvedSpell,
@@ -404,6 +438,7 @@ export function castSpell() {
             arkynStoreInternal.getEnemyResistances(),
             arkynStoreInternal.getEnemyWeaknesses(),
             arkynStoreInternal.getScrollLevels(),
+            synapseMult,
         )
         : null;
     // Final post-mult damage applied to the enemy on the impact frame.
@@ -425,7 +460,6 @@ export function castSpell() {
     // ----- Voltage proc check -----
     // Deterministic RNG shared with the server so both sides agree on which
     // Lightning runes hit twice. Only consumes rolls for Lightning runes.
-    const ownedSigils = arkynStoreInternal.getSigils();
     const hasVoltage = ownedSigils.includes("voltage");
     const procFlags: boolean[] = []; // per-contributing-rune
     let procDamageTotal = 0;
@@ -462,7 +496,7 @@ export function castSpell() {
     // The extended breakdown interleaves proc entries after their parent rune
     // so the timeline staggers them naturally. Each event in the array gets
     // one BUBBLE_STAGGER_MS slot.
-    const runeBreakdown: { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean }[] = [];
+    const runeBreakdown: { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean; isSynapse?: boolean; multDelta?: number }[] = [];
     let eventIdx = 0;
     if (breakdown) {
         for (let i = 0; i < contributingIndices.length; i++) {
@@ -514,6 +548,33 @@ export function castSpell() {
         }
     }
 
+    // ----- Synapse hand bubbles -----
+    // Build mult bubbles for held Psy runes. These appear on hand rune cards
+    // during the bubble phase, staggered after all play-area bubbles finish.
+    // Also push synapse entries into runeBreakdown so the timeline schedules
+    // SFX and sigil shakes for them.
+    const handMultBubblesForCast: (HandMultBubble | null)[] = new Array(hand.length).fill(null);
+    if (hasSynapse && heldPsyIndices.length > 0) {
+        for (let i = 0; i < heldPsyIndices.length; i++) {
+            handMultBubblesForCast[heldPsyIndices[i]] = {
+                amount: SYNAPSE_MULT_PER_PSY,
+                seq: ++bubbleSeqCounter,
+                delayMs: eventIdx * BUBBLE_STAGGER_MS,
+            };
+            runeBreakdown.push({
+                base: 0,
+                final: 0,
+                isResisted: false,
+                isCritical: false,
+                isProc: false,
+                isSynapse: true,
+                multDelta: SYNAPSE_MULT_PER_PSY,
+            });
+            eventIdx++;
+        }
+    }
+    const hasAnySynapseProc = heldPsyIndices.length > 0;
+
     // Snapshot the round accumulator BEFORE this cast so the total reveal
     // tween can offset its values. This avoids the double-counting window
     // that would occur if the display added roundTotalDamage + castTotalDamage
@@ -560,6 +621,9 @@ export function castSpell() {
                 // timeline's initial t=0 tick snaps it up to spellBase
                 // immediately so the chip starts at the spell's tier base.
                 castBaseCounter = 0;
+                // Reset the Mult counter — starts at tier mult, ticks
+                // up during synapse events.
+                castMultCounter = -1;
                 // Sentinel-reset the Total counter to "hidden" so the
                 // chip shows "-" until the timeline's count-up reveal
                 // tween fires (after all rune ticks have completed).
@@ -607,9 +671,15 @@ export function castSpell() {
         onBubblesStart: () => {
             runeDamageBubbles = bubbles;
             procDamageBubbles = procBubblesForCast;
+            handMultBubbles = handMultBubblesForCast;
             notify();
         },
-        onSigilShake: hasAnyProc ? (sigilId: string) => {
+        baseMult: resolvedSpell ? (SPELL_TIER_MULT[resolvedSpell.tier] ?? 0) : 0,
+        onMultTick: hasAnySynapseProc ? (mult: number) => {
+            castMultCounter = mult;
+            notify();
+        } : undefined,
+        onSigilShake: (hasAnyProc || hasAnySynapseProc) ? (sigilId: string) => {
             activeSigilShake = { sigilId, seq: ++sigilShakeSeq };
             notify();
         } : undefined,
@@ -635,6 +705,7 @@ export function castSpell() {
             raisedSlotIndices = [];
             runeDamageBubbles = [];
             procDamageBubbles = [];
+            handMultBubbles = [];
             activeSigilShake = null;
             isCastAnimating = false;
             // NOTE: `castingRuneIds` is intentionally NOT cleared here. The

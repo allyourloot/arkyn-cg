@@ -1,0 +1,30 @@
+/* Fixed-position overlay for Synapse "+N Mult" bubbles. Rendered at the
+   top level so it's completely decoupled from the HandDisplay card tree
+   and doesn't trigger WebGL context churn on rune card canvases. */
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 25;
+}
+
+.bubble {
+    position: absolute;
+    transform: translateX(-50%);
+    pointer-events: none;
+    user-select: none;
+
+    font-size: clamp(var(--font-size-xs), 2.4vw, var(--font-size-md));
+    font-weight: normal;
+    line-height: 1;
+    white-space: nowrap;
+    color: #ffffff;
+    background: #309f30;
+    padding: 2px 8px;
+    border-radius: 4px;
+    will-change: transform, opacity;
+    text-shadow:
+        2px 2px 0 rgba(0, 0, 0, 0.85),
+        0 0 6px rgba(0, 0, 0, 0.4);
+}

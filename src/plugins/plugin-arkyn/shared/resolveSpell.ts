@@ -3,6 +3,7 @@ import {
     SPELL_TABLE,
     TWO_PAIR_TABLE,
     FULL_HOUSE_TABLE,
+    isSynergyPair,
     type SpellInfo,
 } from "./spellTable";
 
@@ -111,7 +112,10 @@ function buildResolvedSpell(
     };
 }
 
-export function resolveSpell(runes: RuneData[]): ResolvedSpell | null {
+export function resolveSpell(
+    runes: RuneData[],
+    activeSigils?: readonly string[],
+): ResolvedSpell | null {
     const shape = classifyShape(runes);
     if (!shape) return null;
 
@@ -134,7 +138,7 @@ export function resolveSpell(runes: RuneData[]): ResolvedSpell | null {
         const primary = shape.entries[0].element;
         const secondary = shape.entries[1].element;
         const info = FULL_HOUSE_TABLE[`${primary}+${secondary}`];
-        if (info) {
+        if (info && isSynergyPair(primary, secondary, activeSigils)) {
             return buildResolvedSpell(info, 5, primary, "full_house", [primary, secondary]);
         }
         // No synergy for this pair — fall through to single-element.
@@ -157,7 +161,7 @@ export function resolveSpell(runes: RuneData[]): ResolvedSpell | null {
         const b = shape.entries[1].element;
         const sorted: [string, string] = a < b ? [a, b] : [b, a];
         const info = TWO_PAIR_TABLE[`${sorted[0]}+${sorted[1]}`];
-        if (info) {
+        if (info && isSynergyPair(a, b, activeSigils)) {
             return buildResolvedSpell(info, 4, shape.primaryElement, "two_pair", sorted);
         }
         // No synergy for this pair — fall through to single-element.
@@ -207,9 +211,12 @@ export function resolveSpell(runes: RuneData[]): ResolvedSpell | null {
  * shared layer alongside `resolveSpell` so the rule for "which runes
  * counted" stays in one place.
  */
-export function getContributingRuneIndices(runes: RuneData[]): number[] {
+export function getContributingRuneIndices(
+    runes: RuneData[],
+    activeSigils?: readonly string[],
+): number[] {
     if (runes.length === 0) return [];
-    const spell = resolveSpell(runes);
+    const spell = resolveSpell(runes, activeSigils);
     if (!spell) return [];
 
     if (spell.isCombo && spell.comboElements) {

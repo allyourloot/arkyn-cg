@@ -27,6 +27,7 @@ import DiscardAnimation from "./DiscardAnimation";
 import DrawAnimation from "./DrawAnimation";
 import MainMenu from "./MainMenu";
 import SigilBar from "./SigilBar";
+import MultBubbleOverlay from "./MultBubble";
 import InfoButton from "./InfoButton";
 import BackgroundMusic from "./BackgroundMusic";
 import BackgroundShader from "./BackgroundShader";
@@ -492,6 +493,7 @@ export default function ArkynOverlay() {
             <CastAnimation />
             <DiscardAnimation />
             <DrawAnimation />
+            <MultBubbleOverlay />
             <BackgroundMusic />
             {showRoundEnd && <RoundEndOverlay />}
             {showGameOver && <GameOverOverlay />}

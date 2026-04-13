@@ -431,6 +431,7 @@
     transform-origin: center center;
 }
 
+
 /* -- Landscape phone compact -- */
 @media (max-height: 500px) {
     .panel {

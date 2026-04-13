@@ -33,11 +33,23 @@ export function handleCast(
     // Extract selected runes (by index)
     const selectedRunes = indices.map(i => player.hand[i]);
 
-    // Resolve spell
-    const spell = resolveSpell(selectedRunes.map(r => ({ element: r.element })));
+    // Resolve spell — pass active sigils so sigil-gated synergies (e.g.
+    // Burnrite's Fire+Death) fire when the player owns the relevant sigil.
+    const activeSigils = Array.from(player.sigils);
+    const spell = resolveSpell(
+        selectedRunes.map(r => ({ element: r.element })),
+        activeSigils,
+    );
     if (!spell) {
         logger.warn(`Cast rejected: could not resolve spell`);
         return;
+    }
+
+    // Count Psy runes held in hand (not played) for Synapse sigil mult bonus.
+    const selectedSet = new Set(indices);
+    let heldPsyCount = 0;
+    for (let i = 0; i < player.hand.length; i++) {
+        if (!selectedSet.has(i) && player.hand[i]?.element === "psy") heldPsyCount++;
     }
 
     // Calculate damage — each contributing rune is evaluated against the
@@ -53,6 +65,7 @@ export function handleCast(
         state.runSeed,
         state.currentRound,
         player.castsRemaining,
+        heldPsyCount,
     );
 
     // Move selected runes to played area

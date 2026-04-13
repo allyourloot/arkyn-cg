@@ -7,7 +7,7 @@ import {
     type EnemyState,
 } from "../../shared";
 import type { RarityType } from "../../shared/arkynConstants";
-import { CASTS_PER_ROUND, VOLTAGE_PROC_CHANCE, VOLTAGE_RNG_OFFSET } from "../../shared/arkynConstants";
+import { CASTS_PER_ROUND, VOLTAGE_PROC_CHANCE, VOLTAGE_RNG_OFFSET, SYNAPSE_MULT_PER_PSY } from "../../shared/arkynConstants";
 import { createRoundRng } from "../../shared/seededRandom";
 
 // Server-side wrapper that adapts EnemyState's ArraySchema fields into plain
@@ -29,16 +29,25 @@ export function calculateDamage(
     runSeed?: number,
     currentRound?: number,
     castsRemaining?: number,
+    heldPsyCount?: number,
 ): number {
     const resistances = Array.from(enemy.resistances);
     const weaknesses = Array.from(enemy.weaknesses);
+    const activeSigils = sigils ? Array.from(sigils) : undefined;
     const contributingIndices = getContributingRuneIndices(
         selectedRunes.map(r => ({ element: r.element })),
+        activeSigils,
     );
     const contributingRunes = contributingIndices.map(i => ({ element: selectedRunes[i].element }));
     const contributingRuneRarities = contributingIndices.map(
         i => selectedRunes[i].rarity as RarityType,
     );
+
+    // Synapse sigil — held Psy runes add flat mult bonus
+    const synapseMult = (
+        activeSigils?.includes("synapse") && heldPsyCount
+    ) ? heldPsyCount * SYNAPSE_MULT_PER_PSY : 0;
+
     const breakdown = sharedCalculateSpellDamage(
         spell,
         contributingRunes,
@@ -46,6 +55,7 @@ export function calculateDamage(
         resistances,
         weaknesses,
         scrollLevels,
+        synapseMult,
     );
 
     let totalDamage = breakdown.finalDamage;

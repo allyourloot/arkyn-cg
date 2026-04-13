@@ -17,6 +17,7 @@ import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import frameUrl from "/assets/ui/frame.png?url";
+import innerFrameUrl from "/assets/ui/inner-frame.png?url";
 import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
 import buttonGreenUrl from "/assets/ui/button-green.png?url";
 import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
@@ -30,6 +31,17 @@ const RARITY_COLORS: Record<string, string> = {
     legendary: "#fbbf24",
 };
 
+/** Parse `{text}` markers in a description string into green-highlighted spans. */
+function renderDescription(desc: string) {
+    const parts = desc.split(/(\{[^}]+\})/g);
+    return parts.map((part, i) => {
+        if (part.startsWith("{") && part.endsWith("}")) {
+            return <span key={i} style={{ color: "#309f30" }}>{part.slice(1, -1)}</span>;
+        }
+        return part;
+    });
+}
+
 const panelStyleVars = createPanelStyleVars();
 const buttonStyleVars = {
     "--btn-bg": `url(${buttonGreenUrl})`,
@@ -39,6 +51,7 @@ const buttonStyleVars = {
 const cardStyleVars = {
     "--card-bg": `url(${frameUrl})`,
     "--buy-bg": `url(${innerFrameGreenUrl})`,
+    "--tooltip-desc-bg": `url(${innerFrameUrl})`,
 } as CSSProperties;
 
 type ShopScreenProps = {
@@ -129,12 +142,20 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                 >
                                     Buy
                                 </button>
-                                <Tooltip placement="left" variant="plain">
-                                    <span className={styles.tooltipDesc} style={{ color: rarityColor, fontWeight: "normal" }}>
-                                        {def.name} <span style={{ opacity: 0.7, textTransform: "uppercase", fontSize: "0.85em" }}>({def.rarity})</span>
+                                <Tooltip placement="left" arrow variant="framed">
+                                    <span className={styles.tooltipName}>
+                                        {def.name}
                                     </span>
-                                    <span className={styles.tooltipDesc}>
-                                        {def.description}
+                                    <div className={styles.tooltipDescWrap}>
+                                        <span className={styles.tooltipDesc}>
+                                            {renderDescription(def.description)}
+                                        </span>
+                                    </div>
+                                    <span
+                                        className={styles.tooltipRarity}
+                                        style={{ backgroundColor: rarityColor }}
+                                    >
+                                        {def.rarity}
                                     </span>
                                 </Tooltip>
                             </div>
@@ -187,10 +208,15 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                 </button>
 
                                 {/* Tooltip — visible on hover */}
-                                <Tooltip placement="left" variant="plain">
-                                    <span className={styles.tooltipDesc}>
-                                        +2 base damage to all {elementName} runes.
+                                <Tooltip placement="left" arrow variant="framed">
+                                    <span className={styles.tooltipName} style={{ color: elementColor }}>
+                                        {elementName} Scroll
                                     </span>
+                                    <div className={styles.tooltipDescWrap}>
+                                        <span className={styles.tooltipDesc}>
+                                            +2 base damage to all {elementName} runes.
+                                        </span>
+                                    </div>
                                 </Tooltip>
                             </div>
                         );

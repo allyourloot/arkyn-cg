@@ -223,14 +223,43 @@
 
 /* ================================================================
    Tooltip — hover trigger via the shared Tooltip component.
+   Mirrors SigilBar's framed tooltip structure: name → desc-wrap → rarity.
    ================================================================ */
 .itemCard:hover :global(.arkyn-tooltip) {
     opacity: 1;
 }
 
+.tooltipName {
+    font-size: clamp(var(--font-size-xs), 1.6vw, var(--font-size-sm));
+    font-weight: normal;
+    letter-spacing: 1px;
+    color: #e8e0d4;
+}
+
+.tooltipDescWrap {
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--tooltip-desc-bg) 24 24 24 24 fill / 12px;
+    image-rendering: pixelated;
+    padding: 4px 10px;
+}
+
 .tooltipDesc {
-    font-size: clamp(var(--font-size-3xs), 1vw, var(--font-size-2xs));
+    font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
     color: #c8c0b0;
+    line-height: 1.3;
+}
+
+.tooltipRarity {
+    font-size: clamp(var(--font-size-3xs), 0.8vw, var(--font-size-2xs));
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #fff;
+    padding: 2px 12px;
+    border-radius: 3px;
     line-height: 1.2;
 }
 

@@ -10,9 +10,11 @@ import {
     useCastTotalDamage,
     useRoundTotalDamage,
     useScrollLevels,
+    useSigils,
 } from "../arkynStore";
+import { useCastMultCounter } from "../arkynAnimations";
 import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
-import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT, calculateSpellDamage } from "../../shared";
+import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT, SYNAPSE_MULT_PER_PSY, calculateSpellDamage } from "../../shared";
 import type { RarityType } from "../../shared/arkynConstants";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars } from "./styles";
 import { useEnemyIsBoss } from "../arkynStore";
@@ -74,14 +76,17 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     const castTotalDamage = useCastTotalDamage();
     const roundTotalDamage = useRoundTotalDamage();
     const scrollLevels = useScrollLevels();
+    const activeSigils = useSigils();
+    const castMultCounter = useCastMultCounter();
 
     const damageRef = useRef<HTMLSpanElement>(null);
     const totalRef = useRef<HTMLSpanElement>(null);
+    const multRef = useRef<HTMLSpanElement>(null);
 
     // Live preview from currently selected runes.
     const selectedRunes = selectedIndices.map(i => hand[i]).filter(Boolean);
     const previewSpell = selectedRunes.length > 0
-        ? resolveSpell(selectedRunes.map(r => ({ element: r.element })))
+        ? resolveSpell(selectedRunes.map(r => ({ element: r.element })), activeSigils)
         : null;
 
     // During a cast animation the selection is cleared, so fall back to
@@ -89,7 +94,7 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     // Once the animation ends, the panel returns to the empty state
     // instead of lingering on "Last Cast".
     const castingSpell = !previewSpell && isCastAnimating && lastCastRunes.length > 0
-        ? resolveSpell(lastCastRunes.map(r => ({ element: r.element })))
+        ? resolveSpell(lastCastRunes.map(r => ({ element: r.element })), activeSigils)
         : null;
 
     const isLive = previewSpell !== null;
@@ -108,7 +113,7 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     const sourceRunes = isLive ? selectedRunes : lastCastRunes;
     const totalSourceRunes = sourceRunes.length;
     const contributingIndices = spell && totalSourceRunes > 0
-        ? getContributingRuneIndices(sourceRunes.map(r => ({ element: r.element })))
+        ? getContributingRuneIndices(sourceRunes.map(r => ({ element: r.element })), activeSigils)
         : [];
     const contributingCount = contributingIndices.length;
     const contributingRunes = contributingIndices.map(i => sourceRunes[i]);
@@ -129,16 +134,31 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     let displayMult: number | string = "-";
     let displayTotal: number | string = roundTotalDamage > 0 ? roundTotalDamage : "-";
     if (spell) {
-        const mult = SPELL_TIER_MULT[spell.tier] ?? 0;
+        const baseMult = SPELL_TIER_MULT[spell.tier] ?? 0;
         const spellTierBase = SPELL_TIER_BASE_DAMAGE[spell.tier] ?? 0;
-        displayMult = mult;
+
+        // Synapse sigil — count held Psy runes (in hand, not played/selected)
+        let synapseMult = 0;
+        if (activeSigils.includes("synapse")) {
+            const selected = new Set(selectedIndices);
+            for (let i = 0; i < hand.length; i++) {
+                if (!selected.has(i) && hand[i]?.element === "psy") synapseMult += SYNAPSE_MULT_PER_PSY;
+            }
+        }
 
         if (isCastAnimating) {
+            // During cast: use live mult counter if synapse is ticking,
+            // otherwise show the tier mult. Synapse bonus ticks up in
+            // real time as each held Psy rune's bubble appears.
+            displayMult = castMultCounter >= 0 ? castMultCounter : baseMult;
             displayBase = castBaseCounter;
             displayTotal = castTotalDamage >= 0
                 ? castTotalDamage
                 : (roundTotalDamage > 0 ? roundTotalDamage : "-");
         } else {
+            // Live preview shows tier mult only — Synapse bonus is
+            // revealed during the cast animation, not before.
+            displayMult = baseMult;
             displayBase = spellTierBase;
         }
     }
@@ -147,6 +167,7 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     // increment during a cast. Each tick pops the chip for a Balatro-
     // style "number go up" feel.
     useCounterPop(damageRef, castBaseCounter, isCastAnimating);
+    useCounterPop(multRef, castMultCounter, isCastAnimating);
     useCounterPop(totalRef, castTotalDamage, isCastAnimating);
 
     if (!spell) {
@@ -162,7 +183,7 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
                 {/* Damage chips stay mounted in the empty state too so
                     the panel doesn't reflow when a spell first resolves —
                     both read "-" until something's selected. */}
-                <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} totalRef={totalRef} />
+                <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} multRef={multRef} totalRef={totalRef} />
                 {/* margin-top: auto inside GoldCounter pins it to the
                     bottom of the panel's flex column. */}
                 <GoldCounter />
@@ -318,7 +339,7 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
                 whatever the live cast counter / preview computation /
                 last-cast snapshot resolved to (see the displayBase block
                 above); Mult is the static tier-derived multiplier. */}
-            <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} totalRef={totalRef} />
+            <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} multRef={multRef} totalRef={totalRef} />
 
             {/* margin-top: auto inside GoldCounter pins it to the
                 bottom of the panel's flex column, regardless of how
@@ -346,12 +367,14 @@ function DamageChips({
     mult,
     total,
     baseRef,
+    multRef,
     totalRef,
 }: {
     base: number | string;
     mult: number | string;
     total: number | string;
     baseRef: RefObject<HTMLSpanElement | null>;
+    multRef?: RefObject<HTMLSpanElement | null>;
     totalRef: RefObject<HTMLSpanElement | null>;
 }) {
     return (
@@ -374,7 +397,7 @@ function DamageChips({
                 <div className={styles.damageChipColumn}>
                     <span className={styles.damageChipLabel}>Mult</span>
                     <div className={`${styles.damageChip} ${styles.damageChipMult}`}>
-                        <BouncyText className={styles.damageChipValue}>
+                        <BouncyText ref={multRef} className={styles.damageChipValue}>
                             {mult}
                         </BouncyText>
                     </div>

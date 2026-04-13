@@ -156,12 +156,33 @@ export const SYNERGY_PAIRS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Sigil-granted synergy pairs. These element pairs are NOT in the base
+ * `SYNERGY_PAIRS` set — they only become active when the player owns
+ * the corresponding sigil. Keys are alphabetically sorted, same as
+ * `SYNERGY_PAIRS`. Each sigil maps to the pair keys it unlocks.
+ */
+export const SIGIL_SYNERGY_PAIRS: Record<string, readonly string[]> = {
+    burnrite: ["death+fire"],
+};
+
+/**
  * Helper: alphabetically-sorted key lookup for the synergy graph. Both
  * orders ("fire+lightning" and "lightning+fire") map to the same edge.
+ * When `activeSigils` is provided, sigil-granted synergy pairs are also
+ * checked.
  */
-export function isSynergyPair(a: string, b: string): boolean {
+export function isSynergyPair(
+    a: string,
+    b: string,
+    activeSigils?: readonly string[],
+): boolean {
     const key = a < b ? `${a}+${b}` : `${b}+${a}`;
-    return SYNERGY_PAIRS.has(key);
+    if (SYNERGY_PAIRS.has(key)) return true;
+    if (!activeSigils) return false;
+    for (const sigilId of activeSigils) {
+        if (SIGIL_SYNERGY_PAIRS[sigilId]?.includes(key)) return true;
+    }
+    return false;
 }
 
 // ----- Poker-shape combo tables -----
@@ -193,6 +214,7 @@ export const TWO_PAIR_TABLE: Record<string, SpellInfo> = {
     "air+lightning":    { name: "Tempest",         description: "A roaring electric gale" },
     "air+ice":          { name: "Hailstorm",       description: "Razor ice carried by wind" },
     "air+water":        { name: "Tidal Mist",      description: "Sea-laden gale floods the lungs" },
+    "death+fire":       { name: "Hellfire",         description: "Flames fed by the dying breath" },
     "death+ice":        { name: "Frostbite",       description: "Killing cold gnaws bone" },
     "lightning+steel":  { name: "Railgun",         description: "Magnetized steel at lethal speed" },
     // Arcane / mind / shadow cluster
@@ -256,6 +278,9 @@ export const FULL_HOUSE_TABLE: Record<string, SpellInfo> = {
     // air + water
     "air+water":        { name: "Sea Gale",          description: "A salt-soaked storm wind" },
     "water+air":        { name: "Maelstrom",         description: "A churning vortex of water and air" },
+    // death + fire (sigil-gated: Burnrite)
+    "fire+death":       { name: "Cremation",         description: "A pyre that consumes body and soul" },
+    "death+fire":       { name: "Soul Pyre",         description: "Spirits burn in undying flame" },
     // death + ice
     "ice+death":        { name: "Eternal Winter",    description: "Ice that drinks the warmth of life" },
     "death+ice":        { name: "Soul Frost",        description: "Cold that freezes the spirit itself" },

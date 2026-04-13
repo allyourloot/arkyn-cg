@@ -18,6 +18,30 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         cost: 4,
         sellPrice: 2,
     },
+    burnrite: {
+        id: "burnrite",
+        name: "Burnrite",
+        rarity: "uncommon",
+        description: "Unlocks {Fire + Death} spell synergy.",
+        cost: 4,
+        sellPrice: 2,
+    },
+    caster: {
+        id: "caster",
+        name: "Caster",
+        rarity: "common",
+        description: "{+1 Cast} per round.",
+        cost: 3,
+        sellPrice: 1,
+    },
+    synapse: {
+        id: "synapse",
+        name: "Synapse",
+        rarity: "rare",
+        description: "Each held Psy rune adds {+2 Mult} to your casts.",
+        cost: 6,
+        sellPrice: 3,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);
