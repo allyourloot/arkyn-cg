@@ -1,0 +1,118 @@
+/* ----- Reusable Tooltip ----- */
+
+.tooltip {
+    position: absolute;
+    box-sizing: border-box;
+    opacity: 0;
+    transition: opacity 120ms ease-out;
+    pointer-events: none;
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    z-index: 30;
+}
+
+/* ---- Placement modifiers ---- */
+
+.bottom {
+    top: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 8px;
+}
+
+.top {
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+}
+
+.left {
+    right: calc(100% + 16px);
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.right {
+    left: calc(100% + 16px);
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* ---- Variant: framed (9-slice border-image) ---- */
+
+.framed {
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 16px;
+    border-image: var(--tooltip-frame) 24 24 24 24 fill / 16px;
+    image-rendering: pixelated;
+    padding: 4px 8px;
+}
+
+/* ---- Variant: plain (dark background) ---- */
+
+.plain {
+    background: rgba(14, 10, 6, 0.92);
+    border: 1px solid rgba(180, 170, 150, 0.25);
+    border-radius: 4px;
+    padding: 6px 12px;
+}
+
+/* ---- Arrow pseudo-elements ---- */
+
+.arrowBottom::before {
+    content: '';
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    width: 0;
+    height: 0;
+    border-left: 16px solid transparent;
+    border-right: 16px solid transparent;
+    border-bottom: 10px solid #2a2240;
+}
+
+.arrowTop::after {
+    content: '';
+    position: absolute;
+    bottom: -16px;
+    left: 50%;
+    transform: translate(-50%, 100%);
+    width: 0;
+    height: 0;
+    border-left: 16px solid transparent;
+    border-right: 16px solid transparent;
+    border-top: 10px solid #2a2240;
+}
+
+.arrowLeft::after {
+    content: '';
+    position: absolute;
+    right: -16px;
+    top: 50%;
+    transform: translate(100%, -50%);
+    width: 0;
+    height: 0;
+    border-top: 16px solid transparent;
+    border-bottom: 16px solid transparent;
+    border-left: 10px solid #2a2240;
+}
+
+.arrowRight::before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 50%;
+    transform: translate(-100%, -50%);
+    width: 0;
+    height: 0;
+    border-top: 16px solid transparent;
+    border-bottom: 16px solid transparent;
+    border-right: 10px solid #2a2240;
+}

@@ -15,9 +15,9 @@ import {
     RUNE_SHAKE_FRAME_S,
 } from "../arkynStore";
 import { MAX_PLAY } from "../../shared";
-import DissolveShader from "./DissolveShader";
+import DissolveCanvas from "./DissolveCanvas";
 import RuneDamageBubble from "./RuneDamageBubble";
-import { getBaseRuneImageUrl } from "./runeAssets";
+import { getRuneImageUrl, getBaseRuneImageUrl } from "./runeAssets";
 import styles from "./PlayArea.module.css";
 
 export default function PlayArea() {
@@ -127,8 +127,12 @@ export default function PlayArea() {
                                 ref={(el) => { shakeRefs.current[i] = el; }}
                                 className={styles.runeShake}
                             >
-                                <DissolveShader
-                                    rune={dissolving}
+                                <DissolveCanvas
+                                    element={dissolving.element}
+                                    rune={{
+                                        baseUrl: getBaseRuneImageUrl(dissolving.rarity),
+                                        runeUrl: getRuneImageUrl(dissolving.element),
+                                    }}
                                     // Stagger each rune so they dissolve one after
                                     // another for a more dramatic spell impact.
                                     startTime={dissolveStartTime + i * DISSOLVE_STAGGER_MS}

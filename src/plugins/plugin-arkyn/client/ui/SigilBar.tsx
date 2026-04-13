@@ -6,10 +6,11 @@ import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { useSigils, sendSellSigil, useActiveSigilShake, registerSigilSlot } from "../arkynStore";
 import { RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
 import ItemScene from "./ItemScene";
+import Tooltip from "./Tooltip";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import handFrameUrl from "/assets/ui/hand-frame.png?url";
-import frameUrl from "/assets/ui/frame.png?url";
 import innerFrameUrl from "/assets/ui/inner-frame.png?url";
+import { HAS_HOVER } from "./utils/hasHover";
 import styles from "./SigilBar.module.css";
 
 const RARITY_BG_COLORS: Record<string, string> = {
@@ -21,7 +22,6 @@ const RARITY_BG_COLORS: Record<string, string> = {
 
 const slotFrameVars = {
     "--slot-bg": `url(${handFrameUrl})`,
-    "--tooltip-bg": `url(${frameUrl})`,
     "--tooltip-desc-bg": `url(${innerFrameUrl})`,
 } as CSSProperties;
 
@@ -37,11 +37,6 @@ function renderDescription(desc: string) {
 }
 
 const HOVER_POP_SCALE = 1.1;
-
-const HAS_HOVER =
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(hover: hover)").matches;
 
 export default function SigilBar() {
     const sigils = useSigils();
@@ -116,7 +111,7 @@ export default function SigilBar() {
                     >
                         <ItemScene itemId={sigilId} index={i} />
                         {/* Tooltip — centered below */}
-                        <div className={styles.tooltip}>
+                        <Tooltip placement="bottom" arrow variant="framed" interactive>
                             <span className={styles.tooltipName}>
                                 {def.name}
                             </span>
@@ -140,7 +135,7 @@ export default function SigilBar() {
                                 <img src={goldIconUrl} alt="Gold" className={styles.sellIcon} />
                                 {def.sellPrice}
                             </button>
-                        </div>
+                        </Tooltip>
                     </div>
                 );
             })}

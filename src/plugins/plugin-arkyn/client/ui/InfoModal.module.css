@@ -8,7 +8,7 @@
     justify-content: center;
     z-index: 1000;
     pointer-events: auto;
-    animation: fade-in 0.15s ease-out;
+    animation: arkyn-fade-in 0.15s ease-out;
 }
 
 /* ── Modal shell — vertical: header then sidebar|content ── */
@@ -28,7 +28,7 @@
     color: #e8d4b8;
     image-rendering: pixelated;
     cursor: default;
-    animation: scale-in 0.18s cubic-bezier(0.2, 0.8, 0.4, 1);
+    animation: arkyn-scale-in 0.18s cubic-bezier(0.2, 0.8, 0.4, 1);
 }
 
 /* ── Header bar ── */
@@ -427,17 +427,6 @@
 .totalChip {
     color: #ef4444;
     font-weight: normal;
-}
-
-/* ── Animations ── */
-@keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes scale-in {
-    from { transform: scale(0.9); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
 }
 
 /* ── Landscape phone compact ── */

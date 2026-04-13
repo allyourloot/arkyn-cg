@@ -222,29 +222,9 @@
 }
 
 /* ================================================================
-   Tooltip — appears on the left side of the card on hover
+   Tooltip — hover trigger via the shared Tooltip component.
    ================================================================ */
-.tooltip {
-    position: absolute;
-    left: -16px;
-    top: 50%;
-    transform: translate(-100%, -50%);
-    background: rgba(14, 10, 6, 0.92);
-    border: 1px solid rgba(180, 170, 150, 0.25);
-    border-radius: 4px;
-    padding: 6px 12px;
-    white-space: nowrap;
-    z-index: 10;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 120ms ease-out;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-}
-
-.itemCard:hover .tooltip {
+.itemCard:hover :global(.arkyn-tooltip) {
     opacity: 1;
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./OverlayShader.frag";
-import { createProgram } from "./utils/glProgram";
+import { createProgram, createQuadBuffer, bindQuadAttributes } from "./utils/glProgram";
 import styles from "./OverlayShader.module.css";
 
 // Each shader pixel becomes a PIXEL_SIZE×PIXEL_SIZE block on screen after
@@ -38,21 +38,8 @@ export default function OverlayShader() {
         if (!program) return;
         gl.useProgram(program);
 
-        // Fullscreen quad as a triangle strip — same shape as the
-        // BackgroundShader.
-        const positions = new Float32Array([
-            -1, -1,
-             1, -1,
-            -1,  1,
-             1,  1,
-        ]);
-        const buffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-
-        const aPosition = gl.getAttribLocation(program, "aPosition");
-        gl.enableVertexAttribArray(aPosition);
-        gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+        const buffer = createQuadBuffer(gl, false);
+        bindQuadAttributes(gl, program, false);
 
         const uResolution = gl.getUniformLocation(program, "uResolution");
 

@@ -9,11 +9,12 @@ import {
     emitSigilPurchase,
 } from "../arkynStore";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
-import { playMenuOpen } from "../sfx";
+import { playMenuOpen, playBuy } from "../sfx";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getScrollImageUrl } from "./scrollAssets";
 import BouncyText from "./BouncyText";
 import ItemScene from "./ItemScene";
+import Tooltip from "./Tooltip";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import frameUrl from "/assets/ui/frame.png?url";
 import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
@@ -57,6 +58,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     const handleBuy = (shopIndex: number, element: string, e: React.MouseEvent) => {
         const currentLevel = scrollLevels.get(element) ?? 0;
         sendBuyItem(shopIndex);
+        playBuy();
         // Find the scroll image in the card to get its bounding rect
         const card = (e.currentTarget as HTMLElement).closest(`.${styles.itemCard}`);
         const img = card?.querySelector(`.${styles.itemImage}`) as HTMLElement | null;
@@ -115,6 +117,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                     style={buttonStyleVars}
                                     onClick={(e) => {
                                         sendBuyItem(item.shopIndex);
+                                        playBuy();
                                         const card = (e.currentTarget as HTMLElement).closest(`.${styles.itemCard}`);
                                         const canvas = card?.querySelector(`.${styles.sigilCanvas}`) as HTMLElement | null;
                                         const fromRect = canvas?.getBoundingClientRect() ?? new DOMRect(
@@ -126,14 +129,14 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                 >
                                     Buy
                                 </button>
-                                <div className={styles.tooltip}>
+                                <Tooltip placement="left" variant="plain">
                                     <span className={styles.tooltipDesc} style={{ color: rarityColor, fontWeight: "normal" }}>
                                         {def.name} <span style={{ opacity: 0.7, textTransform: "uppercase", fontSize: "0.85em" }}>({def.rarity})</span>
                                     </span>
                                     <span className={styles.tooltipDesc}>
                                         {def.description}
                                     </span>
-                                </div>
+                                </Tooltip>
                             </div>
                         );
                     }) : null}
@@ -184,11 +187,11 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                 </button>
 
                                 {/* Tooltip — visible on hover */}
-                                <div className={styles.tooltip}>
+                                <Tooltip placement="left" variant="plain">
                                     <span className={styles.tooltipDesc}>
                                         +2 base damage to all {elementName} runes.
                                     </span>
-                                </div>
+                                </Tooltip>
                             </div>
                         );
                     })}

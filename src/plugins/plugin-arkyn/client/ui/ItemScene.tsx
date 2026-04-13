@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { getSigilImageUrl } from "./sigilAssets";
+import { HAS_HOVER } from "./utils/hasHover";
 import styles from "./SigilBar.module.css";
 
 // ----- Shader sources -----
@@ -70,12 +71,6 @@ const MAX_TILT_RAD = 0.32;          // ~18 degrees max mesh rotation
 const TILT_LERP_SPEED = 8;          // smoothing factor
 const IDLE_TILT_AMP = 0.22;         // idle rotation amplitude (radians, ~12 deg)
 const PHASE_STAGGER = 1.2;          // seconds offset per sigil index
-
-// Touch-device detection (same as RuneCard.tsx)
-const HAS_HOVER =
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(hover: hover)").matches;
 
 // ----- Component -----
 

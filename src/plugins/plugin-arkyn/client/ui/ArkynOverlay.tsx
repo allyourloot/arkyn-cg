@@ -33,8 +33,9 @@ import BackgroundShader from "./BackgroundShader";
 import OverlayShader from "./OverlayShader";
 import { getScrollImageUrl } from "./scrollAssets";
 import { getSigilImageUrl } from "./sigilAssets";
-import ScrollDissolveShader from "./ScrollDissolveShader";
+import DissolveCanvas from "./DissolveCanvas";
 import { playCount, playDissolve } from "../sfx";
+import "./shared-animations.css";
 import styles from "./ArkynOverlay.module.css";
 
 // Normalizes the raw gamePhase into one of the four visual layouts the
@@ -450,8 +451,9 @@ export default function ArkynOverlay() {
 
                 {/* WebGL dissolve canvas — replaces the img for the final phase */}
                 {dissolveData && (
-                    <ScrollDissolveShader
+                    <DissolveCanvas
                         element={dissolveData.element}
+                        imageUrl={getScrollImageUrl(dissolveData.element)}
                         startTime={dissolveData.startTime}
                         duration={DISSOLVE_DURATION_MS}
                         size={dissolveData.size}

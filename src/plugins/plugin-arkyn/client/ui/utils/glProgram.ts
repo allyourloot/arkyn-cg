@@ -1,3 +1,107 @@
+// ---- Quad buffer helpers ----
+
+/**
+ * Fullscreen quad vertices as a triangle strip.
+ *
+ * With `includeUv = true` (default) each vertex is [x, y, u, v] (stride 16).
+ * UV v-axis is flipped so an Image() upload (top-left origin) maps correctly.
+ *
+ * With `includeUv = false` each vertex is [x, y] (stride 8) — used by
+ * background/overlay shaders that derive coords from gl_FragCoord.
+ */
+export function createQuadBuffer(
+    gl: WebGLRenderingContext,
+    includeUv = true,
+): WebGLBuffer | null {
+    const verts = includeUv
+        ? new Float32Array([
+            -1, -1,   0, 1,
+             1, -1,   1, 1,
+            -1,  1,   0, 0,
+             1,  1,   1, 0,
+        ])
+        : new Float32Array([
+            -1, -1,
+             1, -1,
+            -1,  1,
+             1,  1,
+        ]);
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
+    return buffer;
+}
+
+/**
+ * Bind the standard quad attribute layout produced by `createQuadBuffer`.
+ *
+ * With `includeUv = true`: binds `aPosition` (2 floats) + `aUv` (2 floats),
+ * stride 16. With `includeUv = false`: binds `aPosition` (2 floats), stride 0.
+ */
+export function bindQuadAttributes(
+    gl: WebGLRenderingContext,
+    program: WebGLProgram,
+    includeUv = true,
+): void {
+    const aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.enableVertexAttribArray(aPosition);
+    if (includeUv) {
+        gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 16, 0);
+        const aUv = gl.getAttribLocation(program, "aUv");
+        gl.enableVertexAttribArray(aUv);
+        gl.vertexAttribPointer(aUv, 2, gl.FLOAT, false, 16, 8);
+    } else {
+        gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+    }
+}
+
+// ---- Texture helpers ----
+
+/**
+ * Configure a texture with CLAMP_TO_EDGE wrapping and NEAREST filtering
+ * (pixel-art crisp). The texture is left bound after this call.
+ */
+export function configureTexture(
+    gl: WebGLRenderingContext,
+    tex: WebGLTexture | null,
+): void {
+    if (!tex) return;
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+}
+
+// ---- Cleanup helpers ----
+
+/**
+ * Delete a set of GL resources and drop the WebGL context. Call during
+ * component teardown to prevent resource leaks.
+ */
+export function cleanupGL(
+    gl: WebGLRenderingContext,
+    resources: {
+        textures?: (WebGLTexture | null)[];
+        buffers?: (WebGLBuffer | null)[];
+        programs?: (WebGLProgram | null)[];
+    },
+): void {
+    for (const tex of resources.textures ?? []) {
+        if (tex) gl.deleteTexture(tex);
+    }
+    for (const buf of resources.buffers ?? []) {
+        if (buf) gl.deleteBuffer(buf);
+    }
+    for (const prog of resources.programs ?? []) {
+        if (prog) gl.deleteProgram(prog);
+    }
+    const loseExt = gl.getExtension("WEBGL_lose_context");
+    if (loseExt) loseExt.loseContext();
+}
+
+// ---- Shader compile / link ----
+
 /**
  * Compile a GLSL shader. Returns null on compile failure, with the error
  * logged under the supplied `label` so multiple shaders in one app can be

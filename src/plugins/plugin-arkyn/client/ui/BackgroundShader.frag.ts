@@ -1,3 +1,5 @@
+import { GLSL_HASH, GLSL_NOISE, GLSL_FBM_4, GLSL_BAYER4 } from "./utils/glslNoise";
+
 // Fragment shader for the medieval-magical animated background.
 //
 // Look: deep purple/navy base swirling with domain-warped FBM fog (gives the
@@ -20,32 +22,9 @@ uniform float uBossMode;
 
 // --- Hash & noise ---
 
-float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-}
-
-float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(
-        mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
-        mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
-        u.y
-    );
-}
-
-// Fractal Brownian Motion — sums octaves of value noise for cloud-like fog.
-float fbm(vec2 p) {
-    float v = 0.0;
-    float a = 0.5;
-    for (int i = 0; i < 4; i++) {
-        v += a * noise(p);
-        p *= 2.02;
-        a *= 0.5;
-    }
-    return v;
-}
+${GLSL_HASH}
+${GLSL_NOISE}
+${GLSL_FBM_4}
 
 // Soft radial glow falloff for the orbs.
 float orbGlow(vec2 p, vec2 center, float radius) {
@@ -103,29 +82,7 @@ float bossLightning(vec2 p, float t) {
     return total;
 }
 
-// 4x4 Bayer matrix — used for ordered dithering. Produces the classic
-// crunchy 8-bit color banding pattern instead of smooth gradients.
-float bayer4(vec2 pos) {
-    int x = int(mod(pos.x, 4.0));
-    int y = int(mod(pos.y, 4.0));
-    int idx = x + y * 4;
-    if (idx == 0)  return  0.0 / 16.0;
-    if (idx == 1)  return  8.0 / 16.0;
-    if (idx == 2)  return  2.0 / 16.0;
-    if (idx == 3)  return 10.0 / 16.0;
-    if (idx == 4)  return 12.0 / 16.0;
-    if (idx == 5)  return  4.0 / 16.0;
-    if (idx == 6)  return 14.0 / 16.0;
-    if (idx == 7)  return  6.0 / 16.0;
-    if (idx == 8)  return  3.0 / 16.0;
-    if (idx == 9)  return 11.0 / 16.0;
-    if (idx == 10) return  1.0 / 16.0;
-    if (idx == 11) return  9.0 / 16.0;
-    if (idx == 12) return 15.0 / 16.0;
-    if (idx == 13) return  7.0 / 16.0;
-    if (idx == 14) return 13.0 / 16.0;
-    return 5.0 / 16.0;
-}
+${GLSL_BAYER4}
 
 void main() {
     // Aspect-corrected coordinates centered on (0,0).

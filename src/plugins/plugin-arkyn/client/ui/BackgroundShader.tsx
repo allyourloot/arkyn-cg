@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useGamePhase, useEnemyIsBoss } from "../arkynStore";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./BackgroundShader.frag";
-import { createProgram } from "./utils/glProgram";
+import { createProgram, createQuadBuffer, bindQuadAttributes } from "./utils/glProgram";
+import { HAS_HOVER } from "./utils/hasHover";
 import styles from "./BackgroundShader.module.css";
 
 // Seconds to tween the shop-mode uniform between 0 and 1 when the player
@@ -19,11 +20,6 @@ const SHOP_MODE_TWEEN_S = 0.6;
 // stop the shader from competing with React for the main thread on phones.
 // The aesthetic stays the same: it's already a pixel-art look, the blocks
 // just get a touch chunkier.
-const HAS_HOVER =
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(hover: hover)").matches;
-
 const PIXEL_SIZE = HAS_HOVER ? 3 : 5;
 const FRAME_INTERVAL_MS = HAS_HOVER ? 0 : 1000 / 30;
 
@@ -64,20 +60,8 @@ export default function BackgroundShader() {
         if (!program) return;
         gl.useProgram(program);
 
-        // Fullscreen quad as a triangle strip.
-        const positions = new Float32Array([
-            -1, -1,
-             1, -1,
-            -1,  1,
-             1,  1,
-        ]);
-        const buffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-
-        const aPosition = gl.getAttribLocation(program, "aPosition");
-        gl.enableVertexAttribArray(aPosition);
-        gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+        const buffer = createQuadBuffer(gl, false);
+        bindQuadAttributes(gl, program, false);
 
         const uResolution = gl.getUniformLocation(program, "uResolution");
         const uTime = gl.getUniformLocation(program, "uTime");

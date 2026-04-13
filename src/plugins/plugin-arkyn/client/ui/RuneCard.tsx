@@ -12,6 +12,7 @@ import {
     DESELECT_DURATION_S,
 } from "../animations/runeCardMotion";
 import RuneImage from "./RuneImage";
+import { HAS_HOVER } from "./utils/hasHover";
 import styles from "./RuneCard.module.css";
 
 const MAX_TILT_DEG = 14;
@@ -21,15 +22,6 @@ const HOVER_POP_DURATION = 0.05;
 const HOVER_POP_EASE = "power4.out";
 const HOVER_SHRINK_DURATION = 0.08;
 const HOVER_SHRINK_EASE = "power3.out";
-
-// Touch devices have no real "hover" state, so the 3D tilt-on-pointermove
-// effect is purely cosmetic clutter on phones — and worse, the constant
-// setState it triggers on every touch movement causes noticeable input lag.
-// Detect once at module load and short-circuit the tilt logic on touch.
-const HAS_HOVER =
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(hover: hover)").matches;
 
 interface RuneCardProps {
     rune: RuneClientData;

@@ -1,0 +1,23 @@
+/* Shared keyframe animations used across multiple Arkyn UI components.
+   Imported once at the overlay root so names are globally available.
+   Prefixed with arkyn- to prevent collisions with other plugins. */
+
+@keyframes arkyn-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes arkyn-scale-in {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes arkyn-backdrop-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes arkyn-panel-in {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}

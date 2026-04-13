@@ -168,38 +168,17 @@
     image-rendering: pixelated;
 }
 
-.tooltip {
-    box-sizing: border-box;
-    position: absolute;
-    left: 50%;
-    top: 100%;
-    transform: translateX(-50%);
-    margin-top: 6px;
-    padding: 4px 8px;
+.affinityIconWrap:hover :global(.arkyn-tooltip) {
+    opacity: 1;
     font-size: var(--font-size-2xs);
     color: #ffffff;
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 12px;
-    border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-    white-space: nowrap;
     line-height: 1;
     letter-spacing: 0.5px;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
-    image-rendering: pixelated;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-    z-index: 10;
 }
 
 .tooltipMult {
     font-weight: normal;
-}
-
-.affinityIconWrap:hover .tooltip {
-    opacity: 1;
 }
 
 /* The .barShake shake (translateX) and the floating damage number's pop /

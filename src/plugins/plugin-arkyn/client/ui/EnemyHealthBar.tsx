@@ -18,6 +18,7 @@ import innerFrameGoldUrl from "/assets/ui/inner-frame-gold.png?url";
 import bossFrameUrl from "/assets/ui/boss-frame.png?url";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
+import Tooltip from "./Tooltip";
 import { playCritical } from "../sfx";
 import criticalUrl from "/assets/ui/critical.png?url";
 import styles from "./EnemyHealthBar.module.css";
@@ -287,12 +288,12 @@ function AffinitySection({ label, labelClass, elements, multiplier, multiplierCo
                                 alt={element}
                                 className={styles.affinityIcon}
                             />
-                            <span className={styles.tooltip}>
+                            <Tooltip placement="bottom" variant="framed">
                                 <span className={styles.tooltipMult} style={{ color: multiplierColor }}>
                                     {multiplier}
                                 </span>
                                 {` damage from ${displayName}`}
-                            </span>
+                            </Tooltip>
                         </span>
                     );
                 })}
