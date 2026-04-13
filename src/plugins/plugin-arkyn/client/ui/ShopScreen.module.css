@@ -134,10 +134,13 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    background: rgba(14, 10, 6, 0.9);
-    border: 1px solid rgba(255, 215, 0, 0.3);
-    border-radius: 4px;
-    padding: 4px 10px;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--card-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    image-rendering: pixelated;
+    padding: 0px 4px;
     z-index: 2;
     white-space: nowrap;
 }
