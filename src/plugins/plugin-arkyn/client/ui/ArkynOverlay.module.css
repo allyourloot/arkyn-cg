@@ -161,6 +161,20 @@
     will-change: transform, opacity, filter;
 }
 
+/* Flying sigil image — flies from shop card to sigil bar slot.
+   Same pattern as flyingScroll but with a subtle glow. */
+.flyingSigil {
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    image-rendering: pixelated;
+    z-index: 100;
+    object-fit: contain;
+    filter: drop-shadow(0 0 16px rgba(180, 160, 255, 0.5));
+    will-change: transform, opacity;
+}
+
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
     .centerColumn {

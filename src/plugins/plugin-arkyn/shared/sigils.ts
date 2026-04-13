@@ -14,7 +14,7 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         id: "voltage",
         name: "Voltage",
         rarity: "uncommon",
-        description: "Lightning runes have a 1 in 4 chance to hit twice.",
+        description: "Lightning runes have a {1 in 4} chance to hit twice.",
         cost: 4,
         sellPrice: 2,
     },

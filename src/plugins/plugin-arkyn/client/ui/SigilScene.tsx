@@ -48,12 +48,19 @@ void main() {
     float edgeDist = distance(vUv, vec2(0.5));
     float vignette = smoothstep(0.35, 0.72, edgeDist) * 0.15;
 
+    // ── Rounded-rect mask in UV space — corners tilt with the mesh ──
+    float radius = 0.09;
+    vec2 halfSize = vec2(0.5);
+    vec2 q = abs(vUv - 0.5) - (halfSize - radius);
+    float d = length(max(q, 0.0)) - radius;
+    float mask = 1.0 - smoothstep(-0.008, 0.008, d);
+
     // ── Compose — additive highlight, subtractive vignette ──
     vec3 color = tex.rgb;
     color += vec3(1.0, 0.98, 0.94) * (highlight + core);
     color *= 1.0 - vignette;
 
-    gl_FragColor = vec4(color, tex.a);
+    gl_FragColor = vec4(color, tex.a * mask);
 }
 `;
 
@@ -76,9 +83,11 @@ interface SigilSceneProps {
     sigilId: string;
     /** Index in the bar — offsets the float phase so sigils bob out of sync. */
     index: number;
+    /** Optional CSS class for the canvas element. Defaults to SigilBar's sigilCanvas. */
+    className?: string;
 }
 
-export default function SigilScene({ sigilId, index }: SigilSceneProps) {
+export default function SigilScene({ sigilId, index, className }: SigilSceneProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const tiltTargetRef = useRef({ x: 0, y: 0 });
     const tiltCurrentRef = useRef({ x: 0, y: 0 });
@@ -126,8 +135,8 @@ export default function SigilScene({ sigilId, index }: SigilSceneProps) {
             depthTest: false,
         });
 
-        // ── Mesh — full 1×1 plane fills the camera view exactly so CSS
-        //    border-radius on the canvas clips into a clean card shape ──
+        // ── Mesh — full 1×1 plane fills the camera view, shader handles
+        //    corner rounding so it stays correct during 3D tilt ──
         const geometry = new THREE.PlaneGeometry(1, 1);
         const mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
@@ -210,7 +219,7 @@ export default function SigilScene({ sigilId, index }: SigilSceneProps) {
     return (
         <canvas
             ref={canvasRef}
-            className={styles.sigilCanvas}
+            className={className ?? styles.sigilCanvas}
             onPointerMove={HAS_HOVER ? handlePointerMove : undefined}
             onPointerLeave={HAS_HOVER ? handlePointerLeave : undefined}
         />

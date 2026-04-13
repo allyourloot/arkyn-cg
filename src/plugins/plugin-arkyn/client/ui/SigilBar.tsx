@@ -3,27 +3,41 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { MAX_SIGILS } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
-import { useSigils, sendSellSigil, useActiveSigilShake } from "../arkynStore";
+import { useSigils, sendSellSigil, useActiveSigilShake, registerSigilSlot } from "../arkynStore";
 import { RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
 import SigilScene from "./SigilScene";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import handFrameUrl from "/assets/ui/hand-frame.png?url";
+import frameUrl from "/assets/ui/frame.png?url";
+import innerFrameUrl from "/assets/ui/inner-frame.png?url";
 import styles from "./SigilBar.module.css";
 
-const RARITY_COLORS: Record<string, string> = {
-    common: "#b0b0b0",
-    uncommon: "#4ade80",
-    rare: "#60a5fa",
-    legendary: "#fbbf24",
+const RARITY_BG_COLORS: Record<string, string> = {
+    common: "#6b6b6b",
+    uncommon: "#309f30",
+    rare: "#3b7dd8",
+    legendary: "#d4a017",
 };
 
-const frameStyleVars = {
-    "--sigil-frame-bg": `url(${handFrameUrl})`,
+const slotFrameVars = {
+    "--slot-bg": `url(${handFrameUrl})`,
+    "--tooltip-bg": `url(${frameUrl})`,
+    "--tooltip-desc-bg": `url(${innerFrameUrl})`,
 } as CSSProperties;
+
+/** Parse `{text}` markers in a description string into green-highlighted spans. */
+function renderDescription(desc: string) {
+    const parts = desc.split(/(\{[^}]+\})/g);
+    return parts.map((part, i) => {
+        if (part.startsWith("{") && part.endsWith("}")) {
+            return <span key={i} style={{ color: "#309f30" }}>{part.slice(1, -1)}</span>;
+        }
+        return part;
+    });
+}
 
 const HOVER_POP_SCALE = 1.1;
 
-// Touch-device detection (same as RuneCard.tsx)
 const HAS_HOVER =
     typeof window !== "undefined" &&
     typeof window.matchMedia === "function" &&
@@ -58,7 +72,7 @@ export default function SigilBar() {
         });
     }, { dependencies: [activeSigilShake], scope: barRef });
 
-    // Hover pop handlers — GSAP scale on the slot wrapper
+    // Hover pop handlers
     const handlePointerEnter = (i: number) => {
         const el = slotRefs.current[i];
         if (!el) return;
@@ -72,58 +86,64 @@ export default function SigilBar() {
 
     return (
         <div ref={barRef} className={styles.wrapper}>
-            <div className={styles.frame} style={frameStyleVars}>
-                {Array.from({ length: MAX_SIGILS }, (_, i) => {
-                    const sigilId = sigils[i];
-                    if (!sigilId) {
-                        return <div key={i} className={styles.emptySlot} />;
-                    }
+            {Array.from({ length: MAX_SIGILS }, (_, i) => {
+                const sigilId = sigils[i];
 
-                    const def = SIGIL_DEFINITIONS[sigilId];
-                    if (!def) return <div key={i} className={styles.emptySlot} />;
-
-                    const rarityColor = RARITY_COLORS[def.rarity] ?? "#b0b0b0";
-
+                if (!sigilId) {
                     return (
                         <div
-                            key={sigilId}
-                            ref={(el) => { slotRefs.current[i] = el; }}
-                            className={styles.filledSlot}
-                            onPointerEnter={HAS_HOVER ? () => handlePointerEnter(i) : undefined}
-                            onPointerLeave={HAS_HOVER ? () => handlePointerLeave(i) : undefined}
-                        >
-                            <SigilScene sigilId={sigilId} index={i} />
-                            {/* Tooltip on hover */}
-                            <div className={styles.tooltip}>
-                                <span
-                                    className={styles.tooltipName}
-                                    style={{ color: rarityColor }}
-                                >
-                                    {def.name}
-                                </span>
-                                <span
-                                    className={styles.tooltipRarity}
-                                    style={{ color: rarityColor }}
-                                >
-                                    {def.rarity}
-                                </span>
-                                <span className={styles.tooltipDesc}>
-                                    {def.description}
-                                </span>
-                                <button
-                                    type="button"
-                                    className={styles.sellButton}
-                                    onClick={() => sendSellSigil(sigilId)}
-                                >
-                                    Sell
-                                    <img src={goldIconUrl} alt="Gold" className={styles.sellIcon} />
-                                    {def.sellPrice}
-                                </button>
-                            </div>
-                        </div>
+                            key={i}
+                            ref={(el) => { registerSigilSlot(i, el); }}
+                            className={styles.slot}
+                            style={slotFrameVars}
+                        />
                     );
-                })}
-            </div>
+                }
+
+                const def = SIGIL_DEFINITIONS[sigilId];
+                if (!def) return <div key={i} className={styles.slot} style={slotFrameVars} />;
+
+                const rarityBg = RARITY_BG_COLORS[def.rarity] ?? "#6b6b6b";
+
+                return (
+                    <div
+                        key={sigilId}
+                        ref={(el) => { slotRefs.current[i] = el; registerSigilSlot(i, el); }}
+                        className={styles.filledSlot}
+                        style={slotFrameVars}
+                        onPointerEnter={HAS_HOVER ? () => handlePointerEnter(i) : undefined}
+                        onPointerLeave={HAS_HOVER ? () => handlePointerLeave(i) : undefined}
+                    >
+                        <SigilScene sigilId={sigilId} index={i} />
+                        {/* Tooltip — centered below */}
+                        <div className={styles.tooltip}>
+                            <span className={styles.tooltipName}>
+                                {def.name}
+                            </span>
+                            <div className={styles.tooltipDescWrap}>
+                                <span className={styles.tooltipDesc}>
+                                    {renderDescription(def.description)}
+                                </span>
+                            </div>
+                            <span
+                                className={styles.tooltipRarity}
+                                style={{ backgroundColor: rarityBg }}
+                            >
+                                {def.rarity}
+                            </span>
+                            <button
+                                type="button"
+                                className={styles.sellButton}
+                                onClick={() => sendSellSigil(sigilId)}
+                            >
+                                Sell
+                                <img src={goldIconUrl} alt="Gold" className={styles.sellIcon} />
+                                {def.sellPrice}
+                            </button>
+                        </div>
+                    </div>
+                );
+            })}
             <span className={styles.countLabel}>{sigils.length}/{MAX_SIGILS}</span>
         </div>
     );

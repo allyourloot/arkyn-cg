@@ -4,10 +4,13 @@ import { useGSAP } from "@gsap/react";
 import {
     useGamePhase,
     useIsCastAnimating,
+    useSigils,
     onScrollPurchase,
+    onSigilPurchase,
+    getSigilSlotRect,
     setScrollUpgradeDisplay,
 } from "../arkynStore";
-import type { ScrollPurchaseEvent } from "../arkynStore";
+import type { ScrollPurchaseEvent, SigilPurchaseEvent } from "../arkynStore";
 import { ENEMY_DAMAGE_HIT_MS } from "../arkynAnimations";
 import EnemyHealthBar from "./EnemyHealthBar";
 import SpellPreview from "./SpellPreview";
@@ -29,6 +32,7 @@ import BackgroundMusic from "./BackgroundMusic";
 import BackgroundShader from "./BackgroundShader";
 import OverlayShader from "./OverlayShader";
 import { getScrollImageUrl } from "./scrollAssets";
+import { getSigilImageUrl } from "./sigilAssets";
 import ScrollDissolveShader from "./ScrollDissolveShader";
 import { playCount, playDissolve } from "../sfx";
 import styles from "./ArkynOverlay.module.css";
@@ -77,6 +81,16 @@ export default function ArkynOverlay() {
     // Flying scroll overlay — for the scroll purchase animation.
     const [flyingScroll, setFlyingScroll] = useState<FlyingScroll | null>(null);
     const flyingScrollRef = useRef<HTMLImageElement>(null);
+
+    // Flying sigil overlay — for the sigil purchase animation.
+    const sigils = useSigils();
+    const [flyingSigil, setFlyingSigil] = useState<{
+        sigilId: string;
+        imageUrl: string;
+        fromRect: DOMRect;
+        targetSlotIndex: number;
+    } | null>(null);
+    const flyingSigilRef = useRef<HTMLImageElement>(null);
 
     // Dissolve phase — replaces the img with a WebGL dissolve canvas.
     const [dissolveData, setDissolveData] = useState<{
@@ -128,10 +142,68 @@ export default function ArkynOverlay() {
         });
     }, []);
 
+    // Listen for sigil purchases and orchestrate the fly-to-bar animation.
+    useEffect(() => {
+        return onSigilPurchase((e: SigilPurchaseEvent) => {
+            const imageUrl = getSigilImageUrl(e.sigilId, 128);
+            if (!imageUrl) return;
+            const targetSlotIndex = sigils.length;
+            setFlyingSigil({
+                sigilId: e.sigilId,
+                imageUrl,
+                fromRect: e.fromRect,
+                targetSlotIndex,
+            });
+        });
+    }, [sigils.length]);
+
+    // GSAP timeline for the flying sigil animation.
+    useGSAP(() => {
+        const el = flyingSigilRef.current;
+        if (!el || !flyingSigil) return;
+
+        const { fromRect, targetSlotIndex } = flyingSigil;
+        const toRect = getSigilSlotRect(targetSlotIndex);
+        // Fallback: fly to top-center if slot rect not available
+        const toX = toRect ? toRect.left + toRect.width / 2 : window.innerWidth / 2;
+        const toY = toRect ? toRect.top + toRect.height / 2 : 40;
+        const toSize = toRect ? toRect.width : 60;
+
+        gsap.set(el, {
+            x: fromRect.left,
+            y: fromRect.top,
+            width: fromRect.width,
+            height: fromRect.height,
+            opacity: 1,
+        });
+
+        const tl = gsap.timeline();
+
+        // Fly from shop card to the sigil bar slot
+        tl.to(el, {
+            x: toX - toSize / 2,
+            y: toY - toSize / 2,
+            width: toSize,
+            height: toSize,
+            duration: 0.45,
+            ease: "power2.inOut",
+        });
+
+        // Quick pop at destination
+        tl.to(el, { scale: 1.25, duration: 0.08, ease: "power2.out" });
+        tl.to(el, { scale: 1, opacity: 0, duration: 0.15, ease: "power2.in" });
+
+        // Clean up
+        tl.call(() => { setFlyingSigil(null); });
+
+        return () => { tl.kill(); };
+    }, { dependencies: [flyingSigil] });
+
     // Clear animation state when leaving shop
     useEffect(() => {
         if (gamePhase !== "shop") {
             setFlyingScroll(null);
+            setFlyingSigil(null);
             setDissolveData(null);
             setShowUpgradeLabel(false);
             setScrollUpgradeDisplay(null);
@@ -348,6 +420,7 @@ export default function ArkynOverlay() {
                     <ShopScreen ref={shopScreenRef} />
                 </div>
                 <div className={styles.rightSpacer} aria-hidden="true" />
+                <PouchCounter />
                 <SigilBar />
 
                 {/* Flying scroll animation overlay */}
@@ -357,6 +430,16 @@ export default function ArkynOverlay() {
                         src={flyingScroll.imageUrl}
                         alt=""
                         className={styles.flyingScroll}
+                    />
+                )}
+
+                {/* Flying sigil animation overlay */}
+                {flyingSigil && (
+                    <img
+                        ref={flyingSigilRef}
+                        src={flyingSigil.imageUrl}
+                        alt=""
+                        className={styles.flyingSigil}
                     />
                 )}
 

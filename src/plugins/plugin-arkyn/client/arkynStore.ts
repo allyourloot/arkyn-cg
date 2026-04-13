@@ -300,6 +300,31 @@ export function emitScrollPurchase(e: ScrollPurchaseEvent) {
     scrollPurchaseListeners.forEach(fn => fn(e));
 }
 
+// Sigil purchase event — same pattern as scroll purchase.
+// ShopScreen fires on buy; ArkynOverlay flies the sigil to its bar slot.
+export type SigilPurchaseEvent = {
+    sigilId: string;
+    fromRect: DOMRect;
+};
+type SigilPurchaseListener = (e: SigilPurchaseEvent) => void;
+const sigilPurchaseListeners = new Set<SigilPurchaseListener>();
+export function onSigilPurchase(fn: SigilPurchaseListener) {
+    sigilPurchaseListeners.add(fn);
+    return () => { sigilPurchaseListeners.delete(fn); };
+}
+export function emitSigilPurchase(e: SigilPurchaseEvent) {
+    sigilPurchaseListeners.forEach(fn => fn(e));
+}
+
+// Sigil slot rect registry — SigilBar writes, ArkynOverlay reads.
+const sigilSlotElements: (HTMLElement | null)[] = [];
+export function registerSigilSlot(index: number, el: HTMLElement | null) {
+    sigilSlotElements[index] = el;
+}
+export function getSigilSlotRect(index: number): DOMRect | null {
+    return sigilSlotElements[index]?.getBoundingClientRect() ?? null;
+}
+
 // Run stats setters
 export function setRunTotalDamage(d: number) { runTotalDamage = d; notify(); }
 export function setRunTotalCasts(c: number) { runTotalCasts = c; notify(); }

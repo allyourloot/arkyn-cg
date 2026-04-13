@@ -6,13 +6,14 @@ import {
     useGold,
     useScrollLevels,
     emitScrollPurchase,
+    emitSigilPurchase,
 } from "../arkynStore";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { playMenuOpen } from "../sfx";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getScrollImageUrl } from "./scrollAssets";
-import { getSigilImageUrl } from "./sigilAssets";
 import BouncyText from "./BouncyText";
+import SigilScene from "./SigilScene";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import frameUrl from "/assets/ui/frame.png?url";
 import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
@@ -85,10 +86,9 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             <span className={styles.sectionLabel}>Sigils</span>
             <div className={styles.section}>
                 <div className={styles.itemGrid}>
-                    {sigilItems.length > 0 ? sigilItems.map(item => {
+                    {sigilItems.length > 0 ? sigilItems.map((item, i) => {
                         const def = SIGIL_DEFINITIONS[item.element];
                         if (!def) return null;
-                        const sigilUrl = getSigilImageUrl(item.element, 128);
                         const canAfford = gold >= item.cost;
                         const rarityColor = RARITY_COLORS[def.rarity] ?? "#b0b0b0";
 
@@ -103,19 +103,25 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                     <span className={styles.priceValue}>{item.cost}</span>
                                 </div>
                                 <div className={styles.cardImageWrap}>
-                                    {sigilUrl && (
-                                        <img
-                                            src={sigilUrl}
-                                            alt={def.name}
-                                            className={styles.itemImage}
-                                        />
-                                    )}
+                                    <SigilScene
+                                        sigilId={item.element}
+                                        index={i}
+                                        className={styles.sigilCanvas}
+                                    />
                                 </div>
                                 <button
                                     type="button"
                                     className={styles.buyButton}
                                     style={buttonStyleVars}
-                                    onClick={() => sendBuyItem(item.shopIndex)}
+                                    onClick={(e) => {
+                                        sendBuyItem(item.shopIndex);
+                                        const card = (e.currentTarget as HTMLElement).closest(`.${styles.itemCard}`);
+                                        const canvas = card?.querySelector(`.${styles.sigilCanvas}`) as HTMLElement | null;
+                                        const fromRect = canvas?.getBoundingClientRect() ?? new DOMRect(
+                                            window.innerWidth / 2, window.innerHeight / 2, 0, 0,
+                                        );
+                                        emitSigilPurchase({ sigilId: item.element, fromRect });
+                                    }}
                                     disabled={!canAfford}
                                 >
                                     Buy
@@ -130,20 +136,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                 </div>
                             </div>
                         );
-                    }) : (
-                        <>
-                            <div className={styles.placeholderCard}>
-                                <BouncyText className={styles.placeholderText}>
-                                    Sold Out
-                                </BouncyText>
-                            </div>
-                            <div className={styles.placeholderCard}>
-                                <BouncyText className={styles.placeholderText}>
-                                    Sold Out
-                                </BouncyText>
-                            </div>
-                        </>
-                    )}
+                    }) : null}
                 </div>
             </div>
 
