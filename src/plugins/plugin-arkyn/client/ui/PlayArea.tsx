@@ -4,6 +4,7 @@ import { useGSAP } from "@gsap/react";
 import {
     useDissolvingRunes,
     useDissolveStartTime,
+    useFlyingRunes,
     useRaisedSlotIndices,
     useRuneDamageBubbles,
     useProcDamageBubbles,
@@ -23,9 +24,19 @@ import styles from "./PlayArea.module.css";
 export default function PlayArea() {
     const dissolvingRunes = useDissolvingRunes();
     const dissolveStartTime = useDissolveStartTime();
+    const flyingRunes = useFlyingRunes();
     const raisedSlotIndices = useRaisedSlotIndices();
     const runeDamageBubbles = useRuneDamageBubbles();
     const procDamageBubbles = useProcDamageBubbles();
+
+    // Hide the dissolve layer while flyers are still in transit. The
+    // dissolving runes are pre-mounted at cast start so their WebGL
+    // contexts boot and textures decode during the fly window — but the
+    // flyers sit at different DOM positions and can't be seen-through, so
+    // we keep the play-area copies invisible until the flyers have all
+    // landed and unmounted. Flipping opacity at that instant reveals the
+    // already-rendered canvas underneath with zero blank frames.
+    const runesVisible = flyingRunes.length === 0;
 
     const areaRef = useRef<HTMLDivElement>(null);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -127,6 +138,7 @@ export default function PlayArea() {
                             <div
                                 ref={(el) => { shakeRefs.current[i] = el; }}
                                 className={styles.runeShake}
+                                style={{ opacity: runesVisible ? 1 : 0 }}
                             >
                                 <DissolveCanvas
                                     element={dissolving.element}

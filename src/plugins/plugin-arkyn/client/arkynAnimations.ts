@@ -588,7 +588,7 @@ export function castSpell() {
         runeBreakdown,
         spellBaseDamage,
         totalDamage,
-        onStart: () => {
+        onStart: (dissolveDelayFromStartMs: number) => {
             // Mount the flyers and lock HP. flushSync forces React to
             // commit synchronously inside this callback so CastAnimation's
             // useGSAP fires (and the per-flyer fly tween starts) BEFORE
@@ -605,6 +605,15 @@ export function castSpell() {
                 // this, the deferred server hand-sync would leave the played
                 // runes visible in the hand until the dissolve completes.
                 castingRuneIds = castRunes.map(r => r.id);
+                // Pre-mount the dissolving runes (hidden by PlayArea while
+                // flyingRunes is non-empty). dissolveStartTime is set far
+                // in the future so the shader renders the intact rune the
+                // whole time until the real dissolve kicks in. By the time
+                // the flyers unmount at fly-complete, the DissolveCanvas
+                // has booted its WebGL context + loaded textures + painted
+                // its first frame — no flicker on the handoff.
+                dissolvingRunes = castRunes;
+                dissolveStartTime = performance.now() + dissolveDelayFromStartMs;
                 // Reset the live Base counter — it'll tick up with the
                 // bubbles below. Starting at 0 reads as "calculating"; the
                 // timeline's initial t=0 tick snaps it up to spellBase
@@ -639,18 +648,16 @@ export function castSpell() {
             castTotalDamage = previousRoundTotal + value;
             notify();
         },
-        onFlyComplete: (dissolveDelayMs: number) => {
+        onFlyComplete: () => {
             // Send the cast to the server (same instant as today — the
             // server's HP update arrives mid-animation but the bar stays
             // frozen via lockHpDisplay until the impact callback unlocks).
             sendArkynMessage(ARKYN_CAST, { selectedIndices: serverIndices });
+            // Clearing the flyers reveals the dissolving runes that were
+            // pre-mounted in onStart. They've been rendering the intact
+            // rune this whole time (dissolveStartTime is still in the
+            // future), so the handoff is seamless.
             flyingRunes = [];
-            // Mount the dissolving runes statically. dissolveStartTime is
-            // set in the future by the delay the timeline computed, so the
-            // shader keeps them fully intact through the settle → raise →
-            // bubbles → impact sequence, then naturally starts dissolving.
-            dissolvingRunes = castRunes;
-            dissolveStartTime = performance.now() + dissolveDelayMs;
             notify();
         },
         onRaiseStart: () => {

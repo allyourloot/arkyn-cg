@@ -105,15 +105,20 @@ export interface CastTimelineContext {
      * `onTotalReveal` callback below.
      */
     totalDamage: number;
-    /** Fired at t=0 — `flyingRunes` is mounted, HP locked. Plays cast SFX. */
-    onStart: () => void;
-    /** Fired when the fly tween completes. Mounts dissolving runes.
-     *  `dissolveDelayMs` is the wall-clock ms from NOW until the dissolve
-     *  should start — the caller sets `dissolveStartTime = performance.now() + dissolveDelayMs`
-     *  so the shader keeps runes intact until the right moment without
-     *  ever changing startTime mid-animation (which would re-trigger the
-     *  WebGL useEffect and hide the canvas). */
-    onFlyComplete: (dissolveDelayMs: number) => void;
+    /** Fired at t=0 — `flyingRunes` is mounted, HP locked. Plays cast SFX.
+     *  `dissolveDelayFromStartMs` is the wall-clock ms from NOW until the
+     *  dissolve should begin. The caller mounts the dissolving runes here
+     *  (with dissolveStartTime set that far in the future) so the
+     *  DissolveCanvas has the full fly window to boot its WebGL context and
+     *  decode textures BEFORE the flyer unmounts — without this pre-mount,
+     *  the 1-3 frame texture-load gap at fly-complete shows as a visible
+     *  flicker on the slot. PlayArea hides the dissolve layer until
+     *  flyingRunes is empty. */
+    onStart: (dissolveDelayFromStartMs: number) => void;
+    /** Fired when the fly tween completes. Clears `flyingRunes` (revealing
+     *  the pre-mounted dissolve canvases underneath) and sends the
+     *  ARKYN_CAST message to the server. */
+    onFlyComplete: () => void;
     /** Fired when slots should raise. Sets raisedSlotIndices. */
     onRaiseStart: () => void;
     /** Fired after the raise transition completes. Mounts runeDamageBubbles. */
@@ -198,23 +203,23 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
         },
     });
 
-    // t=0: fire cast-rune SFX, mount flying runes, lock HP, and snap the
-    // Base counter to spellBase so the SpellPreview chip reads the spell's
-    // tier base from the very first frame (Balatro's "hand-type chips
-    // appear instantly when you press play"). The fly tweens themselves
-    // live inside CastAnimation's useGSAP — they start in the same frame
-    // this callback fires.
+    // t=0: fire cast-rune SFX, mount flying runes + pre-mount dissolving
+    // runes (hidden), lock HP, and snap the Base counter to spellBase so
+    // the SpellPreview chip reads the spell's tier base from the very first
+    // frame (Balatro's "hand-type chips appear instantly when you press
+    // play"). The fly tweens themselves live inside CastAnimation's useGSAP
+    // — they start in the same frame this callback fires.
+    const dissolveDelayFromStartMs = dissolveStartS * 1000;
     tl.call(() => {
         playCastRune();
-        ctx.onStart();
+        ctx.onStart(dissolveDelayFromStartMs);
         ctx.onCountTick(ctx.spellBaseDamage);
     }, undefined, 0);
 
-    // Fly-complete: mount dissolving runes. Pass the wall-clock delay (ms)
-    // from fly-complete to dissolve-start so the caller can set
-    // dissolveStartTime upfront — the shader keeps runes intact until then.
-    const dissolveDelayFromFlyMs = (dissolveStartS - flyTotalS) * 1000;
-    tl.call(() => ctx.onFlyComplete(dissolveDelayFromFlyMs), undefined, flyTotalS);
+    // Fly-complete: clear the flying runes so the pre-mounted dissolve
+    // canvases (already rendering the intact rune while waiting for their
+    // startTime) are revealed underneath. Also sends the ARKYN_CAST message.
+    tl.call(ctx.onFlyComplete, undefined, flyTotalS);
 
     // Settle done: lift the valid slots.
     tl.call(ctx.onRaiseStart, undefined, flyTotalS + SETTLE_DELAY_S);

@@ -40,9 +40,12 @@ void main() {
         discard;
     }
 
-    // Glowing edge band right above the threshold.
+    // Glowing edge band right above the threshold. Gated on uThreshold so
+    // pre-dissolve (threshold == 0) renders the rune identically to a plain
+    // <img>/RuneImage — avoids a visible element-colored tint mismatch at
+    // the moment we swap the flyer for the dissolve canvas.
     float edgeWidth = 0.10;
-    if (n < th + edgeWidth) {
+    if (uThreshold > 0.001 && n < th + edgeWidth) {
         float k = 1.0 - (n - th) / edgeWidth;
         // Hot inner edge → fall off through the spell color.
         col.rgb = mix(col.rgb, uEdgeColor, k);
@@ -79,7 +82,7 @@ void main() {
     if (n < th) discard;
 
     float edgeWidth = 0.10;
-    if (n < th + edgeWidth) {
+    if (uThreshold > 0.001 && n < th + edgeWidth) {
         float k = 1.0 - (n - th) / edgeWidth;
         col.rgb = mix(col.rgb, uEdgeColor, k);
         col.rgb += uEdgeColor * k * 1.2;
