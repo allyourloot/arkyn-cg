@@ -48,8 +48,10 @@ export function handleCast(
     // Calculate damage — each contributing rune is evaluated against the
     // enemy's resistances/weaknesses individually, then summed. Sigil effects
     // (Voltage procs, Synapse hand-mult, etc.) are applied inside
-    // calculateDamage using the sigil effect registries.
-    const damage = calculateDamage(
+    // calculateDamage using the sigil effect registries. Proc gold (from
+    // Fortune-style grant_gold effects) is returned alongside the damage
+    // and applied to player.gold below in the same state patch.
+    const { finalDamage: damage, procGold } = calculateDamage(
         spell,
         selectedRunes,
         state.enemy,
@@ -89,33 +91,53 @@ export function handleCast(
         stats.spellUsage[spell.spellName] = (stats.spellUsage[spell.spellName] ?? 0) + 1;
     }
 
+    // Credit Fortune-style proc gold. The client mirrors the same proc roll
+    // and shows "+N Gold" bubbles over the procced runes during the cast
+    // animation; this schema patch carries the authoritative total.
+    if (procGold > 0) {
+        player.gold += procGold;
+        if (stats) stats.goldEarned += procGold;
+    }
+
     logger.info(`${spell.spellName} (Tier ${spell.tier}) deals ${damage} damage! Enemy HP: ${state.enemy.currentHp}/${state.enemy.maxHp}`);
 
     // Check if enemy is defeated
     if (state.enemy.currentHp <= 0) {
-        // Award gold:
+        // Stage the gold breakdown onto the player so the Round End
+        // overlay can display it:
         //  - 3 base for the kill
         //  - +1 per remaining cast ("hand") the player still has banked.
         //    `castsRemaining` was decremented above for the killing-blow
         //    cast itself, so a 1-cast clear yields a 2-hand bonus, etc.
+        //
+        // NOTE: the gold is NOT added to `player.gold` here — the award
+        // is deferred until the player clicks Continue on the RoundEnd
+        // overlay (handled in `handleReady`). This keeps the Spell
+        // Preview gold counter from ticking up before the overlay even
+        // appears, and makes the "Continue → gold added" moment read as
+        // a deliberate player action rather than a silent schema patch.
         const baseGold = GOLD_BASE_REWARD;
         const handsCount = player.castsRemaining;
         const handsBonus = handsCount;
         player.lastRoundGoldBase = baseGold;
         player.lastRoundGoldHandsBonus = handsBonus;
         player.lastRoundGoldHandsCount = handsCount;
-        player.gold += baseGold + handsBonus;
+        // Reset the collected flag — the client will flip it true when it
+        // fires ARKYN_COLLECT_ROUND_GOLD at the overlay's Total reveal.
+        player.lastRoundGoldCollected = false;
 
         if (stats) {
             stats.enemiesDefeated++;
-            stats.goldEarned += baseGold + handsBonus;
+            // stats.goldEarned for the round-win reward is also deferred
+            // to handleReady so the stat accumulates at the same moment
+            // the player's gold does.
         }
 
         state.gamePhase = "round_end";
         logger.info(
             `Enemy defeated! Round ${state.currentRound} complete. ` +
-            `Gold awarded: ${baseGold} base + ${handsBonus} hands bonus ` +
-            `= ${baseGold + handsBonus} (total: ${player.gold})`,
+            `Pending gold: ${baseGold} base + ${handsBonus} hands bonus ` +
+            `= ${baseGold + handsBonus} (awarded on Continue)`,
         );
         return;
     }

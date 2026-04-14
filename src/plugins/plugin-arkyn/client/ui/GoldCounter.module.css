@@ -19,6 +19,9 @@
     justify-content: center;
     gap: clamp(6px, 1vw, 12px);
     image-rendering: pixelated;
+    /* Relative positioning lets the absolutely-positioned gold-proc "+N"
+       overlay anchor to this wrapper when a Fortune-style sigil procs. */
+    position: relative;
 }
 
 .icon {
@@ -36,6 +39,31 @@
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
     line-height: 1;
     letter-spacing: 1px;
+}
+
+/* Wrapper around the count so GSAP can scale-pop the number whenever the
+   displayed value changes without clobbering BouncyText's per-char bob. */
+.countPop {
+    display: inline-block;
+    transform-origin: center;
+    line-height: 1;
+}
+
+/* Floating "+N" overlay that pops over the counter when a gold-proc
+   sigil fires. Absolute to the .wrapper; sits above the number. GSAP
+   animates y/scale/opacity — the CSS just handles positioning + style. */
+.procOverlay {
+    position: absolute;
+    top: -6px;
+    right: 10px;
+    font-size: clamp(var(--font-size-lg), 3vw, var(--font-size-xl));
+    color: #ffd770;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    pointer-events: none;
+    line-height: 1;
+    letter-spacing: 1px;
+    will-change: transform, opacity;
+    z-index: 2;
 }
 
 /* ── Landscape phone compact ── */

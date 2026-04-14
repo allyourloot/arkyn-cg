@@ -43,6 +43,7 @@ export const ARKYN_JOIN = "arkyn:join";
 export const ARKYN_CAST = "arkyn:cast";
 export const ARKYN_DISCARD = "arkyn:discard";
 export const ARKYN_READY = "arkyn:ready";
+export const ARKYN_COLLECT_ROUND_GOLD = "arkyn:collect_round_gold";
 export const ARKYN_NEW_RUN = "arkyn:new_run";
 export const ARKYN_BUY_ITEM = "arkyn:buy_item";
 export const ARKYN_SELL_SIGIL = "arkyn:sell_sigil";

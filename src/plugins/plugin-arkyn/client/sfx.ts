@@ -15,6 +15,7 @@ import menuCloseUrl from "/assets/audio/sfx/menu-close.ogg?url";
 import roundWinUrl from "/assets/audio/sfx/round-win.ogg?url";
 import gameOverUrl from "/assets/audio/sfx/game-over.ogg?url";
 import buyUrl from "/assets/audio/sfx/buy.ogg?url";
+import buttonUrl from "/assets/audio/sfx/button.ogg?url";
 import typewriterUrl from "/assets/audio/sfx/typewriter.ogg?url";
 import { getAudioContext } from "./audioContext";
 
@@ -94,6 +95,7 @@ export const playMenuClose = makeSfx(menuCloseUrl, VOL_MENU);
 export const playRoundWin = makeSfx(roundWinUrl, VOL_DEFAULT);
 export const playGameOver = makeSfx(gameOverUrl, VOL_DEFAULT);
 export const playBuy = makeSfx(buyUrl, VOL_DEFAULT);
+export const playButton = makeSfx(buttonUrl, VOL_DEFAULT);
 
 // Typewriter SFX — needs to be startable + stoppable so the sound can
 // run for the duration of a single typewriter line and be cut off

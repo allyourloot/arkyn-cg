@@ -4,9 +4,11 @@ import {
     useLastRoundGoldBase,
     useLastRoundGoldHandsBonus,
     useLastRoundGoldHandsCount,
+    sendCollectRoundGold,
     sendReady,
 } from "../arkynStore";
 import {
+    playButton,
     playGold,
     playGoldTotal,
     playMenuOpen,
@@ -147,6 +149,11 @@ export default function RoundEndOverlay() {
             // Heavier "total reveal" stinger — distinct from the per-coin
             // blip so the player feels the round-up moment.
             playGoldTotal();
+            // Credit the staged round-win gold into the player's bank now
+            // (not on Continue). The server-side guard only lands the
+            // award when phase is still round_end, so a double-send from
+            // a re-mount would be a no-op anyway.
+            sendCollectRoundGold();
             await wait(360);
             if (cancelled) return;
             setShowButton(true);
@@ -170,6 +177,7 @@ export default function RoundEndOverlay() {
     // accidental keypress mid-animation doesn't lose the reward.
     const handleContinue = () => {
         if (!showButton) return;
+        playButton();
         sendReady();
     };
 
@@ -246,7 +254,7 @@ export default function RoundEndOverlay() {
                     aria-hidden={!showButton}
                     tabIndex={showButton ? 0 : -1}
                 >
-                    Continue
+                    Collect
                 </button>
             </div>
         </div>

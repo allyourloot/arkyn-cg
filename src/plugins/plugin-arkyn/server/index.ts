@@ -7,6 +7,7 @@ import {
     ARKYN_CAST,
     ARKYN_DISCARD,
     ARKYN_READY,
+    ARKYN_COLLECT_ROUND_GOLD,
     ARKYN_NEW_RUN,
     ARKYN_BUY_ITEM,
     ARKYN_SELL_SIGIL,
@@ -17,6 +18,7 @@ import { handleJoin } from "./systems/handleJoin";
 import { handleCast } from "./systems/handleCast";
 import { handleDiscard } from "./systems/handleDiscard";
 import { handleReady } from "./systems/handleReady";
+import { handleCollectRoundGold } from "./systems/handleCollectRoundGold";
 import { handleNewRun } from "./systems/handleNewRun";
 import { handleBuyItem } from "./systems/handleBuyItem";
 import { handleSellSigil } from "./systems/handleSellSigil";
@@ -54,6 +56,10 @@ export function PluginArkynServer(): ServerPlugin {
 
             runtime.onMessage(ARKYN_READY, (client: ServerClientRef) => {
                 handleReady(state, client);
+            });
+
+            runtime.onMessage(ARKYN_COLLECT_ROUND_GOLD, (client: ServerClientRef) => {
+                handleCollectRoundGold(state, client);
             });
 
             runtime.onMessage(ARKYN_BUY_ITEM, (client: ServerClientRef, payload: unknown) => {

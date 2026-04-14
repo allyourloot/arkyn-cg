@@ -9,7 +9,7 @@ import {
     emitSigilPurchase,
 } from "../arkynStore";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
-import { playMenuOpen, playBuy } from "../sfx";
+import { playButton, playBuy } from "../sfx";
 import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { getScrollImageUrl } from "./scrollAssets";
 import BouncyText from "./BouncyText";
@@ -64,7 +64,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     const scrollLevels = useScrollLevels();
 
     const handleContinue = () => {
-        playMenuOpen();
+        playButton();
         sendReady();
     };
 

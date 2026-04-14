@@ -31,6 +31,11 @@ export function handleReady(
     }
 
     if (state.gamePhase === "round_end") {
+        // NOTE: the round-win gold itself is credited via
+        // `handleCollectRoundGold` fired at the moment the RoundEnd
+        // overlay's "Total" line reveals — not here. By the time the
+        // player hits Continue the gold is already in their bank.
+
         // Pre-spawn the next enemy so the shop panel can show boss/debuff
         // info as part of the "Next Enemy" preview. The round counter
         // hasn't incremented yet, so pass currentRound + 1 explicitly.

@@ -61,12 +61,23 @@ export function getPlayerStatDeltas(sigils: readonly string[]): PlayerStatDeltas
  *
  * - `double_damage`: adds the rune's base contribution again (multiplied
  *   by the cast's final mult). Matches Voltage's original behavior.
+ * - `grant_gold`: awards the player a flat amount of gold. The server
+ *   applies it to `player.gold`; the client shows a floating "+N Gold"
+ *   bubble over the procced rune. Does NOT contribute to cast damage.
  */
-export type ProcEffect = { type: "double_damage" };
+export type ProcEffect =
+    | { type: "double_damage" }
+    | { type: "grant_gold"; amount: number };
 
 export interface ProcDefinition {
     /** Element the proc checks for. `undefined` = any element triggers the roll. */
     element?: ElementType;
+    /**
+     * If true, the proc only rolls for runes that landed a critical hit
+     * (rune element matched an enemy weakness). Independent of `element`
+     * — a proc can require both, either, or neither.
+     */
+    requireCritical?: boolean;
     /** Proc chance, 0-1. */
     chance: number;
     /**
@@ -85,6 +96,12 @@ export const SIGIL_PROCS: Record<string, ProcDefinition> = {
         chance: 0.25,
         rngOffset: 300000,
         effect: { type: "double_damage" },
+    },
+    fortune: {
+        requireCritical: true,
+        chance: 1 / 3,
+        rngOffset: 310000,
+        effect: { type: "grant_gold", amount: 2 },
     },
 };
 
@@ -115,6 +132,12 @@ export function* iterateProcs(
     runSeed: number,
     round: number,
     castNumber: number,
+    /**
+     * Optional per-rune crit flags, parallel to `contributingRuneElements`.
+     * Required when any owned proc uses `requireCritical`. Callers that
+     * never need crit-conditional procs may omit this.
+     */
+    isCritical?: readonly boolean[],
 ): Generator<ProcEvent, void, unknown> {
     for (const sigilId of sigils) {
         const proc = SIGIL_PROCS[sigilId];
@@ -123,6 +146,7 @@ export function* iterateProcs(
         for (let i = 0; i < contributingRuneElements.length; i++) {
             const element = contributingRuneElements[i];
             if (proc.element !== undefined && element !== proc.element) continue;
+            if (proc.requireCritical && !isCritical?.[i]) continue;
             if (rng() < proc.chance) {
                 yield { sigilId, runeIdx: i, effect: proc.effect };
             }

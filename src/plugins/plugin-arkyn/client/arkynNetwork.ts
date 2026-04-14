@@ -1,4 +1,4 @@
-import { ARKYN_JOIN, ARKYN_READY, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL } from "../shared";
+import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL } from "../shared";
 
 /**
  * Network layer for Arkyn. Owns the connection sender and exposes
@@ -26,6 +26,16 @@ export function joinGame(): void {
 
 export function sendReady(): void {
     sendArkynMessage(ARKYN_READY, {});
+}
+
+/**
+ * Tell the server to credit the staged round-win gold into the player's
+ * bank. Fired by the RoundEnd overlay at the moment its "Total" line
+ * reveals so the counter ticks up with the stinger rather than waiting
+ * for the Continue click.
+ */
+export function sendCollectRoundGold(): void {
+    sendArkynMessage(ARKYN_COLLECT_ROUND_GOLD, {});
 }
 
 export function sendNewRun(): void {

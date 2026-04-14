@@ -28,20 +28,40 @@ interface Props {
      * ticking up.
      */
     delayMs: number;
+    /**
+     * Variant selector. Default (`"damage"` / undefined) renders the
+     * damage number with element-tinted stroke and optional critical /
+     * resist treatments. `"gold"` renders "+N Gold" in the coin-yellow
+     * color — used by Fortune-style grant_gold procs. Gold bubbles
+     * ignore `isCritical` / `isResisted` (gold procs don't crit or resist).
+     */
+    kind?: "damage" | "gold";
 }
 
 const NORMAL_COLOR = "#ffffff";
 const RESISTED_COLOR = "#f87171";
 const CRITICAL_COLOR = "#fbbf24";
+const GOLD_COLOR = "#ffcd3c";
 
-export default function RuneDamageBubble({ amount, baseAmount, spellElement, isCritical, isResisted, seq, delayMs }: Props) {
+export default function RuneDamageBubble({ amount, baseAmount, spellElement, isCritical, isResisted, seq, delayMs, kind }: Props) {
     const bubbleRef = useRef<HTMLSpanElement>(null);
     const textRef = useRef<HTMLSpanElement>(null);
     const criticalRef = useRef<HTMLImageElement>(null);
     const labelRef = useRef<HTMLSpanElement>(null);
-    const strokeColor = ELEMENT_COLORS[spellElement] ?? "#ffffff";
+    const isGold = kind === "gold";
+    // Gold bubbles use a fixed gold stroke; damage bubbles tint to the spell's element.
+    const strokeColor = isGold ? GOLD_COLOR : (ELEMENT_COLORS[spellElement] ?? "#ffffff");
 
-    const hasLabel = isCritical || isResisted;
+    // Gold procs never show the critical burst or resist label — those are
+    // damage-only concepts.
+    const showCritical = isCritical && !isGold;
+    const showResisted = isResisted && !isGold;
+    const hasLabel = showCritical || showResisted;
+
+    // Gold bubbles render "+N Gold"; damage bubbles render the raw number.
+    const displayText = isGold ? `+${baseAmount} Gold` : String(baseAmount);
+    // Choose base text color: white for damage, red tint for resist, gold for gold procs.
+    const baseColor = isGold ? GOLD_COLOR : (showResisted ? RESISTED_COLOR : NORMAL_COLOR);
 
     useGSAP(() => {
         const el = bubbleRef.current;
@@ -49,8 +69,8 @@ export default function RuneDamageBubble({ amount, baseAmount, spellElement, isC
         const critEl = criticalRef.current;
         const labelEl = labelRef.current;
         if (!el) return;
-        if (textEl) textEl.textContent = String(baseAmount);
-        gsap.set(el, { xPercent: -50, y: 6, scale: 0.55, opacity: 0, color: isResisted ? RESISTED_COLOR : NORMAL_COLOR });
+        if (textEl) textEl.textContent = displayText;
+        gsap.set(el, { xPercent: -50, y: 6, scale: 0.55, opacity: 0, color: baseColor });
         if (critEl) gsap.set(critEl, { opacity: 0, scale: 0.5, xPercent: -50, yPercent: -50 });
         if (labelEl) gsap.set(labelEl, { opacity: 0, y: 0, scale: 0.6 });
 
@@ -59,14 +79,14 @@ export default function RuneDamageBubble({ amount, baseAmount, spellElement, isC
         // Phase 1: pop in (130ms)
         tl.to(el, {
             y: -10,
-            scale: isCritical ? 1.38 : 1.18,
+            scale: showCritical ? 1.38 : 1.18,
             opacity: 1,
             duration: 0.13,
-            ease: isCritical ? "back.out(2.5)" : "back.out(2)",
+            ease: showCritical ? "back.out(2.5)" : "back.out(2)",
         });
 
         // Critical burst pops in simultaneously with the number.
-        if (critEl && isCritical) {
+        if (critEl && showCritical) {
             tl.to(critEl, {
                 opacity: 1,
                 scale: 1,
@@ -96,7 +116,7 @@ export default function RuneDamageBubble({ amount, baseAmount, spellElement, isC
         // Phase 2: settle (70ms)
         tl.to(el, {
             y: -14,
-            scale: isCritical ? 1.12 : 1,
+            scale: showCritical ? 1.12 : 1,
             duration: 0.07,
             ease: "power2.out",
         }, hasLabel ? 0.13 + delayMs / 1000 : ">");
@@ -125,12 +145,12 @@ export default function RuneDamageBubble({ amount, baseAmount, spellElement, isC
                 <span
                     ref={labelRef}
                     className={styles.descriptorLabel}
-                    style={{ color: isCritical ? CRITICAL_COLOR : RESISTED_COLOR }}
+                    style={{ color: showCritical ? CRITICAL_COLOR : RESISTED_COLOR }}
                 >
-                    {isCritical ? "CRITICAL!" : "RESIST!"}
+                    {showCritical ? "CRITICAL!" : "RESIST!"}
                 </span>
             )}
-            {isCritical && (
+            {showCritical && (
                 <img
                     ref={criticalRef}
                     src={criticalUrl}
@@ -138,7 +158,7 @@ export default function RuneDamageBubble({ amount, baseAmount, spellElement, isC
                     className={styles.criticalBg}
                 />
             )}
-            <span ref={textRef}>{baseAmount}</span>
+            <span ref={textRef}>{displayText}</span>
         </span>
     );
 }

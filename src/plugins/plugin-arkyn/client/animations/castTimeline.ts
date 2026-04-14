@@ -8,7 +8,7 @@ import {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,
 } from "./timingConstants";
-import { playCastRune, playCount, playDamage, playDiscard, playDissolve, playCritical } from "../sfx";
+import { playCastRune, playCount, playDamage, playDiscard, playDissolve, playCritical, playGold } from "../sfx";
 
 // ============================================================
 // GSAP timeline factories for the gameplay orchestrators
@@ -31,6 +31,11 @@ import { playCastRune, playCount, playDamage, playDiscard, playDissolve, playCri
 
 const FLY_DURATION_S = 0.3;
 const FLY_STAGGER_S = 0.06;
+// Delay between a gold-proc "+N" overlay popping and the displayed gold
+// counter incrementing. Gives the player a beat to read the "+N" as its
+// own event before the counter updates, rather than the two flashing
+// simultaneously which reads as a single event.
+const GOLD_COMMIT_DELAY_S = 0.25;
 const DISCARD_FLY_DURATION_S = 0.4;
 const DISCARD_STAGGER_S = 0.04;
 const DRAW_FLY_DURATION_S = 0.45;
@@ -85,6 +90,14 @@ export interface CastTimelineContext {
         isCritical: boolean;
         isProc: boolean;
         isSynapse?: boolean;
+        /**
+         * Gold-grant proc (Fortune-style). Skips the Base counter tick and
+         * plays the gold SFX instead of the damage count. The bubble for
+         * this event renders as "+N Gold" via the `kind: "gold"` variant.
+         */
+        isGold?: boolean;
+        /** Gold payout for the proc — drives the gold-counter tick callbacks. */
+        goldDelta?: number;
         multDelta?: number;
         /** Sigil ID that fired this event (procs + synapse). Drives onSigilShake dispatch. */
         sigilId?: string;
@@ -144,6 +157,18 @@ export interface CastTimelineContext {
     onSigilShake?: (sigilId: string) => void;
     /** Fired when a Synapse event ticks the Mult counter. */
     onMultTick?: (mult: number) => void;
+    /**
+     * Fired when a gold-grant proc's "+N Gold" overlay should pop over
+     * the gold counter. Fires at the same moment as the proc bubble on
+     * the rune — the displayed counter value stays unchanged here.
+     */
+    onGoldProcShow?: (amount: number) => void;
+    /**
+     * Fired a beat later than `onGoldProcShow` to actually increment the
+     * displayed gold counter. The stagger (see `GOLD_COMMIT_DELAY_S`) lets
+     * the player read the "+N" before the counter updates.
+     */
+    onGoldProcCommit?: (amount: number) => void;
     /** Starting mult value (tier mult) — used to compute cumulative mult ticks. */
     baseMult?: number;
     /** Fired when the timeline finishes. Clears all animation state. */
@@ -262,6 +287,28 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
             }
             if (ctx.onMultTick) {
                 tl.call(() => ctx.onMultTick!(multAtEvent), undefined, tickAt);
+            }
+            continue;
+        }
+
+        // Gold-grant procs (Fortune-style) don't tick Base or Mult — gold
+        // is pure economy. Play the gold SFX, shake the firing sigil, and
+        // fire the two-phase gold-counter reveal: `onGoldProcShow` pops
+        // the "+N" overlay over the counter at tickAt, `onGoldProcCommit`
+        // increments the displayed value one beat later so the player
+        // reads the "+N" before the counter updates.
+        if (item.isGold) {
+            const sigilId = item.sigilId;
+            const amount = item.goldDelta ?? 0;
+            tl.call(playGold, undefined, tickAt);
+            if (ctx.onSigilShake && sigilId) {
+                tl.call(() => ctx.onSigilShake!(sigilId), undefined, tickAt);
+            }
+            if (ctx.onGoldProcShow && amount > 0) {
+                tl.call(() => ctx.onGoldProcShow!(amount), undefined, tickAt);
+            }
+            if (ctx.onGoldProcCommit && amount > 0) {
+                tl.call(() => ctx.onGoldProcCommit!(amount), undefined, tickAt + GOLD_COMMIT_DELAY_S);
             }
             continue;
         }

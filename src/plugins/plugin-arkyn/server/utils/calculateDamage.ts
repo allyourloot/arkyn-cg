@@ -21,6 +21,14 @@ import { CASTS_PER_ROUND } from "../../shared/arkynConstants";
 // - Hand-based mult bonuses (Synapse-style): via `getHandMultBonus()`
 // - RNG procs on played runes (Voltage-style): via `iterateProcs()`
 // Both use deterministic RNG that the client mirrors for animation accuracy.
+//
+// Returns both the final damage and any proc-granted gold (Fortune-style
+// sigils) so the caller can credit the player's gold in the same tick.
+export interface CastDamageResult {
+    finalDamage: number;
+    procGold: number;
+}
+
 export function calculateDamage(
     spell: ResolvedSpell,
     selectedRunes: readonly RuneInstance[],
@@ -32,7 +40,7 @@ export function calculateDamage(
     castsRemaining?: number,
     hand?: readonly RuneInstance[],
     selectedIndices?: readonly number[],
-): number {
+): CastDamageResult {
     const resistances = Array.from(enemy.resistances);
     const weaknesses = Array.from(enemy.weaknesses);
     const activeSigils = sigils ? Array.from(sigils) : undefined;
@@ -62,6 +70,7 @@ export function calculateDamage(
     );
 
     let totalDamage = breakdown.finalDamage;
+    let procGold = 0;
 
     // Apply proc effects from all owned proc-style sigils. `iterateProcs`
     // walks SIGIL_PROCS, rolls the deterministic RNG for each matching rune,
@@ -79,14 +88,17 @@ export function calculateDamage(
             runSeed,
             currentRound,
             castNumber,
+            breakdown.isCritical,
         )) {
             if (proc.effect.type === "double_damage") {
                 // Adds the rune's base contribution again, multiplied by the
                 // cast's final mult — matches legacy Voltage behavior.
                 totalDamage += breakdown.runeBaseContributions[proc.runeIdx] * breakdown.mult;
+            } else if (proc.effect.type === "grant_gold") {
+                procGold += proc.effect.amount;
             }
         }
     }
 
-    return totalDamage;
+    return { finalDamage: totalDamage, procGold };
 }

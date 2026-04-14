@@ -198,31 +198,45 @@ Future spellbooks will add match-wide modifiers (e.g., +1 hand size, -1 discard,
 
 ### Rendering Architecture — WebGL Context Budget
 
-Browsers limit concurrent WebGL contexts (Chrome: ~16, practical ceiling ~8–12 before the oldest gets evicted). The game carefully budgets contexts to stay under the limit during casts:
+Browsers limit concurrent WebGL contexts (Chrome: ~16, practical ceiling ~8–12 before the oldest gets evicted). The game pools every GPU surface behind one of two shared renderers so the peak never exceeds 3 contexts:
 
 | Component | Contexts |
 |---|---|
 | `BackgroundShader` | 1 |
-| `OverlayShader` | 1 |
 | `sharedItemRenderer` (all sigils + scrolls) | **1 shared** |
-| `DissolveCanvas` (per cast rune) | up to 5 |
-| **Total peak during cast** | ~8 |
+| `sharedDissolveRenderer` (all cast runes + scroll dissolves) | **1 shared** |
+| `OverlayShader` | 0 (Canvas2D) |
+| **Total peak during cast** | 3 |
 
 **Shared ItemScene renderer (`client/ui/sharedItemRenderer.ts`)**:
 - One `THREE.WebGLRenderer` attached to a hidden offscreen canvas serves every sigil / scroll card in the game.
 - `ItemScene.tsx` (`client/ui/ItemScene.tsx`) is a thin wrapper: it owns the visible display `<canvas>`, handles pointer events (tilt), and registers with the shared renderer on mount. The display canvas uses a plain 2D context and receives rendered frames via `drawImage`.
-- Per-frame, the render loop iterates registered items: sets per-item uniforms (`uTexture`, `uTilt`, `uTime`) and mesh rotation, calls `renderer.setSize(cssW, cssH, false)` (Three.js handles DPR via `setPixelRatio(2)`), renders the shared scene, then blits the offscreen buffer to the item's display canvas pixel-perfect 1:1.
-- Texture cache keyed by URL — each sigil/scroll image loads once, reused across all instances.
+- Per-frame, the render loop iterates registered items, sets per-item uniforms (`uTexture`, `uTilt`, `uTime`) and mesh rotation, calls `renderer.setSize(cssW, cssH, false)` only when dimensions change, renders the shared scene, then blits the offscreen buffer to the item's display canvas pixel-perfect 1:1.
+- Item sizes are cached via `ResizeObserver` to avoid per-frame `getBoundingClientRect` reads.
+- Texture cache keyed by URL (reusing a module-level `THREE.TextureLoader`); each sigil/scroll image loads once, reused across all instances. `disposeAllTextures()` is exported for plugin teardown.
 - Exposes `registerItemScene({ canvas, imageUrl, index, tiltTargetRef }) → unregister()`.
-- This replaced a previous pattern that created one `WebGLRenderer` per sigil instance — with 4+ sigils equipped, that alone consumed most of the context budget and caused `BackgroundShader` to flash white on cast (oldest context evicted).
+
+**Shared Dissolve renderer (`client/ui/sharedDissolveRenderer.ts`)**:
+- One raw-WebGL context + two compiled programs (dual-texture for runes, single-texture for scrolls) serves every concurrent dissolve.
+- `DissolveCanvas.tsx` is a thin wrapper: it renders a visible `<canvas>` (2D context) and registers with the shared renderer. Props are unchanged (`element`, `startTime`, `duration`, `rune?|imageUrl?`, `size?`).
+- Per-frame, the loop iterates active slots: computes `t = (now - startTime) / duration`, gates on textures being loaded, binds the right program, sets `uThreshold` + `uEdgeColor` + texture samplers, draws to offscreen, blits to the slot's display canvas via `drawImage`. On slot completion (`t >= 1`) it hides the display canvas (`visibility: hidden; display: none`) exactly as the old per-instance component did.
+- Texture cache keyed by URL; rune base/element textures are reused across all slots + every cast.
+- Exposes `registerDissolve({ canvas, element, startTime, duration, rune?|imageUrl?, size? }) → unregister()` and `disposeAllDissolveTextures()`.
+- Replaces a previous pattern that created one WebGL context per DissolveCanvas instance — with dissolve canvases now pre-mounted at cast start (to avoid a fly → dissolve handoff flicker), up to 6 concurrent contexts were possible, regularly triggering background-context eviction.
+
+**OverlayShader (`client/ui/OverlayShader.tsx`)**:
+- Static grain + 4×4 Bayer dither pattern rendered into a fixed-position canvas via Canvas2D `putImageData`. Same math as the old GLSL shader — `hash(x,y) = fract(sin(x*127.1 + y*311.7) * 43758.5453123)` + Bayer lookup — just executed in JS. Rendered once on mount + on each resize. No animation loop, no WebGL context.
+
+**Dissolve flicker prevention — pre-mount pattern**:
+- Dissolving runes are mounted at cast start (`arkynAnimations.ts:onStart`, not at fly-complete) so the shared renderer has the entire fly window to decode textures and paint the first frame.
+- `PlayArea` wraps the runeShake div with `opacity: flyingRunes.length === 0 ? 1 : 0` — keeps the pre-mounted dissolve layer invisible while flyers are still in transit, then flips to visible in the same tick the flyers unmount.
+- The dissolve shader gates the edge-glow band on `uThreshold > 0.001` so the pre-dissolve render is pixel-identical to a plain `<RuneImage>` — no element-colored tint during the idle pre-dissolve hold.
 
 **BackgroundShader graceful degradation**:
 - Uses `alpha: true` with a CSS `background-color: #1a1530` fallback on the canvas so if its context is lost the user sees a dimmed fallback instead of a white flash.
 - Listens for `webglcontextlost` (pauses render loop, logs warning) and `webglcontextrestored` (resumes).
 
-**`DissolveCanvas`**: one context per dissolving rune (up to 5 during cast). Not shared because each dissolve animation has its own startTime/duration and uses distinct raw-WebGL shaders. Out of scope for the shared renderer refactor; could be pooled later if needed.
-
-**If you're adding another WebGL surface**: check the context budget table above. Prefer routing through an existing shared renderer if possible. If you must add a new context, ensure it has a CSS fallback (like BackgroundShader) so context eviction degrades gracefully.
+**If you're adding another WebGL surface**: check the context budget table above. Prefer routing through an existing shared renderer if possible. If the new surface is fully static (no animation, no per-frame uniform updates), prefer Canvas2D + `putImageData` like OverlayShader — no context at all. If you must add a new WebGL context, ensure it has a CSS fallback (like BackgroundShader) so context eviction degrades gracefully.
 
 ### Enemy System
 

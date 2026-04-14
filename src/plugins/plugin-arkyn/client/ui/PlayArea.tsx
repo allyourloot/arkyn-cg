@@ -173,6 +173,7 @@ export default function PlayArea() {
                                 isResisted={procBubble.isResisted}
                                 seq={procBubble.seq}
                                 delayMs={procBubble.delayMs}
+                                kind={procBubble.kind}
                             />
                         )}
                     </div>

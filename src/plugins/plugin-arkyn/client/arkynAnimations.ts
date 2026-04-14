@@ -11,6 +11,7 @@ import {
     resolveSpell,
     calculateSpellDamage,
     getContributingRuneIndices,
+    type ProcEffect,
 } from "../shared";
 import type { RarityType } from "../shared/arkynConstants";
 import { subscribe, notify, type RuneClientData } from "./arkynStoreCore";
@@ -80,6 +81,12 @@ export interface RuneDamageBubble {
      * runes get "counted" one after another in slot order.
      */
     delayMs: number;
+    /**
+     * Variant discriminator. Default ("damage") renders the number with
+     * the damage stroke/outline styling. `"gold"` renders "+N Gold" in
+     * the coin-yellow color — used by Fortune-style grant_gold procs.
+     */
+    kind?: "damage" | "gold";
 }
 
 // One-shot floating damage hit on the enemy health bar. `seq` increments on
@@ -453,38 +460,53 @@ export function castSpell() {
 
     // ----- Sigil procs -----
     // Generic proc loop mirrors server's iterateProcs exactly. Each proc
-    // event carries the sigilId so the timeline can dispatch shakes
-    // generically. RNG is deterministic — server and client roll identical
-    // sequences.
-    // procsPerRune[i] = { sigilId } | null for the i-th contributing rune.
-    const procsPerRune: ({ sigilId: string } | null)[] = new Array(contributingIndices.length).fill(null);
+    // event carries the sigilId + effect so the timeline can dispatch
+    // shakes generically and branch on effect type (damage vs gold). RNG
+    // is deterministic — server and client roll identical sequences.
+    // procsPerRune[i] = { sigilId, effect } | null for the i-th contributing rune.
+    const procsPerRune: ({ sigilId: string; effect: ProcEffect } | null)[] = new Array(contributingIndices.length).fill(null);
     let procDamageTotal = 0;
     if (breakdown && ownedSigils.length > 0) {
         const castNumber = CASTS_PER_ROUND - arkynStoreInternal.getCastsRemaining();
         const runSeed = arkynStoreInternal.getRunSeed();
         const round = arkynStoreInternal.getCurrentRound();
         const contributingElements = contributingIndices.map(idx => castRunes[idx]?.element ?? "");
-        for (const proc of iterateProcs(ownedSigils, contributingElements, runSeed, round, castNumber)) {
-            procsPerRune[proc.runeIdx] = { sigilId: proc.sigilId };
+        for (const proc of iterateProcs(
+            ownedSigils,
+            contributingElements,
+            runSeed,
+            round,
+            castNumber,
+            breakdown.isCritical,
+        )) {
+            procsPerRune[proc.runeIdx] = { sigilId: proc.sigilId, effect: proc.effect };
             if (proc.effect.type === "double_damage") {
                 procDamageTotal += breakdown.runeBaseContributions[proc.runeIdx] * breakdown.mult;
             }
+            // grant_gold: no damage contribution — handled below when
+            // building the proc bubble (kind: "gold").
         }
     }
     const hasAnyProc = procsPerRune.some(p => p !== null);
     totalDamage += procDamageTotal;
-    // Adjust baseTotal to include proc contributions (for lastCastBaseDamage)
+    // Adjust baseTotal to include proc contributions (for lastCastBaseDamage).
+    // Only damage-type procs contribute to Base — gold procs are pure economy.
     if (breakdown && hasAnyProc) {
         for (let i = 0; i < procsPerRune.length; i++) {
-            if (procsPerRune[i]) baseTotal += breakdown.runeBaseContributions[i];
+            const p = procsPerRune[i];
+            if (p && p.effect.type === "double_damage") {
+                baseTotal += breakdown.runeBaseContributions[i];
+            }
         }
     }
 
     // ----- Build bubble arrays and extended runeBreakdown -----
     // The extended breakdown interleaves proc entries after their parent rune
     // so the timeline staggers them naturally. Each event in the array gets
-    // one BUBBLE_STAGGER_MS slot.
-    const runeBreakdown: { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean; isSynapse?: boolean; multDelta?: number; sigilId?: string }[] = [];
+    // one BUBBLE_STAGGER_MS slot. `isGold` distinguishes Fortune-style
+    // grant_gold procs from damage procs so the timeline skips the Base
+    // counter tick for them (gold isn't damage).
+    const runeBreakdown: { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean; isSynapse?: boolean; isGold?: boolean; goldDelta?: number; multDelta?: number; sigilId?: string }[] = [];
     let eventIdx = 0;
     if (breakdown) {
         for (let i = 0; i < contributingIndices.length; i++) {
@@ -513,24 +535,34 @@ export function castSpell() {
             });
             eventIdx++;
 
-            // Interleave proc bubble right after the parent rune
+            // Interleave proc bubble right after the parent rune. Damage
+            // procs (Voltage) show the rune's base contribution again;
+            // gold procs (Fortune) show the flat gold amount with the
+            // "gold" bubble variant and contribute nothing to damage.
             const proc = procsPerRune[i];
             if (proc) {
+                const isGoldProc = proc.effect.type === "grant_gold";
+                const bubbleAmount = isGoldProc
+                    ? proc.effect.amount
+                    : postModifier;
                 procBubblesForCast[slotIdx] = {
-                    amount: postModifier,
-                    baseAmount: postModifier,
+                    amount: bubbleAmount,
+                    baseAmount: bubbleAmount,
                     spellElement,
                     isCritical: false,
                     isResisted: false,
                     seq: ++bubbleSeqCounter,
                     delayMs: eventIdx * BUBBLE_STAGGER_MS,
+                    kind: isGoldProc ? "gold" : "damage",
                 };
                 runeBreakdown.push({
-                    base: postModifier,
-                    final: postModifier,
+                    base: isGoldProc ? 0 : postModifier,
+                    final: isGoldProc ? 0 : postModifier,
                     isResisted: false,
                     isCritical: false,
                     isProc: true,
+                    isGold: isGoldProc,
+                    goldDelta: isGoldProc ? proc.effect.amount : undefined,
                     sigilId: proc.sigilId,
                 });
                 eventIdx++;
@@ -632,6 +664,12 @@ export function castSpell() {
                 // stale) enemy state after a round transition.
                 lastCastBaseDamage = baseTotal;
                 arkynStoreInternal.lockHpDisplay();
+                // Freeze the gold counter at its pre-cast value. Fortune-style
+                // procs will tick it up per event via `addDisplayedGold`;
+                // the server's schema patch (which arrives almost instantly
+                // when the cast message is sent at fly-complete) won't
+                // jump the counter ahead of the animation.
+                arkynStoreInternal.lockGoldDisplay();
                 arkynStoreInternal.clearSelection();
                 arkynStoreInternal.setLastCastRunes(castRunes);
                 notify();
@@ -679,6 +717,18 @@ export function castSpell() {
             activeSigilShake = { sigilId, seq: ++sigilShakeSeq };
             notify();
         } : undefined,
+        // Gold-proc two-phase reveal: show the "+N Gold" overlay over the
+        // counter, then (one GOLD_COMMIT_DELAY_S beat later) increment the
+        // displayed counter value. Only wired when a gold proc was rolled
+        // this cast so there's no overhead when Fortune isn't equipped.
+        onGoldProcShow: hasAnyProc ? (amount: number) => {
+            arkynStoreInternal.triggerGoldProcBubble(amount);
+            notify();
+        } : undefined,
+        onGoldProcCommit: hasAnyProc ? (amount: number) => {
+            arkynStoreInternal.addDisplayedGold(amount);
+            notify();
+        } : undefined,
         onImpact: () => {
             enemyDamageHit = {
                 amount: totalDamage,
@@ -704,6 +754,11 @@ export function castSpell() {
             handMultBubbles = [];
             activeSigilShake = null;
             isCastAnimating = false;
+            // Release the gold-counter lock and snap the displayed value
+            // to the server's authoritative total. Also clear the proc
+            // overlay so the next cast mounts a fresh bubble state.
+            arkynStoreInternal.unlockGoldDisplayAndSyncToServer();
+            arkynStoreInternal.clearGoldProcBubble();
             // NOTE: `castingRuneIds` is intentionally NOT cleared here. The
             // sync system clears it atomically with `setHand` so the
             // remaining hand cards (which slid left to fill the cast gap)

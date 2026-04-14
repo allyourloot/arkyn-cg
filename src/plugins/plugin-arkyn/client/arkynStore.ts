@@ -108,6 +108,18 @@ let discardsRemaining = 3;
 // the most recent enemy defeat — `RoundEndOverlay` reads them to play the
 // typewriter reward animation.
 let gold = 0;
+// Visual gold counter value — normally mirrors `gold`, but during a cast
+// animation it's frozen at its pre-cast value and ticks up per proc commit
+// so the displayed gain lines up with the "+N Gold" bubbles instead of
+// jumping instantly when the server's schema patch arrives.
+let displayedGold = 0;
+let goldDisplayLocked = false;
+// Latest gold-proc "+N" overlay to render near the gold counter. Replaced
+// (with a fresh `seq`) on each proc so the pop animation re-fires. The
+// value update is applied separately via `addDisplayedGold` a beat later
+// so the player reads the "+N" before the counter increments.
+let goldProcBubble: { amount: number; seq: number } | null = null;
+let goldProcSeq = 0;
 let lastRoundGoldBase = 0;
 let lastRoundGoldHandsBonus = 0;
 let lastRoundGoldHandsCount = 0;
@@ -262,7 +274,18 @@ export function setPouchSize(s: number) { pouchSize = s; notify(); }
 export function setPouchContents(p: RuneClientData[]) { pouchContents = p; notify(); }
 export function setCastsRemaining(c: number) { castsRemaining = c; notify(); }
 export function setDiscardsRemaining(d: number) { discardsRemaining = d; notify(); }
-export function setGold(g: number) { gold = g; notify(); }
+export function setGold(g: number) {
+    gold = g;
+    // Only drive the visual counter if we're not mid-cast — during a cast
+    // the timeline ticks `displayedGold` per proc via `addDisplayedGold`
+    // so the counter increments in sync with the "+N Gold" bubble. On
+    // cast complete the orchestrator calls `unlockGoldDisplayAndSync` which
+    // syncs `displayedGold` back to `gold` in case of any drift.
+    if (!goldDisplayLocked) {
+        displayedGold = g;
+    }
+    notify();
+}
 export function setLastRoundGoldBase(g: number) { lastRoundGoldBase = g; notify(); }
 export function setLastRoundGoldHandsBonus(g: number) { lastRoundGoldHandsBonus = g; notify(); }
 export function setLastRoundGoldHandsCount(c: number) { lastRoundGoldHandsCount = c; notify(); }
@@ -400,6 +423,35 @@ export const arkynStoreInternal = {
         hpDisplayLocked = false;
         displayedEnemyHp = enemyHp;
     },
+    lockGoldDisplay() {
+        goldDisplayLocked = true;
+    },
+    unlockGoldDisplayAndSyncToServer() {
+        goldDisplayLocked = false;
+        displayedGold = gold;
+    },
+    /**
+     * Tick the displayed gold counter by `amount`. Called by the cast
+     * timeline's gold-proc commit event (after the "+N Gold" bubble has
+     * already appeared) so the counter increments visibly in sync with
+     * the proc payout. Clamped against `gold` so if the server's schema
+     * patch hasn't arrived yet we don't over-display.
+     */
+    addDisplayedGold(amount: number) {
+        displayedGold = Math.min(gold, displayedGold + amount);
+    },
+    /**
+     * Trigger the floating "+N" overlay over the gold counter. The
+     * monotonic `seq` forces a React remount so the pop animation
+     * replays even on back-to-back procs.
+     */
+    triggerGoldProcBubble(amount: number) {
+        goldProcBubble = { amount, seq: ++goldProcSeq };
+    },
+    /** Clear the overlay after the cast timeline completes. */
+    clearGoldProcBubble() {
+        goldProcBubble = null;
+    },
 
     /**
      * Convert client selection (by rune id) into server-side hand indices.
@@ -452,6 +504,14 @@ export function useCastsRemaining() { return useSyncExternalStore(subscribe, () 
 export function useDiscardsRemaining() { return useSyncExternalStore(subscribe, () => discardsRemaining); }
 export function useLastCastRunes() { return useSyncExternalStore(subscribe, () => lastCastRunes); }
 export function useGold() { return useSyncExternalStore(subscribe, () => gold); }
+/**
+ * Read the display-frozen gold value. During a cast the counter stays at
+ * its pre-cast value and is bumped per proc by the cast timeline; outside
+ * of a cast it mirrors `gold` exactly.
+ */
+export function useDisplayedGold() { return useSyncExternalStore(subscribe, () => displayedGold); }
+/** Read the latest gold-proc overlay bubble (seq-keyed). */
+export function useGoldProcBubble() { return useSyncExternalStore(subscribe, () => goldProcBubble); }
 export function useLastRoundGoldBase() { return useSyncExternalStore(subscribe, () => lastRoundGoldBase); }
 export function useLastRoundGoldHandsBonus() { return useSyncExternalStore(subscribe, () => lastRoundGoldHandsBonus); }
 export function useLastRoundGoldHandsCount() { return useSyncExternalStore(subscribe, () => lastRoundGoldHandsCount); }
@@ -482,7 +542,7 @@ export function useBestSingleCast() { return useSyncExternalStore(subscribe, () 
 // ============================================================
 
 export { subscribe } from "./arkynStoreCore";
-export { setConnection, joinGame, sendReady, sendNewRun, sendBuyItem, sendSellSigil } from "./arkynNetwork";
+export { setConnection, joinGame, sendReady, sendCollectRoundGold, sendNewRun, sendBuyItem, sendSellSigil } from "./arkynNetwork";
 export {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,

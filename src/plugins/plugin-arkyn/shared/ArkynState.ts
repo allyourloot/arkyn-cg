@@ -46,6 +46,11 @@ export class ArkynPlayerState extends Schema {
     @type("number") lastRoundGoldBase = 0;
     @type("number") lastRoundGoldHandsBonus = 0;
     @type("number") lastRoundGoldHandsCount = 0;
+    // Flipped true once the client has fired ARKYN_COLLECT_ROUND_GOLD for
+    // the current round_end episode. Prevents double-crediting if the
+    // RoundEnd overlay unmounts + remounts before the player hits
+    // Continue. Reset to false by `handleCast` on the next killing blow.
+    @type("boolean") lastRoundGoldCollected = false;
 
     // Run stats — synced to client for the game-over screen.
     @type("number") runTotalDamage = 0;
