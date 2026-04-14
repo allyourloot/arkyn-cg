@@ -2,14 +2,17 @@
 
 .wrapper {
     position: absolute;
-    top: clamp(12px, 2.4vh, 28px);
+    /* Mirrors `.handStack`'s padding-bottom in ArkynOverlay so the Sigil
+       bar's distance from the top matches Cast/Discard's distance from
+       the bottom. */
+    top: clamp(20px, 6vh, 80px);
     left: 50%;
     transform: translateX(-50%);
     z-index: 20;
     pointer-events: auto;
     display: flex;
     align-items: center;
-    gap: clamp(4px, 0.6vw, 10px);
+    gap: clamp(8px, 1.2vw, 18px);
 }
 
 /* Sigil count label — end of the row */
@@ -25,8 +28,8 @@
 
 .slot {
     box-sizing: border-box;
-    width: clamp(52px, 6.4vw, 76px);
-    height: clamp(52px, 6.4vw, 76px);
+    width: clamp(68px, 8.4vw, 100px);
+    height: clamp(68px, 8.4vw, 100px);
     background: transparent;
     border-style: solid;
     border-color: transparent;
@@ -40,10 +43,16 @@
 .filledSlot {
     position: relative;
     box-sizing: border-box;
-    width: clamp(52px, 6.4vw, 76px);
-    height: clamp(52px, 6.4vw, 76px);
+    width: clamp(68px, 8.4vw, 100px);
+    height: clamp(68px, 8.4vw, 100px);
     flex-shrink: 0;
     cursor: pointer;
+}
+
+/* Selected slot — lifted above neighbors so its Sell button paints on
+   top of the next slot instead of getting hidden behind it. */
+.filledSlotSelected {
+    z-index: 30;
 }
 
 /* Three.js canvas — fills the sigil slot, shader handles corner rounding */
@@ -62,7 +71,6 @@
 
 .filledSlot:hover :global(.arkyn-tooltip) {
     opacity: 1;
-    pointer-events: auto;
 }
 
 /* Sigil name */
@@ -108,25 +116,35 @@
 
 .sellButton {
     position: absolute;
-    left: 50%;
-    top: calc(100% + 16px);
-    transform: translateX(-50%);
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: auto;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 1px;
     background: rgba(180, 50, 50, 0.85);
     border: 1px solid rgba(220, 80, 80, 0.5);
-    border-top: none;
-    border-radius: 0 0 4px 4px;
+    border-radius: 0 4px 4px 0;
     color: #fff;
     font-family: inherit;
-    font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
+    font-size: clamp(var(--font-size-3xs), 1vw, var(--font-size-xs));
     letter-spacing: 1px;
     text-transform: uppercase;
     cursor: pointer;
-    padding: 3px 12px;
+    padding: 4px 10px;
     transition: background 80ms ease-out;
     white-space: nowrap;
+    z-index: 20;
+    line-height: 1.1;
+}
+
+.sellValue {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.9em;
 }
 
 .sellButton:hover {
@@ -138,7 +156,7 @@
 }
 
 .sellIcon {
-    width: clamp(14px, 1.6vw, 20px);
-    height: clamp(14px, 1.6vw, 20px);
+    width: clamp(12px, 1.4vw, 18px);
+    height: clamp(12px, 1.4vw, 18px);
     image-rendering: pixelated;
 }

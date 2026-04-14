@@ -1,4 +1,4 @@
-import { useRef, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { MAX_SIGILS } from "../../shared";
@@ -11,12 +11,13 @@ import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import handFrameUrl from "/assets/ui/hand-frame.png?url";
 import innerFrameUrl from "/assets/ui/inner-frame.png?url";
 import { HAS_HOVER } from "./utils/hasHover";
+import { renderDescription, SigilExplainer } from "./descriptionText";
 import styles from "./SigilBar.module.css";
 
 const RARITY_BG_COLORS: Record<string, string> = {
     common: "#6b6b6b",
     uncommon: "#309f30",
-    rare: "#3b7dd8",
+    rare: "#c13030",
     legendary: "#d4a017",
 };
 
@@ -25,24 +26,44 @@ const slotFrameVars = {
     "--tooltip-desc-bg": `url(${innerFrameUrl})`,
 } as CSSProperties;
 
-/** Parse `{text}` markers in a description string into green-highlighted spans. */
-function renderDescription(desc: string) {
-    const parts = desc.split(/(\{[^}]+\})/g);
-    return parts.map((part, i) => {
-        if (part.startsWith("{") && part.endsWith("}")) {
-            return <span key={i} style={{ color: "#309f30" }}>{part.slice(1, -1)}</span>;
-        }
-        return part;
-    });
-}
-
-const HOVER_POP_SCALE = 1.1;
+// Hover: subtle scale pop. Active (selected): raise the slot upward.
+const HOVER_POP_SCALE = 1.05;
+const ACTIVE_LIFT_PX = -12;
+const ACTIVE_SCALE = 1.04;
+const ACTIVE_EASE = "back.out(1.9)";
+const ACTIVE_DURATION_S = 0.22;
+const HOVER_EASE = "power3.out";
+const HOVER_DURATION_S = 0.12;
 
 export default function SigilBar() {
     const sigils = useSigils();
     const activeSigilShake = useActiveSigilShake();
     const barRef = useRef<HTMLDivElement>(null);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const [selectedSigilId, setSelectedSigilId] = useState<string | null>(null);
+    const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+    // Deselect when the user clicks outside the sigil bar. The slot's own
+    // onClick toggles selection, so in-bar clicks are handled by React state
+    // updates and this listener only fires for genuinely-outside clicks.
+    useEffect(() => {
+        if (!selectedSigilId) return;
+        const handleDocClick = (e: MouseEvent) => {
+            if (barRef.current && !barRef.current.contains(e.target as Node)) {
+                setSelectedSigilId(null);
+            }
+        };
+        document.addEventListener("click", handleDocClick);
+        return () => document.removeEventListener("click", handleDocClick);
+    }, [selectedSigilId]);
+
+    // If the selected sigil is sold (e.g. via server echo) or removed, clear
+    // the selection so a stale sell button doesn't linger.
+    useEffect(() => {
+        if (selectedSigilId && !sigils.includes(selectedSigilId)) {
+            setSelectedSigilId(null);
+        }
+    }, [sigils, selectedSigilId]);
 
     // Sigil shake animation — fires when activeSigilShake changes
     useGSAP(() => {
@@ -67,17 +88,29 @@ export default function SigilBar() {
         });
     }, { dependencies: [activeSigilShake], scope: barRef });
 
-    // Hover pop handlers
-    const handlePointerEnter = (i: number) => {
-        const el = slotRefs.current[i];
-        if (!el) return;
-        gsap.to(el, { scale: HOVER_POP_SCALE, duration: 0.08, ease: "power4.out", overwrite: "auto" });
-    };
-    const handlePointerLeave = (i: number) => {
-        const el = slotRefs.current[i];
-        if (!el) return;
-        gsap.to(el, { scale: 1, duration: 0.12, ease: "power3.out", overwrite: "auto" });
-    };
+    // Combined hover + selection animation — single source of truth for each
+    // slot's transform so the two states don't fight. Selection wins over
+    // hover (selected slot stays lifted regardless of hover state).
+    useGSAP(() => {
+        const selectedIdx = selectedSigilId ? sigils.indexOf(selectedSigilId) : -1;
+        for (let i = 0; i < slotRefs.current.length; i++) {
+            const el = slotRefs.current[i];
+            if (!el) continue;
+            const isSelected = i === selectedIdx;
+            const isHovered = i === hoveredIdx;
+            const targetY = isSelected ? ACTIVE_LIFT_PX : 0;
+            const targetScale = isSelected
+                ? ACTIVE_SCALE
+                : isHovered ? HOVER_POP_SCALE : 1;
+            gsap.to(el, {
+                y: targetY,
+                scale: targetScale,
+                duration: isSelected ? ACTIVE_DURATION_S : HOVER_DURATION_S,
+                ease: isSelected ? ACTIVE_EASE : HOVER_EASE,
+                overwrite: "auto",
+            });
+        }
+    }, { dependencies: [selectedSigilId, hoveredIdx, sigils], scope: barRef });
 
     return (
         <div ref={barRef} className={styles.wrapper}>
@@ -100,18 +133,21 @@ export default function SigilBar() {
 
                 const rarityBg = RARITY_BG_COLORS[def.rarity] ?? "#6b6b6b";
 
+                const isSelected = selectedSigilId === sigilId;
+
                 return (
                     <div
                         key={sigilId}
                         ref={(el) => { slotRefs.current[i] = el; registerSigilSlot(i, el); }}
-                        className={styles.filledSlot}
+                        className={`${styles.filledSlot} ${isSelected ? styles.filledSlotSelected : ""}`}
                         style={slotFrameVars}
-                        onPointerEnter={HAS_HOVER ? () => handlePointerEnter(i) : undefined}
-                        onPointerLeave={HAS_HOVER ? () => handlePointerLeave(i) : undefined}
+                        onPointerEnter={HAS_HOVER ? () => setHoveredIdx(i) : undefined}
+                        onPointerLeave={HAS_HOVER ? () => setHoveredIdx(prev => prev === i ? null : prev) : undefined}
+                        onClick={() => setSelectedSigilId(prev => prev === sigilId ? null : sigilId)}
                     >
                         <ItemScene itemId={sigilId} index={i} />
-                        {/* Tooltip — centered below */}
-                        <Tooltip placement="bottom" arrow variant="framed" interactive>
+                        {/* Tooltip — centered below, hover-only (info) */}
+                        <Tooltip placement="bottom" arrow variant="framed">
                             <span className={styles.tooltipName}>
                                 {def.name}
                             </span>
@@ -119,6 +155,12 @@ export default function SigilBar() {
                                 <span className={styles.tooltipDesc}>
                                     {renderDescription(def.description)}
                                 </span>
+                                {def.explainer && (
+                                    <SigilExplainer
+                                        label={def.explainer.label}
+                                        elements={def.explainer.elements}
+                                    />
+                                )}
                             </div>
                             <span
                                 className={styles.tooltipRarity}
@@ -126,16 +168,25 @@ export default function SigilBar() {
                             >
                                 {def.rarity}
                             </span>
+                        </Tooltip>
+                        {/* Sell button — click-to-reveal, stays until dismissed */}
+                        {isSelected && (
                             <button
                                 type="button"
                                 className={styles.sellButton}
-                                onClick={() => sendSellSigil(sigilId)}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    sendSellSigil(sigilId);
+                                    setSelectedSigilId(null);
+                                }}
                             >
-                                Sell
-                                <img src={goldIconUrl} alt="Gold" className={styles.sellIcon} />
-                                {def.sellPrice}
+                                <span>Sell</span>
+                                <span className={styles.sellValue}>
+                                    <img src={goldIconUrl} alt="Gold" className={styles.sellIcon} />
+                                    {def.sellPrice}
+                                </span>
                             </button>
-                        </Tooltip>
+                        )}
                     </div>
                 );
             })}

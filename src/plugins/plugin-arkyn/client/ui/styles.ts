@@ -35,6 +35,17 @@ export const ELEMENT_BG_COLORS: Record<string, string> = {
 
 export const TIER_LABELS = ["", "I", "II", "III", "IV", "V"];
 
+/**
+ * Cluster colors — semantic shorthand for the two element groupings the
+ * game surfaces in tooltips and copy. "Elemental" = fire/water/earth/air/
+ * ice/lightning (the 6 COMBINABLE_ELEMENTS). "Arcane" = arcane/death/
+ * psy/shadow/holy/poison/steel. Shared by the description renderer so
+ * proper-noun uses of "Elemental" / "Arcane" auto-color consistently
+ * across every UI.
+ */
+export const ELEMENTAL_CLUSTER_COLOR = "#06b6d4";
+export const ARCANE_CLUSTER_COLOR = "#a855f7";
+
 // ----- Panel chrome -----
 
 /**

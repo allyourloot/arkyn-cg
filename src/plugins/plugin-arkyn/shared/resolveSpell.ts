@@ -1,11 +1,13 @@
-import { type ElementType } from "./arkynConstants";
+import { COMBINABLE_ELEMENTS, type ElementType } from "./arkynConstants";
 import {
     SPELL_TABLE,
     TWO_PAIR_TABLE,
     FULL_HOUSE_TABLE,
+    COMBO_TABLE,
     isSynergyPair,
     type SpellInfo,
 } from "./spellTable";
+import { looseDuosEnabled } from "./sigilEffects";
 
 // `duo` is kept in the union for the future shop-unlock path that
 // re-enables loose-duo combos (COMBO_TABLE). In the base game, only
@@ -167,20 +169,27 @@ export function resolveSpell(
         // No synergy for this pair — fall through to single-element.
     }
 
-    // NOTE: Loose duo combos (COMBO_TABLE) are intentionally disabled
-    // in the base game. Mixed-element hands that don't form a synergy
-    // poker shape (Two Pair / Full House) fall through to single-
-    // element — the non-matching runes are wasted. This keeps the
-    // poker analogy clean: only real "hands" score, and mismatched
-    // runes are dead weight, creating meaningful commit-vs-hold
-    // tension during play.
-    //
-    // The COMBO_TABLE content is preserved for a future shop item
-    // (e.g. "Grimoire of Wild Magic") that unlocks loose-duo combos
-    // as a run-wide power-up. When that item is equipped, re-enable
-    // the loose-duo branch here (gate on a player/runtime flag).
+    // 3. Loose duo combos — gated on a sigil unlock (see
+    //    SIGIL_LOOSE_DUO_UNLOCKS, currently Fuze). When a cast has
+    //    exactly two distinct combinable elements and didn't match a
+    //    synergy poker shape above, fire the COMBO_TABLE entry. Tier =
+    //    total runes played (capped at 5), mirroring the single-element
+    //    fallback's count→tier mapping so damage scales with commitment.
+    if (shape.distinctCount === 2 && looseDuosEnabled(activeSigils ?? [])) {
+        const a = shape.entries[0].element;
+        const b = shape.entries[1].element;
+        const combinables = COMBINABLE_ELEMENTS as readonly string[];
+        if (combinables.includes(a) && combinables.includes(b)) {
+            const sorted: [string, string] = a < b ? [a, b] : [b, a];
+            const info = COMBO_TABLE[`${sorted[0]}+${sorted[1]}`];
+            if (info) {
+                const tier = Math.min(runes.length, 5);
+                return buildResolvedSpell(info, tier, shape.primaryElement, "duo", sorted);
+            }
+        }
+    }
 
-    // 3. Single-element fallback — most-frequent element wins, tier
+    // 4. Single-element fallback — most-frequent element wins, tier
     //    equals that element's count (capped at 5). Hands that don't
     //    fit any combo shape (3-distinct, 4-distinct, 5-distinct, or
     //    [2,1,1]/[3,1,1]) land here, plus non-synergy poker shapes

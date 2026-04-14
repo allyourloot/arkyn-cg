@@ -1,4 +1,4 @@
-import type { RarityType } from "./arkynConstants";
+import { COMBINABLE_ELEMENTS, type ElementType, type RarityType } from "./arkynConstants";
 
 export interface SigilDefinition {
     id: string;
@@ -7,6 +7,17 @@ export interface SigilDefinition {
     description: string;
     cost: number;
     sellPrice: number;
+    /**
+     * Optional explainer shown in the tooltip below the description — a
+     * small row of element rune icons with a label. Used when a sigil's
+     * effect only applies to a specific element group (e.g. Fuze only
+     * fuses Elemental runes, not Arcane) and the scope isn't obvious
+     * from the description alone.
+     */
+    explainer?: {
+        label?: string;
+        elements: readonly ElementType[];
+    };
 }
 
 export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
@@ -49,6 +60,18 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         description: "Critical runes have a {1 in 3} chance to grant {+2 gold}.",
         cost: 4,
         sellPrice: 2,
+    },
+    fuze: {
+        id: "fuze",
+        name: "Fuze",
+        rarity: "rare",
+        description: "Any {2} Elemental runes can fuse into a {Combo spell}.",
+        cost: 6,
+        sellPrice: 3,
+        explainer: {
+            label: "Elemental runes:",
+            elements: COMBINABLE_ELEMENTS,
+        },
     },
 };
 

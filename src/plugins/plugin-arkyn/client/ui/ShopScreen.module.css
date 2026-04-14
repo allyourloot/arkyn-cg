@@ -114,6 +114,13 @@
     z-index: 5;
 }
 
+/* Selected card — lifted above neighbors so the Buy button (anchored
+   to the right edge) paints on top of the next card. */
+.itemCardSelected,
+.itemCardSelected:hover {
+    z-index: 30;
+}
+
 .itemCardCantAfford {
     opacity: 0.45;
 }
@@ -151,14 +158,18 @@
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
 }
 
-/* --- Item image — centered in remaining card space --- */
+/* --- Item image — centered in remaining card space.
+      Shrink-wrapped to the canvas size so the Buy button, positioned
+      `left: 100%` relative to this wrap, sits flush with the image edge
+      rather than the padded card edge. --- */
 .cardImageWrap {
+    position: relative;
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 0;
-    width: 100%;
+    align-self: center;
 }
 
 .itemImage {
@@ -178,33 +189,33 @@
 }
 
 /* ================================================================
-   Buy button — appears on hover, inner-frame-green 9-slice
+   Buy button — appears on click (mirrors SigilBar's Sell flow),
+   anchored to the right of the card.
    ================================================================ */
 .buyButton {
     position: absolute;
-    top: 0;
+    top: 50%;
     left: 100%;
+    transform: translateY(-50%);
     box-sizing: border-box;
     background: #2d9e2d;
     border: 2px solid #1a7a1a;
-    border-radius: 4px;
+    border-radius: 0 4px 4px 0;
+    border-left: none;
     color: #fff;
     font-family: inherit;
-    font-size: clamp(var(--font-size-2xs), 1.4vw, var(--font-size-xs));
+    font-size: clamp(var(--font-size-xs), 1.3vw, var(--font-size-md));
     font-weight: normal;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
     cursor: pointer;
     line-height: 1;
-    padding: clamp(2px, 0.4vh, 5px) clamp(6px, 1vw, 12px);
-    z-index: 4;
-    opacity: 0;
-    transition: opacity 100ms ease-out, transform 80ms ease-out, background 80ms ease-out;
-}
-
-.itemCard:hover .buyButton {
-    opacity: 1;
+    padding: clamp(6px, 1vh, 10px) clamp(10px, 1.4vw, 16px);
+    z-index: 30;
+    pointer-events: auto;
+    transition: background 80ms ease-out;
+    white-space: nowrap;
 }
 
 .buyButton:hover {

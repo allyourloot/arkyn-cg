@@ -19,9 +19,6 @@ interface TooltipProps {
     className?: string;
     /** Inline styles appended to the root element. */
     style?: CSSProperties;
-    /** Whether this tooltip allows pointer events (e.g. for buttons inside).
-     *  Default: false */
-    interactive?: boolean;
     children: ReactNode;
 }
 
@@ -41,7 +38,6 @@ export default function Tooltip({
     frameImageUrl,
     className,
     style,
-    interactive = false,
     children,
 }: TooltipProps) {
     const placementClass = styles[placement];
@@ -64,7 +60,7 @@ export default function Tooltip({
         <div
             className={`arkyn-tooltip ${styles.tooltip} ${placementClass} ${variantClass} ${arrowClass} ${className ?? ""}`.trim()}
             style={{
-                pointerEvents: interactive ? "auto" : "none",
+                pointerEvents: "none",
                 ...frameVars,
                 ...style,
             }}

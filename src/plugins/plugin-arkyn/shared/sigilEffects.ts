@@ -237,6 +237,26 @@ export interface SigilLifecycleHooks {
 export const SIGIL_LIFECYCLE_HOOKS: Record<string, SigilLifecycleHooks> = {};
 
 // ============================================================================
+// Category 5 — Resolver Feature Unlocks (boolean flags)
+// ============================================================================
+
+/**
+ * Sigils that unlock loose-duo combo spells. When any owned sigil is in this
+ * registry, casts with exactly 2 distinct combinable elements fire the
+ * matching COMBO_TABLE spell instead of falling to single-element.
+ */
+export const SIGIL_LOOSE_DUO_UNLOCKS: Record<string, true> = {
+    fuze: true,
+};
+
+export function looseDuosEnabled(sigils: readonly string[]): boolean {
+    for (const id of sigils) {
+        if (SIGIL_LOOSE_DUO_UNLOCKS[id]) return true;
+    }
+    return false;
+}
+
+// ============================================================================
 // Module-Load Validation
 // ============================================================================
 
