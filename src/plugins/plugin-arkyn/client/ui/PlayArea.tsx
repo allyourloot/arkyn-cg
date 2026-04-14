@@ -90,6 +90,7 @@ export default function PlayArea() {
                     keyframes: shakeKeyframes,
                     ease: "power2.out",
                     delay: procBubble.delayMs / 1000,
+                    overwrite: "auto",
                 });
             }
         }

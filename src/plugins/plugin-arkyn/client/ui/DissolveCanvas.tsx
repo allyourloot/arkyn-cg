@@ -67,7 +67,10 @@ export default function DissolveCanvas({
             premultipliedAlpha: false,
             antialias: false,
         });
-        if (!gl) return;
+        if (!gl) {
+            console.warn("DissolveCanvas: WebGL unavailable, skipping dissolve animation.");
+            return;
+        }
 
         const fragShader = isDual
             ? DISSOLVE_FRAGMENT_SHADER
@@ -97,7 +100,7 @@ export default function DissolveCanvas({
         let loaded = 0;
         let expectedCount: number;
 
-        const loadTex = (url: string, unit: number): WebGLTexture | null => {
+        const loadTex = (url: string): WebGLTexture | null => {
             const tex = gl.createTexture();
             textures.push(tex);
             const img = new Image();
@@ -112,8 +115,8 @@ export default function DissolveCanvas({
         };
 
         if (isDual) {
-            const baseTex = loadTex(rune.baseUrl, 0);
-            const runeTex = loadTex(rune.runeUrl, 1);
+            const baseTex = loadTex(rune.baseUrl);
+            const runeTex = loadTex(rune.runeUrl);
             gl.uniform1i(gl.getUniformLocation(program, "uBaseTex"), 0);
             gl.uniform1i(gl.getUniformLocation(program, "uRuneTex"), 1);
             expectedCount = 2;
@@ -122,7 +125,7 @@ export default function DissolveCanvas({
             var dualTexBase = baseTex;   // eslint-disable-line no-var
             var dualTexRune = runeTex;   // eslint-disable-line no-var
         } else {
-            loadTex(imageUrl!, 0);
+            loadTex(imageUrl!);
             gl.uniform1i(gl.getUniformLocation(program, "uTex"), 0);
             expectedCount = 1;
         }
@@ -175,7 +178,12 @@ export default function DissolveCanvas({
             canvas.style.visibility = "hidden";
             canvas.style.display = "none";
             canvas.style.opacity = "0";
-            for (const img of images) img.onload = null;
+            // Clear handlers before cancelling src to prevent the in-flight
+            // load from firing onload into a torn-down GL context.
+            for (const img of images) {
+                img.onload = null;
+                img.src = "";
+            }
             // Defer GL teardown by two frames so the hidden canvas is
             // fully removed from the render tree before loseContext().
             requestAnimationFrame(() => {

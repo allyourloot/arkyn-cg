@@ -115,10 +115,16 @@ interface RegisteredItem {
     canvas: HTMLCanvasElement;
     ctx2d: CanvasRenderingContext2D;
     texture: THREE.Texture;
+    imageUrl: string;
     index: number;
     phase: number;
     tiltTargetRef: { current: TiltTarget };
     tiltCurrent: TiltTarget;
+    // Cached CSS size, updated by ResizeObserver — avoids per-frame
+    // getBoundingClientRect() forced-layout reads inside the RAF loop.
+    cssW: number;
+    cssH: number;
+    resizeObserver: ResizeObserver | null;
 }
 
 // ----- Module state (lazy-initialized) -----
@@ -131,6 +137,10 @@ let mesh: THREE.Mesh | null = null;
 let material: THREE.ShaderMaterial | null = null;
 
 const textureCache: Map<string, THREE.Texture> = new Map();
+// Single shared loader — reused across all texture loads. Three.js's
+// TextureLoader is stateless once constructed; re-instantiating per call
+// is pure allocation overhead.
+const sharedTextureLoader = new THREE.TextureLoader();
 
 let nextItemId = 0;
 const registered: Map<number, RegisteredItem> = new Map();
@@ -139,6 +149,11 @@ let rafId = 0;
 let running = false;
 let contextLost = false;
 let lastFrameTime = 0;
+// Track last dimensions applied to the shared renderer so we can skip
+// redundant setSize() calls when every item in the frame is the same size
+// (the common case — all sigil cards share a size).
+let lastRendererW = 0;
+let lastRendererH = 0;
 
 // ----- Lazy initialization -----
 
@@ -202,24 +217,16 @@ function ensureInitialized(): boolean {
         for (const tex of textureCache.values()) tex.dispose();
         textureCache.clear();
         for (const item of registered.values()) {
-            item.texture = getOrLoadTexture(getTextureUrlForItem(item));
+            item.texture = getOrLoadTexture(item.imageUrl);
         }
+        // Renderer dimensions are owned by the browser after restore; force
+        // the next frame to re-apply setSize.
+        lastRendererW = 0;
+        lastRendererH = 0;
         console.info("sharedItemRenderer: WebGL context restored.");
     });
 
     return true;
-}
-
-// Reverse-lookup helper used only during context-restoration to rebuild
-// textures. We store the URL on each item when we register it.
-const itemUrls: Map<number, string> = new Map();
-function getTextureUrlForItem(item: RegisteredItem): string {
-    // Find the URL via the items map. We keep a parallel map because the
-    // registered item doesn't carry the URL directly.
-    for (const [id, entry] of registered) {
-        if (entry === item) return itemUrls.get(id) ?? "";
-    }
-    return "";
 }
 
 // ----- Texture cache -----
@@ -227,11 +234,21 @@ function getTextureUrlForItem(item: RegisteredItem): string {
 function getOrLoadTexture(url: string): THREE.Texture {
     const cached = textureCache.get(url);
     if (cached) return cached;
-    const tex = new THREE.TextureLoader().load(url);
+    const tex = sharedTextureLoader.load(url);
     tex.magFilter = THREE.LinearFilter;
     tex.minFilter = THREE.LinearFilter;
     textureCache.set(url, tex);
     return tex;
+}
+
+/**
+ * Dispose every cached texture and drop the cache. Call on plugin teardown
+ * or when a full session reset is appropriate. Safe to call at any time —
+ * textures will simply re-upload on next render from registered items.
+ */
+export function disposeAllTextures(): void {
+    for (const tex of textureCache.values()) tex.dispose();
+    textureCache.clear();
 }
 
 // ----- Render loop -----
@@ -265,17 +282,21 @@ function renderFrame(now: number): void {
     const lerpFactor = 1 - Math.exp(-TILT_LERP_SPEED * dt);
 
     for (const item of registered.values()) {
-        // Skip if display canvas is hidden or has 0 dimensions.
-        const rect = item.canvas.getBoundingClientRect();
-        const cssW = rect.width;
-        const cssH = rect.height;
+        // Sizes come from the ResizeObserver cache — no per-frame layout
+        // read. Skip items whose canvas is hidden or not yet measured.
+        const cssW = item.cssW;
+        const cssH = item.cssH;
         if (cssW <= 0 || cssH <= 0) continue;
 
-        // Always resize the shared renderer for this item — the renderer
-        // state persists across items within a frame, so we need to set
-        // the size before each render. Three.js's setPixelRatio(dpr) means
-        // passing CSS size here yields a `cssW*dpr × cssH*dpr` buffer.
-        renderer.setSize(cssW, cssH, false);
+        // Only apply setSize when dimensions actually change. In the common
+        // case (all sigils same size) the call is skipped every frame after
+        // the first. Three.js's setPixelRatio(dpr) means passing CSS size
+        // here yields a `cssW*dpr × cssH*dpr` buffer.
+        if (cssW !== lastRendererW || cssH !== lastRendererH) {
+            renderer.setSize(cssW, cssH, false);
+            lastRendererW = cssW;
+            lastRendererH = cssH;
+        }
         const bufW = renderer.domElement.width;
         const bufH = renderer.domElement.height;
 
@@ -349,19 +370,42 @@ export function registerItemScene(cfg: ItemSceneRegistration): () => void {
         canvas: cfg.canvas,
         ctx2d,
         texture,
+        imageUrl: cfg.imageUrl,
         index: cfg.index,
         phase: cfg.index * PHASE_STAGGER,
         tiltTargetRef: cfg.tiltTargetRef,
         tiltCurrent: { x: 0, y: 0 },
+        cssW: 0,
+        cssH: 0,
+        resizeObserver: null,
     };
     registered.set(id, item);
-    itemUrls.set(id, cfg.imageUrl);
+
+    // Seed initial size so the first frame can render before any
+    // ResizeObserver callback fires.
+    const initialRect = cfg.canvas.getBoundingClientRect();
+    item.cssW = initialRect.width;
+    item.cssH = initialRect.height;
+
+    // Observe the display canvas for size changes. The callback just
+    // writes into the item — the render loop reads on its own schedule.
+    const observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+            // contentRect is in CSS pixels, same as getBoundingClientRect
+            // for an unstyled canvas element.
+            item.cssW = entry.contentRect.width;
+            item.cssH = entry.contentRect.height;
+        }
+    });
+    observer.observe(cfg.canvas);
+    item.resizeObserver = observer;
 
     startLoop();
 
     return () => {
+        item.resizeObserver?.disconnect();
+        item.resizeObserver = null;
         registered.delete(id);
-        itemUrls.delete(id);
         if (registered.size === 0) {
             stopLoop();
         }
