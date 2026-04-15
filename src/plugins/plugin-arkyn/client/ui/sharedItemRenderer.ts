@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import sigilFrameUrl from "/assets/sigils/sigil-frame-128x128.png?url";
 
 /**
  * Shared Three.js renderer for all ItemScene instances (sigils + scrolls).
@@ -33,18 +34,55 @@ void main() {
 
 // Glossy-card shader. A soft specular highlight follows the tilt so the
 // card looks like a shiny surface catching light. A subtle vignette at
-// the edges adds depth. Original texture colors are preserved faithfully.
+// the edges adds depth.
+//
+// When `uUseFrame == 1.0`, the sigil fills the card edge-to-edge and the
+// frame's luminance is overlaid on top — the frame's cracks/highlights
+// get stamped onto the sigil (engraved-on-stone look) without the frame
+// itself being visible as a separate backdrop. Scrolls (parchment
+// silhouettes with transparent backgrounds) pass uUseFrame == 0.0 and
+// render the texture as-is.
 const FRAGMENT_SHADER = /* glsl */ `
 precision mediump float;
 
 uniform sampler2D uTexture;
+uniform sampler2D uFrame;
+uniform float uUseFrame;  // 0.0 = raw sigil (scrolls), 1.0 = framed (sigils)
 uniform float uTime;
 uniform vec2 uTilt;   // smoothed mouse offset (-1..1)
 
 varying vec2 vUv;
 
 void main() {
-    vec4 tex = texture2D(uTexture, vUv);
+    vec4 rawTex = texture2D(uTexture, vUv);
+
+    // ── Framed path — sigil covers the full card, frame overlays on top ──
+    vec4 frameTex = texture2D(uFrame, vUv);
+
+    // Grayscale frame luminance used as the overlay source. Keeps the
+    // transfer hue-neutral so the sigil's own colors stay intact; only
+    // brightness is modulated.
+    float frameL = dot(frameTex.rgb, vec3(0.299, 0.587, 0.114));
+    vec3 blendRGB = vec3(frameL);
+
+    // Per-channel overlay blend — dark frame areas (cracks) darken the
+    // sigil, bright areas lift it, mid-gray is a no-op. Preserves sigil
+    // color fidelity while stamping the carved-stone detail visibly.
+    vec3 base = rawTex.rgb;
+    vec3 overlay = mix(
+        2.0 * base * blendRGB,
+        vec3(1.0) - 2.0 * (vec3(1.0) - base) * (vec3(1.0) - blendRGB),
+        step(vec3(0.5), base)
+    );
+
+    // Strength — how visible the frame's detail is on the sigil. Higher
+    // → cracks/bevel read more clearly; lower → subtler stamping.
+    float frameDetailStrength = 0.9;
+    vec3 framedRGB = mix(base, overlay, frameDetailStrength);
+
+    // Full coverage → alpha comes from the sigil itself.
+    vec3 baseColor = mix(rawTex.rgb, framedRGB, uUseFrame);
+    float baseAlpha = rawTex.a;
 
     // ── Idle drift — slow circular orbit so the highlight lives even
     //    when the mouse is away. Mouse tilt adds on top. ──
@@ -66,19 +104,17 @@ void main() {
     float edgeDist = distance(vUv, vec2(0.5));
     float vignette = smoothstep(0.35, 0.72, edgeDist) * 0.15;
 
-    // ── Rounded-rect mask in UV space — corners tilt with the mesh ──
-    float radius = 0.09;
-    vec2 halfSize = vec2(0.5);
-    vec2 q = abs(vUv - 0.5) - (halfSize - radius);
-    float d = length(max(q, 0.0)) - radius;
+    // ── Box mask in UV space — square corners, tilts with the mesh ──
+    vec2 edge = abs(vUv - 0.5) - 0.5;
+    float d = max(edge.x, edge.y);
     float mask = 1.0 - smoothstep(-0.008, 0.008, d);
 
     // ── Compose — additive highlight, subtractive vignette ──
-    vec3 color = tex.rgb;
+    vec3 color = baseColor;
     color += vec3(1.0, 0.98, 0.94) * (highlight + core);
     color *= 1.0 - vignette;
 
-    gl_FragColor = vec4(color, tex.a * mask);
+    gl_FragColor = vec4(color, baseAlpha * mask);
 }
 `;
 
@@ -100,12 +136,10 @@ varying vec2 vUv;
 void main() {
     vec4 tex = texture2D(uTexture, vUv);
 
-    // Rounded-rect mask — must match the card shader's radius + AA band
-    // so sigils cast a shadow with the same silhouette as the card front.
-    float radius = 0.09;
-    vec2 halfSize = vec2(0.5);
-    vec2 q = abs(vUv - 0.5) - (halfSize - radius);
-    float d = length(max(q, 0.0)) - radius;
+    // Box mask — must match the card shader's silhouette so sigils cast
+    // a shadow with the same shape as the card front.
+    vec2 edge = abs(vUv - 0.5) - 0.5;
+    float d = max(edge.x, edge.y);
     float mask = 1.0 - smoothstep(-0.008, 0.008, d);
 
     gl_FragColor = vec4(0.0, 0.0, 0.0, tex.a * mask * uShadowOpacity);
@@ -156,6 +190,13 @@ export interface ItemSceneRegistration {
      * per-item `tiltCurrent` toward the target each frame.
      */
     tiltTargetRef: { current: TiltTarget };
+    /**
+     * When true, the sigil-frame backdrop is composited behind the texture
+     * so the card reads as an engraved plate rather than a flat sticker.
+     * Scrolls (parchment silhouettes with their own transparent background)
+     * should pass false. Defaults to true at the call site.
+     */
+    useFrame?: boolean;
 }
 
 interface RegisteredItem {
@@ -165,6 +206,7 @@ interface RegisteredItem {
     shadowCtx2d: CanvasRenderingContext2D | null;
     texture: THREE.Texture;
     imageUrl: string;
+    useFrame: boolean;
     index: number;
     phase: number;
     tiltTargetRef: { current: TiltTarget };
@@ -238,9 +280,16 @@ function ensureInitialized(): boolean {
     camera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 0.1, 10);
     camera.position.z = 2;
 
+    // Preload the frame texture — shared across every framed sigil.
+    // Held in the module's texture cache so `disposeAllTextures()` clears
+    // it alongside every other texture on teardown.
+    const frameTexture = getOrLoadTexture(sigilFrameUrl);
+
     material = new THREE.ShaderMaterial({
         uniforms: {
             uTexture: { value: null },
+            uFrame: { value: frameTexture },
+            uUseFrame: { value: 1 },
             uTime: { value: 0 },
             uTilt: { value: new THREE.Vector2(0, 0) },
         },
@@ -421,6 +470,7 @@ function renderFrame(now: number): void {
 
         // Update uniforms for this item's draw.
         material.uniforms.uTexture.value = item.texture;
+        material.uniforms.uUseFrame.value = item.useFrame ? 1 : 0;
         material.uniforms.uTime.value = t;
         (material.uniforms.uTilt.value as THREE.Vector2).set(cur.x, cur.y);
 
@@ -473,6 +523,7 @@ export function registerItemScene(cfg: ItemSceneRegistration): () => void {
         shadowCtx2d,
         texture,
         imageUrl: cfg.imageUrl,
+        useFrame: cfg.useFrame ?? true,
         index: cfg.index,
         phase: cfg.index * PHASE_STAGGER,
         tiltTargetRef: cfg.tiltTargetRef,

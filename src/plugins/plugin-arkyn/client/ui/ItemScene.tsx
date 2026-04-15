@@ -18,6 +18,10 @@ interface ItemSceneProps {
     className?: string;
     /** Optional image URL — if provided, uses this instead of getSigilImageUrl(itemId). */
     imageUrl?: string;
+    /** Paint the texture onto the sigil-frame backdrop. Defaults to true for
+     *  sigils (no imageUrl passed) and false when an external imageUrl is
+     *  supplied — scrolls and other custom art shouldn't be framed. */
+    useFrame?: boolean;
 }
 
 /**
@@ -26,7 +30,7 @@ interface ItemSceneProps {
  * shared Three.js renderer in `sharedItemRenderer.ts`; this component
  * owns the display canvas + shadow div and their pointer handlers.
  */
-export default function ItemScene({ itemId, index, className, imageUrl: imageUrlProp }: ItemSceneProps) {
+export default function ItemScene({ itemId, index, className, imageUrl: imageUrlProp, useFrame }: ItemSceneProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const shadowRef = useRef<HTMLCanvasElement>(null);
     const tiltTargetRef = useRef({ x: 0, y: 0 });
@@ -35,15 +39,17 @@ export default function ItemScene({ itemId, index, className, imageUrl: imageUrl
         const canvas = canvasRef.current;
         if (!canvas) return;
         const resolvedUrl = imageUrlProp || getSigilImageUrl(itemId, 128);
+        const resolvedUseFrame = useFrame ?? !imageUrlProp;
         const unregister = registerItemScene({
             canvas,
             shadowCanvas: shadowRef.current,
             imageUrl: resolvedUrl,
             index,
             tiltTargetRef,
+            useFrame: resolvedUseFrame,
         });
         return unregister;
-    }, [itemId, index, imageUrlProp]);
+    }, [itemId, index, imageUrlProp, useFrame]);
 
     // ----- Pointer handlers (tilt only — hover pop is GSAP in SigilBar) -----
 
