@@ -31,6 +31,7 @@ interface ItemSceneProps {
  * owns the display canvas + shadow div and their pointer handlers.
  */
 export default function ItemScene({ itemId, index, className, imageUrl: imageUrlProp, useFrame }: ItemSceneProps) {
+    const wrapperRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const shadowRef = useRef<HTMLCanvasElement>(null);
     const tiltTargetRef = useRef({ x: 0, y: 0 });
@@ -51,10 +52,12 @@ export default function ItemScene({ itemId, index, className, imageUrl: imageUrl
         return unregister;
     }, [itemId, index, imageUrlProp, useFrame]);
 
-    // ----- Pointer handlers (tilt only — hover pop is GSAP in SigilBar) -----
-
-    const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-        const rect = canvasRef.current?.getBoundingClientRect();
+    // Pointer handlers live on the wrapper (cell-sized) rather than the
+    // canvas (which extends 15% beyond the cell for tilt headroom). That
+    // way the -1..1 tilt range maps to the visible sigil bounds, not the
+    // expanded render buffer.
+    const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+        const rect = wrapperRef.current?.getBoundingClientRect();
         if (!rect) return;
         const nx = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
         const ny = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
@@ -68,14 +71,14 @@ export default function ItemScene({ itemId, index, className, imageUrl: imageUrl
     const wrapperClass = className ?? sigilBarStyles.sigilCanvas;
 
     return (
-        <div className={wrapperClass}>
+        <div
+            ref={wrapperRef}
+            className={wrapperClass}
+            onPointerMove={HAS_HOVER ? handlePointerMove : undefined}
+            onPointerLeave={HAS_HOVER ? handlePointerLeave : undefined}
+        >
             <canvas ref={shadowRef} aria-hidden className={styles.shadow} />
-            <canvas
-                ref={canvasRef}
-                className={styles.canvas}
-                onPointerMove={HAS_HOVER ? handlePointerMove : undefined}
-                onPointerLeave={HAS_HOVER ? handlePointerLeave : undefined}
-            />
+            <canvas ref={canvasRef} className={styles.canvas} />
         </div>
     );
 }

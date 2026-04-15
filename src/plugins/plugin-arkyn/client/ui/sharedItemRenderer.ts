@@ -90,7 +90,10 @@ void main() {
         sin(uTime * 0.6) * 0.15,
         cos(uTime * 0.45) * 0.12
     );
-    vec2 offset = idle - uTilt * 0.3;
+    // Pull the highlight toward the cursor. UV x grows rightward (same
+    // as mouse.x), but UV y grows upward while mouse.y grows downward —
+    // so Y needs an inverted sign to end up under the cursor.
+    vec2 offset = idle + vec2(uTilt.x, -uTilt.y) * 0.3;
 
     // ── Specular highlight — follows the combined offset ──
     vec2 highlightCenter = vec2(0.5, 0.5) + offset;
@@ -104,9 +107,11 @@ void main() {
     float edgeDist = distance(vUv, vec2(0.5));
     float vignette = smoothstep(0.35, 0.72, edgeDist) * 0.15;
 
-    // ── Box mask in UV space — square corners, tilts with the mesh ──
-    vec2 edge = abs(vUv - 0.5) - 0.5;
-    float d = max(edge.x, edge.y);
+    // ── Rounded-rect mask in UV space — corners tilt with the mesh ──
+    float radius = 0.035;
+    vec2 halfSize = vec2(0.5);
+    vec2 q = abs(vUv - 0.5) - (halfSize - radius);
+    float d = length(max(q, 0.0)) - radius;
     float mask = 1.0 - smoothstep(-0.008, 0.008, d);
 
     // ── Compose — additive highlight, subtractive vignette ──
@@ -136,10 +141,12 @@ varying vec2 vUv;
 void main() {
     vec4 tex = texture2D(uTexture, vUv);
 
-    // Box mask — must match the card shader's silhouette so sigils cast
-    // a shadow with the same shape as the card front.
-    vec2 edge = abs(vUv - 0.5) - 0.5;
-    float d = max(edge.x, edge.y);
+    // Rounded-rect mask — must match the card shader's radius + AA band
+    // so sigils cast a shadow with the same silhouette as the card front.
+    float radius = 0.035;
+    vec2 halfSize = vec2(0.5);
+    vec2 q = abs(vUv - 0.5) - (halfSize - radius);
+    float d = length(max(q, 0.0)) - radius;
     float mask = 1.0 - smoothstep(-0.008, 0.008, d);
 
     gl_FragColor = vec4(0.0, 0.0, 0.0, tex.a * mask * uShadowOpacity);
@@ -148,7 +155,7 @@ void main() {
 
 // ----- Constants (copied verbatim from ItemScene.tsx) -----
 
-const MAX_TILT_RAD = 0.32;          // ~18 degrees max mesh rotation
+const MAX_TILT_RAD = 0.18;          // ~10 degrees max mesh rotation
 const TILT_LERP_SPEED = 8;          // smoothing factor
 const IDLE_TILT_AMP = 0.22;         // idle rotation amplitude (radians, ~12 deg)
 const PHASE_STAGGER = 1.2;          // seconds offset per sigil index
@@ -277,7 +284,11 @@ function ensureInitialized(): boolean {
     renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 
     scene = new THREE.Scene();
-    camera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 0.1, 10);
+    // Camera bounds wider than the 1x1 plane so that tilted corners have
+    // room to extend without being clipped at the canvas edge. The plane
+    // occupies the inner 1/1.3 ≈ 77% of the view, and CSS grows the
+    // canvas by the same factor so the visual sigil size is preserved.
+    camera = new THREE.OrthographicCamera(-0.65, 0.65, 0.65, -0.65, 0.1, 10);
     camera.position.z = 2;
 
     // Preload the frame texture — shared across every framed sigil.
@@ -438,8 +449,14 @@ function renderFrame(now: number): void {
         // Card tilt (mouse + idle). Shadow pass uses rotation.set(0,0,0)
         // below since a ground-plane shadow shouldn't itself tilt — only
         // the translate offset tracks the card's rotation.
+        //
+        // Sign mapping: the hovered corner should lean toward the camera.
+        // In Three.js, +rotation.x pitches the top toward +Z (forward),
+        // and +rotation.y yaws the left edge toward +Z. Mouse coords
+        // have +y downward and +x rightward, so both axes need a sign
+        // flip to make the corner under the cursor come forward.
         const cardRotX = idleTiltX - cur.y * MAX_TILT_RAD;
-        const cardRotY = idleTiltY + cur.x * MAX_TILT_RAD;
+        const cardRotY = idleTiltY - cur.x * MAX_TILT_RAD;
 
         // ── Shadow pass — flat mesh, shadow material, alpha sourced from
         //    the item's texture. Runs before the card pass so the shadow
