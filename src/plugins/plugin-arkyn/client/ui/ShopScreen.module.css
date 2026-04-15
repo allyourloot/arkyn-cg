@@ -179,9 +179,11 @@
     object-fit: contain;
 }
 
-/* Three.js sigil canvas — explicit size so it participates in flow layout
-   (absolute positioning would collapse the card's intrinsic width) */
+/* ItemScene wrapper — explicit size so it participates in flow layout
+   (absolute positioning would collapse the card's intrinsic width).
+   position: relative anchors the shadow + canvas children inside. */
 .sigilCanvas {
+    position: relative;
     width: clamp(80px, 12vw, 140px) !important;
     height: clamp(80px, 12vw, 140px) !important;
     border-radius: clamp(4px, 0.6vw, 8px);

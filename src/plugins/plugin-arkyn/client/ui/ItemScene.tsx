@@ -2,7 +2,8 @@ import { useEffect, useRef } from "react";
 import { getSigilImageUrl } from "./sigilAssets";
 import { registerItemScene } from "./sharedItemRenderer";
 import { HAS_HOVER } from "./utils/hasHover";
-import styles from "./SigilBar.module.css";
+import sigilBarStyles from "./SigilBar.module.css";
+import styles from "./ItemScene.module.css";
 
 // ----- Component -----
 
@@ -11,20 +12,23 @@ interface ItemSceneProps {
     itemId: string;
     /** Index — offsets the idle float phase so items bob out of sync. */
     index: number;
-    /** Optional CSS class for the canvas element. Defaults to SigilBar's sigilCanvas. */
+    /** Optional CSS class for the wrapper element — controls size & placement.
+     *  Must establish a positioning context (position: relative or absolute)
+     *  since the shadow + canvas children are absolutely positioned. */
     className?: string;
     /** Optional image URL — if provided, uses this instead of getSigilImageUrl(itemId). */
     imageUrl?: string;
 }
 
 /**
- * Renders a glossy tilted card (sigil or scroll art) into a canvas. All
- * rendering goes through the shared Three.js renderer in
- * `sharedItemRenderer.ts` — this component is just the React shell that
- * owns the display canvas element and its pointer event handlers.
+ * Renders a glossy tilted card (sigil or scroll art) into a canvas, with
+ * a tilt-reactive drop shadow behind it. All GPU work goes through the
+ * shared Three.js renderer in `sharedItemRenderer.ts`; this component
+ * owns the display canvas + shadow div and their pointer handlers.
  */
 export default function ItemScene({ itemId, index, className, imageUrl: imageUrlProp }: ItemSceneProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const shadowRef = useRef<HTMLCanvasElement>(null);
     const tiltTargetRef = useRef({ x: 0, y: 0 });
 
     useEffect(() => {
@@ -33,6 +37,7 @@ export default function ItemScene({ itemId, index, className, imageUrl: imageUrl
         const resolvedUrl = imageUrlProp || getSigilImageUrl(itemId, 128);
         const unregister = registerItemScene({
             canvas,
+            shadowCanvas: shadowRef.current,
             imageUrl: resolvedUrl,
             index,
             tiltTargetRef,
@@ -54,12 +59,17 @@ export default function ItemScene({ itemId, index, className, imageUrl: imageUrl
         tiltTargetRef.current = { x: 0, y: 0 };
     };
 
+    const wrapperClass = className ?? sigilBarStyles.sigilCanvas;
+
     return (
-        <canvas
-            ref={canvasRef}
-            className={className ?? styles.sigilCanvas}
-            onPointerMove={HAS_HOVER ? handlePointerMove : undefined}
-            onPointerLeave={HAS_HOVER ? handlePointerLeave : undefined}
-        />
+        <div className={wrapperClass}>
+            <canvas ref={shadowRef} aria-hidden className={styles.shadow} />
+            <canvas
+                ref={canvasRef}
+                className={styles.canvas}
+                onPointerMove={HAS_HOVER ? handlePointerMove : undefined}
+                onPointerLeave={HAS_HOVER ? handlePointerLeave : undefined}
+            />
+        </div>
     );
 }

@@ -82,12 +82,53 @@ void main() {
 }
 `;
 
+// Silhouette shadow shader — emits black pixels with alpha sourced from
+// the card's own texture. This matches non-rectangular sprites (scrolls
+// have transparent regions around the parchment shape) as well as
+// rectangular ones (sigils fill their square). The rounded-rect mask
+// clips the shadow's corners the same way the card shader clips sigils,
+// so sigil shadows end up as proper rounded rects rather than sharp
+// squares.
+const SHADOW_FRAGMENT_SHADER = /* glsl */ `
+precision mediump float;
+
+uniform sampler2D uTexture;
+uniform float uShadowOpacity;
+
+varying vec2 vUv;
+
+void main() {
+    vec4 tex = texture2D(uTexture, vUv);
+
+    // Rounded-rect mask — must match the card shader's radius + AA band
+    // so sigils cast a shadow with the same silhouette as the card front.
+    float radius = 0.09;
+    vec2 halfSize = vec2(0.5);
+    vec2 q = abs(vUv - 0.5) - (halfSize - radius);
+    float d = length(max(q, 0.0)) - radius;
+    float mask = 1.0 - smoothstep(-0.008, 0.008, d);
+
+    gl_FragColor = vec4(0.0, 0.0, 0.0, tex.a * mask * uShadowOpacity);
+}
+`;
+
 // ----- Constants (copied verbatim from ItemScene.tsx) -----
 
 const MAX_TILT_RAD = 0.32;          // ~18 degrees max mesh rotation
 const TILT_LERP_SPEED = 8;          // smoothing factor
 const IDLE_TILT_AMP = 0.22;         // idle rotation amplitude (radians, ~12 deg)
 const PHASE_STAGGER = 1.2;          // seconds offset per sigil index
+
+// Tilt-reactive drop shadow. Shadow translate is driven off the card's
+// live mesh rotation so idle drift produces micro-motion and hover tilt
+// produces a clear "card lifts, shadow slides" cue. Units:
+//   offset px per radian of tilt  — 15 ⇒ ~8px at max combined tilt
+//   base drop  — constant downward shift so the card always appears to
+//   float slightly above a surface even at neutral tilt.
+//   opacity — how dark the silhouette shadow renders.
+const SHADOW_OFFSET_PX_PER_RAD = 15;
+const SHADOW_BASE_DROP_PX = 4;
+const SHADOW_OPACITY = 0.35;
 
 // ----- Types -----
 
@@ -99,6 +140,12 @@ export interface TiltTarget {
 export interface ItemSceneRegistration {
     /** The visible display canvas — uses a 2D context for drawImage blit. */
     canvas: HTMLCanvasElement;
+    /** Shadow display canvas painted behind the card. The render loop
+     *  renders a black-silhouette pass sampled from the item's texture
+     *  into this canvas, and writes a per-frame `transform: translate(...)`
+     *  driven off the card's tilt so the shadow shifts as the card rocks.
+     *  Optional — omitting it skips both passes. */
+    shadowCanvas?: HTMLCanvasElement | null;
     /** URL of the image texture to render. */
     imageUrl: string;
     /** Phase-stagger index — affects idle drift timing per instance. */
@@ -113,7 +160,9 @@ export interface ItemSceneRegistration {
 
 interface RegisteredItem {
     canvas: HTMLCanvasElement;
+    shadowCanvas: HTMLCanvasElement | null;
     ctx2d: CanvasRenderingContext2D;
+    shadowCtx2d: CanvasRenderingContext2D | null;
     texture: THREE.Texture;
     imageUrl: string;
     index: number;
@@ -135,6 +184,7 @@ let scene: THREE.Scene | null = null;
 let camera: THREE.OrthographicCamera | null = null;
 let mesh: THREE.Mesh | null = null;
 let material: THREE.ShaderMaterial | null = null;
+let shadowMaterial: THREE.ShaderMaterial | null = null;
 
 const textureCache: Map<string, THREE.Texture> = new Map();
 // Single shared loader — reused across all texture loads. Three.js's
@@ -196,6 +246,17 @@ function ensureInitialized(): boolean {
         },
         vertexShader: VERTEX_SHADER,
         fragmentShader: FRAGMENT_SHADER,
+        transparent: true,
+        depthTest: false,
+    });
+
+    shadowMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+            uTexture: { value: null },
+            uShadowOpacity: { value: SHADOW_OPACITY },
+        },
+        vertexShader: VERTEX_SHADER,
+        fragmentShader: SHADOW_FRAGMENT_SHADER,
         transparent: true,
         depthTest: false,
     });
@@ -271,7 +332,7 @@ function renderFrame(now: number): void {
     if (!running) return;
     rafId = requestAnimationFrame(renderFrame);
 
-    if (contextLost || registered.size === 0 || !renderer || !material || !mesh || !scene || !camera) {
+    if (contextLost || registered.size === 0 || !renderer || !material || !shadowMaterial || !mesh || !scene || !camera) {
         return;
     }
 
@@ -306,6 +367,10 @@ function renderFrame(now: number): void {
             item.canvas.width = bufW;
             item.canvas.height = bufH;
         }
+        if (item.shadowCanvas && (item.shadowCanvas.width !== bufW || item.shadowCanvas.height !== bufH)) {
+            item.shadowCanvas.width = bufW;
+            item.shadowCanvas.height = bufH;
+        }
 
         // Lerp smoothed mouse tilt toward target.
         const cur = item.tiltCurrent;
@@ -321,9 +386,38 @@ function renderFrame(now: number): void {
         const idleTiltY = Math.cos(t * 0.5 + phase * 1.3) * IDLE_TILT_AMP
                         + Math.cos(t * 0.2 + phase * 0.7) * IDLE_TILT_AMP * 0.3;
 
-        // Mouse tilt adds on top of idle drift.
-        mesh.rotation.x = idleTiltX - cur.y * MAX_TILT_RAD;
-        mesh.rotation.y = idleTiltY + cur.x * MAX_TILT_RAD;
+        // Card tilt (mouse + idle). Shadow pass uses rotation.set(0,0,0)
+        // below since a ground-plane shadow shouldn't itself tilt — only
+        // the translate offset tracks the card's rotation.
+        const cardRotX = idleTiltX - cur.y * MAX_TILT_RAD;
+        const cardRotY = idleTiltY + cur.x * MAX_TILT_RAD;
+
+        // ── Shadow pass — flat mesh, shadow material, alpha sourced from
+        //    the item's texture. Runs before the card pass so the shadow
+        //    canvas gets the silhouette even if the card pass errors out.
+        if (item.shadowCtx2d && item.shadowCanvas) {
+            mesh.material = shadowMaterial;
+            shadowMaterial.uniforms.uTexture.value = item.texture;
+            mesh.rotation.set(0, 0, 0);
+            renderer.render(scene, camera);
+            item.shadowCtx2d.clearRect(0, 0, bufW, bufH);
+            item.shadowCtx2d.drawImage(renderer.domElement, 0, 0, bufW, bufH, 0, 0, bufW, bufH);
+        }
+
+        // ── Card pass — tilted mesh, glossy-card material.
+        mesh.material = material;
+        mesh.rotation.x = cardRotX;
+        mesh.rotation.y = cardRotY;
+
+        // Tilt-reactive shadow translate — written to the shadow canvas's
+        // style (GPU-composited, no layout/paint). rotation.y>0 tips the
+        // left edge forward, so the shadow slides right; rotation.x>0
+        // tips the top back, so the shadow drops further down the screen.
+        if (item.shadowCanvas) {
+            const shadowX = cardRotY * SHADOW_OFFSET_PX_PER_RAD;
+            const shadowY = cardRotX * SHADOW_OFFSET_PX_PER_RAD + SHADOW_BASE_DROP_PX;
+            item.shadowCanvas.style.transform = `translate(${shadowX.toFixed(2)}px, ${shadowY.toFixed(2)}px)`;
+        }
 
         // Update uniforms for this item's draw.
         material.uniforms.uTexture.value = item.texture;
@@ -364,11 +458,19 @@ export function registerItemScene(cfg: ItemSceneRegistration): () => void {
         return () => undefined;
     }
 
+    const shadowCanvas = cfg.shadowCanvas ?? null;
+    const shadowCtx2d = shadowCanvas ? shadowCanvas.getContext("2d") : null;
+    if (shadowCanvas && !shadowCtx2d) {
+        console.warn("sharedItemRenderer: failed to get 2D context for shadow canvas");
+    }
+
     const id = ++nextItemId;
     const texture = getOrLoadTexture(cfg.imageUrl);
     const item: RegisteredItem = {
         canvas: cfg.canvas,
+        shadowCanvas,
         ctx2d,
+        shadowCtx2d,
         texture,
         imageUrl: cfg.imageUrl,
         index: cfg.index,
