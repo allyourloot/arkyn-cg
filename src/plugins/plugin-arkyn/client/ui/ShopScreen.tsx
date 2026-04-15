@@ -124,6 +124,9 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         const canAfford = gold >= item.cost;
                         const rarityColor = RARITY_COLORS[def.rarity] ?? "#b0b0b0";
                         const isSelected = selectedShopIndex === item.shopIndex;
+                        // Tooltip flips side based on card position so it always
+                        // extends outward (never overlapping neighbor cards).
+                        const tooltipPlacement = i < sigilItems.length / 2 ? "left" : "right";
 
                         return (
                             <div
@@ -166,7 +169,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                         </button>
                                     )}
                                 </div>
-                                <Tooltip placement="left" arrow variant="framed">
+                                <Tooltip placement={tooltipPlacement} arrow variant="framed">
                                     <span className={styles.tooltipName}>
                                         {def.name}
                                     </span>
@@ -204,6 +207,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         const canAfford = gold >= item.cost;
                         const elementName = item.element.charAt(0).toUpperCase() + item.element.slice(1);
                         const isSelected = selectedShopIndex === item.shopIndex;
+                        const tooltipPlacement = i < scrollItems.length / 2 ? "left" : "right";
 
                         return (
                             <div
@@ -241,7 +245,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                 </div>
 
                                 {/* Tooltip — visible on hover */}
-                                <Tooltip placement="left" arrow variant="framed">
+                                <Tooltip placement={tooltipPlacement} arrow variant="framed">
                                     <span className={styles.tooltipName} style={{ color: elementColor }}>
                                         {elementName} Scroll
                                     </span>

@@ -103,6 +103,12 @@ export const SIGIL_PROCS: Record<string, ProcDefinition> = {
         rngOffset: 310000,
         effect: { type: "grant_gold", amount: 2 },
     },
+    hourglass: {
+        // element omitted → any element triggers the roll
+        chance: 0.25,
+        rngOffset: 320000,
+        effect: { type: "double_damage" },
+    },
 };
 
 /**

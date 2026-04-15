@@ -73,6 +73,14 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
             elements: COMBINABLE_ELEMENTS,
         },
     },
+    hourglass: {
+        id: "hourglass",
+        name: "Hourglass",
+        rarity: "rare",
+        description: "Played runes have a {1 in 4} chance to retrigger once.",
+        cost: 6,
+        sellPrice: 3,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);
