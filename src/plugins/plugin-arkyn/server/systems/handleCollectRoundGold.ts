@@ -44,7 +44,10 @@ export function handleCollectRoundGold(
     // re-firing this message won't double-credit.
     if (player.lastRoundGoldCollected) return;
 
-    const roundGold = player.lastRoundGoldBase + player.lastRoundGoldHandsBonus;
+    const roundGold =
+        player.lastRoundGoldBase
+        + player.lastRoundGoldHandsBonus
+        + player.lastRoundGoldSigilBonus;
     if (roundGold <= 0) return;
 
     player.gold += roundGold;
@@ -55,6 +58,7 @@ export function handleCollectRoundGold(
     logger.info(
         `Player ${client.sessionId} collected round-win gold: ` +
         `${player.lastRoundGoldBase} base + ${player.lastRoundGoldHandsBonus} hands bonus ` +
+        `+ ${player.lastRoundGoldSigilBonus} sigil bonus ` +
         `= ${roundGold} (total: ${player.gold})`,
     );
 }

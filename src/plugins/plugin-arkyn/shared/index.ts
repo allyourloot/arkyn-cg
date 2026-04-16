@@ -87,10 +87,12 @@ export {
     SIGIL_LIFECYCLE_HOOKS,
     SIGIL_SPELL_X_MULT,
     SIGIL_RESIST_IGNORE,
+    SIGIL_END_OF_ROUND_GOLD,
     getPlayerStatDeltas,
     getHandMultBonus,
     getSpellXMult,
     getIgnoredResistanceElements,
+    getEndOfRoundSigilGold,
     iterateProcs,
 } from "./sigilEffects";
 export type {

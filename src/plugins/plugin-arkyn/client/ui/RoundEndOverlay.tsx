@@ -1,12 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     useCurrentRound,
     useLastRoundGoldBase,
     useLastRoundGoldHandsBonus,
     useLastRoundGoldHandsCount,
+    useLastRoundGoldSigilBonus,
+    useSigils,
     sendCollectRoundGold,
     sendReady,
 } from "../arkynStore";
+import {
+    SIGIL_DEFINITIONS,
+    getEndOfRoundSigilGold,
+    type EndOfRoundGoldEntry,
+} from "../../shared";
 import {
     playButton,
     playGold,
@@ -59,7 +66,34 @@ export default function RoundEndOverlay() {
     const baseGold = useLastRoundGoldBase();
     const handsBonus = useLastRoundGoldHandsBonus();
     const handsCount = useLastRoundGoldHandsCount();
-    const totalGold = baseGold + handsBonus;
+    const sigilBonus = useLastRoundGoldSigilBonus();
+    const sigils = useSigils();
+    const totalGold = baseGold + handsBonus + sigilBonus;
+
+    // Per-sigil end-of-round gold breakdown (Plunder et al.). Ordered by
+    // the player's owned-sigils array so the reveal feels stable across
+    // re-mounts. Memoized so the animation useEffect doesn't re-fire when
+    // sigils identity changes but the relevant subset hasn't.
+    const sigilEntries: EndOfRoundGoldEntry[] = useMemo(
+        () => getEndOfRoundSigilGold(sigils).entries,
+        [sigils],
+    );
+    // Baked text per sigil row, e.g. "Plunder........". Dot padding matches
+    // the base/hands rows so the right edge lands in the same column.
+    const sigilLines = useMemo(
+        () => sigilEntries.map(entry => {
+            const name = SIGIL_DEFINITIONS[entry.sigilId]?.name ?? entry.sigilId;
+            return { sigilId: entry.sigilId, amount: entry.amount, text: `${name}........` };
+        }),
+        [sigilEntries],
+    );
+    // Memo key that changes only when the animated line set changes —
+    // stable identity lets the animation useEffect's dep array compare
+    // cheaply without re-running on unrelated sigil changes.
+    const sigilLinesKey = useMemo(
+        () => sigilLines.map(l => `${l.sigilId}:${l.amount}`).join("|"),
+        [sigilLines],
+    );
 
     // Animation reveal state. Each piece is independent so the rest of
     // the panel can already be on screen as later pieces type/pop in.
@@ -67,6 +101,11 @@ export default function RoundEndOverlay() {
     const [line1Coins, setLine1Coins] = useState(0);
     const [line2Text, setLine2Text] = useState("");
     const [line2Coins, setLine2Coins] = useState(0);
+    // Per-sigil rows — parallel arrays indexed by sigilLines position.
+    // The typewriter writes into `sigilTexts[i]` and the coins populate
+    // `sigilCoins[i]`, one row at a time.
+    const [sigilTexts, setSigilTexts] = useState<string[]>([]);
+    const [sigilCoins, setSigilCoins] = useState<number[]>([]);
     const [showTotal, setShowTotal] = useState(false);
     const [showButton, setShowButton] = useState(false);
 
@@ -131,8 +170,28 @@ export default function RoundEndOverlay() {
         setLine1Coins(0);
         setLine2Text("");
         setLine2Coins(0);
+        setSigilTexts(sigilLines.map(() => ""));
+        setSigilCoins(sigilLines.map(() => 0));
         setShowTotal(false);
         setShowButton(false);
+
+        // Index-based setters so the sequencer can address one sigil row
+        // at a time without churning surrounding state. Used by typeText
+        // and popCoins below exactly like the scalar setters for rows 1-2.
+        const setSigilText = (idx: number) => (s: string) =>
+            setSigilTexts(prev => {
+                if (prev[idx] === s) return prev;
+                const next = prev.slice();
+                next[idx] = s;
+                return next;
+            });
+        const setSigilCoinCount = (idx: number) => (n: number) =>
+            setSigilCoins(prev => {
+                if (prev[idx] === n) return prev;
+                const next = prev.slice();
+                next[idx] = n;
+                return next;
+            });
 
         (async () => {
             await wait(INTRO_DELAY_MS);
@@ -143,6 +202,16 @@ export default function RoundEndOverlay() {
             await typeText(line2Full, setLine2Text);
             await wait(60);
             await popCoins(handsBonus, setLine2Coins);
+            // Sigil rows — one per owned end-of-round-gold sigil. Same
+            // typewriter → coin-pop cadence as the base/hands rows. Order
+            // follows the owned-sigils array so reveals stay stable.
+            for (let i = 0; i < sigilLines.length; i++) {
+                if (cancelled) return;
+                await wait(LINE_GAP_MS);
+                await typeText(sigilLines[i].text, setSigilText(i));
+                await wait(60);
+                await popCoins(sigilLines[i].amount, setSigilCoinCount(i));
+            }
             await wait(LINE_GAP_MS);
             if (cancelled) return;
             setShowTotal(true);
@@ -167,11 +236,11 @@ export default function RoundEndOverlay() {
             // animation finishes).
             stopTypewriter();
         };
-        // baseGold / handsBonus / line2Full uniquely identify the reward
-        // breakdown — re-running on change handles the (rare) case where
-        // the player advances mid-animation and a new defeat lands before
-        // the component fully unmounts.
-    }, [baseGold, handsBonus, line2Full]);
+        // baseGold / handsBonus / line2Full / sigilLinesKey uniquely
+        // identify the reward breakdown — re-running on change handles
+        // the (rare) case where the player advances mid-animation and
+        // a new defeat lands before the component fully unmounts.
+    }, [baseGold, handsBonus, line2Full, sigilLines, sigilLinesKey]);
 
     // The handler must be the only path that closes the overlay so an
     // accidental keypress mid-animation doesn't lose the reward.
@@ -221,6 +290,26 @@ export default function RoundEndOverlay() {
                                 ))}
                             </div>
                         </div>
+
+                        {/* One row per owned end-of-round-gold sigil
+                            (Plunder et al.). Reveals in order after the
+                            Remaining Hands row — same typewriter + coin
+                            pop cadence as the fixed rows above. */}
+                        {sigilLines.map((line, i) => (
+                            <div key={line.sigilId} className={styles.row}>
+                                <span className={styles.label}>{sigilTexts[i] ?? ""}</span>
+                                <div className={styles.coins}>
+                                    {Array.from({ length: sigilCoins[i] ?? 0 }).map((_, c) => (
+                                        <img
+                                            key={`s-${line.sigilId}-${c}`}
+                                            src={goldIconUrl}
+                                            alt="Gold"
+                                            className={styles.coin}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
                     </div>
 
                     {/* Pixelated dashed divider between the breakdown

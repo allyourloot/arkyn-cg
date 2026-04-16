@@ -125,6 +125,14 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
             elements: ["steel"] as const,
         },
     },
+    plunder: {
+        id: "plunder",
+        name: "Plunder",
+        rarity: "common",
+        description: "Earn {+5 Gold} at the end of each round.",
+        cost: 3,
+        sellPrice: 1,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

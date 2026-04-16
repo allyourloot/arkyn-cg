@@ -1,4 +1,4 @@
-import { type ArkynState } from "../../shared";
+import { type ArkynState, getEndOfRoundSigilGold } from "../../shared";
 import { resolveSpell } from "../../shared/resolveSpell";
 import { Logger } from "@core/shared/utils";
 import { calculateDamage } from "../utils/calculateDamage";
@@ -119,9 +119,15 @@ export function handleCast(
         const baseGold = GOLD_BASE_REWARD;
         const handsCount = player.castsRemaining;
         const handsBonus = handsCount;
+        // Sigil bonus: flat gold from end-of-round-gold sigils (Plunder et al.).
+        // Iterates SIGIL_END_OF_ROUND_GOLD generically — zero sigil-specific
+        // branching, so adding future "+N gold per round" sigils is a data
+        // entry. The client derives per-sigil rows from the same registry.
+        const sigilBonus = getEndOfRoundSigilGold(Array.from(player.sigils)).total;
         player.lastRoundGoldBase = baseGold;
         player.lastRoundGoldHandsBonus = handsBonus;
         player.lastRoundGoldHandsCount = handsCount;
+        player.lastRoundGoldSigilBonus = sigilBonus;
         // Reset the collected flag — the client will flip it true when it
         // fires ARKYN_COLLECT_ROUND_GOLD at the overlay's Total reveal.
         player.lastRoundGoldCollected = false;
@@ -137,7 +143,8 @@ export function handleCast(
         logger.info(
             `Enemy defeated! Round ${state.currentRound} complete. ` +
             `Pending gold: ${baseGold} base + ${handsBonus} hands bonus ` +
-            `= ${baseGold + handsBonus} (awarded on Continue)`,
+            `+ ${sigilBonus} sigil bonus ` +
+            `= ${baseGold + handsBonus + sigilBonus} (awarded on Continue)`,
         );
         return;
     }

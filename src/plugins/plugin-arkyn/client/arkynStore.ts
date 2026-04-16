@@ -123,6 +123,7 @@ let goldProcSeq = 0;
 let lastRoundGoldBase = 0;
 let lastRoundGoldHandsBonus = 0;
 let lastRoundGoldHandsCount = 0;
+let lastRoundGoldSigilBonus = 0;
 // The exact runes from the most recent cast. Persists between casts so the
 // SpellPreview panel can re-resolve them and display the last cast result
 // (element / description / combo info that the server doesn't sync).
@@ -303,6 +304,7 @@ export function setGold(g: number) {
 export function setLastRoundGoldBase(g: number) { lastRoundGoldBase = g; notify(); }
 export function setLastRoundGoldHandsBonus(g: number) { lastRoundGoldHandsBonus = g; notify(); }
 export function setLastRoundGoldHandsCount(c: number) { lastRoundGoldHandsCount = c; notify(); }
+export function setLastRoundGoldSigilBonus(g: number) { lastRoundGoldSigilBonus = g; notify(); }
 
 // Scroll / shop setters
 export function setScrollLevels(levels: Map<string, number>) { scrollLevels = levels; notify(); }
@@ -554,6 +556,7 @@ export function useGoldProcBubble() { return useSyncExternalStore(subscribe, () 
 export function useLastRoundGoldBase() { return useSyncExternalStore(subscribe, () => lastRoundGoldBase); }
 export function useLastRoundGoldHandsBonus() { return useSyncExternalStore(subscribe, () => lastRoundGoldHandsBonus); }
 export function useLastRoundGoldHandsCount() { return useSyncExternalStore(subscribe, () => lastRoundGoldHandsCount); }
+export function useLastRoundGoldSigilBonus() { return useSyncExternalStore(subscribe, () => lastRoundGoldSigilBonus); }
 
 // Scroll / shop hooks
 export function useScrollLevels() { return useSyncExternalStore(subscribe, () => scrollLevels); }

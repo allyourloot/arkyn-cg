@@ -26,6 +26,7 @@ import {
     setLastRoundGoldBase,
     setLastRoundGoldHandsBonus,
     setLastRoundGoldHandsCount,
+    setLastRoundGoldSigilBonus,
     setRunTotalDamage,
     setRunTotalCasts,
     setRunTotalDiscards,
@@ -148,6 +149,7 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevGoldBase = -1;
     let prevGoldHandsBonus = -1;
     let prevGoldHandsCount = -1;
+    let prevGoldSigilBonus = -1;
     let prevRunTotalDamage = -1;
     let prevRunTotalCasts = -1;
     let prevRunTotalDiscards = -1;
@@ -349,6 +351,10 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (player.lastRoundGoldHandsCount !== prevGoldHandsCount) {
             setLastRoundGoldHandsCount(player.lastRoundGoldHandsCount);
             prevGoldHandsCount = player.lastRoundGoldHandsCount;
+        }
+        if (player.lastRoundGoldSigilBonus !== prevGoldSigilBonus) {
+            setLastRoundGoldSigilBonus(player.lastRoundGoldSigilBonus);
+            prevGoldSigilBonus = player.lastRoundGoldSigilBonus;
         }
 
         // Sync run stats

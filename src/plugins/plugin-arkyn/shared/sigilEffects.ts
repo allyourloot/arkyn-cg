@@ -366,6 +366,52 @@ export function getIgnoredResistanceElements(sigils: readonly string[]): Set<str
 }
 
 // ============================================================================
+// Category 8 — End-of-Round Gold (Plunder pattern)
+// ============================================================================
+
+/**
+ * Flat gold granted when the player defeats the round's enemy. Unlike
+ * Fortune-style proc gold (rolled per-cast, credited mid-animation), this
+ * gold is staged on the killing blow and paid out alongside the base +
+ * hands-bonus reward at the RoundEnd overlay's Total reveal.
+ *
+ * The RoundEnd overlay iterates owned sigils against this registry to
+ * render one "<SigilName>..." row per matching sigil, just above the
+ * Total line. Multiple sigils stack additively.
+ */
+export interface EndOfRoundGoldEffect {
+    amount: number;
+}
+
+export const SIGIL_END_OF_ROUND_GOLD: Record<string, EndOfRoundGoldEffect> = {
+    plunder: { amount: 5 },
+};
+
+export interface EndOfRoundGoldEntry {
+    sigilId: string;
+    amount: number;
+}
+
+/**
+ * Compute the total end-of-round gold from all owned sigils + a per-sigil
+ * breakdown for the RoundEnd overlay to animate one row per match. Returns
+ * `total = 0, entries = []` when no owned sigil grants end-of-round gold.
+ */
+export function getEndOfRoundSigilGold(
+    sigils: readonly string[],
+): { total: number; entries: EndOfRoundGoldEntry[] } {
+    let total = 0;
+    const entries: EndOfRoundGoldEntry[] = [];
+    for (const sigilId of sigils) {
+        const effect = SIGIL_END_OF_ROUND_GOLD[sigilId];
+        if (!effect) continue;
+        total += effect.amount;
+        entries.push({ sigilId, amount: effect.amount });
+    }
+    return { total, entries };
+}
+
+// ============================================================================
 // Module-Load Validation
 // ============================================================================
 

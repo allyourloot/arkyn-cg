@@ -45,11 +45,15 @@ export const RUNE_BAG_COST = 4;
 export const SHOP_RUNE_BAG_COUNT = 1;       // bag slots shown per shop visit
 export const RUNE_BAG_CHOICES = 4;          // runes shown in the picker
 export const MAX_RUNE_BAGS_PER_SHOP = 1;    // max bags purchasable per shop
+// Per-slot rarity weights used by rollBagRunes. Tuned so bags feel
+// exciting without making rare/legendary commonplace: at 4 slots per
+// bag these weights produce ~11% of bags containing a legendary and
+// ~52% containing at least one rare-or-better.
 export const RUNE_BAG_RARITY_WEIGHTS: Record<RarityType, number> = {
-    common: 45,
+    common: 60,
     uncommon: 25,
-    rare: 20,
-    legendary: 10,
+    rare: 12,
+    legendary: 3,
 };
 
 // Sigil effect values (proc chances, RNG offsets, mult bonuses, etc.)
