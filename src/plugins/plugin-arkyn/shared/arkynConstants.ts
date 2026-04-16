@@ -22,6 +22,20 @@ export const COMBINABLE_ELEMENTS = [
 
 export type CombinableElement = (typeof COMBINABLE_ELEMENTS)[number];
 
+// Elements in the Grimoire's Arcane Cluster — see ARCANE_CLUSTER_PAIRS in
+// InfoModal.tsx. Any rune whose element is in this set counts as an Arcane
+// Cluster rune. Used by Arcana-style sigils that reward clustering these
+// elements in a cast.
+//
+// Note: holy/death/poison/steel are "bridge" elements that also appear in
+// Elemental Cluster synergies, but canonically they're still Arcane Cluster
+// runes for sigil purposes. If a future cluster is carved out for the
+// bridge elements, drop them from this list and revisit which sigils
+// target which set.
+export const ARCANE_CLUSTER_ELEMENTS = [
+    "arcane", "psy", "shadow", "holy", "death", "poison", "steel",
+] as const;
+
 export const RARITY_TYPES = ["common", "uncommon", "rare", "legendary"] as const;
 export type RarityType = (typeof RARITY_TYPES)[number];
 

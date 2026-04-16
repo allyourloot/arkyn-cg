@@ -8,6 +8,7 @@ import {
     SPELL_TIER_MULT,
     getHandMultBonus,
     getIgnoredResistanceElements,
+    getPlayedMultBonus,
     getSpellXMult,
     iterateProcs,
     resolveSpell,
@@ -433,6 +434,12 @@ export function castSpell() {
     const handMultResult = getHandMultBonus(ownedSigils, hand, sortedSelected);
     const handMultBonus = handMultResult.total;
 
+    // Played-rune mult bonus from Arcana-style sigils — each contributing
+    // rune matching the sigil's element adds mult. Same additive channel
+    // as hand-mult; bubbles interleave after each matching rune's damage.
+    const playedMultResult = getPlayedMultBonus(ownedSigils, contributingRuneData);
+    const playedMultBonus = playedMultResult.total;
+
     // Spell-element xMult from Supercell-style sigils. Multiplicative —
     // applied after all additive bonuses so the animation can reveal the
     // multiplier as a dramatic final mult event.
@@ -460,7 +467,7 @@ export function castSpell() {
             effectiveResistances,
             arkynStoreInternal.getEnemyWeaknesses(),
             arkynStoreInternal.getScrollLevels(),
-            handMultBonus,
+            handMultBonus + playedMultBonus,
             xMultTotal,
         )
         : null;
@@ -528,7 +535,7 @@ export function castSpell() {
     // one BUBBLE_STAGGER_MS slot. `isGold` distinguishes Fortune-style
     // grant_gold procs from damage procs so the timeline skips the Base
     // counter tick for them (gold isn't damage).
-    const runeBreakdown: { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean; isSynapse?: boolean; isGold?: boolean; isXMult?: boolean; goldDelta?: number; multDelta?: number; xMultFactor?: number; sigilId?: string }[] = [];
+    const runeBreakdown: { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean; isMultTick?: boolean; isGold?: boolean; isXMult?: boolean; goldDelta?: number; multDelta?: number; xMultFactor?: number; sigilId?: string }[] = [];
     let eventIdx = 0;
     if (breakdown) {
         for (let i = 0; i < contributingIndices.length; i++) {
@@ -589,6 +596,26 @@ export function castSpell() {
                 });
                 eventIdx++;
             }
+
+            // Played-rune mult events (Arcana-style) — one per matching
+            // sigil/rune pair. Interleaved after the parent rune's damage
+            // (and optional proc) so the Mult counter ticks in lockstep
+            // with the rune that triggered it. No separate bubble is
+            // mounted; the mult counter + sigil shake carry the feedback.
+            for (const pm of playedMultResult.perSigil) {
+                if (pm.contributingRuneIdx !== i) continue;
+                runeBreakdown.push({
+                    base: 0,
+                    final: 0,
+                    isResisted: false,
+                    isCritical: false,
+                    isProc: false,
+                    isMultTick: true,
+                    multDelta: pm.multDelta,
+                    sigilId: pm.sigilId,
+                });
+                eventIdx++;
+            }
         }
     }
 
@@ -610,13 +637,14 @@ export function castSpell() {
             isResisted: false,
             isCritical: false,
             isProc: false,
-            isSynapse: true,
+            isMultTick: true,
             multDelta: entry.multDelta,
             sigilId: entry.sigilId,
         });
         eventIdx++;
     }
     const hasAnyHandMultProc = handMultResult.perSigil.length > 0;
+    const hasAnyPlayedMult = playedMultResult.perSigil.length > 0;
 
     // ----- Spell-element xMult entries (Supercell-style sigils) -----
     // Appended AFTER synapse entries so the animation reveals the
@@ -637,7 +665,7 @@ export function castSpell() {
         eventIdx++;
     }
     const hasAnyXMult = xMultResult.entries.length > 0;
-    const hasAnyMultEvent = hasAnyHandMultProc || hasAnyXMult;
+    const hasAnyMultEvent = hasAnyHandMultProc || hasAnyPlayedMult || hasAnyXMult;
 
     // Snapshot the round accumulator BEFORE this cast so the total reveal
     // tween can offset its values. This avoids the double-counting window

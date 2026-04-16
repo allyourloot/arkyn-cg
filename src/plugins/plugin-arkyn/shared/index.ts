@@ -36,6 +36,7 @@ export {
     RUNE_BAG_CHOICES,
     MAX_RUNE_BAGS_PER_SHOP,
     RUNE_BAG_RARITY_WEIGHTS,
+    ARCANE_CLUSTER_ELEMENTS,
 } from "./arkynConstants";
 
 export type {
@@ -88,11 +89,13 @@ export {
     SIGIL_SPELL_X_MULT,
     SIGIL_RESIST_IGNORE,
     SIGIL_END_OF_ROUND_GOLD,
+    SIGIL_PLAYED_MULT,
     getPlayerStatDeltas,
     getHandMultBonus,
     getSpellXMult,
     getIgnoredResistanceElements,
     getEndOfRoundSigilGold,
+    getPlayedMultBonus,
     iterateProcs,
 } from "./sigilEffects";
 export type {

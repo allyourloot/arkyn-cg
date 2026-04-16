@@ -4,6 +4,7 @@ import {
     getContributingRuneIndices,
     getHandMultBonus,
     getIgnoredResistanceElements,
+    getPlayedMultBonus,
     getSpellXMult,
     iterateProcs,
     type ResolvedSpell,
@@ -71,6 +72,11 @@ export function calculateDamage(
     const handMultBonus = (activeSigils && hand && selectedIndices)
         ? getHandMultBonus(activeSigils, hand, selectedIndices).total
         : 0;
+    // Played-rune mult bonus from Arcana-style sigils (contributing runes
+    // of a given element add mult). Same additive channel as hand-mult.
+    const playedMultBonus = activeSigils
+        ? getPlayedMultBonus(activeSigils, contributingRunes).total
+        : 0;
 
     // Spell-element xMult from Supercell-style sigils. Multiplicative —
     // applied after all additive bonuses: finalMult = (tierMult + bonuses) × xMult.
@@ -88,7 +94,7 @@ export function calculateDamage(
         resistances,
         weaknesses,
         scrollLevels,
-        handMultBonus,
+        handMultBonus + playedMultBonus,
         xMultTotal,
     );
 

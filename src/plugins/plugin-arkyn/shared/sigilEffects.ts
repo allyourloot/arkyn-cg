@@ -1,4 +1,4 @@
-import { ELEMENT_TYPES, type ElementType } from "./arkynConstants";
+import { ARCANE_CLUSTER_ELEMENTS, ELEMENT_TYPES, type ElementType } from "./arkynConstants";
 import { createRoundRng } from "./seededRandom";
 
 /**
@@ -409,6 +409,71 @@ export function getEndOfRoundSigilGold(
         entries.push({ sigilId, amount: effect.amount });
     }
     return { total, entries };
+}
+
+// ============================================================================
+// Category 9 — Played-Rune Mult (Arcana pattern)
+// ============================================================================
+
+/**
+ * Additive mult bonus driven by runes PLAYED (contributing to the spell)
+ * whose element is in the sigil's trigger set. Mirrors `SIGIL_HAND_MULT`
+ * but fires on the cast's contributing runes instead of held-in-hand
+ * runes — useful for sigils that reward "clustering" a group of elements
+ * into a single cast.
+ *
+ * `elements` is a SET of trigger elements, not a single one, because most
+ * natural-feeling sigils target a group (e.g. Arcana covers the whole
+ * Arcane Cluster, not just the single "arcane" element).
+ *
+ * A contributing rune is one that actually drives damage for the resolved
+ * spell (see `getContributingRuneIndices`), so Two-Pair kickers and
+ * single-element non-primary runes don't count.
+ */
+export interface PlayedMultEffect {
+    /** Played rune elements that trigger the mult bonus. */
+    elements: readonly ElementType[];
+    /** Mult bonus per matching played rune. */
+    multPerRune: number;
+}
+
+export const SIGIL_PLAYED_MULT: Record<string, PlayedMultEffect> = {
+    arcana: { elements: ARCANE_CLUSTER_ELEMENTS, multPerRune: 2 },
+};
+
+/**
+ * Per-sigil per-rune entry — the animation layer uses these to tick the
+ * Mult counter + shake the sigil once per matching played rune.
+ */
+export interface PlayedMultEntry {
+    sigilId: string;
+    /** Index into the CONTRIBUTING-runes array (not the full selection). */
+    contributingRuneIdx: number;
+    multDelta: number;
+}
+
+/**
+ * Compute the total played-rune mult bonus + per-rune breakdown for the
+ * animation. Returns `total = 0, perSigil = []` when no owned sigil
+ * matches any played rune's element.
+ */
+export function getPlayedMultBonus(
+    sigils: readonly string[],
+    contributingRunes: readonly { element: string }[],
+): { total: number; perSigil: PlayedMultEntry[] } {
+    let total = 0;
+    const perSigil: PlayedMultEntry[] = [];
+    for (const sigilId of sigils) {
+        const effect = SIGIL_PLAYED_MULT[sigilId];
+        if (!effect) continue;
+        const triggers = effect.elements as readonly string[];
+        for (let i = 0; i < contributingRunes.length; i++) {
+            if (!triggers.includes(contributingRunes[i].element)) continue;
+            total += effect.multPerRune;
+            perSigil.push({ sigilId, contributingRuneIdx: i, multDelta: effect.multPerRune });
+        }
+    }
+    return { total, perSigil };
 }
 
 // ============================================================================

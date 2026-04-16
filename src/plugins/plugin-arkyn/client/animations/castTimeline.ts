@@ -89,7 +89,14 @@ export interface CastTimelineContext {
         isResisted: boolean;
         isCritical: boolean;
         isProc: boolean;
-        isSynapse?: boolean;
+        /**
+         * Additive-mult tick event. Generic across all sigils that add to
+         * the mult channel — Synapse (per held Psy rune), Arcana (per
+         * played Arcane rune), and any future additive-mult sigil. Not
+         * specific to one source — the sigilId + multDelta carry the
+         * identity and payload.
+         */
+        isMultTick?: boolean;
         /**
          * Gold-grant proc (Fortune-style). Skips the Base counter tick and
          * plays the gold SFX instead of the damage count. The bubble for
@@ -282,10 +289,12 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
         const item = ctx.runeBreakdown[i];
         if (!item) continue;
 
-        // Hand-mult events (Synapse-style) don't tick the Base counter —
-        // they add to Mult (already baked into finalDamage). Play SFX +
-        // sigil shake + mult tick. sigilId drives dispatch generically.
-        if (item.isSynapse) {
+        // Additive-mult tick events — fired by Synapse (held Psy) AND
+        // Arcana (played Arcane) and any future additive-mult sigil. The
+        // Base counter doesn't tick here (the add is already baked into
+        // finalDamage via bonusMult). sigilId drives dispatch generically
+        // so no sigil-specific branches live in the timeline.
+        if (item.isMultTick) {
             runningMult += item.multDelta ?? 0;
             const multAtEvent = runningMult;
             const sigilId = item.sigilId;

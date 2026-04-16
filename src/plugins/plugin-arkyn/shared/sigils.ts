@@ -1,4 +1,4 @@
-import { COMBINABLE_ELEMENTS, type ElementType, type RarityType } from "./arkynConstants";
+import { ARCANE_CLUSTER_ELEMENTS, COMBINABLE_ELEMENTS, type ElementType, type RarityType } from "./arkynConstants";
 
 export interface SigilDefinition {
     id: string;
@@ -132,6 +132,18 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         description: "Earn {+5 Gold} at the end of each round.",
         cost: 3,
         sellPrice: 1,
+    },
+    arcana: {
+        id: "arcana",
+        name: "Arcana",
+        rarity: "uncommon",
+        description: "Each played {Arcane Cluster} rune adds {+2 Mult}.",
+        cost: 4,
+        sellPrice: 2,
+        explainer: {
+            label: "Arcane Cluster runes:",
+            elements: ARCANE_CLUSTER_ELEMENTS,
+        },
     },
 };
 
