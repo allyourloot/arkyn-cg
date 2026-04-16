@@ -82,7 +82,7 @@ export function handleReady(
         state.currentRound++;
         // Enemy already spawned on shop entry — just init the player
         // and apply any boss debuff modifiers.
-        initPlayerForRound(player, client.sessionId);
+        initPlayerForRound(player, client.sessionId, state.currentRound, state.runSeed);
         applyBossDebuff(state, player);
         state.gamePhase = "playing";
         logger.info(`Round ${state.currentRound} started. Enemy: ${state.enemy.name} (HP: ${state.enemy.maxHp})`);

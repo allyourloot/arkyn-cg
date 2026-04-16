@@ -1,4 +1,4 @@
-import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL } from "../shared";
+import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_USE_CONSUMABLE } from "../shared";
 
 /**
  * Network layer for Arkyn. Owns the connection sender and exposes
@@ -48,4 +48,8 @@ export function sendBuyItem(shopIndex: number): void {
 
 export function sendSellSigil(sigilId: string): void {
     sendArkynMessage(ARKYN_SELL_SIGIL, { sigilId });
+}
+
+export function sendUseConsumable(index: number): void {
+    sendArkynMessage(ARKYN_USE_CONSUMABLE, { index });
 }

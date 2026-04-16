@@ -34,6 +34,9 @@ export const SHOP_SCROLL_COUNT = 2;   // scroll slots shown per shop visit
 export const MAX_SIGILS = 6;          // max sigils a player can hold
 export const SHOP_SIGIL_COUNT = 2;    // sigil slots shown per shop visit
 
+// Consumable inventory
+export const MAX_CONSUMABLES = 2;     // max consumable items a player can hold
+
 // Sigil effect values (proc chances, RNG offsets, mult bonuses, etc.)
 // live in their category-specific registries in `shared/sigilEffects.ts`.
 // See: SIGIL_PROCS (Voltage), SIGIL_HAND_MULT (Synapse), etc.
@@ -47,3 +50,4 @@ export const ARKYN_COLLECT_ROUND_GOLD = "arkyn:collect_round_gold";
 export const ARKYN_NEW_RUN = "arkyn:new_run";
 export const ARKYN_BUY_ITEM = "arkyn:buy_item";
 export const ARKYN_SELL_SIGIL = "arkyn:sell_sigil";
+export const ARKYN_USE_CONSUMABLE = "arkyn:use_consumable";

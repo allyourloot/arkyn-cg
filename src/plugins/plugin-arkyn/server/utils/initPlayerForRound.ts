@@ -2,7 +2,9 @@ import {
     HAND_SIZE,
     CASTS_PER_ROUND,
     DISCARDS_PER_ROUND,
+    MAX_CONSUMABLES,
     getPlayerStatDeltas,
+    SIGIL_LIFECYCLE_HOOKS,
     type ArkynPlayerState,
 } from "../../shared";
 import { clearArraySchema } from "./clearArraySchema";
@@ -20,8 +22,16 @@ import { refillHand } from "./refillHand";
  * definition lives in exactly one place. Safe to call on a brand-new
  * `ArkynPlayerState` — the clears and metadata resets are no-ops on a
  * Schema with default values.
+ *
+ * @param round  Current round number (1-based). Used by lifecycle hooks.
+ * @param runSeed  Run seed for deterministic RNG in lifecycle hooks.
  */
-export function initPlayerForRound(player: ArkynPlayerState, sessionId: string): void {
+export function initPlayerForRound(
+    player: ArkynPlayerState,
+    sessionId: string,
+    round = 0,
+    runSeed = 0,
+): void {
     clearArraySchema(player.hand);
     clearArraySchema(player.playedRunes);
     player.lastSpellName = "";
@@ -40,6 +50,16 @@ export function initPlayerForRound(player: ArkynPlayerState, sessionId: string):
     player.lastRoundGoldBase = 0;
     player.lastRoundGoldHandsBonus = 0;
     player.lastRoundGoldHandsCount = 0;
+
+    // Fire lifecycle hooks (Thief grants a random scroll consumable).
+    for (const sigilId of player.sigils) {
+        const hooks = SIGIL_LIFECYCLE_HOOKS[sigilId];
+        if (!hooks?.onRoundStart) continue;
+        const result = hooks.onRoundStart(round, runSeed);
+        if (result?.grantConsumable && player.consumables.length < MAX_CONSUMABLES) {
+            player.consumables.push(result.grantConsumable);
+        }
+    }
 
     setPouch(sessionId, createPouch());
     refillHand(player, sessionId);

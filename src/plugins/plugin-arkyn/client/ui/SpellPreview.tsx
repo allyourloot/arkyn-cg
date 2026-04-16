@@ -1,4 +1,4 @@
-import { useRef, type CSSProperties, type RefObject } from "react";
+import { useRef, useState, useEffect, type CSSProperties, type RefObject } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
@@ -11,10 +11,11 @@ import {
     useRoundTotalDamage,
     useScrollLevels,
     useSigils,
+    useScrollUpgradeDisplay,
 } from "../arkynStore";
 import { useCastMultCounter } from "../arkynAnimations";
 import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
-import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT, calculateSpellDamage } from "../../shared";
+import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT, SCROLL_RUNE_BONUS, RUNE_BASE_DAMAGE, calculateSpellDamage } from "../../shared";
 import type { RarityType } from "../../shared/arkynConstants";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars } from "./styles";
 import { useEnemyIsBoss } from "../arkynStore";
@@ -165,18 +166,15 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
         return (
             <div ref={ref} className={styles.panel} style={panelStyleVars}>
                 <RoundInfo />
-                <span className={styles.heading}>Spell Preview</span>
                 <div className={styles.section}>
                     <BouncyText className={styles.empty}>
                         Select runes to preview spell
                     </BouncyText>
                 </div>
-                {/* Damage chips stay mounted in the empty state too so
-                    the panel doesn't reflow when a spell first resolves —
-                    both read "-" until something's selected. */}
+                <div className={styles.upgradeArea}>
+                    <ScrollUpgradeDisplay />
+                </div>
                 <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} multRef={multRef} totalRef={totalRef} />
-                {/* margin-top: auto inside GoldCounter pins it to the
-                    bottom of the panel's flex column. */}
                 <GoldCounter />
             </div>
         );
@@ -184,12 +182,9 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
 
     const elementColor = ELEMENT_COLORS[spell.element] ?? "#aaa";
 
-    const headingLabel = isCastAnimating ? "Casting" : "Spell Preview";
-
     return (
         <div ref={ref} className={styles.panel} style={panelStyleVars}>
             <RoundInfo />
-            <span className={styles.heading}>{headingLabel}</span>
 
             {/* Header section: rune recipe + spell name + tier + description.
                 Description used to live in its own inner-frame below the
@@ -326,16 +321,58 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
                 </BouncyText>
             </div>
 
-            {/* Base + Mult damage chips, side-by-side. The Base value is
-                whatever the live cast counter / preview computation /
-                last-cast snapshot resolved to (see the displayBase block
-                above); Mult is the static tier-derived multiplier. */}
+            <div className={styles.upgradeArea}>
+                <ScrollUpgradeDisplay />
+            </div>
+
             <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} multRef={multRef} totalRef={totalRef} />
 
-            {/* margin-top: auto inside GoldCounter pins it to the
-                bottom of the panel's flex column, regardless of how
-                many sections sit above it. */}
             <GoldCounter />
+        </div>
+    );
+}
+
+function ScrollUpgradeDisplay() {
+    const upgradeDisplay = useScrollUpgradeDisplay();
+    const [showUpgraded, setShowUpgraded] = useState(false);
+
+    useEffect(() => {
+        if (!upgradeDisplay) { setShowUpgraded(false); return; }
+        setShowUpgraded(false);
+        const t = setTimeout(() => setShowUpgraded(true), 600);
+        return () => clearTimeout(t);
+    }, [upgradeDisplay?.element, upgradeDisplay?.oldLevel, upgradeDisplay?.newLevel]);
+
+    if (!upgradeDisplay) return null;
+
+    const { element, oldLevel, newLevel } = upgradeDisplay;
+    const runeBase = RUNE_BASE_DAMAGE.common;
+    const oldRuneDamage = runeBase + (oldLevel - 1) * SCROLL_RUNE_BONUS;
+    const newRuneDamage = runeBase + (newLevel - 1) * SCROLL_RUNE_BONUS;
+
+    return (
+        <div className={styles.upgradeContent}>
+            <div className={styles.upgradeRow}>
+                <div className={styles.upgradeRuneIcon}>
+                    <RuneImage rarity="common" element={element} className={styles.upgradeRuneImg} />
+                </div>
+                <div className={styles.upgradeRuneInfo}>
+                    <span className={styles.upgradeRuneDamageLabel}>Base Damage</span>
+                    <div className={styles.upgradeRuneDamageRow}>
+                        <BouncyText className={styles.upgradeRuneDamageOld}>
+                            {`${oldRuneDamage}`}
+                        </BouncyText>
+                        {showUpgraded && (
+                            <span className={styles.upgradeRuneDamageResult}>
+                                <span className={styles.upgradeRuneDamageArrow}>→</span>
+                                <BouncyText className={styles.upgradeRuneDamageNew}>
+                                    {`${newRuneDamage}`}
+                                </BouncyText>
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

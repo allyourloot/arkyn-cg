@@ -81,6 +81,14 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         cost: 6,
         sellPrice: 3,
     },
+    thief: {
+        id: "thief",
+        name: "Thief",
+        rarity: "common",
+        description: "Gain a random {Scroll} at the start of each round.",
+        cost: 3,
+        sellPrice: 1,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

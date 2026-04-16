@@ -12,6 +12,7 @@ import handFrameUrl from "/assets/ui/hand-frame.png?url";
 import innerFrameUrl from "/assets/ui/inner-frame.png?url";
 import { HAS_HOVER } from "./utils/hasHover";
 import { renderDescription, SigilExplainer } from "./descriptionText";
+import ConsumableBar from "./ConsumableBar";
 import styles from "./SigilBar.module.css";
 
 const RARITY_BG_COLORS: Record<string, string> = {
@@ -191,6 +192,7 @@ export default function SigilBar() {
                 );
             })}
             <span className={styles.countLabel}>{sigils.length}/{MAX_SIGILS}</span>
+            <ConsumableBar />
         </div>
     );
 }

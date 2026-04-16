@@ -1,4 +1,4 @@
-import { type ElementType } from "./arkynConstants";
+import { ELEMENT_TYPES, type ElementType } from "./arkynConstants";
 import { createRoundRng } from "./seededRandom";
 
 /**
@@ -232,15 +232,26 @@ export function getHandMultBonus(
  * Keep this sparse — if two sigils need the same hook, consider promoting
  * it to a proper category registry above.
  */
-export interface SigilLifecycleHooks {
-    // Placeholder — add hook method signatures as one-off sigils are designed.
-    // Examples for future reference:
-    //   onDiscard?(ctx: DiscardContext): void;
-    //   onCastStart?(ctx: CastContext): void;
-    //   onRoundStart?(ctx: RoundContext): void;
+
+export interface RoundStartResult {
+    grantConsumable?: string;
 }
 
-export const SIGIL_LIFECYCLE_HOOKS: Record<string, SigilLifecycleHooks> = {};
+export interface SigilLifecycleHooks {
+    onRoundStart?(round: number, runSeed: number): RoundStartResult | void;
+}
+
+const THIEF_RNG_OFFSET = 400000;
+
+export const SIGIL_LIFECYCLE_HOOKS: Record<string, SigilLifecycleHooks> = {
+    thief: {
+        onRoundStart(round, runSeed) {
+            const rng = createRoundRng(runSeed, THIEF_RNG_OFFSET + round);
+            const element = ELEMENT_TYPES[Math.floor(rng() * ELEMENT_TYPES.length)];
+            return { grantConsumable: element };
+        },
+    },
+};
 
 // ============================================================================
 // Category 5 — Resolver Feature Unlocks (boolean flags)

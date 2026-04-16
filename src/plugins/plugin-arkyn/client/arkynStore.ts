@@ -141,6 +141,9 @@ let shopItems: ShopItemClientData[] = [];
 // Sigils owned this run — array of sigil IDs.
 let sigils: string[] = [];
 
+// Consumable items — array of element names (scroll consumables).
+let consumables: string[] = [];
+
 // Run stats — synced from server for the game-over screen.
 let runTotalDamage = 0;
 let runTotalCasts = 0;
@@ -296,6 +299,9 @@ export function setShopItems(items: ShopItemClientData[]) { shopItems = items; n
 
 // Sigil setters
 export function setSigils(s: string[]) { sigils = s; notify(); }
+
+// Consumable setters
+export function setConsumables(c: string[]) { consumables = c; notify(); }
 
 // Scroll purchase event — lightweight pub-sub. ShopScreen fires this on
 // buy; ArkynOverlay orchestrates the fly/shake/dissolve animation and
@@ -523,6 +529,9 @@ export function useShopItems() { return useSyncExternalStore(subscribe, () => sh
 // Sigil hooks
 export function useSigils() { return useSyncExternalStore(subscribe, () => sigils); }
 
+// Consumable hooks
+export function useConsumables() { return useSyncExternalStore(subscribe, () => consumables); }
+
 // Run stats hooks
 export function useRunTotalDamage() { return useSyncExternalStore(subscribe, () => runTotalDamage); }
 export function useRunTotalCasts() { return useSyncExternalStore(subscribe, () => runTotalCasts); }
@@ -542,7 +551,7 @@ export function useBestSingleCast() { return useSyncExternalStore(subscribe, () 
 // ============================================================
 
 export { subscribe } from "./arkynStoreCore";
-export { setConnection, joinGame, sendReady, sendCollectRoundGold, sendNewRun, sendBuyItem, sendSellSigil } from "./arkynNetwork";
+export { setConnection, joinGame, sendReady, sendCollectRoundGold, sendNewRun, sendBuyItem, sendSellSigil, sendUseConsumable } from "./arkynNetwork";
 export {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,

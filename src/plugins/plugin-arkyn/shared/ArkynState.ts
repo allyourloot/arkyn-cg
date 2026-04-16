@@ -74,6 +74,11 @@ export class ArkynPlayerState extends Schema {
     // ID (e.g. "voltage"). Resets on new run (fresh schema).
     @type(["string"]) sigils = new ArraySchema<string>();
 
+    // Consumable items — up to MAX_CONSUMABLES (2). Each entry is an
+    // element name representing a scroll consumable (e.g. "fire").
+    // Players click USE to apply the scroll (increments scrollLevels).
+    @type(["string"]) consumables = new ArraySchema<string>();
+
     // Current shop inventory — populated on entering the shop phase and
     // synced to the client for rendering. Each entry tracks whether the
     // item has been purchased so the client can grey it out.

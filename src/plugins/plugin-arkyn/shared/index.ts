@@ -28,6 +28,8 @@ export {
     ARKYN_NEW_RUN,
     ARKYN_BUY_ITEM,
     ARKYN_SELL_SIGIL,
+    ARKYN_USE_CONSUMABLE,
+    MAX_CONSUMABLES,
 } from "./arkynConstants";
 
 export type {
@@ -89,6 +91,7 @@ export type {
     HandMultEffect,
     HandMultEntry,
     SigilLifecycleHooks,
+    RoundStartResult,
 } from "./sigilEffects";
 
 export { BOSS_DEBUFFS, isBossRound, pickDebuffForRound, getDebuffById } from "./bossDebuffs";

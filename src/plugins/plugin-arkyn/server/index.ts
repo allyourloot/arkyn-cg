@@ -11,6 +11,7 @@ import {
     ARKYN_NEW_RUN,
     ARKYN_BUY_ITEM,
     ARKYN_SELL_SIGIL,
+    ARKYN_USE_CONSUMABLE,
     ArkynState,
 } from "../shared";
 import { createArkynContext } from "./types/ArkynContext";
@@ -22,6 +23,7 @@ import { handleCollectRoundGold } from "./systems/handleCollectRoundGold";
 import { handleNewRun } from "./systems/handleNewRun";
 import { handleBuyItem } from "./systems/handleBuyItem";
 import { handleSellSigil } from "./systems/handleSellSigil";
+import { handleUseConsumable } from "./systems/handleUseConsumable";
 import { handleLeave } from "./systems/handleLeave";
 
 const logger = new Logger("ArkynServer");
@@ -68,6 +70,10 @@ export function PluginArkynServer(): ServerPlugin {
 
             runtime.onMessage(ARKYN_SELL_SIGIL, (client: ServerClientRef, payload: unknown) => {
                 handleSellSigil(state, client, payload);
+            });
+
+            runtime.onMessage(ARKYN_USE_CONSUMABLE, (client: ServerClientRef, payload: unknown) => {
+                handleUseConsumable(state, client, payload);
             });
 
             runtime.onMessage(ARKYN_NEW_RUN, (client: ServerClientRef) => {

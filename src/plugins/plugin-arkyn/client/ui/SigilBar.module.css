@@ -15,13 +15,16 @@
     gap: clamp(8px, 1.2vw, 18px);
 }
 
-/* Sigil count label — end of the row */
+/* Sigil count label — pinned under the last slot */
 .countLabel {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
     font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
     color: #8a8070;
     letter-spacing: 1px;
     line-height: 1;
-    margin-left: 4px;
 }
 
 /* ----- Individual slot — each gets its own hand-frame ----- */

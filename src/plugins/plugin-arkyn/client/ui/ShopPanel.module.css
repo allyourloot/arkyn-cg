@@ -229,12 +229,6 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 24px;
-    border-image: var(--section-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
-    image-rendering: pixelated;
 }
 
 .upgradeContent {

@@ -1,0 +1,118 @@
+/* ----- ConsumableBar — framed container holding up to 2 consumables ----- */
+
+/* Outer frame — absolutely positioned to the right of the SigilBar
+   wrapper so it doesn't affect the bar's centered layout. Uses
+   hand-frame 9-slice. Same height as sigil slots, fixed width for 2
+   consumable items side by side. */
+.wrapper {
+    position: absolute;
+    left: calc(100% + clamp(36px, 4.5vw, 64px));
+    top: 50%;
+    transform: translateY(-50%);
+    box-sizing: border-box;
+    width: clamp(130px, 16vw, 192px);
+    height: clamp(68px, 8.4vw, 100px);
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    border-image: var(--slot-bg) 24 24 24 24 fill / 10px;
+    image-rendering: pixelated;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(4px, 0.6vw, 8px);
+    overflow: visible;
+    pointer-events: auto;
+}
+
+/* Count label — pinned below the wrapper's border, right-aligned.
+   top: calc(100% + 10px) clears the 10px border-width so the label
+   sits fully outside the frame. */
+.countLabel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    margin-top: 4px;
+    font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
+    color: #8a8070;
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
+/* Individual consumable slot — intentionally larger than the wrapper's
+   content area so the scroll art overflows the frame visually. */
+.filledSlot {
+    position: relative;
+    box-sizing: border-box;
+    width: clamp(58px, 7.2vw, 86px);
+    height: clamp(58px, 7.2vw, 86px);
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.filledSlotSelected {
+    z-index: 30;
+}
+
+.scrollCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: auto;
+}
+
+/* ================================================================
+   Tooltip — hover trigger
+   ================================================================ */
+
+.filledSlot:hover :global(.arkyn-tooltip) {
+    opacity: 1;
+}
+
+.tooltipName {
+    font-size: clamp(var(--font-size-xs), 1.6vw, var(--font-size-sm));
+    font-weight: normal;
+    letter-spacing: 1px;
+    color: #e8e0d4;
+}
+
+/* ================================================================
+   Use button — mirrors SigilBar's Sell button pattern (blue tint)
+   ================================================================ */
+
+.useButton {
+    position: absolute;
+    left: calc(100% + 4px);
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    background: rgba(50, 130, 180, 0.85);
+    border: 1px solid rgba(80, 170, 220, 0.5);
+    border-radius: 0 4px 4px 0;
+    color: #fff;
+    font-family: inherit;
+    font-size: clamp(var(--font-size-3xs), 1vw, var(--font-size-xs));
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 4px 10px;
+    transition: background 80ms ease-out;
+    white-space: nowrap;
+    z-index: 20;
+    line-height: 1.1;
+}
+
+.useButton:hover {
+    background: rgba(60, 160, 220, 0.95);
+}
+
+.useButton:active {
+    transform: translateY(-50%) scale(0.95);
+}
