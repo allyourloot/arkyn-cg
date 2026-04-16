@@ -3,6 +3,7 @@ import {
     calculateSpellDamage as sharedCalculateSpellDamage,
     getContributingRuneIndices,
     getHandMultBonus,
+    getSpellXMult,
     iterateProcs,
     type ResolvedSpell,
     type RuneInstance,
@@ -59,6 +60,15 @@ export function calculateDamage(
         ? getHandMultBonus(activeSigils, hand, selectedIndices).total
         : 0;
 
+    // Spell-element xMult from Supercell-style sigils. Multiplicative —
+    // applied after all additive bonuses: finalMult = (tierMult + bonuses) × xMult.
+    const spellElements = spell.comboElements
+        ? [...spell.comboElements]
+        : [spell.element];
+    const xMultTotal = activeSigils
+        ? getSpellXMult(activeSigils, spellElements).total
+        : 1;
+
     const breakdown = sharedCalculateSpellDamage(
         spell,
         contributingRunes,
@@ -67,6 +77,7 @@ export function calculateDamage(
         weaknesses,
         scrollLevels,
         handMultBonus,
+        xMultTotal,
     );
 
     let totalDamage = breakdown.finalDamage;

@@ -96,10 +96,18 @@ export interface CastTimelineContext {
          * this event renders as "+N Gold" via the `kind: "gold"` variant.
          */
         isGold?: boolean;
+        /**
+         * Spell-element xMult event (Supercell-style). Multiplies the running
+         * mult instead of adding to it. Fires after all synapse ticks for a
+         * dramatic reveal.
+         */
+        isXMult?: boolean;
         /** Gold payout for the proc — drives the gold-counter tick callbacks. */
         goldDelta?: number;
         multDelta?: number;
-        /** Sigil ID that fired this event (procs + synapse). Drives onSigilShake dispatch. */
+        /** Multiplicative factor for xMult events (e.g. 3 for "x3 Mult"). */
+        xMultFactor?: number;
+        /** Sigil ID that fired this event (procs + synapse + xMult). Drives onSigilShake dispatch. */
         sigilId?: string;
     }[];
     /**
@@ -279,6 +287,23 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
         // sigil shake + mult tick. sigilId drives dispatch generically.
         if (item.isSynapse) {
             runningMult += item.multDelta ?? 0;
+            const multAtEvent = runningMult;
+            const sigilId = item.sigilId;
+            tl.call(playCount, undefined, tickAt);
+            if (ctx.onSigilShake && sigilId) {
+                tl.call(() => ctx.onSigilShake!(sigilId), undefined, tickAt);
+            }
+            if (ctx.onMultTick) {
+                tl.call(() => ctx.onMultTick!(multAtEvent), undefined, tickAt);
+            }
+            continue;
+        }
+
+        // Spell-element xMult events (Supercell-style) MULTIPLY the running
+        // mult (unlike synapse which adds). Fires after all synapse ticks
+        // for a dramatic jump — e.g. mult goes from 9 to 27 for x3.
+        if (item.isXMult) {
+            runningMult *= item.xMultFactor ?? 1;
             const multAtEvent = runningMult;
             const sigilId = item.sigilId;
             tl.call(playCount, undefined, tickAt);

@@ -274,6 +274,60 @@ export function looseDuosEnabled(sigils: readonly string[]): boolean {
 }
 
 // ============================================================================
+// Category 6 — Spell Element xMult (Supercell pattern)
+// ============================================================================
+
+/**
+ * Multiplicative mult modifier conditioned on the spell's element(s). Unlike
+ * hand-mult (Synapse), this doesn't depend on held runes — it fires whenever
+ * the resolved spell involves one of the listed elements.
+ *
+ * Applied AFTER all additive mult bonuses (tier mult + hand-mult), so the
+ * formula becomes:  `finalMult = (tierMult + additiveBonuses) × xMult`.
+ * Multiple xMult sigils multiply together.
+ */
+export interface SpellXMultEffect {
+    /** Elements that trigger this xMult. Spell must involve at least one. */
+    elements: readonly ElementType[];
+    /** Multiplicative factor applied to the final mult. */
+    xMult: number;
+}
+
+export const SIGIL_SPELL_X_MULT: Record<string, SpellXMultEffect> = {
+    supercell: { elements: ["lightning", "air"], xMult: 3 },
+};
+
+export interface SpellXMultEntry {
+    sigilId: string;
+    xMult: number;
+}
+
+/**
+ * Compute the total multiplicative mult factor from spell-element xMult sigils.
+ * Returns `total = 1` (identity) when no xMult applies. `entries` carries
+ * per-sigil data for the animation layer (sigil shake + mult counter jump).
+ *
+ * @param spellElements - Elements involved in the resolved spell. For single-
+ *   element spells, pass `[spell.element]`. For combos, pass `spell.comboElements`.
+ */
+export function getSpellXMult(
+    sigils: readonly string[],
+    spellElements: readonly string[],
+): { total: number; entries: SpellXMultEntry[] } {
+    let total = 1;
+    const entries: SpellXMultEntry[] = [];
+    for (const sigilId of sigils) {
+        const effect = SIGIL_SPELL_X_MULT[sigilId];
+        if (!effect) continue;
+        if (spellElements.some(e => (effect.elements as readonly string[]).includes(e))) {
+            total *= effect.xMult;
+            entries.push({ sigilId, xMult: effect.xMult });
+        }
+    }
+    return { total, entries };
+}
+
+// ============================================================================
 // Module-Load Validation
 // ============================================================================
 

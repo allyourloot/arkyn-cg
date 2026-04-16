@@ -7,6 +7,7 @@ import {
     CASTS_PER_ROUND,
     SPELL_TIER_MULT,
     getHandMultBonus,
+    getSpellXMult,
     iterateProcs,
     resolveSpell,
     calculateSpellDamage,
@@ -431,6 +432,15 @@ export function castSpell() {
     const handMultResult = getHandMultBonus(ownedSigils, hand, sortedSelected);
     const handMultBonus = handMultResult.total;
 
+    // Spell-element xMult from Supercell-style sigils. Multiplicative —
+    // applied after all additive bonuses so the animation can reveal the
+    // multiplier as a dramatic final mult event.
+    const spellElements = resolvedSpell
+        ? (resolvedSpell.comboElements ? [...resolvedSpell.comboElements] : [resolvedSpell.element])
+        : [];
+    const xMultResult = getSpellXMult(ownedSigils, spellElements);
+    const xMultTotal = xMultResult.total;
+
     const breakdown = resolvedSpell
         ? calculateSpellDamage(
             resolvedSpell,
@@ -440,6 +450,7 @@ export function castSpell() {
             arkynStoreInternal.getEnemyWeaknesses(),
             arkynStoreInternal.getScrollLevels(),
             handMultBonus,
+            xMultTotal,
         )
         : null;
     // Final post-mult damage applied to the enemy on the impact frame.
@@ -506,7 +517,7 @@ export function castSpell() {
     // one BUBBLE_STAGGER_MS slot. `isGold` distinguishes Fortune-style
     // grant_gold procs from damage procs so the timeline skips the Base
     // counter tick for them (gold isn't damage).
-    const runeBreakdown: { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean; isSynapse?: boolean; isGold?: boolean; goldDelta?: number; multDelta?: number; sigilId?: string }[] = [];
+    const runeBreakdown: { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean; isSynapse?: boolean; isGold?: boolean; isXMult?: boolean; goldDelta?: number; multDelta?: number; xMultFactor?: number; sigilId?: string }[] = [];
     let eventIdx = 0;
     if (breakdown) {
         for (let i = 0; i < contributingIndices.length; i++) {
@@ -595,6 +606,27 @@ export function castSpell() {
         eventIdx++;
     }
     const hasAnyHandMultProc = handMultResult.perSigil.length > 0;
+
+    // ----- Spell-element xMult entries (Supercell-style sigils) -----
+    // Appended AFTER synapse entries so the animation reveals the
+    // multiplicative factor as the final dramatic mult event before the
+    // total reveal tween. Each xMult entry multiplies runningMult in the
+    // timeline (unlike synapse which adds).
+    for (const entry of xMultResult.entries) {
+        runeBreakdown.push({
+            base: 0,
+            final: 0,
+            isResisted: false,
+            isCritical: false,
+            isProc: false,
+            isXMult: true,
+            xMultFactor: entry.xMult,
+            sigilId: entry.sigilId,
+        });
+        eventIdx++;
+    }
+    const hasAnyXMult = xMultResult.entries.length > 0;
+    const hasAnyMultEvent = hasAnyHandMultProc || hasAnyXMult;
 
     // Snapshot the round accumulator BEFORE this cast so the total reveal
     // tween can offset its values. This avoids the double-counting window
@@ -709,11 +741,11 @@ export function castSpell() {
             notify();
         },
         baseMult: resolvedSpell ? (SPELL_TIER_MULT[resolvedSpell.tier] ?? 0) : 0,
-        onMultTick: hasAnyHandMultProc ? (mult: number) => {
+        onMultTick: hasAnyMultEvent ? (mult: number) => {
             castMultCounter = mult;
             notify();
         } : undefined,
-        onSigilShake: (hasAnyProc || hasAnyHandMultProc) ? (sigilId: string) => {
+        onSigilShake: (hasAnyProc || hasAnyMultEvent) ? (sigilId: string) => {
             activeSigilShake = { sigilId, seq: ++sigilShakeSeq };
             notify();
         } : undefined,

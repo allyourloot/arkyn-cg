@@ -79,8 +79,10 @@ export {
     SIGIL_PROCS,
     SIGIL_HAND_MULT,
     SIGIL_LIFECYCLE_HOOKS,
+    SIGIL_SPELL_X_MULT,
     getPlayerStatDeltas,
     getHandMultBonus,
+    getSpellXMult,
     iterateProcs,
 } from "./sigilEffects";
 export type {
@@ -90,6 +92,8 @@ export type {
     ProcEvent,
     HandMultEffect,
     HandMultEntry,
+    SpellXMultEffect,
+    SpellXMultEntry,
     SigilLifecycleHooks,
     RoundStartResult,
 } from "./sigilEffects";

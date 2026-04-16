@@ -89,6 +89,18 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         cost: 3,
         sellPrice: 1,
     },
+    supercell: {
+        id: "supercell",
+        name: "Supercell",
+        rarity: "rare",
+        description: "Lightning and Air spells gain {x3 Mult}.",
+        cost: 6,
+        sellPrice: 3,
+        explainer: {
+            label: "Applies to:",
+            elements: ["lightning", "air"] as const,
+        },
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

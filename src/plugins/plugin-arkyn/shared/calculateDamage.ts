@@ -89,9 +89,10 @@ export function calculateSpellDamage(
     weaknesses: readonly string[],
     scrollLevels?: ScrollLevelsLike,
     bonusMult?: number,
+    xMult?: number,
 ): SpellDamageBreakdown {
     const spellBase = SPELL_TIER_BASE_DAMAGE[spell.tier] ?? 0;
-    const mult = (SPELL_TIER_MULT[spell.tier] ?? 0) + (bonusMult ?? 0);
+    const mult = ((SPELL_TIER_MULT[spell.tier] ?? 0) + (bonusMult ?? 0)) * (xMult ?? 1);
 
     const count = contributingRunes.length;
     const runeBaseContributions: number[] = new Array(count);
