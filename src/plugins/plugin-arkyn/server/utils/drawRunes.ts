@@ -3,7 +3,7 @@ import { clearArraySchema } from "./clearArraySchema";
 import type { RuneInstanceData } from "./createPouch";
 
 /** Build a Schema-backed RuneInstance from plain pouch data. */
-function createRuneInstance(data: RuneInstanceData): RuneInstance {
+export function createRuneInstance(data: RuneInstanceData): RuneInstance {
     const rune = new RuneInstance();
     rune.id = data.id;
     rune.element = data.element;

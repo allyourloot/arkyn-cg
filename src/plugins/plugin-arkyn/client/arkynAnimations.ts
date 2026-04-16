@@ -6,10 +6,7 @@ import {
     ARKYN_DISCARD,
     CASTS_PER_ROUND,
     SPELL_TIER_MULT,
-    getHandMultBonus,
-    getIgnoredResistanceElements,
-    getPlayedMultBonus,
-    getSpellXMult,
+    composeCastModifiers,
     iterateProcs,
     resolveSpell,
     calculateSpellDamage,
@@ -427,48 +424,35 @@ export function castSpell() {
         i => castRunes[i].rarity as RarityType,
     );
 
-    // Hand-based mult bonus from all owned hand-mult sigils (Synapse,
-    // future equivalents). `perSigil` carries per-rune entries with the
-    // triggering sigilId — used below to build bubbles + tick the mult
-    // counter generically (no "synapse" strings in the timeline).
-    const handMultResult = getHandMultBonus(ownedSigils, hand, sortedSelected);
-    const handMultBonus = handMultResult.total;
-
-    // Played-rune mult bonus from Arcana-style sigils — each contributing
-    // rune matching the sigil's element adds mult. Same additive channel
-    // as hand-mult; bubbles interleave after each matching rune's damage.
-    const playedMultResult = getPlayedMultBonus(ownedSigils, contributingRuneData);
-    const playedMultBonus = playedMultResult.total;
-
-    // Spell-element xMult from Supercell-style sigils. Multiplicative —
-    // applied after all additive bonuses so the animation can reveal the
-    // multiplier as a dramatic final mult event.
-    const spellElements = resolvedSpell
-        ? (resolvedSpell.comboElements ? [...resolvedSpell.comboElements] : [resolvedSpell.element])
-        : [];
-    const xMultResult = getSpellXMult(ownedSigils, spellElements);
-    const xMultTotal = xMultResult.total;
-
-    // Strip resistances nullified by owned resist-ignore sigils (Impale-style)
-    // so the per-rune mod becomes neutral (×1.0) instead of resisted (×0.5).
-    // The UI still reads the raw enemy state and overlays a red X on the
-    // ignored chips — this filter is damage-only.
-    const rawResistances = arkynStoreInternal.getEnemyResistances();
-    const ignoredResistances = getIgnoredResistanceElements(ownedSigils);
-    const effectiveResistances = ignoredResistances.size > 0
-        ? rawResistances.filter(e => !ignoredResistances.has(e))
-        : rawResistances;
+    // Compose all sigil-driven cast modifiers through the shared helper —
+    // server runs the identical helper so bonusMult / xMult / stripped
+    // resistances match byte-for-byte. The `breakdowns` field carries the
+    // per-sigil entries the animation layer uses to build hand bubbles,
+    // played-rune mult ticks, and xMult reveal events.
+    const modifiers = composeCastModifiers({
+        sigils: ownedSigils,
+        spellElements: resolvedSpell
+            ? (resolvedSpell.comboElements ? [...resolvedSpell.comboElements] : [resolvedSpell.element])
+            : [],
+        hand,
+        selectedIndices: sortedSelected,
+        contributingRunes: contributingRuneData,
+        rawResistances: arkynStoreInternal.getEnemyResistances(),
+    });
+    const handMultEntries = modifiers.breakdowns.handMult;
+    const playedMultEntries = modifiers.breakdowns.playedMult;
+    const xMultEntries = modifiers.breakdowns.xMult;
 
     const breakdown = resolvedSpell
         ? calculateSpellDamage(
             resolvedSpell,
             contributingRuneData,
             contributingRuneRarities,
-            effectiveResistances,
+            modifiers.effectiveResistances,
             arkynStoreInternal.getEnemyWeaknesses(),
             arkynStoreInternal.getScrollLevels(),
-            handMultBonus + playedMultBonus,
-            xMultTotal,
+            modifiers.bonusMult,
+            modifiers.xMult,
         )
         : null;
     // Final post-mult damage applied to the enemy on the impact frame.
@@ -602,7 +586,7 @@ export function castSpell() {
             // (and optional proc) so the Mult counter ticks in lockstep
             // with the rune that triggered it. No separate bubble is
             // mounted; the mult counter + sigil shake carry the feedback.
-            for (const pm of playedMultResult.perSigil) {
+            for (const pm of playedMultEntries) {
                 if (pm.contributingRuneIdx !== i) continue;
                 runeBreakdown.push({
                     base: 0,
@@ -625,7 +609,7 @@ export function castSpell() {
     // staggered after all play-area bubbles finish. Each entry carries its
     // triggering sigilId so the timeline dispatches shakes generically.
     const handMultBubblesForCast: (HandMultBubble | null)[] = new Array(hand.length).fill(null);
-    for (const entry of handMultResult.perSigil) {
+    for (const entry of handMultEntries) {
         handMultBubblesForCast[entry.handIndex] = {
             amount: entry.multDelta,
             seq: ++bubbleSeqCounter,
@@ -643,15 +627,15 @@ export function castSpell() {
         });
         eventIdx++;
     }
-    const hasAnyHandMultProc = handMultResult.perSigil.length > 0;
-    const hasAnyPlayedMult = playedMultResult.perSigil.length > 0;
+    const hasAnyHandMultProc = handMultEntries.length > 0;
+    const hasAnyPlayedMult = playedMultEntries.length > 0;
 
     // ----- Spell-element xMult entries (Supercell-style sigils) -----
     // Appended AFTER synapse entries so the animation reveals the
     // multiplicative factor as the final dramatic mult event before the
     // total reveal tween. Each xMult entry multiplies runningMult in the
     // timeline (unlike synapse which adds).
-    for (const entry of xMultResult.entries) {
+    for (const entry of xMultEntries) {
         runeBreakdown.push({
             base: 0,
             final: 0,
@@ -664,7 +648,7 @@ export function castSpell() {
         });
         eventIdx++;
     }
-    const hasAnyXMult = xMultResult.entries.length > 0;
+    const hasAnyXMult = xMultEntries.length > 0;
     const hasAnyMultEvent = hasAnyHandMultProc || hasAnyPlayedMult || hasAnyXMult;
 
     // Snapshot the round accumulator BEFORE this cast so the total reveal

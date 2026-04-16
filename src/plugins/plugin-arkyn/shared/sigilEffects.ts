@@ -267,10 +267,7 @@ export const SIGIL_LOOSE_DUO_UNLOCKS: Record<string, true> = {
 };
 
 export function looseDuosEnabled(sigils: readonly string[]): boolean {
-    for (const id of sigils) {
-        if (SIGIL_LOOSE_DUO_UNLOCKS[id]) return true;
-    }
-    return false;
+    return sigils.some(id => SIGIL_LOOSE_DUO_UNLOCKS[id]);
 }
 
 // ============================================================================

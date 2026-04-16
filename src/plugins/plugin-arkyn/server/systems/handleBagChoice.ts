@@ -1,7 +1,7 @@
-import { RuneInstance, type ArkynState } from "../../shared";
+import { type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
 import { clearArraySchema } from "../utils/clearArraySchema";
-import { syncPlayerPouch } from "../utils/drawRunes";
+import { createRuneInstance, syncPlayerPouch } from "../utils/drawRunes";
 import { getPouch } from "../resources/playerPouch";
 import { nextRuneId } from "../utils/nextRuneId";
 
@@ -51,12 +51,7 @@ export function handleBagChoice(
     const picked = player.pendingBagRunes[index];
 
     // Permanent record — will be rehydrated by createPouch every round.
-    const acquired = new RuneInstance();
-    acquired.id = picked.id;
-    acquired.element = picked.element;
-    acquired.rarity = picked.rarity;
-    acquired.level = picked.level;
-    player.acquiredRunes.push(acquired);
+    player.acquiredRunes.push(createRuneInstance(picked));
 
     // Immediate live add — push into the resource pouch and re-sync so
     // the shop-phase pouch counter ticks +1 right now. A fresh id keeps

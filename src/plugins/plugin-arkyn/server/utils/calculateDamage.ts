@@ -1,11 +1,8 @@
 import type { ArraySchema, MapSchema } from "@colyseus/schema";
 import {
     calculateSpellDamage as sharedCalculateSpellDamage,
+    composeCastModifiers,
     getContributingRuneIndices,
-    getHandMultBonus,
-    getIgnoredResistanceElements,
-    getPlayedMultBonus,
-    getSpellXMult,
     iterateProcs,
     type ResolvedSpell,
     type RuneInstance,
@@ -45,19 +42,8 @@ export function calculateDamage(
     selectedIndices?: readonly number[],
 ): CastDamageResult {
     const weaknesses = Array.from(enemy.weaknesses);
-    const activeSigils = sigils ? Array.from(sigils) : undefined;
-    // Strip resistances whose element is nullified by an owned resist-ignore
-    // sigil (Impale-style). The per-rune resistance lookup inside the shared
-    // formula checks `resistances.includes(element)`, so removing the entry
-    // here gives that rune a neutral (×1.0) mod even though the enemy's raw
-    // state still reports the resistance. The UI shows a red X on the chip.
-    const rawResistances = Array.from(enemy.resistances);
-    const ignoredResistances = activeSigils
-        ? getIgnoredResistanceElements(activeSigils)
-        : null;
-    const resistances = ignoredResistances && ignoredResistances.size > 0
-        ? rawResistances.filter(e => !ignoredResistances.has(e))
-        : rawResistances;
+    const activeSigils = sigils ? Array.from(sigils) : [];
+
     const contributingIndices = getContributingRuneIndices(
         selectedRunes.map(r => ({ element: r.element })),
         activeSigils,
@@ -67,35 +53,29 @@ export function calculateDamage(
         i => selectedRunes[i].rarity as RarityType,
     );
 
-    // Hand-based mult bonus from Synapse-style sigils (held runes add mult).
-    // Iterates SIGIL_HAND_MULT generically — no sigil-specific branching.
-    const handMultBonus = (activeSigils && hand && selectedIndices)
-        ? getHandMultBonus(activeSigils, hand, selectedIndices).total
-        : 0;
-    // Played-rune mult bonus from Arcana-style sigils (contributing runes
-    // of a given element add mult). Same additive channel as hand-mult.
-    const playedMultBonus = activeSigils
-        ? getPlayedMultBonus(activeSigils, contributingRunes).total
-        : 0;
-
-    // Spell-element xMult from Supercell-style sigils. Multiplicative —
-    // applied after all additive bonuses: finalMult = (tierMult + bonuses) × xMult.
-    const spellElements = spell.comboElements
-        ? [...spell.comboElements]
-        : [spell.element];
-    const xMultTotal = activeSigils
-        ? getSpellXMult(activeSigils, spellElements).total
-        : 1;
+    // Compose all sigil-driven cast modifiers through the shared helper.
+    // The client runs the exact same helper so bonusMult / xMult / stripped
+    // resistances are guaranteed byte-identical across server and client.
+    const modifiers = composeCastModifiers({
+        sigils: activeSigils,
+        spellElements: spell.comboElements
+            ? [...spell.comboElements]
+            : [spell.element],
+        hand: hand ? hand.map(r => ({ element: r.element })) : [],
+        selectedIndices: selectedIndices ?? [],
+        contributingRunes,
+        rawResistances: Array.from(enemy.resistances),
+    });
 
     const breakdown = sharedCalculateSpellDamage(
         spell,
         contributingRunes,
         contributingRuneRarities,
-        resistances,
+        modifiers.effectiveResistances,
         weaknesses,
         scrollLevels,
-        handMultBonus + playedMultBonus,
-        xMultTotal,
+        modifiers.bonusMult,
+        modifiers.xMult,
     );
 
     let totalDamage = breakdown.finalDamage;

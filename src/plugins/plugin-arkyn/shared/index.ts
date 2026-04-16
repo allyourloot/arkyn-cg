@@ -86,6 +86,7 @@ export {
     SIGIL_PROCS,
     SIGIL_HAND_MULT,
     SIGIL_LIFECYCLE_HOOKS,
+    SIGIL_LOOSE_DUO_UNLOCKS,
     SIGIL_SPELL_X_MULT,
     SIGIL_RESIST_IGNORE,
     SIGIL_END_OF_ROUND_GOLD,
@@ -97,6 +98,7 @@ export {
     getEndOfRoundSigilGold,
     getPlayedMultBonus,
     iterateProcs,
+    looseDuosEnabled,
 } from "./sigilEffects";
 export type {
     PlayerStatDeltas,
@@ -113,3 +115,10 @@ export type {
 
 export { BOSS_DEBUFFS, isBossRound, pickDebuffForRound, getDebuffById } from "./bossDebuffs";
 export type { BossDebuff } from "./bossDebuffs";
+
+export { composeCastModifiers } from "./composeCastModifiers";
+export type {
+    CastModifiersResult,
+    CastModifiersBreakdown,
+    ComposeCastModifiersArgs,
+} from "./composeCastModifiers";
