@@ -50,6 +50,7 @@ import {
     clearLastCastState,
     type RuneClientData,
 } from "../../arkynStore";
+import { playAddConsumable } from "../../sfx";
 
 function runeFromSchema(r: RuneInstance): RuneClientData {
     return { id: r.id, element: r.element, rarity: r.rarity, level: r.level };
@@ -163,6 +164,12 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevShopItems: { itemType: string; element: string; cost: number; purchased: boolean }[] = [];
     let prevSigils: string[] = [];
     let prevConsumables: string[] = [];
+    // Gate the add-consumable SFX so the first sync after join/reconnect
+    // doesn't bleep for pre-existing consumables on the player's state.
+    // Subsequent grows (Thief at round start, future consumable-granting
+    // sigils) play the sound once per sync frame regardless of how many
+    // were added in that frame.
+    let hasSyncedConsumables = false;
     let prevAcquired: RuneClientData[] = [];
     let prevPending: RuneClientData[] = [];
 
@@ -425,8 +432,13 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
 
         // Sync consumables
         if (!stringArraysEqual(player.consumables, prevConsumables)) {
+            const grew = player.consumables.length > prevConsumables.length;
             prevConsumables = Array.from(player.consumables);
             setConsumables(prevConsumables);
+            if (hasSyncedConsumables && grew) {
+                playAddConsumable();
+            }
+            hasSyncedConsumables = true;
         }
 
         // Sync Rune Bag state: permanent run-long additions and the
