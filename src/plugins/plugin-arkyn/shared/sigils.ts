@@ -101,6 +101,30 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
             elements: ["lightning", "air"] as const,
         },
     },
+    eruption: {
+        id: "eruption",
+        name: "Eruption",
+        rarity: "uncommon",
+        description: "Fire and Earth spells gain {x3 Mult}.",
+        cost: 4,
+        sellPrice: 2,
+        explainer: {
+            label: "Applies to:",
+            elements: ["fire", "earth"] as const,
+        },
+    },
+    impale: {
+        id: "impale",
+        name: "Impale",
+        rarity: "common",
+        description: "{Steel} runes ignore enemy resistance.",
+        cost: 3,
+        sellPrice: 1,
+        explainer: {
+            label: "Applies to:",
+            elements: ["steel"] as const,
+        },
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

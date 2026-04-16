@@ -168,6 +168,52 @@
     image-rendering: pixelated;
 }
 
+/* Ignored resistance — a red X (built from two rotated bars) is layered
+   over the chip and the icon itself dims so the player reads it as
+   "this affinity is being bypassed". Driven by a sigil like Impale that
+   adds the element to SIGIL_RESIST_IGNORE. */
+.affinityIconIgnored .affinityIcon {
+    filter: grayscale(0.75) brightness(0.55);
+}
+
+.ignoredX {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 130%;
+    height: 130%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Two rotated bars drawn with pseudo-elements form a crisp pixel-art X.
+   A dark box-shadow outline on each bar keeps the red readable against
+   any rune icon colour underneath. */
+.ignoredX::before,
+.ignoredX::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 100%;
+    height: clamp(3px, 0.4vw, 5px);
+    background: #ef4444;
+    transform-origin: center;
+    border-radius: 1px;
+    box-shadow:
+        0 0 0 2px rgba(0, 0, 0, 0.9),
+        0 0 6px rgba(0, 0, 0, 0.6);
+}
+
+.ignoredX::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.ignoredX::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+
 .affinityIconWrap:hover :global(.arkyn-tooltip) {
     opacity: 1;
     font-size: var(--font-size-2xs);
@@ -374,6 +420,11 @@
     .affinityIcon {
         width: clamp(20px, 2.4vw, 32px);
         height: clamp(20px, 2.4vw, 32px);
+    }
+
+    .ignoredX::before,
+    .ignoredX::after {
+        height: clamp(2px, 0.3vw, 4px);
     }
 
     .tooltip {

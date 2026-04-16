@@ -7,6 +7,7 @@ import {
     CASTS_PER_ROUND,
     SPELL_TIER_MULT,
     getHandMultBonus,
+    getIgnoredResistanceElements,
     getSpellXMult,
     iterateProcs,
     resolveSpell,
@@ -441,12 +442,22 @@ export function castSpell() {
     const xMultResult = getSpellXMult(ownedSigils, spellElements);
     const xMultTotal = xMultResult.total;
 
+    // Strip resistances nullified by owned resist-ignore sigils (Impale-style)
+    // so the per-rune mod becomes neutral (×1.0) instead of resisted (×0.5).
+    // The UI still reads the raw enemy state and overlays a red X on the
+    // ignored chips — this filter is damage-only.
+    const rawResistances = arkynStoreInternal.getEnemyResistances();
+    const ignoredResistances = getIgnoredResistanceElements(ownedSigils);
+    const effectiveResistances = ignoredResistances.size > 0
+        ? rawResistances.filter(e => !ignoredResistances.has(e))
+        : rawResistances;
+
     const breakdown = resolvedSpell
         ? calculateSpellDamage(
             resolvedSpell,
             contributingRuneData,
             contributingRuneRarities,
-            arkynStoreInternal.getEnemyResistances(),
+            effectiveResistances,
             arkynStoreInternal.getEnemyWeaknesses(),
             arkynStoreInternal.getScrollLevels(),
             handMultBonus,

@@ -3,6 +3,7 @@ import {
     calculateSpellDamage as sharedCalculateSpellDamage,
     getContributingRuneIndices,
     getHandMultBonus,
+    getIgnoredResistanceElements,
     getSpellXMult,
     iterateProcs,
     type ResolvedSpell,
@@ -42,9 +43,20 @@ export function calculateDamage(
     hand?: readonly RuneInstance[],
     selectedIndices?: readonly number[],
 ): CastDamageResult {
-    const resistances = Array.from(enemy.resistances);
     const weaknesses = Array.from(enemy.weaknesses);
     const activeSigils = sigils ? Array.from(sigils) : undefined;
+    // Strip resistances whose element is nullified by an owned resist-ignore
+    // sigil (Impale-style). The per-rune resistance lookup inside the shared
+    // formula checks `resistances.includes(element)`, so removing the entry
+    // here gives that rune a neutral (×1.0) mod even though the enemy's raw
+    // state still reports the resistance. The UI shows a red X on the chip.
+    const rawResistances = Array.from(enemy.resistances);
+    const ignoredResistances = activeSigils
+        ? getIgnoredResistanceElements(activeSigils)
+        : null;
+    const resistances = ignoredResistances && ignoredResistances.size > 0
+        ? rawResistances.filter(e => !ignoredResistances.has(e))
+        : rawResistances;
     const contributingIndices = getContributingRuneIndices(
         selectedRunes.map(r => ({ element: r.element })),
         activeSigils,

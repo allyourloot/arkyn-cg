@@ -295,6 +295,7 @@ export interface SpellXMultEffect {
 
 export const SIGIL_SPELL_X_MULT: Record<string, SpellXMultEffect> = {
     supercell: { elements: ["lightning", "air"], xMult: 3 },
+    eruption: { elements: ["fire", "earth"], xMult: 3 },
 };
 
 export interface SpellXMultEntry {
@@ -325,6 +326,43 @@ export function getSpellXMult(
         }
     }
     return { total, entries };
+}
+
+// ============================================================================
+// Category 7 — Resistance Ignore (Impale pattern)
+// ============================================================================
+
+/**
+ * Elements whose enemy-resistance is nullified while the sigil is owned.
+ * When a sigil in this registry is active, the listed elements bypass the
+ * enemy's resistance (×0.5) modifier — they hit for ×1.0 (neutral) instead.
+ *
+ * The UI consults `getIgnoredResistanceElements()` to overlay a red X on
+ * the matching element chip in the enemy's Resists box, so the player can
+ * see the nullification at a glance.
+ *
+ * Weaknesses are NOT affected — an enemy weak to Steel with Impale owned
+ * still takes ×2.0 damage (weakness always wins).
+ */
+export const SIGIL_RESIST_IGNORE: Record<string, readonly ElementType[]> = {
+    impale: ["steel"],
+};
+
+/**
+ * Aggregate the set of elements whose enemy-resistances should be ignored
+ * given the player's owned sigils. Multiple sigils stack: any element listed
+ * by any owned sigil is ignored. Call at both the damage formula call sites
+ * (to strip matching entries from the enemy's resistances before the
+ * per-rune modifier lookup) and in the UI (to decide which chips to X out).
+ */
+export function getIgnoredResistanceElements(sigils: readonly string[]): Set<string> {
+    const out = new Set<string>();
+    for (const sigilId of sigils) {
+        const elements = SIGIL_RESIST_IGNORE[sigilId];
+        if (!elements) continue;
+        for (const e of elements) out.add(e);
+    }
+    return out;
 }
 
 // ============================================================================

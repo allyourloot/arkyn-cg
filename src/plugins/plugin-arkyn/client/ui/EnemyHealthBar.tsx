@@ -10,9 +10,10 @@ import {
     useEnemyWeaknesses,
     useEnemyIsBoss,
     useEnemyDebuff,
+    useSigils,
     BAR_SHAKE_FRAME_S,
 } from "../arkynStore";
-import { getDebuffById } from "../../shared";
+import { getDebuffById, getIgnoredResistanceElements } from "../../shared";
 import innerFrameRedUrl from "/assets/ui/inner-frame-red.png?url";
 import innerFrameGoldUrl from "/assets/ui/inner-frame-gold.png?url";
 import bossFrameUrl from "/assets/ui/boss-frame.png?url";
@@ -55,6 +56,11 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
     const isBoss = useEnemyIsBoss();
     const debuffId = useEnemyDebuff();
     const debuff = debuffId ? getDebuffById(debuffId) : undefined;
+    // Resistances nullified by owned resist-ignore sigils (Impale-style).
+    // Each matching chip renders with a red X overlay + dimmed icon to show
+    // the player the enemy's resistance is being bypassed this run.
+    const sigils = useSigils();
+    const ignoredResistances = getIgnoredResistanceElements(sigils);
 
     // wrapperRef scopes the GSAP context for cleanup; the actual shake
     // target is the inner barShakeRef so the name above and the affinity
@@ -223,7 +229,7 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
 
             <div className={styles.barRow}>
                 {resistances.length > 0 ? (
-                    <AffinitySection label="Resists" labelClass={styles.affinityLabelResist} elements={resistances} multiplier="0.5x" multiplierColor="#ef4444" />
+                    <AffinitySection label="Resists" labelClass={styles.affinityLabelResist} elements={resistances} multiplier="0.5x" multiplierColor="#ef4444" ignored={ignoredResistances} />
                 ) : (
                     <div className={styles.affinitySpacer} />
                 )}
@@ -272,7 +278,11 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
 // Single inner-frame chip showing a label ("Resists" / "Weak To") above
 // a row of element rune icons. Lives inside EnemyHealthBar so the visual
 // chrome stays alongside the bar it describes.
-function AffinitySection({ label, labelClass, elements, multiplier, multiplierColor }: { label: string; labelClass?: string; elements: readonly string[]; multiplier: string; multiplierColor: string }) {
+//
+// `ignored` flags elements whose affinity is nullified by an owned sigil
+// (e.g. Impale → Steel resistance). Flagged chips render with a red X
+// overlay + dimmed icon and swap to a "1x (ignored)" tooltip.
+function AffinitySection({ label, labelClass, elements, multiplier, multiplierColor, ignored }: { label: string; labelClass?: string; elements: readonly string[]; multiplier: string; multiplierColor: string; ignored?: ReadonlySet<string> }) {
     return (
         <div className={styles.affinitySection}>
             <span className={`${styles.affinityLabel} ${labelClass ?? ""}`}>{label}</span>
@@ -281,18 +291,32 @@ function AffinitySection({ label, labelClass, elements, multiplier, multiplierCo
                     const url = getRuneImageUrl(element);
                     if (!url) return null;
                     const displayName = element.charAt(0).toUpperCase() + element.slice(1);
+                    const isIgnored = ignored?.has(element) ?? false;
                     return (
-                        <span key={element} className={styles.affinityIconWrap}>
+                        <span
+                            key={element}
+                            className={`${styles.affinityIconWrap} ${isIgnored ? styles.affinityIconIgnored : ""}`}
+                        >
                             <img
                                 src={url}
                                 alt={element}
                                 className={styles.affinityIcon}
                             />
+                            {isIgnored && <span className={styles.ignoredX} aria-hidden="true" />}
                             <Tooltip placement="bottom" variant="framed">
-                                <span className={styles.tooltipMult} style={{ color: multiplierColor }}>
-                                    {multiplier}
-                                </span>
-                                {` damage from ${displayName}`}
+                                {isIgnored ? (
+                                    <>
+                                        <span className={styles.tooltipMult} style={{ color: "#e8d4b8" }}>1x</span>
+                                        {` damage from ${displayName} (ignored)`}
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className={styles.tooltipMult} style={{ color: multiplierColor }}>
+                                            {multiplier}
+                                        </span>
+                                        {` damage from ${displayName}`}
+                                    </>
+                                )}
                             </Tooltip>
                         </span>
                     );
