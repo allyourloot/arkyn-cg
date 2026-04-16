@@ -2,10 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { TWO_PAIR_TABLE, FULL_HOUSE_TABLE, SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT } from "../../shared";
 import { playMenuClose, playMenuOpen } from "../sfx";
 import RuneImage from "./RuneImage";
-import { createPanelStyleVars, ELEMENT_COLORS } from "./styles";
+import { createPanelStyleVars, ELEMENT_COLORS, INNER_FRAME_BGS } from "./styles";
 import closeIconUrl from "/assets/icons/close-64x64.png?url";
 import closeHoverIconUrl from "/assets/icons/close-hover-64x64.png?url";
-import innerFrameOrangeUrl from "/assets/ui/inner-frame-orange.png?url";
 import styles from "./InfoModal.module.css";
 
 interface InfoModalProps {
@@ -16,7 +15,7 @@ type Tab = "synergies" | "spells";
 
 const modalStyleVars: React.CSSProperties = {
     ...createPanelStyleVars(),
-    "--tab-active-bg": `url(${innerFrameOrangeUrl})`,
+    "--tab-active-bg": INNER_FRAME_BGS.orange,
 } as React.CSSProperties;
 
 // Parse SYNERGY_PAIRS into structured data for display, grouped by cluster.

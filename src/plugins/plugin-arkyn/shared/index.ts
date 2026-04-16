@@ -44,6 +44,8 @@ export type {
     RarityType,
 } from "./arkynConstants";
 
+export { isRarity } from "./arkynConstants";
+
 export {
     SPELL_TABLE,
     SPELL_TIER_BASE_DAMAGE,
@@ -91,12 +93,14 @@ export {
     SIGIL_RESIST_IGNORE,
     SIGIL_END_OF_ROUND_GOLD,
     SIGIL_PLAYED_MULT,
+    SIGIL_CRITICAL_RUNE_BONUS,
     getPlayerStatDeltas,
     getHandMultBonus,
     getSpellXMult,
     getIgnoredResistanceElements,
     getEndOfRoundSigilGold,
     getPlayedMultBonus,
+    getCriticalRuneBonus,
     iterateProcs,
     looseDuosEnabled,
 } from "./sigilEffects";
@@ -109,8 +113,10 @@ export type {
     HandMultEntry,
     SpellXMultEffect,
     SpellXMultEntry,
+    CriticalRuneBonusEffect,
+    CriticalRuneBonusEntry,
     SigilLifecycleHooks,
-    RoundStartResult,
+    RoundStartEffect,
 } from "./sigilEffects";
 
 export { BOSS_DEBUFFS, isBossRound, pickDebuffForRound, getDebuffById } from "./bossDebuffs";
@@ -122,3 +128,6 @@ export type {
     CastModifiersBreakdown,
     ComposeCastModifiersArgs,
 } from "./composeCastModifiers";
+
+export { CONSUMABLE_DEFINITIONS, getConsumableDefinition } from "./consumables";
+export type { ConsumableDefinition, ConsumableEffect } from "./consumables";

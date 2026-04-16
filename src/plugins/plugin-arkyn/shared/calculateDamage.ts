@@ -90,6 +90,13 @@ export function calculateSpellDamage(
     scrollLevels?: ScrollLevelsLike,
     bonusMult?: number,
     xMult?: number,
+    /**
+     * Optional per-rune flat base bonus, parallel to `contributingRunes`.
+     * Added AFTER the resist/weak modifier so it reads as "+N to the damage
+     * that lands" rather than compounding with ×2 weakness. Today driven
+     * by crit-rune-bonus sigils (Lex Divina); see `composeCastModifiers`.
+     */
+    perRuneBaseBonus?: readonly number[],
 ): SpellDamageBreakdown {
     const spellBase = SPELL_TIER_BASE_DAMAGE[spell.tier] ?? 0;
     const mult = ((SPELL_TIER_MULT[spell.tier] ?? 0) + (bonusMult ?? 0)) * (xMult ?? 1);
@@ -112,7 +119,7 @@ export function calculateSpellDamage(
         const crit = weaknesses.includes(element);
         const resist = !crit && resistances.includes(element);
         const mod = crit ? 2.0 : resist ? 0.5 : 1.0;
-        const post = Math.round(preMod * mod);
+        const post = Math.round(preMod * mod) + (perRuneBaseBonus?.[i] ?? 0);
 
         runeBasePreModifier[i] = preMod;
         runeBaseContributions[i] = post;

@@ -14,10 +14,8 @@ import {
     BAR_SHAKE_FRAME_S,
 } from "../arkynStore";
 import { getDebuffById, getIgnoredResistanceElements } from "../../shared";
-import innerFrameRedUrl from "/assets/ui/inner-frame-red.png?url";
-import innerFrameGoldUrl from "/assets/ui/inner-frame-gold.png?url";
 import bossFrameUrl from "/assets/ui/boss-frame.png?url";
-import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
+import { ELEMENT_COLORS, createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import Tooltip from "./Tooltip";
 import { playCritical } from "../sfx";
@@ -210,14 +208,14 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
                     <div className={styles.bossRow}>
                         <span
                             className={styles.bossTag}
-                            style={{ "--boss-bg": `url(${innerFrameGoldUrl})` } as CSSProperties}
+                            style={{ "--boss-bg": INNER_FRAME_BGS.gold } as CSSProperties}
                         >
                             BOSS
                         </span>
                         {debuff && (
                             <span
                                 className={styles.debuffChip}
-                                style={{ "--debuff-bg": `url(${innerFrameRedUrl})` } as CSSProperties}
+                                style={{ "--debuff-bg": INNER_FRAME_BGS.red } as CSSProperties}
                             >
                                 {debuff.description}
                             </span>

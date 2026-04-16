@@ -39,6 +39,11 @@ export const ARCANE_CLUSTER_ELEMENTS = [
 export const RARITY_TYPES = ["common", "uncommon", "rare", "legendary"] as const;
 export type RarityType = (typeof RARITY_TYPES)[number];
 
+/** Type-guard — narrows an arbitrary string to a canonical RarityType. */
+export function isRarity(s: string): s is RarityType {
+    return (RARITY_TYPES as readonly string[]).includes(s);
+}
+
 // Scroll item configuration
 export const SCROLL_COST = 2;
 export const SCROLL_RUNE_BONUS = 2;   // +2 per-rune base damage per scroll

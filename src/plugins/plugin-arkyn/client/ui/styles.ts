@@ -1,5 +1,10 @@
 import frameUrl from "/assets/ui/frame.png?url";
 import innerFrameUrl from "/assets/ui/inner-frame.png?url";
+import innerFrameBlueUrl from "/assets/ui/inner-frame-blue.png?url";
+import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
+import innerFrameRedUrl from "/assets/ui/inner-frame-red.png?url";
+import innerFrameOrangeUrl from "/assets/ui/inner-frame-orange.png?url";
+import innerFrameGoldUrl from "/assets/ui/inner-frame-gold.png?url";
 
 export const ELEMENT_COLORS: Record<string, string> = {
     fire: "#ff5722",
@@ -58,22 +63,43 @@ export const ARCANE_CLUSTER_COLOR = "#a855f7";
 // ----- Panel chrome -----
 
 /**
+ * `url(...)`-wrapped asset references for the colored inner-frame 9-slice
+ * variants. Every panel that wires `--xxx-bg` CSS vars to a colored chip
+ * should pull from this map instead of importing the PNG individually,
+ * so changing the art only touches one file.
+ */
+export const INNER_FRAME_BGS = {
+    default: `url(${innerFrameUrl})`,
+    blue: `url(${innerFrameBlueUrl})`,
+    green: `url(${innerFrameGreenUrl})`,
+    red: `url(${innerFrameRedUrl})`,
+    orange: `url(${innerFrameOrangeUrl})`,
+    gold: `url(${innerFrameGoldUrl})`,
+} as const;
+
+export type InnerFrameColor = keyof typeof INNER_FRAME_BGS;
+
+/**
  * CSS variables for the standard panel chrome (frame border + sectioned
  * inner panels). All panels share the same `--panel-bg` and `--section-bg`
- * art; pass an optional `headingUrl` to set `--heading-bg` for panels that
- * have a tinted title strip (e.g. gold for the enemy panel, blue for the
- * spell preview). Panels without a heading strip can omit the argument.
+ * art; pass an optional heading color name (or raw URL) to set
+ * `--heading-bg` for panels with a tinted title strip. Panels without
+ * a heading strip can omit the argument.
  *
- * Centralizes the URL imports so anyone changing the panel art only has
- * to update this file.
+ * Backwards-compatible: any existing caller passing a raw `url(...)` is
+ * still accepted — a URL string is detected by the leading slash / protocol.
  */
-export function createPanelStyleVars(headingUrl?: string): React.CSSProperties {
+export function createPanelStyleVars(
+    heading?: InnerFrameColor | string,
+): React.CSSProperties {
     const vars: Record<string, string> = {
         "--panel-bg": `url(${frameUrl})`,
-        "--section-bg": `url(${innerFrameUrl})`,
+        "--section-bg": INNER_FRAME_BGS.default,
     };
-    if (headingUrl !== undefined) {
-        vars["--heading-bg"] = `url(${headingUrl})`;
+    if (heading !== undefined) {
+        vars["--heading-bg"] = heading in INNER_FRAME_BGS
+            ? INNER_FRAME_BGS[heading as InnerFrameColor]
+            : `url(${heading})`;
     }
     return vars as React.CSSProperties;
 }

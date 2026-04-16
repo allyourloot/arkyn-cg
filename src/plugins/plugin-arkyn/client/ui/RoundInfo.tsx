@@ -1,14 +1,14 @@
 import type { CSSProperties } from "react";
 import { useCurrentRound } from "../arkynStore";
 import BouncyText from "./BouncyText";
-import innerFrameOrangeUrl from "/assets/ui/inner-frame-orange.png?url";
+import { INNER_FRAME_BGS } from "./styles";
 import styles from "./RoundInfo.module.css";
 
 // Self-contained orange inner-frame chrome — wires up `--round-info-bg`
 // on the wrapper so RoundInfo's CSS module can pick its own 9-slice
 // background instead of inheriting `--section-bg` from the parent panel.
 const wrapperStyle: CSSProperties = {
-    ["--round-info-bg" as string]: `url(${innerFrameOrangeUrl})`,
+    ["--round-info-bg" as string]: INNER_FRAME_BGS.orange,
 };
 
 export default function RoundInfo() {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { MAX_CONSUMABLES } from "../../shared";
+import { MAX_CONSUMABLES, getConsumableDefinition } from "../../shared";
 import {
     useConsumables,
     useScrollLevels,
@@ -82,29 +82,35 @@ export default function ConsumableBar() {
     return (
         <div ref={barRef} className={styles.wrapper} style={frameVars}>
             {Array.from({ length: MAX_CONSUMABLES }, (_, i) => {
-                const element = consumables[i];
-                if (!element) return null;
+                const consumableId = consumables[i];
+                if (!consumableId) return null;
 
-                const scrollUrl = getScrollImageUrl(element);
-                const displayName = element.charAt(0).toUpperCase() + element.slice(1);
+                const def = getConsumableDefinition(consumableId);
+                // Scroll consumables store the element as the id; fall back to
+                // that when a future consumable kind arrives without art yet.
+                const iconElement = def?.effect.type === "upgradeScroll"
+                    ? def.effect.element
+                    : consumableId;
+                const scrollUrl = getScrollImageUrl(iconElement);
+                const displayName = def?.name ?? consumableId;
                 const isSelected = selectedIdx === i;
 
                 return (
                     <div
-                        key={`${element}-${i}`}
+                        key={`${consumableId}-${i}`}
                         ref={(el) => { slotRefs.current[i] = el; }}
                         className={`${styles.filledSlot} ${isSelected ? styles.filledSlotSelected : ""}`}
                         onClick={() => setSelectedIdx(prev => prev === i ? null : i)}
                     >
                         <ItemScene
-                            itemId={element}
+                            itemId={consumableId}
                             index={100 + i}
                             imageUrl={scrollUrl}
                             className={styles.scrollCanvas}
                         />
                         <Tooltip placement="bottom" arrow variant="framed">
                             <span className={styles.tooltipName}>
-                                {displayName} Scroll
+                                {displayName}
                             </span>
                         </Tooltip>
                         {isSelected && (
@@ -113,7 +119,7 @@ export default function ConsumableBar() {
                                 className={styles.useButton}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    handleUse(i, element);
+                                    handleUse(i, iconElement);
                                 }}
                             >
                                 Use

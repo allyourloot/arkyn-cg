@@ -20,20 +20,18 @@ import {
     useScrollUpgradeDisplay,
     useSigils,
 } from "../arkynStore";
-import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
+import { ELEMENT_COLORS, createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import RuneImage from "./RuneImage";
 import BouncyText from "./BouncyText";
 import GoldCounter from "./GoldCounter";
-import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
-import innerFrameOrangeUrl from "/assets/ui/inner-frame-orange.png?url";
 import styles from "./ShopPanel.module.css";
 
 const panelStyleVars = {
     ...createPanelStyleVars(),
-    ["--hands-bg" as string]: `url(${innerFrameGreenUrl})`,
-    ["--discards-bg" as string]: `url(${innerFrameOrangeUrl})`,
-    ["--shop-chip-bg" as string]: `url(${innerFrameOrangeUrl})`,
+    ["--hands-bg" as string]: INNER_FRAME_BGS.green,
+    ["--discards-bg" as string]: INNER_FRAME_BGS.orange,
+    ["--shop-chip-bg" as string]: INNER_FRAME_BGS.orange,
 } as CSSProperties;
 
 type ShopPanelProps = {

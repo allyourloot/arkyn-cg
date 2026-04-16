@@ -65,6 +65,7 @@ export function calculateDamage(
         selectedIndices: selectedIndices ?? [],
         contributingRunes,
         rawResistances: Array.from(enemy.resistances),
+        weaknesses,
     });
 
     const breakdown = sharedCalculateSpellDamage(
@@ -76,6 +77,7 @@ export function calculateDamage(
         scrollLevels,
         modifiers.bonusMult,
         modifiers.xMult,
+        modifiers.perRuneBaseBonus,
     );
 
     let totalDamage = breakdown.finalDamage;

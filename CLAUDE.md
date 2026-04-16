@@ -125,46 +125,53 @@ finalDamage = baseTotal × finalMult
 - `scrollBonus` = `SCROLL_RUNE_BONUS (2) × scrollLevels[element]`, applied per-rune BEFORE the resist/weak multiplier so it compounds with both.
 - `calculateSpellDamage(spell, runes, rarities, resistances, weaknesses, scrollLevels?, bonusMult?, xMult?)` returns the full `SpellDamageBreakdown` (spellBase, runeBaseContributions, baseTotal, mult, finalDamage, per-rune crit/resist flags). `bonusMult` is the sum of all additive-mult sigil bonuses (Synapse hand-mult + Arcana played-mult); `xMult` multiplies the total mult (Supercell/Eruption spell-element xMult).
 - Server calls `calculateDamage(...)` (returns `{ finalDamage, procGold }`) from `handleCast.ts`. Proc gold (Fortune-style grants) is credited in the same patch as the damage.
+- **Single source of truth for sigil-driven modifiers** — `shared/composeCastModifiers.ts` wraps the five sigil registry lookups (hand-mult, played-mult, xMult, resist-ignore, and the derived totals) into one pure function. Both `server/utils/calculateDamage.ts` AND `client/arkynAnimations.ts` call it with identical inputs, returning `{ bonusMult, xMult, effectiveResistances, breakdowns: { handMult[], playedMult[], xMult[] } }`. Server uses the totals; client uses the breakdowns to build per-sigil bubbles / mult ticks / xMult reveals. Server/client damage drift is structurally impossible — adding a new additive-mult category means updating this one file.
 
 ### Cast Animation Pipeline (client)
 
-1. `castSpell()` in `arkynAnimations.ts` calls `calculateSpellDamage` client-side (same shared formula → identical numbers).
-2. Builds per-rune `runeBreakdown[]` and passes it + `spellBaseDamage` + `totalDamage` to `buildCastTimeline()`.
-3. The GSAP timeline orchestrates: fly runes to play area → settle → raise contributing slots → per-rune damage bubbles pop (staggered) while the Base counter ticks in the Spell Preview → dissolve shader tears runes apart → total damage count-up reveal (0.5s GSAP tween) → enemy floating damage number + HP bar shake → cleanup.
-4. Key store fields: `castBaseCounter` (live Base tick), `castTotalDamage` (live Total count-up, sentinel `-1` until reveal), `lastCastBaseDamage` (snapshot for Last Cast view).
+1. `castSpell()` in `arkynAnimations.ts` captures DOM positions for flight tweens, then delegates the damage/bubble/event calculation to `assembleCastBreakdown()` in the same file.
+2. `assembleCastBreakdown()` is the pure-ish helper that: resolves the spell, calls `composeCastModifiers()` (see Damage Model), runs `calculateSpellDamage` with identical inputs to the server, iterates sigil procs via `iterateProcs`, and emits `{ runeBreakdown, bubbles, procBubblesForCast, handMultBubblesForCast, totalDamage, spellBaseDamage, baseTotal, hasCritical, hasAnyProc, hasAnyMultEvent, ... }`. `castSpell` stays ~200 lines of orchestration (flight capture → breakdown call → timeline callback wiring).
+3. `runeBreakdown[]` is the flat event list the timeline consumes — typed as `CastBreakdownEvent[]` with discriminator flags (`isProc` / `isMultTick` / `isXMult` / `isGold`, plus `sigilId` for generic dispatch). See "Cast timeline + event flags" under the Sigil System.
+4. The GSAP timeline (`buildCastTimeline`) orchestrates: fly runes to play area → settle → raise contributing slots → per-rune damage bubbles pop (staggered) while the Base counter ticks in the Spell Preview → dissolve shader tears runes apart → total damage count-up reveal (0.5s GSAP tween) → enemy floating damage number + HP bar shake → cleanup.
+5. Key store fields: `castBaseCounter` (live Base tick), `castTotalDamage` (live Total count-up, sentinel `-1` until reveal), `lastCastBaseDamage` (snapshot for Last Cast view), `castMultCounter` (ticks per additive-mult event, then multiplies on xMult).
 
 ### Sigil System (`shared/sigilEffects.ts`, `shared/sigils.ts`)
 
-Sigils are shop-purchased items that modify a run. **12 sigils are implemented today** across **9 effect categories**, and the system is designed to scale to 50+ via **data-driven effect registries** — adding most new sigils is a single data entry, zero code branches.
+Sigils are shop-purchased items that modify a run. **13 sigils are implemented today** across **10 effect categories**, and the system is designed to scale to 50+ via **data-driven effect registries** — adding most new sigils is a single data entry, zero code branches.
 
 **Two files, clear separation of concerns:**
 - `shared/sigils.ts` — `SIGIL_DEFINITIONS: Record<string, SigilDefinition>` with metadata (id, name, rarity, description with `{highlighted}` markers, cost, sellPrice, optional `explainer` showing trigger-element icons in the tooltip).
 - `shared/sigilEffects.ts` — category-based registries for mechanics, plus pure helpers consumers call generically.
 
-**Nine effect categories.** A sigil can appear in multiple (e.g. a future "+1 cast AND 10% fire proc" sigil would have entries in both `SIGIL_STAT_MODIFIERS` and `SIGIL_PROCS`).
+**Ten effect categories.** A sigil can appear in multiple (e.g. a future "+1 cast AND 10% fire proc" sigil would have entries in both `SIGIL_STAT_MODIFIERS` and `SIGIL_PROCS`).
 
 | # | Category | Registry | Helper | Sigils |
 |---|---|---|---|---|
 | 1 | Stat modifiers | `SIGIL_STAT_MODIFIERS` | `getPlayerStatDeltas(sigils)` | Caster: `{ castsPerRound: 1 }` |
 | 2 | RNG procs on played runes | `SIGIL_PROCS` | `iterateProcs(sigils, elements, seed, round, cast, isCritical?)` | Voltage (25% on lightning → double_damage), Fortune (33% on critical → +2 gold), Hourglass (25% any element → double_damage) |
 | 3 | Hand-based mult | `SIGIL_HAND_MULT` | `getHandMultBonus(sigils, hand, excluded)` | Synapse: `{ element: "psy", multPerRune: 2 }` |
-| 4 | Lifecycle hooks | `SIGIL_LIFECYCLE_HOOKS` | `hooks.onRoundStart(round, seed)` | Thief (onRoundStart → grants random scroll consumable) |
+| 4 | Lifecycle hooks | `SIGIL_LIFECYCLE_HOOKS` | `hooks.onRoundStart(round, seed)` → `RoundStartEffect[]` | Thief (onRoundStart → `[{ type: "grantConsumable", consumableId }]`) |
 | 5 | Resolver synergy/feature unlocks | `SIGIL_SYNERGY_PAIRS` (in `spellTable.ts`), `SIGIL_LOOSE_DUO_UNLOCKS` | `isSynergyPair(a, b, sigils)`, `looseDuosEnabled(sigils)` | Burnrite (unlocks `"death+fire"` synergy), Fuze (unlocks loose-duo combos for any 2 combinable elements) |
 | 6 | Spell-element xMult | `SIGIL_SPELL_X_MULT` | `getSpellXMult(sigils, spellElements)` | Supercell (lightning/air spells × 3), Eruption (fire/earth spells × 3) |
 | 7 | Resistance ignore | `SIGIL_RESIST_IGNORE` | `getIgnoredResistanceElements(sigils)` | Impale (`["steel"]` — nullifies enemy steel resistance) |
 | 8 | End-of-round gold | `SIGIL_END_OF_ROUND_GOLD` | `getEndOfRoundSigilGold(sigils)` | Plunder (`{ amount: 5 }`) |
 | 9 | Played-rune mult | `SIGIL_PLAYED_MULT` | `getPlayedMultBonus(sigils, contributingRunes)` | Arcana (`{ elements: ARCANE_CLUSTER_ELEMENTS, multPerRune: 2 }`) |
+| 10 | Critical-rune bonus | `SIGIL_CRITICAL_RUNE_BONUS` | `getCriticalRuneBonus(sigils, elements, isCritical)` | Lex Divina (`{ element: "holy", baseBonus: 8, multBonus: 2 }` — +8 Base post-modifier and +2 Mult per holy crit) |
 
-**Additive vs multiplicative mult**: Categories 3 (hand-mult) and 9 (played-mult) both feed the additive `bonusMult` channel; their values sum. Category 6 (spell xMult) is multiplicative and applies AFTER the additive sum: `finalMult = (tierMult + bonusMult) × xMult`. Proc damage from Voltage/Hourglass uses the same final mult, so additive + multiplicative sigils stack cleanly with procs.
+**Additive vs multiplicative mult**: Categories 3 (hand-mult), 9 (played-mult), and 10 (crit-rune-bonus mult portion) all feed the additive `bonusMult` channel; their values sum. Category 6 (spell xMult) is multiplicative and applies AFTER the additive sum: `finalMult = (tierMult + bonusMult) × xMult`. Proc damage from Voltage/Hourglass uses the same final mult, so additive + multiplicative sigils stack cleanly with procs.
 
-**Proc RNG determinism**: Each proc entry carries a unique `rngOffset` (Voltage = 300000, Fortune = 310000, Hourglass = 320000; Thief's lifecycle hook uses 400000). Server and client both use `createRoundRng(runSeed, rngOffset + round * 10 + castNumber)` so they agree byte-for-byte on which runes proc. Module-load validation throws if two procs share an offset.
+**Post-modifier per-rune base bonus** (Category 10): The base portion of `SIGIL_CRITICAL_RUNE_BONUS` is distinct from mult — it's a FLAT per-rune base added AFTER the resist/weak ×-modifier has been applied (so "+8 Base" reads as "+8 to the number that lands", not "+8 that then gets doubled by weakness"). `composeCastModifiers` returns this as `perRuneBaseBonus: number[]`, and `calculateSpellDamage` accepts it as an optional parameter that gets added directly to each rune's post-modifier contribution. Because the bonus lands inside `runeBaseContributions[i]`, the per-rune damage bubble, proc double-damage re-pops, and `baseTotal` automatically pick it up.
+
+**Proc RNG determinism**: Each proc entry carries a unique `rngOffset` derived from the slot helpers `procRngSlot(n)` / `lifecycleRngSlot(n)` (not raw magic numbers). Slots are append-only — Voltage = `procRngSlot(0)` = 300000, Fortune = `procRngSlot(1)` = 310000, Hourglass = `procRngSlot(2)` = 320000; Thief = `lifecycleRngSlot(0)` = 400000. Procs live in band `[300000, 400000)`, lifecycle hooks in band `[400000, 500000)`, spaced by `SIGIL_RNG_OFFSET_SPACING = 10000`. Server and client both use `createRoundRng(runSeed, rngOffset + round * 10 + castNumber)` so they agree byte-for-byte on which runes proc. Module-load validation throws on duplicate offsets, out-of-band offsets, or offsets that don't align to the spacing grid — don't hand-pick numbers; use the slot helpers.
+
+**⚠ Latent namespace collision**: `rollBagRunes` uses base `400000 + round + bagIndex * 7919`, which shares the lifecycle band. Today it doesn't interact because Thief is slot 0 and only fires one rng() call at `400000 + round` — the bag jitter steps clear. **Any new lifecycle sigil MUST use slot ≥ 1** (`lifecycleRngSlot(1)` = 410000) or the first bag of each round will correlate with its roll. The namespace map is documented at the top of `sigilEffects.ts`.
 
 **Where the registries plug in:**
-- `server/utils/initPlayerForRound.ts` applies `getPlayerStatDeltas(sigils)` and iterates `SIGIL_LIFECYCLE_HOOKS` for `onRoundStart` effects (e.g. Thief's consumable grant).
-- `server/utils/calculateDamage.ts` composes all damage-phase registries: `getHandMultBonus` + `getPlayedMultBonus` → `bonusMult`, `getSpellXMult` → `xMult`, `getIgnoredResistanceElements` → filters the resistances array, and loops `iterateProcs(...)` for proc damage/gold.
+- `server/utils/initPlayerForRound.ts` applies `getPlayerStatDeltas(sigils)` and iterates `SIGIL_LIFECYCLE_HOOKS`. Each hook returns `RoundStartEffect[]` — a discriminated union the caller dispatches over (`grantConsumable` / `grantGold` / `grantStat`). One hook can return multiple effects; new effect kinds add as switch arms without touching the hook definitions.
+- `server/utils/calculateDamage.ts` delegates all damage-phase modifier composition to `composeCastModifiers()` (shared helper — see Damage Model). The wrapper then loops `iterateProcs(...)` for proc damage/gold using the shared helper's computed `effectiveResistances`.
 - `server/systems/handleCast.ts` calls `getEndOfRoundSigilGold(sigils).total` on the killing blow and stages it into `player.lastRoundGoldSigilBonus`; `handleCollectRoundGold.ts` credits it alongside the base + hands bonuses.
 - `shared/resolveSpell.ts` calls `isSynergyPair` (gates Two Pair / Full House lookups) and `looseDuosEnabled` (gates `COMBO_TABLE` fallback).
-- `client/arkynAnimations.ts` (`castSpell`) mirrors every server registry so the cast animation's numbers match the server's authoritative damage exactly. Each event in `runeBreakdown[]` carries a `sigilId` field — the cast timeline dispatches `onSigilShake(item.sigilId)` generically (no `"voltage"` / `"synapse"` / `"arcana"` strings hardcoded in the timeline).
+- `client/arkynAnimations.ts` calls `composeCastModifiers()` — the same shared helper the server uses — so the cast animation's numbers match the server's authoritative damage exactly. Each event in `runeBreakdown[]` carries a `sigilId` field; the cast timeline dispatches `onSigilShake(item.sigilId)` generically (no `"voltage"` / `"synapse"` / `"arcana"` strings hardcoded in the timeline).
 - `client/ui/ShopPanel.tsx` reads `getPlayerStatDeltas(sigils)` for the Casts / Discards chips.
 - `client/ui/SpellPreview.tsx` shows tier mult in live preview; during cast, `castMultCounter` ticks up as each additive-mult bubble fires (Synapse per held Psy, Arcana per played Arcane Cluster rune), then multiplies on the xMult event (Supercell/Eruption).
 - `client/ui/EnemyHealthBar.tsx` reads `getIgnoredResistanceElements(sigils)` and overlays a red X on matching resistance chips with a dimmed icon + swapped "1x (ignored)" tooltip.
@@ -182,20 +189,22 @@ Sigils are shop-purchased items that modify a run. **12 sigils are implemented t
 1. Add metadata to `SIGIL_DEFINITIONS` in `sigils.ts` (id, name, rarity, cost, sellPrice, description with `{highlighted}` markers; optional `explainer` if the trigger scope isn't obvious from the description).
 2. Drop PNG assets in `assets/sigils/<id>-32x32.png`, `<id>-64x64.png`, `<id>-128x128.png` (auto-discovered by Vite glob).
 3. Add **one** entry to whichever category registry fits (1-9 above). If the mechanic is genuinely one-off, define a lifecycle hook in `SIGIL_LIFECYCLE_HOOKS` or propose a new category.
-4. For proc sigils: pick a new unique `rngOffset` (e.g. 330000, 340000) so deterministic RNG stays collision-free.
+4. For proc sigils: assign `rngOffset: procRngSlot(N)` where N is the next unused slot (append — don't reuse or reorder existing slots, or you break replay determinism). Module-load validation will throw on collision, out-of-band, or misaligned offsets.
+5. For lifecycle sigils: assign `rngOffset: lifecycleRngSlot(N)` where **N ≥ 1** (slot 0 is Thief and shares its numeric base with the Rune Bag jitter — see the latent collision warning above).
 
 No other code changes needed for the 12 currently-implemented sigils — each is a pure data entry. Grep audit: `grep -rn 'includes("voltage"\|"synapse"\|"arcana"\|"supercell"\|"plunder")' src/plugins/plugin-arkyn` returns zero results outside the registries.
 
 ### Spell Preview Panel (`client/ui/SpellPreview.tsx`)
 
-Left-side panel showing:
+Left-side panel showing the current cast state. Driven by a discriminated union `PanelMode` computed once at the top — `{ kind: "empty" } | { kind: "preview", spell, sourceRunes } | { kind: "casting", spell, sourceRunes }` — which replaces what used to be three chained ternaries. Every downstream conditional (display values, rune source, JSX branch) reads from this single discriminator.
+
+Layout:
 - **Round info** (orange inner-frame chip, top)
 - **Heading** ("Spell Preview" / "Casting" / "Last Cast")
 - **Spell info section** (rune recipe tiles via `RuneImage`, spell name with per-element color or per-char gradient for combos via `BouncyText.colorRange`, tier, description)
 - **Damage chips** (Base blue / Mult green / Total red, side-by-side row + total below):
-  - Live preview: Base = spell tier base only, Mult = tier mult (sigil bonuses — Synapse hand-mult, Arcana played-mult, Supercell/Eruption xMult — are NOT previewed; all revealed during cast), Total = "-"
-  - Casting: Base ticks from spellBase → baseTotal as each rune damage bubble pops, Mult ticks up as each `isMultTick` event fires (Synapse / Arcana) and then multiplies on the `isXMult` event (Supercell / Eruption), Total reveals via count-up after all rune + mult ticks
-  - Last Cast: Base = snapshot, Mult = tier mult, Total = snapshot × mult
+  - Live preview (`mode.kind === "preview"`): Base = spell tier base only, Mult = tier mult (sigil bonuses — Synapse hand-mult, Arcana played-mult, Supercell/Eruption xMult — are NOT previewed; all revealed during cast), Total = "-"
+  - Casting (`mode.kind === "casting"`): Base ticks from spellBase → baseTotal as each rune damage bubble pops, Mult ticks up as each `isMultTick` event fires (Synapse / Arcana) and then multiplies on the `isXMult` event (Supercell / Eruption), Total reveals via count-up after all rune + mult ticks
 - **Gold counter** (inner-frame chip, pinned to bottom via `margin-top: auto`)
 
 ### Spellbook System (`shared/spellbooks.ts`)
@@ -206,8 +215,9 @@ Future spellbooks will add match-wide modifiers (e.g., +1 hand size, -1 discard,
 
 ### UI Chrome
 
-- All panels use 9-slice `border-image` from `assets/ui/` PNG frames (`frame.png`, `inner-frame.png`, color variants `inner-frame-blue/red/green/orange.png`).
-- `createPanelStyleVars()` in `styles.ts` wires `--panel-bg` (frame.png) and `--section-bg` (inner-frame.png) as CSS variables; components pass custom variables for colored chips (e.g., `--base-bg`, `--mult-bg`, `--total-bg`, `--round-info-bg`).
+- All panels use 9-slice `border-image` from `assets/ui/` PNG frames (`frame.png`, `inner-frame.png`, color variants `inner-frame-blue/red/green/orange/gold.png`).
+- **All colored inner-frame URLs are centralized** in `styles.ts` as the `INNER_FRAME_BGS` map — keys `default | blue | green | red | orange | gold`, values are pre-wrapped `url(...)` strings. Components import `INNER_FRAME_BGS` instead of the individual PNG files, so art changes only touch `styles.ts`.
+- `createPanelStyleVars(heading?)` wires `--panel-bg` (frame.png) and `--section-bg` (inner-frame.png) as CSS variables; the optional `heading` argument accepts a color name (`"blue"`, `"red"`, etc., keyed into `INNER_FRAME_BGS`) or a raw URL for the `--heading-bg` variable. Components pass custom variables for colored chips using the map (e.g., `["--base-bg"]: INNER_FRAME_BGS.blue`, `["--mult-bg"]: INNER_FRAME_BGS.green`).
 - `BouncyText` component (`client/ui/BouncyText.tsx`) splits text into per-char inline-block spans with CSS keyframe bob animation (1px amplitude, 1.6s cycle, per-char phase offset). Supports `colorRange` prop for per-char color interpolation (used for combo spell name gradients).
 - `OverlayShader` (`client/ui/OverlayShader.tsx`) renders a static WebGL grain + Bayer dither pattern as a translucent fixed-position canvas above all UI (z-index 9999, `mix-blend-mode: soft-light`, opacity 0.18). Rendered once on mount + on resize — no animation loop.
 
@@ -253,6 +263,29 @@ Browsers limit concurrent WebGL contexts (Chrome: ~16, practical ceiling ~8–12
 
 **If you're adding another WebGL surface**: check the context budget table above. Prefer routing through an existing shared renderer if possible. If the new surface is fully static (no animation, no per-frame uniform updates), prefer Canvas2D + `putImageData` like OverlayShader — no context at all. If you must add a new WebGL context, ensure it has a CSS fallback (like BackgroundShader) so context eviction degrades gracefully.
 
+### Shop Item System (`server/systems/handleBuyItem.ts`, `shopItemHandlers.ts`)
+
+Shop purchases dispatch through a data-driven handler registry parallel to the sigil effect registries — `handleBuyItem` validates the request (gold, shop index, item not-already-purchased) then looks up the item's handler in `SHOP_ITEM_HANDLERS`. Each handler runs its own type-specific preconditions and state mutations; the dispatcher charges gold and flips `item.purchased = true` **only after** the handler returns `{ ok: true }`. There is no refund path — gold is never deducted on failure.
+
+**Registry** (`server/systems/shopItemHandlers.ts`):
+```ts
+type ShopItemHandler = (ctx: ShopPurchaseCtx) =>
+    | { ok: true; logMessage: string }
+    | { ok: false; reason: string };
+
+const SHOP_ITEM_HANDLERS: Record<string, ShopItemHandler> = {
+    scroll:  handleScrollPurchase,
+    sigil:   handleSigilPurchase,
+    runeBag: handleRuneBagPurchase,
+};
+```
+
+**Adding a new shop item type** (checklist):
+1. Add the item type string to the generator that populates `player.shopItems` (`shared/shopGeneration.ts` or new site).
+2. Add a handler function in `shopItemHandlers.ts` that validates preconditions (slot limits, duplicates, etc.) and applies the state mutation. Return `{ ok: true, logMessage }` on success or `{ ok: false, reason }` on precondition fail.
+3. Register in `SHOP_ITEM_HANDLERS` keyed by the item type string.
+4. No changes to `handleBuyItem.ts` — the dispatcher is generic.
+
 ### Rune Bag System (`server/systems/handleBuyItem.ts`, `handleBagChoice.ts`, `client/ui/RuneBagPicker.tsx`)
 
 Shop item that rolls a picker of 4 random runes; player picks one (or skips) and the chosen rune is added permanently to their pouch.
@@ -281,7 +314,37 @@ Runes have four rarities: `common`, `uncommon`, `rare`, `legendary` (see `RARITY
 - Rarity is visually stacked in `RuneImage.tsx`: a base frame PNG (`/assets/runes/128x128/base/<rarity>-128x128.png`) is rendered underneath the element glyph PNG (`/assets/runes/128x128/<element>-128x128.png`). Both are CSS-sized identically so rarity reads as the card's frame treatment.
 - The Rune Bag picker (`RuneBagPicker.tsx`) shows the full composed art so players can see the rarity frame before choosing.
 
+**Rune construction — single factory**: Every `RuneInstance` is built through `createRuneInstance(data)` in `server/utils/drawRunes.ts`. The factory validates `data.rarity` via `isRarity()` (exported from `arkynConstants.ts`) and throws on an invalid value, so the `as RarityType` casts elsewhere in the damage pipeline are safe-by-construction. Three call sites (draw, rune bag purchase, bag pick commit) all route through this one factory — adding a new field to `RuneInstance` is a single-file change.
+
 **Future expansion**: `RUNE_BASE_DAMAGE` is a simple dict so per-rarity tuning is a one-line change. Other rarity-gated mechanics (unique rune art, rare-only scroll interactions, etc.) can key off the same `rarity` field on `RuneInstance`.
+
+### Consumable System (`shared/consumables.ts`, `server/systems/handleUseConsumable.ts`, `client/ui/ConsumableBar.tsx`)
+
+Consumables are one-shot items the player carries in the Consumable Bar (up to `MAX_CONSUMABLES = 2`). Today every consumable is a per-element scroll consumable (one per element) that grants +1 scroll level when used; the system is data-driven so future kinds (potions, run-wide buffs) slot in as new effect arms with zero dispatcher changes.
+
+**Registry** (`shared/consumables.ts`):
+```ts
+type ConsumableEffect =
+    | { type: "upgradeScroll"; element: string };
+
+interface ConsumableDefinition {
+    id: string;        // registry key; equals the value stored in `player.consumables`
+    name: string;      // display name for the tooltip
+    effect: ConsumableEffect;
+}
+
+const CONSUMABLE_DEFINITIONS: Record<string, ConsumableDefinition>;  // auto-populated per ELEMENT_TYPES
+```
+
+`player.consumables` is an `ArraySchema<string>` of consumable IDs. For scroll consumables the ID equals the element name (fire, water, …), so the persisted shape is unchanged from the pre-refactor code. New consumable kinds should pick IDs that won't collide with element names (e.g. `"potion_haste"`).
+
+**Dispatch** (`server/systems/handleUseConsumable.ts`): looks up the consumable's `ConsumableEffect`, switches over `effect.type`, applies the mutation, removes from the array. New effect types add as new switch arms.
+
+**Adding a new consumable** (checklist):
+1. Add metadata to `CONSUMABLE_DEFINITIONS` in `shared/consumables.ts` (id, name, effect). If the effect shape doesn't fit the existing union, add a new arm to `ConsumableEffect`.
+2. Add the matching case to the switch in `handleUseConsumable.ts`.
+3. If granted by a sigil lifecycle hook, return `{ type: "grantConsumable", consumableId: "<id>" }` from the hook.
+4. For non-scroll consumables, add icon asset handling — `ConsumableBar.tsx` currently falls back to the element-as-icon for `upgradeScroll` effects; new effect kinds need their own icon resolution path.
 
 ### Enemy System
 
@@ -321,11 +384,13 @@ Each element has a display color used for spell names, rune recipe borders, dama
 
 ## Future Gameplay — Notes for Implementation
 
-### Shop (implemented; `client/ui/ShopScreen.tsx`, `server/systems/handleBuyItem.ts`)
+### Shop Content Ideas (`client/ui/ShopScreen.tsx`, `server/systems/handleBuyItem.ts`)
 
-Between rounds the player enters the shop and can buy scrolls (per-element flat base damage) and sigils (run-wide modifiers). Both are persisted in the player state for the rest of the run. See the **Sigil System** subsection above for how sigil effects dispatch through the registries; scrolls live in `player.scrollLevels` and are applied per-rune inside `calculateSpellDamage`.
+Between rounds the player enters the shop and can buy scrolls (per-element flat base damage), sigils (run-wide modifiers), and Rune Bags. Scrolls live in `player.scrollLevels` and are applied per-rune inside `calculateSpellDamage`; sigils dispatch through the registries (see **Sigil System**); rune bags roll deterministic picker choices (see **Rune Bag System**). All item types dispatch through the `SHOP_ITEM_HANDLERS` registry (see **Shop Item System**), so adding a new item type doesn't require touching `handleBuyItem.ts`.
 
 **Future sigil ideas** would typically slot into one of the 9 existing category registries (stat-mod / proc / hand-mult / lifecycle / synergy-unlock / spell-xMult / resist-ignore / end-of-round-gold / played-mult) as a single data entry. Only genuinely novel mechanics need a new category.
+
+**Future consumable ideas** (potions, one-shot buffs) slot into `CONSUMABLE_DEFINITIONS` as new entries, with new arms added to the `ConsumableEffect` union as needed. See **Consumable System**.
 
 ### All-Runes-Score Item
 

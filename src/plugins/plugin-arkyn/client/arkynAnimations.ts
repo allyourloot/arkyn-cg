@@ -361,52 +361,58 @@ export function triggerDrawAnimation(newRunes: { rune: RuneClientData; handIndex
     });
 }
 
-export function castSpell() {
-    const selectedRuneIds = arkynStoreInternal.getSelectedRuneIds();
-    const selectedIndices = arkynStoreInternal.getSelectedIndices();
-    if (selectedRuneIds.length === 0 || isAnimating()) return;
+/**
+ * Runtime timeline event — the union the cast timeline consumes. Each entry
+ * fires one bubble/counter-tick/reveal step. Interleaved in this order so
+ * the animation reads left-to-right: damage → damage-procs → played-mult
+ * ticks → hand-mult ticks → xMult reveal.
+ */
+interface CastBreakdownEvent {
+    base: number;
+    final: number;
+    isResisted: boolean;
+    isCritical: boolean;
+    isProc: boolean;
+    isMultTick?: boolean;
+    isGold?: boolean;
+    isXMult?: boolean;
+    goldDelta?: number;
+    multDelta?: number;
+    xMultFactor?: number;
+    sigilId?: string;
+}
 
-    const hand = arkynStoreInternal.getHand();
+interface CastBreakdownAssembly {
+    runeBreakdown: CastBreakdownEvent[];
+    bubbles: (RuneDamageBubble | null)[];
+    procBubblesForCast: (RuneDamageBubble | null)[];
+    handMultBubblesForCast: (HandMultBubble | null)[];
+    resolvedSpell: ReturnType<typeof resolveSpell>;
+    contributingIndices: number[];
+    totalDamage: number;
+    spellBaseDamage: number;
+    baseTotal: number;
+    hasCritical: boolean;
+    hasAnyProc: boolean;
+    hasAnyMultEvent: boolean;
+    spellElement: string;
+}
 
-    // Capture DOM positions of selected runes and target slots (display order)
-    const flying: FlyingRune[] = [];
-    const sortedSelected = [...selectedIndices].sort((a, b) => a - b);
-
-    for (let slotIdx = 0; slotIdx < sortedSelected.length; slotIdx++) {
-        const handIdx = sortedSelected[slotIdx];
-        const runeEl = document.querySelector(`[data-rune-index="${handIdx}"]`);
-        const slotEl = document.querySelector(`[data-slot-index="${slotIdx}"]`);
-
-        if (runeEl && slotEl) {
-            const runeRect = runeEl.getBoundingClientRect();
-            const slotRect = slotEl.getBoundingClientRect();
-
-            flying.push({
-                rune: hand[handIdx],
-                fromX: runeRect.left + runeRect.width / 2,
-                fromY: runeRect.top + runeRect.height / 2,
-                toX: slotRect.left + slotRect.width / 2,
-                toY: slotRect.top + slotRect.height / 2,
-                size: runeRect.width,
-                slotIndex: slotIdx,
-            });
-        }
-    }
-
-    const serverIndices = arkynStoreInternal.selectedIdsToServerIndices();
-
-    // Captured ordered list of cast runes for the dissolve animation.
-    const castRunes = sortedSelected
-        .map(idx => hand[idx])
-        .filter((r): r is RuneClientData => r !== undefined);
-
-    if (flying.length === 0) {
-        // Fallback: no DOM elements found, just send immediately
-        sendArkynMessage(ARKYN_CAST, { selectedIndices: serverIndices });
-        arkynStoreInternal.clearSelection();
-        notify();
-        return;
-    }
+/**
+ * Pure-ish computation: resolve the spell, compose sigil modifiers, run the
+ * damage formula, iterate procs, and assemble the per-slot bubble arrays +
+ * the flat `runeBreakdown` event list the cast timeline consumes. Reads
+ * from `arkynStoreInternal` for scroll levels / resistances / RNG seeds
+ * (same store the server mirrors); only mutates `bubbleSeqCounter` for
+ * monotonic bubble keys. No animation side effects — the caller wires the
+ * result into `buildCastTimeline`.
+ */
+function assembleCastBreakdown(args: {
+    castRunes: RuneClientData[];
+    hand: RuneClientData[];
+    sortedSelected: number[];
+}): CastBreakdownAssembly {
+    const { castRunes, hand, sortedSelected } = args;
 
     // Resolve the spell on the client so we can compute the same Base + Mult
     // breakdown the server uses. Each contributing rune is evaluated against
@@ -416,7 +422,6 @@ export function castSpell() {
     const ownedSigils = arkynStoreInternal.getSigils();
     const resolvedSpell = resolveSpell(castRunes.map(r => ({ element: r.element })), ownedSigils);
     const contributingIndices = getContributingRuneIndices(castRunes, ownedSigils);
-    const contributing = contributingIndices.length;
     const contributingRuneData = contributingIndices.map(i => ({ element: castRunes[i].element }));
     // Parallel rarity array — runs alongside contributingRuneData so
     // calculateSpellDamage can look up each rune's RUNE_BASE_DAMAGE.
@@ -438,10 +443,12 @@ export function castSpell() {
         selectedIndices: sortedSelected,
         contributingRunes: contributingRuneData,
         rawResistances: arkynStoreInternal.getEnemyResistances(),
+        weaknesses: arkynStoreInternal.getEnemyWeaknesses(),
     });
     const handMultEntries = modifiers.breakdowns.handMult;
     const playedMultEntries = modifiers.breakdowns.playedMult;
     const xMultEntries = modifiers.breakdowns.xMult;
+    const critRuneBonusEntries = modifiers.breakdowns.critRuneBonus;
 
     const breakdown = resolvedSpell
         ? calculateSpellDamage(
@@ -453,6 +460,7 @@ export function castSpell() {
             arkynStoreInternal.getScrollLevels(),
             modifiers.bonusMult,
             modifiers.xMult,
+            modifiers.perRuneBaseBonus,
         )
         : null;
     // Final post-mult damage applied to the enemy on the impact frame.
@@ -519,7 +527,7 @@ export function castSpell() {
     // one BUBBLE_STAGGER_MS slot. `isGold` distinguishes Fortune-style
     // grant_gold procs from damage procs so the timeline skips the Base
     // counter tick for them (gold isn't damage).
-    const runeBreakdown: { base: number; final: number; isResisted: boolean; isCritical: boolean; isProc: boolean; isMultTick?: boolean; isGold?: boolean; isXMult?: boolean; goldDelta?: number; multDelta?: number; xMultFactor?: number; sigilId?: string }[] = [];
+    const runeBreakdown: CastBreakdownEvent[] = [];
     let eventIdx = 0;
     if (breakdown) {
         for (let i = 0; i < contributingIndices.length; i++) {
@@ -600,6 +608,25 @@ export function castSpell() {
                 });
                 eventIdx++;
             }
+
+            // Crit-rune-bonus mult events (Lex Divina-style) — one per
+            // matching sigil × critical rune. Same event shape as Arcana;
+            // the base portion is already baked into this rune's bubble
+            // via `perRuneBaseBonus`, so only the mult part needs a tick.
+            for (const crb of critRuneBonusEntries) {
+                if (crb.contributingRuneIdx !== i) continue;
+                runeBreakdown.push({
+                    base: 0,
+                    final: 0,
+                    isResisted: false,
+                    isCritical: false,
+                    isProc: false,
+                    isMultTick: true,
+                    multDelta: crb.multDelta,
+                    sigilId: crb.sigilId,
+                });
+                eventIdx++;
+            }
         }
     }
 
@@ -649,7 +676,92 @@ export function castSpell() {
         eventIdx++;
     }
     const hasAnyXMult = xMultEntries.length > 0;
-    const hasAnyMultEvent = hasAnyHandMultProc || hasAnyPlayedMult || hasAnyXMult;
+    const hasAnyCritRuneBonus = critRuneBonusEntries.length > 0;
+    const hasAnyMultEvent = hasAnyHandMultProc || hasAnyPlayedMult || hasAnyXMult || hasAnyCritRuneBonus;
+
+    return {
+        runeBreakdown,
+        bubbles,
+        procBubblesForCast,
+        handMultBubblesForCast,
+        resolvedSpell,
+        contributingIndices,
+        totalDamage,
+        spellBaseDamage,
+        baseTotal,
+        hasCritical,
+        hasAnyProc,
+        hasAnyMultEvent,
+        spellElement,
+    };
+}
+
+export function castSpell() {
+    const selectedRuneIds = arkynStoreInternal.getSelectedRuneIds();
+    const selectedIndices = arkynStoreInternal.getSelectedIndices();
+    if (selectedRuneIds.length === 0 || isAnimating()) return;
+
+    const hand = arkynStoreInternal.getHand();
+
+    // Capture DOM positions of selected runes and target slots (display order)
+    const flying: FlyingRune[] = [];
+    const sortedSelected = [...selectedIndices].sort((a, b) => a - b);
+
+    for (let slotIdx = 0; slotIdx < sortedSelected.length; slotIdx++) {
+        const handIdx = sortedSelected[slotIdx];
+        const runeEl = document.querySelector(`[data-rune-index="${handIdx}"]`);
+        const slotEl = document.querySelector(`[data-slot-index="${slotIdx}"]`);
+
+        if (runeEl && slotEl) {
+            const runeRect = runeEl.getBoundingClientRect();
+            const slotRect = slotEl.getBoundingClientRect();
+
+            flying.push({
+                rune: hand[handIdx],
+                fromX: runeRect.left + runeRect.width / 2,
+                fromY: runeRect.top + runeRect.height / 2,
+                toX: slotRect.left + slotRect.width / 2,
+                toY: slotRect.top + slotRect.height / 2,
+                size: runeRect.width,
+                slotIndex: slotIdx,
+            });
+        }
+    }
+
+    const serverIndices = arkynStoreInternal.selectedIdsToServerIndices();
+
+    // Captured ordered list of cast runes for the dissolve animation.
+    const castRunes = sortedSelected
+        .map(idx => hand[idx])
+        .filter((r): r is RuneClientData => r !== undefined);
+
+    if (flying.length === 0) {
+        // Fallback: no DOM elements found, just send immediately
+        sendArkynMessage(ARKYN_CAST, { selectedIndices: serverIndices });
+        arkynStoreInternal.clearSelection();
+        notify();
+        return;
+    }
+
+    // Assemble the full cast breakdown (resolver, composed modifiers, damage
+    // formula, proc iteration, per-slot bubble arrays, and the flat
+    // `runeBreakdown[]` event list the timeline consumes). See the helper's
+    // docstring for what it reads / mutates.
+    const {
+        runeBreakdown,
+        bubbles,
+        procBubblesForCast,
+        handMultBubblesForCast,
+        resolvedSpell,
+        contributingIndices,
+        totalDamage,
+        spellBaseDamage,
+        baseTotal,
+        hasCritical,
+        hasAnyProc,
+        hasAnyMultEvent,
+        spellElement,
+    } = assembleCastBreakdown({ castRunes, hand, sortedSelected });
 
     // Snapshot the round accumulator BEFORE this cast so the total reveal
     // tween can offset its values. This avoids the double-counting window

@@ -13,9 +13,57 @@ import { createRoundRng } from "./seededRandom";
  * powers Burnrite. This file extends the same approach to the other three
  * common categories (stat mods, procs, hand-mult) plus an escape hatch
  * for one-offs.
- *
- * See plan: C:\Users\17326\.claude\plans\concurrent-dreaming-melody.md
  */
+
+// ============================================================================
+// RNG Namespace Layout
+// ============================================================================
+//
+// Deterministic RNG across server + client requires each sigil-driven roll to
+// live in its OWN namespace so rolls don't correlate. Offsets are picked in
+// 10k-wide bands per category; sigils inside a category reserve a "slot"
+// (0, 1, 2, …) and the actual offset is `base + slot * spacing`.
+//
+// Namespace map (global — flagged to avoid cross-file collisions):
+//   [      0] Enemy selection                   (enemyDefinitions)
+//   [  50000] Boss debuff roll                  (bossDebuffs)
+//   [ 100000] Shop scroll generation            (shopGeneration)
+//   [ 200000] Shop sigil generation             (shopGeneration)
+//   [ 300000–399999] SIGIL_PROCS                 (this file)
+//   [ 400000–499999] SIGIL_LIFECYCLE_HOOKS       (this file)
+//   [ 400000 + round + bagIndex*7919] Rune Bag  (rollBagRunes)  ⚠ shares the
+//       lifecycle base; the two streams don't interact today because Thief's
+//       read is  `400000 + round`  (slot 0 only) while RuneBag's read is
+//       `400000 + round + bagIndex*7919`  — the bagIndex jitter steps clear
+//       of the lifecycle band as long as bagIndex >= 1 for any OTHER
+//       lifecycle sigil in slot 1+. Adding a new lifecycle sigil here MUST
+//       pick a slot > 0 (so its stream is 410000+round, 420000+round, …)
+//       or the first bag of a given round will correlate with its roll.
+//
+// New proc sigils: pick the next unused slot (append-only to preserve replay
+// determinism for saved runs). Validated at module load — any duplicate or
+// out-of-band offset throws.
+
+export const PROC_RNG_OFFSET_BASE = 300000;
+export const LIFECYCLE_RNG_OFFSET_BASE = 400000;
+export const SIGIL_RNG_OFFSET_SPACING = 10000;
+/** Width of a category's band — procs live in [300000, 400000). */
+const SIGIL_RNG_BAND_WIDTH = 100000;
+
+/**
+ * Compute the RNG offset for a proc sigil's slot. Slot is append-only —
+ * reusing slot 0 (Voltage), 1 (Fortune), 2 (Hourglass) preserves replay
+ * determinism. Use `procRngSlot(n)` in a proc definition's `rngOffset` field
+ * instead of writing the raw number.
+ */
+export function procRngSlot(slot: number): number {
+    return PROC_RNG_OFFSET_BASE + slot * SIGIL_RNG_OFFSET_SPACING;
+}
+
+/** Same as `procRngSlot` but for lifecycle hooks. Slot 0 = Thief. */
+export function lifecycleRngSlot(slot: number): number {
+    return LIFECYCLE_RNG_OFFSET_BASE + slot * SIGIL_RNG_OFFSET_SPACING;
+}
 
 // ============================================================================
 // Category 1 — Stat Modifiers (Caster pattern)
@@ -94,19 +142,19 @@ export const SIGIL_PROCS: Record<string, ProcDefinition> = {
     voltage: {
         element: "lightning",
         chance: 0.25,
-        rngOffset: 300000,
+        rngOffset: procRngSlot(0),
         effect: { type: "double_damage" },
     },
     fortune: {
         requireCritical: true,
         chance: 1 / 3,
-        rngOffset: 310000,
+        rngOffset: procRngSlot(1),
         effect: { type: "grant_gold", amount: 2 },
     },
     hourglass: {
         // element omitted → any element triggers the roll
         chance: 0.25,
-        rngOffset: 320000,
+        rngOffset: procRngSlot(2),
         effect: { type: "double_damage" },
     },
 };
@@ -233,22 +281,35 @@ export function getHandMultBonus(
  * it to a proper category registry above.
  */
 
-export interface RoundStartResult {
-    grantConsumable?: string;
-}
+/**
+ * Discriminated effects a lifecycle hook can request. The caller dispatches
+ * over `type` — new effect kinds can be added without changing existing
+ * hook contracts, and a single hook may return multiple effects in one
+ * invocation (e.g. grant a consumable AND +1 gold in the same round-start).
+ */
+export type RoundStartEffect =
+    | { type: "grantConsumable"; consumableId: string }
+    | { type: "grantGold"; amount: number }
+    | { type: "grantStat"; stat: "castsRemaining" | "discardsRemaining" | "handSize"; amount: number };
 
 export interface SigilLifecycleHooks {
-    onRoundStart?(round: number, runSeed: number): RoundStartResult | void;
+    /**
+     * Fired once per player at the start of each round (after stat deltas
+     * are applied, before the pouch is built). Return an array of effects
+     * the caller will dispatch — or `void` / `[]` for no-op. Array form is
+     * preferred: it keeps the contract uniform as new effect kinds land.
+     */
+    onRoundStart?(round: number, runSeed: number): readonly RoundStartEffect[] | void;
 }
 
-const THIEF_RNG_OFFSET = 400000;
+const THIEF_RNG_OFFSET = lifecycleRngSlot(0);
 
 export const SIGIL_LIFECYCLE_HOOKS: Record<string, SigilLifecycleHooks> = {
     thief: {
         onRoundStart(round, runSeed) {
             const rng = createRoundRng(runSeed, THIEF_RNG_OFFSET + round);
             const element = ELEMENT_TYPES[Math.floor(rng() * ELEMENT_TYPES.length)];
-            return { grantConsumable: element };
+            return [{ type: "grantConsumable", consumableId: element }];
         },
     },
 };
@@ -474,22 +535,120 @@ export function getPlayedMultBonus(
 }
 
 // ============================================================================
+// Category 10 — Critical-Rune Bonus (Lex Divina pattern)
+// ============================================================================
+
+/**
+ * Per-rune base + mult bonus applied only to runes that score a CRITICAL
+ * hit (rune element is in the enemy's weaknesses). Optionally gated by a
+ * specific element so a sigil can target one rune type (Lex Divina only
+ * fires on Holy crits). Both base and mult stack per matching rune — 3
+ * holy crits with Lex Divina = +24 Base, +6 Mult.
+ *
+ * The base bonus is added POST-modifier: it's a flat +N on the rune's
+ * final post-weakness/resist contribution, not pre-weakness. A "+8" in
+ * the description reads as "+8 to the number that lands" rather than
+ * compounding with ×2 weakness.
+ */
+export interface CriticalRuneBonusEffect {
+    /** Optional element filter. Omit to trigger on any critical rune. */
+    element?: ElementType;
+    /** Flat base damage added per matching crit rune (post resist/weak mod). */
+    baseBonus: number;
+    /** Additive mult added per matching crit rune. Same channel as Arcana. */
+    multBonus: number;
+}
+
+export const SIGIL_CRITICAL_RUNE_BONUS: Record<string, CriticalRuneBonusEffect> = {
+    lex_divina: { element: "holy", baseBonus: 8, multBonus: 2 },
+};
+
+/**
+ * Per-sigil per-rune trigger entry. Animation layer uses these to emit
+ * `isMultTick` events interleaved after the parent rune's damage bubble,
+ * so the Mult counter ticks + the triggering sigil shakes generically.
+ */
+export interface CriticalRuneBonusEntry {
+    sigilId: string;
+    /** Index into the CONTRIBUTING-runes array. */
+    contributingRuneIdx: number;
+    baseDelta: number;
+    multDelta: number;
+}
+
+/**
+ * Walk owned crit-rune-bonus sigils, check each contributing rune against
+ * both the element filter and the crit flag, and emit per-rune base deltas
+ * + a running mult total.
+ *
+ * @param isCritical - parallel to `contributingRuneElements`. `true` = rune's
+ *   element is in the enemy's weaknesses (same definition as the damage
+ *   formula's `breakdown.isCritical`).
+ * @returns `perRuneBase[i]` is the total base bonus across all owned sigils
+ *   for the i-th contributing rune; `totalMult` is the sum of per-rune mult
+ *   deltas across all triggers; `entries` lists each (sigil × rune) trigger
+ *   for the animation layer.
+ */
+export function getCriticalRuneBonus(
+    sigils: readonly string[],
+    contributingRuneElements: readonly string[],
+    isCritical: readonly boolean[],
+): { totalMult: number; perRuneBase: number[]; entries: CriticalRuneBonusEntry[] } {
+    const perRuneBase = new Array(contributingRuneElements.length).fill(0);
+    let totalMult = 0;
+    const entries: CriticalRuneBonusEntry[] = [];
+    for (const sigilId of sigils) {
+        const effect = SIGIL_CRITICAL_RUNE_BONUS[sigilId];
+        if (!effect) continue;
+        for (let i = 0; i < contributingRuneElements.length; i++) {
+            if (!isCritical[i]) continue;
+            if (effect.element !== undefined && contributingRuneElements[i] !== effect.element) continue;
+            perRuneBase[i] += effect.baseBonus;
+            totalMult += effect.multBonus;
+            entries.push({
+                sigilId,
+                contributingRuneIdx: i,
+                baseDelta: effect.baseBonus,
+                multDelta: effect.multBonus,
+            });
+        }
+    }
+    return { totalMult, perRuneBase, entries };
+}
+
+// ============================================================================
 // Module-Load Validation
 // ============================================================================
 
-// Each proc sigil must have a unique `rngOffset` so server and client
-// stay deterministic. Catch accidental duplicates at startup, not at
-// runtime desync.
+// Each proc sigil must have a unique `rngOffset` within the proc band so
+// server and client stay deterministic. Catch duplicates, out-of-band
+// offsets, and slots that don't line up with SIGIL_RNG_OFFSET_SPACING at
+// startup — never as a silent runtime desync.
 (() => {
     const seen = new Map<number, string>();
     for (const [sigilId, proc] of Object.entries(SIGIL_PROCS)) {
-        const existing = seen.get(proc.rngOffset);
-        if (existing !== undefined) {
+        const offset = proc.rngOffset;
+        if (offset < PROC_RNG_OFFSET_BASE || offset >= PROC_RNG_OFFSET_BASE + SIGIL_RNG_BAND_WIDTH) {
             throw new Error(
-                `SIGIL_PROCS: rngOffset ${proc.rngOffset} is used by both "${existing}" and "${sigilId}". ` +
-                `Each proc sigil must have a unique offset.`,
+                `SIGIL_PROCS: "${sigilId}" rngOffset ${offset} is outside the proc band ` +
+                `[${PROC_RNG_OFFSET_BASE}, ${PROC_RNG_OFFSET_BASE + SIGIL_RNG_BAND_WIDTH}). ` +
+                `Use procRngSlot(n) to derive the offset.`,
             );
         }
-        seen.set(proc.rngOffset, sigilId);
+        if ((offset - PROC_RNG_OFFSET_BASE) % SIGIL_RNG_OFFSET_SPACING !== 0) {
+            throw new Error(
+                `SIGIL_PROCS: "${sigilId}" rngOffset ${offset} is not a multiple of ` +
+                `SIGIL_RNG_OFFSET_SPACING (${SIGIL_RNG_OFFSET_SPACING}) above base. ` +
+                `Use procRngSlot(n).`,
+            );
+        }
+        const existing = seen.get(offset);
+        if (existing !== undefined) {
+            throw new Error(
+                `SIGIL_PROCS: rngOffset ${offset} is used by both "${existing}" and "${sigilId}". ` +
+                `Each proc sigil must use a unique procRngSlot(n).`,
+            );
+        }
+        seen.set(offset, sigilId);
     }
 })();

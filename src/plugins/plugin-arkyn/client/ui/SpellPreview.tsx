@@ -17,7 +17,7 @@ import { useCastMultCounter } from "../arkynAnimations";
 import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
 import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT, SCROLL_RUNE_BONUS, calculateSpellDamage } from "../../shared";
 import type { RarityType } from "../../shared/arkynConstants";
-import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars } from "./styles";
+import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
 import { useEnemyIsBoss } from "../arkynStore";
 import RuneImage from "./RuneImage";
 import BouncyText from "./BouncyText";
@@ -40,9 +40,6 @@ function useCounterPop(
     }, { dependencies: [value, isCastAnimating], scope: ref });
 }
 
-import innerFrameBlueUrl from "/assets/ui/inner-frame-blue.png?url";
-import innerFrameRedUrl from "/assets/ui/inner-frame-red.png?url";
-import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
 import bossFrameUrl from "/assets/ui/boss-frame.png?url";
 import styles from "./SpellPreview.module.css";
 
@@ -51,10 +48,10 @@ import styles from "./SpellPreview.module.css";
 // blue for Base, green for Mult, red for the post-mult Total. Each chip
 // reads as a distinct track at a glance.
 const basePanelStyleVars = {
-    ...createPanelStyleVars(innerFrameBlueUrl),
-    ["--base-bg" as string]: `url(${innerFrameBlueUrl})`,
-    ["--mult-bg" as string]: `url(${innerFrameGreenUrl})`,
-    ["--total-bg" as string]: `url(${innerFrameRedUrl})`,
+    ...createPanelStyleVars("blue"),
+    ["--base-bg" as string]: INNER_FRAME_BGS.blue,
+    ["--mult-bg" as string]: INNER_FRAME_BGS.green,
+    ["--total-bg" as string]: INNER_FRAME_BGS.red,
 } as CSSProperties;
 
 const bossPanelStyleVars = {
@@ -84,22 +81,30 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     const totalRef = useRef<HTMLSpanElement>(null);
     const multRef = useRef<HTMLSpanElement>(null);
 
-    // Live preview from currently selected runes.
+    // Panel state machine. The panel has three possible modes:
+    //   - "preview" — player has runes selected in-hand (live spell preview)
+    //   - "casting" — selection was cleared by the cast start, but we keep
+    //     the spell info visible using lastCastRunes while Base/Mult tick
+    //   - "empty"   — no runes to describe; shows the prompt + Total chip only
+    // Computing one discriminator up top keeps the display logic + JSX
+    // branches readable (no nested `previewSpell ?? castingSpell` chains).
     const selectedRunes = selectedIndices.map(i => hand[i]).filter(Boolean);
-    const previewSpell = selectedRunes.length > 0
-        ? resolveSpell(selectedRunes.map(r => ({ element: r.element })), activeSigils)
-        : null;
-
-    // During a cast animation the selection is cleared, so fall back to
-    // lastCastRunes to keep the spell info visible while Base/Mult tick.
-    // Once the animation ends, the panel returns to the empty state
-    // instead of lingering on "Last Cast".
-    const castingSpell = !previewSpell && isCastAnimating && lastCastRunes.length > 0
-        ? resolveSpell(lastCastRunes.map(r => ({ element: r.element })), activeSigils)
-        : null;
-
-    const isLive = previewSpell !== null;
-    const spell = previewSpell ?? castingSpell;
+    type PanelMode =
+        | { kind: "preview"; spell: NonNullable<ReturnType<typeof resolveSpell>>; sourceRunes: typeof selectedRunes }
+        | { kind: "casting"; spell: NonNullable<ReturnType<typeof resolveSpell>>; sourceRunes: typeof lastCastRunes }
+        | { kind: "empty" };
+    const mode: PanelMode = (() => {
+        if (selectedRunes.length > 0) {
+            const s = resolveSpell(selectedRunes.map(r => ({ element: r.element })), activeSigils);
+            if (s) return { kind: "preview", spell: s, sourceRunes: selectedRunes };
+        }
+        if (isCastAnimating && lastCastRunes.length > 0) {
+            const s = resolveSpell(lastCastRunes.map(r => ({ element: r.element })), activeSigils);
+            if (s) return { kind: "casting", spell: s, sourceRunes: lastCastRunes };
+        }
+        return { kind: "empty" };
+    })();
+    const spell = mode.kind === "empty" ? null : mode.spell;
 
     // Partial-rune indicator: how many of the rune cards backing this
     // spell will actually contribute. For non-synergistic mismatches
@@ -111,7 +116,7 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     // We also keep the actual contributing runes around so the preview
     // can render them as the spell's recipe (e.g. show 2 Ice + 1 Air
     // tiles for Hailstorm) instead of a single primary-element icon.
-    const sourceRunes = isLive ? selectedRunes : lastCastRunes;
+    const sourceRunes = mode.kind === "empty" ? [] : mode.sourceRunes;
     const totalSourceRunes = sourceRunes.length;
     const contributingIndices = spell && totalSourceRunes > 0
         ? getContributingRuneIndices(sourceRunes.map(r => ({ element: r.element })), activeSigils)
@@ -138,10 +143,11 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
         const baseMult = SPELL_TIER_MULT[spell.tier] ?? 0;
         const spellTierBase = SPELL_TIER_BASE_DAMAGE[spell.tier] ?? 0;
 
-        if (isCastAnimating) {
-            // During cast: use live mult counter if a hand-mult sigil is
-            // ticking (Synapse et al.), otherwise show the tier mult.
-            // The bonus ticks up in real time as each held rune's bubble appears.
+        if (mode.kind === "casting") {
+            // During cast: live counters tick in real time. Each counter
+            // uses `-1` as its "not yet revealed" sentinel — fall back to
+            // the static preview value (or round accumulator for Total)
+            // until the animation layer flips them positive.
             displayMult = castMultCounter >= 0 ? castMultCounter : baseMult;
             displayBase = castBaseCounter;
             displayTotal = castTotalDamage >= 0

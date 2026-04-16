@@ -145,6 +145,18 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
             elements: ARCANE_CLUSTER_ELEMENTS,
         },
     },
+    lex_divina: {
+        id: "lex_divina",
+        name: "Lex Divina",
+        rarity: "uncommon",
+        description: "{Holy} runes gain {+8 Base} and {+2 Mult} on Critical hits.",
+        cost: 4,
+        sellPrice: 2,
+        explainer: {
+            label: "Applies to:",
+            elements: ["holy"] as const,
+        },
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

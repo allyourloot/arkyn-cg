@@ -1,9 +1,20 @@
-import { RuneInstance, type ArkynPlayerState } from "../../shared";
+import { RuneInstance, isRarity, type ArkynPlayerState } from "../../shared";
 import { clearArraySchema } from "./clearArraySchema";
 import type { RuneInstanceData } from "./createPouch";
 
-/** Build a Schema-backed RuneInstance from plain pouch data. */
+/**
+ * Build a Schema-backed RuneInstance from plain pouch data. Validates the
+ * rarity at the factory boundary so the invariant "every RuneInstance in
+ * the game has a canonical rarity" holds everywhere downstream — the
+ * `as RarityType` casts in the damage pipeline are safe-by-construction.
+ */
 export function createRuneInstance(data: RuneInstanceData): RuneInstance {
+    if (!isRarity(data.rarity)) {
+        throw new Error(
+            `createRuneInstance: invalid rarity "${data.rarity}" for rune ${data.id} ` +
+            `(${data.element}). Rarity must be one of the canonical RARITY_TYPES.`,
+        );
+    }
     const rune = new RuneInstance();
     rune.id = data.id;
     rune.element = data.element;

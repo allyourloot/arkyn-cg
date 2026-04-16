@@ -51,13 +51,28 @@ export function initPlayerForRound(
     player.lastRoundGoldHandsBonus = 0;
     player.lastRoundGoldHandsCount = 0;
 
-    // Fire lifecycle hooks (Thief grants a random scroll consumable).
+    // Fire lifecycle hooks — each hook returns zero or more discriminated
+    // effects we dispatch over. New effect kinds (grantGold, grantStat, …)
+    // slot into the switch without touching the hooks themselves.
     for (const sigilId of player.sigils) {
         const hooks = SIGIL_LIFECYCLE_HOOKS[sigilId];
         if (!hooks?.onRoundStart) continue;
-        const result = hooks.onRoundStart(round, runSeed);
-        if (result?.grantConsumable && player.consumables.length < MAX_CONSUMABLES) {
-            player.consumables.push(result.grantConsumable);
+        const effects = hooks.onRoundStart(round, runSeed);
+        if (!effects) continue;
+        for (const effect of effects) {
+            switch (effect.type) {
+                case "grantConsumable":
+                    if (player.consumables.length < MAX_CONSUMABLES) {
+                        player.consumables.push(effect.consumableId);
+                    }
+                    break;
+                case "grantGold":
+                    player.gold += effect.amount;
+                    break;
+                case "grantStat":
+                    player[effect.stat] += effect.amount;
+                    break;
+            }
         }
     }
 

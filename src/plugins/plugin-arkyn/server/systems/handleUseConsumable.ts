@@ -1,4 +1,4 @@
-import { type ArkynState } from "../../shared";
+import { type ArkynState, getConsumableDefinition } from "../../shared";
 import { Logger } from "@core/shared/utils";
 
 const logger = new Logger("ArkynUseConsumable");
@@ -26,21 +26,35 @@ export function handleUseConsumable(
         return;
     }
 
-    const element = player.consumables[index];
-    if (!element) {
+    const consumableId = player.consumables[index];
+    if (!consumableId) {
         logger.warn(`Use-consumable rejected: empty slot at index ${index}`);
         return;
     }
 
-    // Apply scroll effect — increment the element's scroll level
-    const currentLevel = player.scrollLevels.get(element) ?? 0;
-    player.scrollLevels.set(element, currentLevel + 1);
+    const def = getConsumableDefinition(consumableId);
+    if (!def) {
+        logger.warn(`Use-consumable rejected: unknown consumable id "${consumableId}"`);
+        return;
+    }
 
-    // Remove from consumable inventory
+    // Dispatch the consumable's effect. New effect types land as new arms
+    // here; the rest of the flow (slot removal, logging) is shared.
+    let logDetail = "";
+    switch (def.effect.type) {
+        case "upgradeScroll": {
+            const element = def.effect.element;
+            const currentLevel = player.scrollLevels.get(element) ?? 0;
+            player.scrollLevels.set(element, currentLevel + 1);
+            logDetail = `${element} scroll → level ${currentLevel + 1}`;
+            break;
+        }
+    }
+
     player.consumables.splice(index, 1);
 
     logger.info(
-        `Player ${client.sessionId} used ${element} scroll consumable ` +
-        `(scroll level ${currentLevel + 1}). Consumables remaining: ${player.consumables.length}`,
+        `Player ${client.sessionId} used ${def.name}${logDetail ? ` (${logDetail})` : ""}. ` +
+        `Consumables remaining: ${player.consumables.length}`,
     );
 }
