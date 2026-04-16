@@ -83,6 +83,22 @@ export class ArkynPlayerState extends Schema {
     // synced to the client for rendering. Each entry tracks whether the
     // item has been purchased so the client can grey it out.
     @type([ShopItemState]) shopItems = new ArraySchema<ShopItemState>();
+
+    // Runes the player has permanently added to their pouch this run via
+    // Rune Bag picks. `createPouch` appends these to the base 52 each
+    // round so they persist across round resets. Empty on fresh runs.
+    @type([RuneInstance]) acquiredRunes = new ArraySchema<RuneInstance>();
+
+    // In-flight Rune Bag picker state. Non-empty = the player has bought
+    // a bag this shop visit and is currently viewing the 4 choices; the
+    // client hides the shop's middle column and shows the picker. Cleared
+    // on Select or Skip. Does not persist across disconnects.
+    @type([RuneInstance]) pendingBagRunes = new ArraySchema<RuneInstance>();
+
+    // How many bags the player has bought during the current shop visit.
+    // Reset to 0 on shop entry. Used to uniquely seed each bag's RNG and
+    // to enforce MAX_RUNE_BAGS_PER_SHOP.
+    @type("number") bagPurchaseCount = 0;
 }
 
 export class ArkynState extends PluginState {

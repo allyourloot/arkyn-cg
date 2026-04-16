@@ -39,6 +39,8 @@ import {
     setShopItems,
     setSigils,
     setConsumables,
+    setAcquiredRunes,
+    setPendingBagRunes,
     clearSelectedIndices,
     triggerDrawAnimation,
     getHandIndex,
@@ -159,6 +161,8 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevShopItems: { itemType: string; element: string; cost: number; purchased: boolean }[] = [];
     let prevSigils: string[] = [];
     let prevConsumables: string[] = [];
+    let prevAcquired: RuneClientData[] = [];
+    let prevPending: RuneClientData[] = [];
 
     return () => {
         const player = state.players.get(sessionId);
@@ -417,6 +421,17 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (!stringArraysEqual(player.consumables, prevConsumables)) {
             prevConsumables = Array.from(player.consumables);
             setConsumables(prevConsumables);
+        }
+
+        // Sync Rune Bag state: permanent run-long additions and the
+        // in-flight 4-rune picker list.
+        if (!runeArraysEqualById(player.acquiredRunes, prevAcquired)) {
+            prevAcquired = snapshotRunes(player.acquiredRunes);
+            setAcquiredRunes(prevAcquired);
+        }
+        if (!runeArraysEqualById(player.pendingBagRunes, prevPending)) {
+            prevPending = snapshotRunes(player.pendingBagRunes);
+            setPendingBagRunes(prevPending);
         }
     };
 }

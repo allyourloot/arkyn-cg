@@ -7,10 +7,11 @@ import {
     useSigils,
     onScrollPurchase,
     onSigilPurchase,
+    onBagRunePick,
     getSigilSlotRect,
     setScrollUpgradeDisplay,
 } from "../arkynStore";
-import type { ScrollPurchaseEvent, SigilPurchaseEvent } from "../arkynStore";
+import type { ScrollPurchaseEvent, SigilPurchaseEvent, BagRunePickEvent, RuneClientData } from "../arkynStore";
 import { ENEMY_DAMAGE_HIT_MS } from "../arkynAnimations";
 import EnemyHealthBar from "./EnemyHealthBar";
 import SpellPreview from "./SpellPreview";
@@ -34,6 +35,7 @@ import BackgroundShader from "./BackgroundShader";
 import OverlayShader from "./OverlayShader";
 import { getScrollImageUrl } from "./scrollAssets";
 import { getSigilImageUrl } from "./sigilAssets";
+import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
 import DissolveCanvas from "./DissolveCanvas";
 import { playCount, playDissolve } from "../sfx";
 import "./shared-animations.css";
@@ -93,6 +95,16 @@ export default function ArkynOverlay() {
         targetSlotIndex: number;
     } | null>(null);
     const flyingSigilRef = useRef<HTMLImageElement>(null);
+
+    // Flying rune overlay — for the Rune Bag "picked rune flies to the
+    // pouch counter" animation. Same pattern as flying sigil, but the
+    // overlay wraps two <img>s (rarity base + element glyph) so the rune
+    // keeps its RuneImage-stacked look in flight.
+    const [flyingRune, setFlyingRune] = useState<{
+        rune: RuneClientData;
+        fromRect: DOMRect;
+    } | null>(null);
+    const flyingRuneRef = useRef<HTMLDivElement>(null);
 
     // Dissolve phase — replaces the img with a WebGL dissolve canvas.
     const [dissolveData, setDissolveData] = useState<{
@@ -201,11 +213,67 @@ export default function ArkynOverlay() {
         return () => { tl.kill(); };
     }, { dependencies: [flyingSigil] });
 
+    // Listen for Rune Bag picks and fly the chosen rune to the pouch.
+    useEffect(() => {
+        return onBagRunePick((e: BagRunePickEvent) => {
+            setFlyingRune({ rune: e.rune, fromRect: e.fromRect });
+        });
+    }, []);
+
+    // GSAP timeline for the flying-rune animation. Fires once the img
+    // ref is mounted. Target is the PouchCounter (data-pouch-counter).
+    useGSAP(() => {
+        const el = flyingRuneRef.current;
+        if (!el || !flyingRune) return;
+
+        const { fromRect } = flyingRune;
+        const target = document.querySelector("[data-pouch-counter]") as HTMLElement | null;
+        const toRect = target?.getBoundingClientRect();
+        const toSize = toRect ? Math.min(toRect.width, toRect.height) * 0.8 : 40;
+        const toX = toRect ? toRect.left + toRect.width / 2 : window.innerWidth - 60;
+        const toY = toRect ? toRect.top + toRect.height / 2 : window.innerHeight - 60;
+
+        gsap.set(el, {
+            x: fromRect.left,
+            y: fromRect.top,
+            width: fromRect.width,
+            height: fromRect.height,
+            opacity: 1,
+            scale: 1,
+        });
+
+        const tl = gsap.timeline();
+
+        // Arc slightly up before diving toward the counter — feels more
+        // like a thrown rune than a linear slide.
+        tl.to(el, {
+            y: fromRect.top - 40,
+            duration: 0.18,
+            ease: "power2.out",
+        });
+        tl.to(el, {
+            x: toX - toSize / 2,
+            y: toY - toSize / 2,
+            width: toSize,
+            height: toSize,
+            duration: 0.5,
+            ease: "power2.in",
+        });
+        // Land pop + fade.
+        tl.to(el, { scale: 1.2, duration: 0.08, ease: "power2.out" });
+        tl.to(el, { scale: 1, opacity: 0, duration: 0.14, ease: "power2.in" });
+
+        tl.call(() => { setFlyingRune(null); });
+
+        return () => { tl.kill(); };
+    }, { dependencies: [flyingRune] });
+
     // Clear animation state when leaving shop
     useEffect(() => {
         if (gamePhase !== "shop") {
             setFlyingScroll(null);
             setFlyingSigil(null);
+            setFlyingRune(null);
             setDissolveData(null);
             setShowUpgradeLabel(false);
             setScrollUpgradeDisplay(null);
@@ -443,6 +511,18 @@ export default function ArkynOverlay() {
                         alt=""
                         className={styles.flyingSigil}
                     />
+                )}
+
+                {/* Flying rune animation overlay — for Rune Bag picks */}
+                {flyingRune && (
+                    <div
+                        ref={flyingRuneRef}
+                        className={styles.flyingRune}
+                        aria-hidden="true"
+                    >
+                        <img src={getBaseRuneImageUrl(flyingRune.rune.rarity)} alt="" />
+                        <img src={getRuneImageUrl(flyingRune.rune.element)} alt="" />
+                    </div>
                 )}
 
                 {/* "UPGRADE!" label above the centered scroll */}

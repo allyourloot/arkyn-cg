@@ -15,7 +15,7 @@ import {
 } from "../arkynStore";
 import { useCastMultCounter } from "../arkynAnimations";
 import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
-import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT, SCROLL_RUNE_BONUS, RUNE_BASE_DAMAGE, calculateSpellDamage } from "../../shared";
+import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT, SCROLL_RUNE_BONUS, calculateSpellDamage } from "../../shared";
 import type { RarityType } from "../../shared/arkynConstants";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars } from "./styles";
 import { useEnemyIsBoss } from "../arkynStore";
@@ -346,9 +346,12 @@ function ScrollUpgradeDisplay() {
     if (!upgradeDisplay) return null;
 
     const { element, oldLevel, newLevel } = upgradeDisplay;
-    const runeBase = RUNE_BASE_DAMAGE.common;
-    const oldRuneDamage = runeBase + (oldLevel - 1) * SCROLL_RUNE_BONUS;
-    const newRuneDamage = runeBase + (newLevel - 1) * SCROLL_RUNE_BONUS;
+    // Scrolls add a flat additive bonus per matching-element rune
+    // regardless of rarity — surface that honestly rather than the
+    // old rarity-dependent "8 → 10" framing. Matches ShopPanel's
+    // UpgradeSection.
+    const oldBonus = (oldLevel - 1) * SCROLL_RUNE_BONUS;
+    const newBonus = (newLevel - 1) * SCROLL_RUNE_BONUS;
 
     return (
         <div className={styles.upgradeContent}>
@@ -357,16 +360,16 @@ function ScrollUpgradeDisplay() {
                     <RuneImage rarity="common" element={element} className={styles.upgradeRuneImg} />
                 </div>
                 <div className={styles.upgradeRuneInfo}>
-                    <span className={styles.upgradeRuneDamageLabel}>Base Damage</span>
+                    <span className={styles.upgradeRuneDamageLabel}>Per Rune Bonus</span>
                     <div className={styles.upgradeRuneDamageRow}>
                         <BouncyText className={styles.upgradeRuneDamageOld}>
-                            {`${oldRuneDamage}`}
+                            {`+${oldBonus}`}
                         </BouncyText>
                         {showUpgraded && (
                             <span className={styles.upgradeRuneDamageResult}>
                                 <span className={styles.upgradeRuneDamageArrow}>→</span>
                                 <BouncyText className={styles.upgradeRuneDamageNew}>
-                                    {`${newRuneDamage}`}
+                                    {`+${newBonus}`}
                                 </BouncyText>
                             </span>
                         )}

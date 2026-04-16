@@ -35,6 +35,15 @@ export const ELEMENT_BG_COLORS: Record<string, string> = {
 
 export const TIER_LABELS = ["", "I", "II", "III", "IV", "V"];
 
+// Rarity chip colors — shared by sigil tooltips and the Rune Bag picker.
+// Matches the `RARITY_TYPES` union (common / uncommon / rare / legendary).
+export const RARITY_COLORS: Record<string, string> = {
+    common: "#b0b0b0",
+    uncommon: "#4ade80",
+    rare: "#f87171",
+    legendary: "#fbbf24",
+};
+
 /**
  * Cluster colors — semantic shorthand for the two element groupings the
  * game surfaces in tooltips and copy. "Elemental" = fire/water/earth/air/

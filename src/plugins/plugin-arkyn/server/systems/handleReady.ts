@@ -1,5 +1,9 @@
 import { type ArkynState, ShopItemState } from "../../shared";
-import { SCROLL_COST } from "../../shared/arkynConstants";
+import {
+    SCROLL_COST,
+    RUNE_BAG_COST,
+    SHOP_RUNE_BAG_COUNT,
+} from "../../shared/arkynConstants";
 import { generateShopScrolls, generateShopSigils } from "../../shared/shopGeneration";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { Logger } from "@core/shared/utils";
@@ -49,6 +53,9 @@ export function handleReady(
         const ownedSigils = Array.from(player.sigils);
         const sigilIds = generateShopSigils(state.runSeed, nextRound, ownedSigils);
         while (player.shopItems.length > 0) player.shopItems.pop();
+        // Fresh shop visit -> reset per-visit bag purchase counter so the
+        // cap enforces MAX_RUNE_BAGS_PER_SHOP per shop (not per run).
+        player.bagPurchaseCount = 0;
 
         // Sigil items first (top section in shop UI)
         for (const sigilId of sigilIds) {
@@ -68,6 +75,17 @@ export function handleReady(
             item.itemType = "scroll";
             item.element = element;
             item.cost = SCROLL_COST;
+            item.purchased = false;
+            player.shopItems.push(item);
+        }
+
+        // Rune Bag items (share the Consumables section with scrolls on
+        // the client). Art is homogeneous so no seeded generator needed.
+        for (let i = 0; i < SHOP_RUNE_BAG_COUNT; i++) {
+            const item = new ShopItemState();
+            item.itemType = "runeBag";
+            item.element = "";
+            item.cost = RUNE_BAG_COST;
             item.purchased = false;
             player.shopItems.push(item);
         }

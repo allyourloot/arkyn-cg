@@ -9,6 +9,17 @@
     max-width: clamp(480px, 60vw, 860px);
 }
 
+/* Inner content wrapper around the shop panel + Next Round button. The
+   Rune Bag picker swaps into the same slot with its own wrapper; both
+   are animated via GSAP when the swap happens. */
+.shopContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(12px, 2vh, 24px);
+    width: 100%;
+}
+
 /* Shop frame containing the item sections. */
 .panel {
     pointer-events: auto;

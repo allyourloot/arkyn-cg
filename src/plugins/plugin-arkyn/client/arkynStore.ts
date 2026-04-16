@@ -144,6 +144,17 @@ let sigils: string[] = [];
 // Consumable items — array of element names (scroll consumables).
 let consumables: string[] = [];
 
+// Runes acquired this run from Rune Bag picks. These are rehydrated into
+// the pouch every round on the server side; the client mirrors the list
+// so PouchModal can show the extra slots (with real rarity art) and
+// PouchCounter can grow its denominator past 52.
+let acquiredRunes: RuneClientData[] = [];
+
+// In-flight Rune Bag picker state. Non-empty -> the player has just
+// bought a bag; ShopScreen hides its Sigils/Consumables panel and the
+// Next Round button, then shows the picker with these 4 runes.
+let pendingBagRunes: RuneClientData[] = [];
+
 // Run stats — synced from server for the game-over screen.
 let runTotalDamage = 0;
 let runTotalCasts = 0;
@@ -303,6 +314,10 @@ export function setSigils(s: string[]) { sigils = s; notify(); }
 // Consumable setters
 export function setConsumables(c: string[]) { consumables = c; notify(); }
 
+// Rune Bag setters
+export function setAcquiredRunes(r: RuneClientData[]) { acquiredRunes = r; notify(); }
+export function setPendingBagRunes(r: RuneClientData[]) { pendingBagRunes = r; notify(); }
+
 // Scroll purchase event — lightweight pub-sub. ShopScreen fires this on
 // buy; ArkynOverlay orchestrates the fly/shake/dissolve animation and
 // ShopPanel shows the upgrade display.
@@ -343,6 +358,24 @@ export function onSigilPurchase(fn: SigilPurchaseListener) {
 }
 export function emitSigilPurchase(e: SigilPurchaseEvent) {
     sigilPurchaseListeners.forEach(fn => fn(e));
+}
+
+// Bag-rune pick event — fired from RuneBagPicker's Select button. The
+// ArkynOverlay listens and flies the picked rune to the PouchCounter
+// icon in the bottom-right. Mirrors the sigil/scroll purchase event
+// pattern so the animation layer stays decoupled from the picker UI.
+export type BagRunePickEvent = {
+    rune: RuneClientData;
+    fromRect: DOMRect;
+};
+type BagRunePickListener = (e: BagRunePickEvent) => void;
+const bagRunePickListeners = new Set<BagRunePickListener>();
+export function onBagRunePick(fn: BagRunePickListener) {
+    bagRunePickListeners.add(fn);
+    return () => { bagRunePickListeners.delete(fn); };
+}
+export function emitBagRunePick(e: BagRunePickEvent) {
+    bagRunePickListeners.forEach(fn => fn(e));
 }
 
 // Sigil slot rect registry — SigilBar writes, ArkynOverlay reads.
@@ -532,6 +565,10 @@ export function useSigils() { return useSyncExternalStore(subscribe, () => sigil
 // Consumable hooks
 export function useConsumables() { return useSyncExternalStore(subscribe, () => consumables); }
 
+// Rune Bag hooks
+export function useAcquiredRunes() { return useSyncExternalStore(subscribe, () => acquiredRunes); }
+export function usePendingBagRunes() { return useSyncExternalStore(subscribe, () => pendingBagRunes); }
+
 // Run stats hooks
 export function useRunTotalDamage() { return useSyncExternalStore(subscribe, () => runTotalDamage); }
 export function useRunTotalCasts() { return useSyncExternalStore(subscribe, () => runTotalCasts); }
@@ -551,7 +588,7 @@ export function useBestSingleCast() { return useSyncExternalStore(subscribe, () 
 // ============================================================
 
 export { subscribe } from "./arkynStoreCore";
-export { setConnection, joinGame, sendReady, sendCollectRoundGold, sendNewRun, sendBuyItem, sendSellSigil, sendUseConsumable } from "./arkynNetwork";
+export { setConnection, joinGame, sendReady, sendCollectRoundGold, sendNewRun, sendBuyItem, sendSellSigil, sendUseConsumable, sendBagChoice } from "./arkynNetwork";
 export {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,

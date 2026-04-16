@@ -5,7 +5,6 @@ import {
     DISCARDS_PER_ROUND,
     getDebuffById,
     getPlayerStatDeltas,
-    RUNE_BASE_DAMAGE,
 } from "../../shared";
 import { SCROLL_RUNE_BONUS } from "../../shared/arkynConstants";
 import {
@@ -210,12 +209,15 @@ function UpgradeSection({
     oldLevel: number;
     newLevel: number;
 }) {
-    // Rune base damage before and after this scroll purchase
-    const runeBase = RUNE_BASE_DAMAGE.common; // all runes are common for now
+    // Scrolls stack as a flat additive bonus to every matching-element
+    // rune, REGARDLESS of rarity (same +2 whether it hits a common or a
+    // legendary). We used to show this as "Base Damage 8 → 10", which
+    // was misleading once non-common runes existed — it implied scrolls
+    // *replaced* the base. Display the additive bonus directly instead.
     const oldScrollCount = oldLevel - 1;
     const newScrollCount = newLevel - 1;
-    const oldRuneDamage = runeBase + oldScrollCount * SCROLL_RUNE_BONUS;
-    const newRuneDamage = runeBase + newScrollCount * SCROLL_RUNE_BONUS;
+    const oldBonus = oldScrollCount * SCROLL_RUNE_BONUS;
+    const newBonus = newScrollCount * SCROLL_RUNE_BONUS;
 
     // Animate from old → new after a delay
     const [showUpgraded, setShowUpgraded] = useState(false);
@@ -225,8 +227,6 @@ function UpgradeSection({
         return () => clearTimeout(t);
     }, [element, oldLevel, newLevel]);
 
-    const displayDamage = showUpgraded ? newRuneDamage : oldRuneDamage;
-
     return (
         <div className={styles.upgradeContent}>
             <div className={styles.upgradeRow}>
@@ -234,16 +234,16 @@ function UpgradeSection({
                     <RuneImage rarity="common" element={element} className={styles.upgradeRuneImg} />
                 </div>
                 <div className={styles.upgradeRuneInfo}>
-                    <span className={styles.upgradeRuneDamageLabel}>Base Damage</span>
+                    <span className={styles.upgradeRuneDamageLabel}>Per Rune Bonus</span>
                     <div className={styles.upgradeRuneDamageRow}>
                         <BouncyText className={styles.upgradeRuneDamageOld}>
-                            {`${oldRuneDamage}`}
+                            {`+${oldBonus}`}
                         </BouncyText>
                         {showUpgraded && (
                             <span className={styles.upgradeRuneDamageResult}>
                                 <span className={styles.upgradeRuneDamageArrow}>→</span>
                                 <BouncyText className={styles.upgradeRuneDamageNew}>
-                                    {`${newRuneDamage}`}
+                                    {`+${newBonus}`}
                                 </BouncyText>
                             </span>
                         )}

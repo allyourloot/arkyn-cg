@@ -337,14 +337,15 @@ export const SPELL_TIER_BASE_DAMAGE = [0, 4, 8, 12, 16, 20] as const;
 // Index = tier; tier 0 is unused/sentinel.
 export const SPELL_TIER_MULT = [0, 1, 2, 3, 4, 5] as const;
 
-// Per-rune base damage by rarity. Each contributing rune adds this value
-// (modified by per-rune resist/weak mod) to the Base counter. All
-// rarities share 8 today since only common rune drops exist; the lookup
-// table shape lets us tune individual rarities later without touching
-// call sites.
+// Per-rune base damage by rarity. Each contributing rune adds this
+// value (modified by per-rune resist/weak mod) to the Base counter.
+// Rarer runes hit harder — tuned so a legendary contributes ~4× a
+// common. Stacks cleanly with scrolls (which add SCROLL_RUNE_BONUS ×
+// scrollLevel per matching-element rune), since both live on the Base
+// track and sum additively inside calculateRuneDamageBreakdown.
 export const RUNE_BASE_DAMAGE: Record<RarityType, number> = {
     common: 8,
-    uncommon: 8,
-    rare: 8,
-    legendary: 8,
+    uncommon: 12,
+    rare: 18,
+    legendary: 30,
 };

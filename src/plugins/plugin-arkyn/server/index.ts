@@ -12,6 +12,7 @@ import {
     ARKYN_BUY_ITEM,
     ARKYN_SELL_SIGIL,
     ARKYN_USE_CONSUMABLE,
+    ARKYN_PICK_BAG_RUNE,
     ArkynState,
 } from "../shared";
 import { createArkynContext } from "./types/ArkynContext";
@@ -24,6 +25,7 @@ import { handleNewRun } from "./systems/handleNewRun";
 import { handleBuyItem } from "./systems/handleBuyItem";
 import { handleSellSigil } from "./systems/handleSellSigil";
 import { handleUseConsumable } from "./systems/handleUseConsumable";
+import { handleBagChoice } from "./systems/handleBagChoice";
 import { handleLeave } from "./systems/handleLeave";
 
 const logger = new Logger("ArkynServer");
@@ -74,6 +76,10 @@ export function PluginArkynServer(): ServerPlugin {
 
             runtime.onMessage(ARKYN_USE_CONSUMABLE, (client: ServerClientRef, payload: unknown) => {
                 handleUseConsumable(state, client, payload);
+            });
+
+            runtime.onMessage(ARKYN_PICK_BAG_RUNE, (client: ServerClientRef, payload: unknown) => {
+                handleBagChoice(state, client, payload);
             });
 
             runtime.onMessage(ARKYN_NEW_RUN, (client: ServerClientRef) => {

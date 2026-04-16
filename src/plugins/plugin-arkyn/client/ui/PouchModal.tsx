@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { ELEMENT_TYPES, RUNES_PER_ELEMENT } from "../../shared";
-import { useHand, usePouchContents } from "../arkynStore";
+import { useHand, usePouchContents, useAcquiredRunes, type RuneClientData } from "../arkynStore";
 import { playMenuClose, playMenuOpen } from "../sfx";
 import RuneImage from "./RuneImage";
 import { getRuneImageUrl } from "./runeAssets";
@@ -24,6 +24,7 @@ type SlotState = "pouch" | "drawn" | "spent";
 export default function PouchModal({ onClose }: PouchModalProps) {
     const pouchContents = usePouchContents();
     const hand = useHand();
+    const acquiredRunes = useAcquiredRunes();
 
     // Play the shared menu-open stinger once on mount.
     useEffect(() => {
@@ -47,21 +48,32 @@ export default function PouchModal({ onClose }: PouchModalProps) {
         return () => window.removeEventListener("keydown", onKey);
     }, [closeWithSfx]);
 
-    // Count pouch + hand runes per element. Each element starts with exactly
-    // RUNES_PER_ELEMENT copies, so any missing slot is "spent" (played or
-    // discarded earlier this round).
-    const pouchByElement = new Map<string, number>();
+    // Count pouch + hand runes per element, along with the actual rune
+    // instances so we can render their real rarity art (not just common).
+    // The deck grows past the base 52 via Rune Bag picks — each acquired
+    // rune adds one extra slot to its element's row.
+    const pouchByElement = new Map<string, RuneClientData[]>();
     for (const r of pouchContents) {
-        pouchByElement.set(r.element, (pouchByElement.get(r.element) ?? 0) + 1);
+        const list = pouchByElement.get(r.element) ?? [];
+        list.push(r);
+        pouchByElement.set(r.element, list);
     }
-    const handByElement = new Map<string, number>();
+    const handByElement = new Map<string, RuneClientData[]>();
     for (const r of hand) {
-        handByElement.set(r.element, (handByElement.get(r.element) ?? 0) + 1);
+        const list = handByElement.get(r.element) ?? [];
+        list.push(r);
+        handByElement.set(r.element, list);
+    }
+    const bonusByElement = new Map<string, number>();
+    for (const r of acquiredRunes) {
+        bonusByElement.set(r.element, (bonusByElement.get(r.element) ?? 0) + 1);
     }
 
     const totalPouch = pouchContents.length;
     const totalHand = hand.length;
-    const totalSpent = ELEMENT_TYPES.length * RUNES_PER_ELEMENT - totalPouch - totalHand;
+    const totalBase = ELEMENT_TYPES.length * RUNES_PER_ELEMENT;
+    const totalAll = totalBase + acquiredRunes.length;
+    const totalSpent = totalAll - totalPouch - totalHand;
 
     return (
         <div className={styles.backdrop} onClick={closeWithSfx}>
@@ -94,8 +106,8 @@ export default function PouchModal({ onClose }: PouchModalProps) {
                     <div className={styles.elementColumn}>
                         {ELEMENT_TYPES.map(element => {
                             const remaining =
-                                (pouchByElement.get(element) ?? 0) +
-                                (handByElement.get(element) ?? 0);
+                                (pouchByElement.get(element)?.length ?? 0) +
+                                (handByElement.get(element)?.length ?? 0);
                             const empty = remaining === 0;
                             return (
                                 <div
@@ -115,24 +127,52 @@ export default function PouchModal({ onClose }: PouchModalProps) {
 
                     <div className={styles.grid}>
                         {ELEMENT_TYPES.flatMap(element => {
-                            const inPouch = pouchByElement.get(element) ?? 0;
-                            const inHand = handByElement.get(element) ?? 0;
-                            const spent = Math.max(0, RUNES_PER_ELEMENT - inPouch - inHand);
+                            const pouchRunes = pouchByElement.get(element) ?? [];
+                            const handRunes = handByElement.get(element) ?? [];
+                            const totalForElement = RUNES_PER_ELEMENT + (bonusByElement.get(element) ?? 0);
+                            const spent = Math.max(0, totalForElement - pouchRunes.length - handRunes.length);
 
-                            // Build the slot list: pouch first (lit), then drawn,
-                            // then spent — both dimmed.
-                            const slots: SlotState[] = [];
-                            for (let i = 0; i < inPouch; i++) slots.push("pouch");
-                            for (let i = 0; i < inHand; i++) slots.push("drawn");
-                            for (let i = 0; i < spent; i++) slots.push("spent");
-
-                            return slots.map((state, i) => (
-                                <RuneIcon
-                                    key={`${element}-${i}`}
-                                    element={element}
-                                    state={state}
-                                />
-                            ));
+                            // Render in three bands: pouch (lit, real rarity),
+                            // drawn (dimmed, real rarity), spent (dimmed).
+                            //
+                            // Limitation: the server doesn't retain which
+                            // specific rune was played/discarded, so spent
+                            // slots fall back to common art. If a player
+                            // picked a rare rune and it got spent, its slot
+                            // renders as common until next round — acceptable
+                            // for v1.
+                            const icons = [];
+                            for (let i = 0; i < pouchRunes.length; i++) {
+                                icons.push(
+                                    <RuneIcon
+                                        key={`${element}-p-${i}`}
+                                        element={element}
+                                        rarity={pouchRunes[i].rarity}
+                                        state="pouch"
+                                    />,
+                                );
+                            }
+                            for (let i = 0; i < handRunes.length; i++) {
+                                icons.push(
+                                    <RuneIcon
+                                        key={`${element}-h-${i}`}
+                                        element={element}
+                                        rarity={handRunes[i].rarity}
+                                        state="drawn"
+                                    />,
+                                );
+                            }
+                            for (let i = 0; i < spent; i++) {
+                                icons.push(
+                                    <RuneIcon
+                                        key={`${element}-s-${i}`}
+                                        element={element}
+                                        rarity="common"
+                                        state="spent"
+                                    />,
+                                );
+                            }
+                            return icons;
                         })}
                     </div>
                 </div>
@@ -141,11 +181,11 @@ export default function PouchModal({ onClose }: PouchModalProps) {
     );
 }
 
-function RuneIcon({ element, state }: { element: string; state: SlotState }) {
+function RuneIcon({ element, rarity, state }: { element: string; rarity: string; state: SlotState }) {
     const dimmed = state !== "pouch";
     return (
         <div className={`${styles.rune} ${dimmed ? styles.dimmed : ""}`}>
-            <RuneImage rarity="common" element={element} className={styles.runeLayer} />
+            <RuneImage rarity={rarity} element={element} className={styles.runeLayer} />
         </div>
     );
 }

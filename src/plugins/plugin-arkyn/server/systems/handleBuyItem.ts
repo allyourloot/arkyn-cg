@@ -1,6 +1,7 @@
-import { type ArkynState } from "../../shared";
-import { MAX_SIGILS } from "../../shared/arkynConstants";
+import { RuneInstance, type ArkynState } from "../../shared";
+import { MAX_SIGILS, MAX_RUNE_BAGS_PER_SHOP } from "../../shared/arkynConstants";
 import { Logger } from "@core/shared/utils";
+import { rollBagRunes } from "../utils/rollBagRunes";
 
 const logger = new Logger("ArkynBuyItem");
 
@@ -68,6 +69,45 @@ export function handleBuyItem(
         player.sigils.push(item.element);
         logger.info(
             `Player ${client.sessionId} bought sigil "${item.element}". ` +
+            `Gold remaining: ${player.gold}`,
+        );
+    } else if (item.itemType === "runeBag") {
+        // Reject double-buy while a picker is already open — avoids
+        // dropping the first bag's rolls on the floor. Also reject if
+        // the per-shop cap is already hit.
+        if (player.pendingBagRunes.length > 0) {
+            logger.warn("Buy rejected: a Rune Bag picker is already open");
+            player.gold += item.cost;
+            item.purchased = false;
+            return;
+        }
+        if (player.bagPurchaseCount >= MAX_RUNE_BAGS_PER_SHOP) {
+            logger.warn(`Buy rejected: per-shop Rune Bag cap reached (${MAX_RUNE_BAGS_PER_SHOP})`);
+            player.gold += item.cost;
+            item.purchased = false;
+            return;
+        }
+
+        // `currentRound + 1` matches the shop's "next round" seeding
+        // convention used by generateShopScrolls / generateShopSigils.
+        const rolls = rollBagRunes(
+            state.runSeed,
+            state.currentRound + 1,
+            player.bagPurchaseCount,
+        );
+        for (const r of rolls) {
+            const ri = new RuneInstance();
+            ri.id = r.id;
+            ri.element = r.element;
+            ri.rarity = r.rarity;
+            ri.level = r.level;
+            player.pendingBagRunes.push(ri);
+        }
+        player.bagPurchaseCount++;
+
+        logger.info(
+            `Player ${client.sessionId} bought a Rune Bag. Rolls: ` +
+            `[${rolls.map(r => `${r.rarity} ${r.element}`).join(", ")}]. ` +
             `Gold remaining: ${player.gold}`,
         );
     }

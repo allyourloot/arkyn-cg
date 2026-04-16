@@ -1,20 +1,24 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { gsap } from "gsap";
 import {
     sendReady,
     sendBuyItem,
     useShopItems,
     useGold,
     useScrollLevels,
+    usePendingBagRunes,
     emitScrollPurchase,
     emitSigilPurchase,
 } from "../arkynStore";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { playButton, playBuy } from "../sfx";
-import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
+import { ELEMENT_COLORS, RARITY_COLORS, createPanelStyleVars } from "./styles";
 import { getScrollImageUrl } from "./scrollAssets";
+import { getRuneBagImageUrl } from "./bagAssets";
 import BouncyText from "./BouncyText";
 import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
+import RuneBagPicker from "./RuneBagPicker";
 import { renderDescription, SigilExplainer } from "./descriptionText";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import frameUrl from "/assets/ui/frame.png?url";
@@ -25,12 +29,11 @@ import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
 import buttonGreenDisabledUrl from "/assets/ui/button-green-disabled.png?url";
 import styles from "./ShopScreen.module.css";
 
-const RARITY_COLORS: Record<string, string> = {
-    common: "#b0b0b0",
-    uncommon: "#4ade80",
-    rare: "#f87171",
-    legendary: "#fbbf24",
-};
+// Slide durations for the shop <-> picker content swap inside the
+// center column. Kept snappy so the purchase → picker transition
+// doesn't feel laggy.
+const CONTENT_EXIT_S = 0.22;
+const CONTENT_ENTER_S = 0.32;
 
 const panelStyleVars = createPanelStyleVars();
 const buttonStyleVars = {
@@ -52,9 +55,50 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     const shopItems = useShopItems();
     const gold = useGold();
     const scrollLevels = useScrollLevels();
+    const pendingBagRunes = usePendingBagRunes();
 
     const panelRef = useRef<HTMLDivElement>(null);
+    const shopContentRef = useRef<HTMLDivElement>(null);
+    const pickerContentRef = useRef<HTMLDivElement>(null);
     const [selectedShopIndex, setSelectedShopIndex] = useState<number | null>(null);
+
+    // `renderedMode` lags the live picker state during exit animations so
+    // React keeps the outgoing element mounted while GSAP slides it out.
+    // Same pattern used by ArkynOverlay's shop <-> playing swap.
+    const showPicker = pendingBagRunes.length > 0;
+    const [renderedMode, setRenderedMode] = useState<"shop" | "picker">(showPicker ? "picker" : "shop");
+
+    useLayoutEffect(() => {
+        const targetMode: "shop" | "picker" = showPicker ? "picker" : "shop";
+        if (targetMode === renderedMode) return;
+
+        const outgoingRef = renderedMode === "shop" ? shopContentRef : pickerContentRef;
+        const outgoing = outgoingRef.current;
+
+        const tl = gsap.timeline({
+            onComplete: () => setRenderedMode(targetMode),
+        });
+        if (outgoing) {
+            tl.to(outgoing, {
+                x: renderedMode === "shop" ? -140 : 140,
+                opacity: 0,
+                duration: CONTENT_EXIT_S,
+                ease: "power2.in",
+            });
+        }
+        return () => { tl.kill(); };
+    }, [showPicker, renderedMode]);
+
+    // Entrance animation — fires on the newly rendered content.
+    useLayoutEffect(() => {
+        const incomingRef = renderedMode === "shop" ? shopContentRef : pickerContentRef;
+        const incoming = incomingRef.current;
+        if (!incoming) return;
+        gsap.fromTo(incoming,
+            { x: renderedMode === "shop" ? -140 : 140, opacity: 0 },
+            { x: 0, opacity: 1, duration: CONTENT_ENTER_S, ease: "power2.out", overwrite: "auto" },
+        );
+    }, [renderedMode]);
 
     // Deselect when the user clicks outside the shop panel. Card onClick
     // handles in-panel selection changes via React state; this listener only
@@ -103,16 +147,22 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         setSelectedShopIndex(null);
     };
 
-    // Split items by type for section rendering
+    // Split items by type for section rendering. Scrolls and Rune Bags
+    // share the Consumables section — the card layout branches on itemType
+    // inside the map below.
     const sigilItems = shopItems
         .map((item, idx) => ({ ...item, shopIndex: idx }))
         .filter(item => item.itemType === "sigil" && !item.purchased);
-    const scrollItems = shopItems
+    const consumableItems = shopItems
         .map((item, idx) => ({ ...item, shopIndex: idx }))
-        .filter(item => item.itemType === "scroll" && !item.purchased);
+        .filter(item => (item.itemType === "scroll" || item.itemType === "runeBag") && !item.purchased);
+
+    const runeBagImageUrl = getRuneBagImageUrl(128);
 
     return (
         <div ref={ref} className={styles.wrapper}>
+        {renderedMode === "shop" && (
+        <div ref={shopContentRef} className={styles.shopContent}>
         <div ref={panelRef} className={styles.panel} style={panelStyleVars}>
             {/* Sigils section */}
             <span className={styles.sectionLabel}>Sigils</span>
@@ -197,17 +247,74 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                 </div>
             </div>
 
-            {/* Scrolls section */}
-            <span className={styles.sectionLabel}>Scrolls</span>
+            {/* Consumables section (scrolls + rune bags) */}
+            <span className={styles.sectionLabel}>Consumables</span>
             <div className={styles.section}>
                 <div className={styles.itemGrid}>
-                    {scrollItems.map((item, i) => {
+                    {consumableItems.map((item, i) => {
+                        const canAfford = gold >= item.cost;
+                        const isSelected = selectedShopIndex === item.shopIndex;
+                        const tooltipPlacement = i < consumableItems.length / 2 ? "left" : "right";
+                        const itemSceneIndex = sigilItems.length + i;
+
+                        if (item.itemType === "runeBag") {
+                            return (
+                                <div
+                                    key={item.shopIndex}
+                                    className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""} ${isSelected ? styles.itemCardSelected : ""}`}
+                                    style={{ ...cardStyleVars } as CSSProperties}
+                                    onClick={() => setSelectedShopIndex(prev => prev === item.shopIndex ? null : item.shopIndex)}
+                                >
+                                    <div className={styles.priceChip}>
+                                        <img src={goldIconUrl} alt="Gold" className={styles.priceIcon} />
+                                        <span className={styles.priceValue}>{item.cost}</span>
+                                    </div>
+
+                                    <div className={styles.cardImageWrap}>
+                                        <ItemScene
+                                            itemId="rune_bag"
+                                            index={itemSceneIndex}
+                                            imageUrl={runeBagImageUrl}
+                                            useFrame={false}
+                                            className={styles.sigilCanvas}
+                                        />
+                                        {isSelected && (
+                                            <button
+                                                type="button"
+                                                className={styles.buyButton}
+                                                style={buttonStyleVars}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (!canAfford) return;
+                                                    sendBuyItem(item.shopIndex);
+                                                    playBuy();
+                                                    setSelectedShopIndex(null);
+                                                }}
+                                                disabled={!canAfford}
+                                            >
+                                                Buy
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <Tooltip placement={tooltipPlacement} arrow variant="framed">
+                                        <span className={styles.tooltipName}>
+                                            Rune Bag
+                                        </span>
+                                        <div className={styles.tooltipDescWrap}>
+                                            <span className={styles.tooltipDesc}>
+                                                Opens 4 random runes. Pick one to add permanently to your pouch.
+                                            </span>
+                                        </div>
+                                    </Tooltip>
+                                </div>
+                            );
+                        }
+
+                        // Scroll card (existing layout).
                         const elementColor = ELEMENT_COLORS[item.element] ?? "#aaa";
                         const scrollUrl = getScrollImageUrl(item.element);
-                        const canAfford = gold >= item.cost;
                         const elementName = item.element.charAt(0).toUpperCase() + item.element.slice(1);
-                        const isSelected = selectedShopIndex === item.shopIndex;
-                        const tooltipPlacement = i < scrollItems.length / 2 ? "left" : "right";
 
                         return (
                             <div
@@ -226,7 +333,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                 <div className={styles.cardImageWrap}>
                                     <ItemScene
                                         itemId={item.element}
-                                        index={sigilItems.length + i}
+                                        index={itemSceneIndex}
                                         imageUrl={scrollUrl}
                                         className={styles.sigilCanvas}
                                     />
@@ -270,6 +377,12 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         >
             Next Round
         </button>
+        </div>
+        )}
+
+        {renderedMode === "picker" && (
+            <RuneBagPicker ref={pickerContentRef} runes={pendingBagRunes} />
+        )}
         </div>
     );
 }

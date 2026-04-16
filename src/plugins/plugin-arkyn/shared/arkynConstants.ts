@@ -37,6 +37,21 @@ export const SHOP_SIGIL_COUNT = 2;    // sigil slots shown per shop visit
 // Consumable inventory
 export const MAX_CONSUMABLES = 2;     // max consumable items a player can hold
 
+// Rune Bag item configuration. Buying a bag shows a picker of 4 random
+// runes (random element + weighted-random rarity). The player picks one
+// (or skips) — the picked rune is permanently added to their pouch for
+// the rest of the run.
+export const RUNE_BAG_COST = 4;
+export const SHOP_RUNE_BAG_COUNT = 1;       // bag slots shown per shop visit
+export const RUNE_BAG_CHOICES = 4;          // runes shown in the picker
+export const MAX_RUNE_BAGS_PER_SHOP = 1;    // max bags purchasable per shop
+export const RUNE_BAG_RARITY_WEIGHTS: Record<RarityType, number> = {
+    common: 45,
+    uncommon: 25,
+    rare: 20,
+    legendary: 10,
+};
+
 // Sigil effect values (proc chances, RNG offsets, mult bonuses, etc.)
 // live in their category-specific registries in `shared/sigilEffects.ts`.
 // See: SIGIL_PROCS (Voltage), SIGIL_HAND_MULT (Synapse), etc.
@@ -51,3 +66,7 @@ export const ARKYN_NEW_RUN = "arkyn:new_run";
 export const ARKYN_BUY_ITEM = "arkyn:buy_item";
 export const ARKYN_SELL_SIGIL = "arkyn:sell_sigil";
 export const ARKYN_USE_CONSUMABLE = "arkyn:use_consumable";
+// Rune-bag picker flow. Payload: { index: number | null }
+//   index = number  -> player selected that rune (adds to pouch permanently)
+//   index = null    -> player skipped (no rune added, no refund)
+export const ARKYN_PICK_BAG_RUNE = "arkyn:pick_bag_rune";

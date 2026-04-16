@@ -1,0 +1,219 @@
+/* Wrapper fills the same vertical band as the shop panel (~62vh). The
+   grid sits at the natural center via the flex `justify-content: center`,
+   while the action panel is absolutely anchored to the wrapper's bottom
+   edge — matching the "Next Round" button position in the normal shop. */
+.wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: clamp(480px, 60vw, 860px);
+    height: 72vh;
+    pointer-events: auto;
+}
+
+.grid {
+    display: flex;
+    flex-direction: row;
+    gap: clamp(20px, 3vw, 48px);
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+/* Plain clickable rune card — no frame, no chip. The RuneImage (base
+   rarity layer + element glyph) carries all the visual information. */
+.card {
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 120ms ease-out, filter 120ms ease-out;
+    image-rendering: pixelated;
+}
+
+.card:hover {
+    transform: translateY(-6px);
+    filter: brightness(1.08);
+}
+
+.cardSelected,
+.cardSelected:hover {
+    transform: translateY(-10px);
+    filter: brightness(1.15);
+}
+
+/* Idle float animation — same keyframes + stagger used by hand cards
+   (RuneCard.module.css .floatWrap). Per-card phase is wired from React
+   via inline `animationDelay: -i * 0.32s`. */
+.runeWrap {
+    position: relative;
+    width: clamp(56px, 7vw, 96px);
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: rune-bag-float 3.6s ease-in-out infinite;
+    will-change: transform, filter;
+    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+}
+
+@keyframes rune-bag-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+.runeLayer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+/* 9-slice frame.png panel wrapping the prompt + action buttons.
+   Absolutely positioned at the wrapper's bottom edge so the grid
+   above can center in the true middle of the wrapper. */
+.actionPanel {
+    box-sizing: border-box;
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 20px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 20px 20px 20px 20px;
+    padding: clamp(10px, 1.4vh, 18px) clamp(18px, 2.4vw, 32px) clamp(12px, 1.6vh, 20px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(10px, 1.4vh, 18px);
+    image-rendering: pixelated;
+}
+
+/* inner-frame.png strip hugging just the prompt text. */
+.promptStrip {
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: clamp(4px, 0.8vh, 8px) clamp(12px, 1.8vw, 22px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    image-rendering: pixelated;
+}
+
+/* Prompt line inside the inner-frame strip. */
+.prompt {
+    font-size: clamp(var(--font-size-2xs), 1.3vw, var(--font-size-xs));
+    color: #e8d4b8;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+}
+
+.buttonRow {
+    display: flex;
+    gap: clamp(12px, 1.8vw, 24px);
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.selectButton,
+.skipButton {
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 9px;
+    background-color: transparent;
+    color: #fff;
+    font-family: inherit;
+    font-size: clamp(var(--font-size-2xs), 1.7vw, var(--font-size-sm));
+    font-weight: normal;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+    cursor: pointer;
+    image-rendering: pixelated;
+    line-height: 1;
+    padding: clamp(6px, 1vh, 11px) clamp(18px, 2.5vw, 30px);
+    transition: transform 80ms ease-out;
+    flex-shrink: 0;
+    pointer-events: auto;
+}
+
+.selectButton {
+    border-image: var(--btn-bg) 10 10 10 10 fill / 9px 9px 9px 9px;
+}
+
+.selectButton:hover:not(:disabled) {
+    border-image: var(--btn-bg-hover) 10 10 10 10 fill / 9px 9px 9px 9px;
+}
+
+.selectButton:disabled {
+    border-image: var(--btn-bg-disabled) 10 10 10 10 fill / 9px 9px 9px 9px;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.skipButton {
+    border-image: var(--skip-bg) 10 10 10 10 fill / 9px 9px 9px 9px;
+}
+
+.skipButton:hover {
+    border-image: var(--skip-bg-hover) 10 10 10 10 fill / 9px 9px 9px 9px;
+}
+
+.selectButton:active,
+.skipButton:active {
+    transform: translateY(2px);
+}
+
+@media (max-height: 500px) {
+    .wrapper {
+        gap: clamp(8px, 2vh, 16px);
+    }
+    .grid {
+        gap: clamp(10px, 2vw, 24px);
+    }
+    .runeWrap {
+        width: clamp(36px, 5vw, 60px);
+    }
+    .actionPanel {
+        border-width: 12px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+        padding: 6px 12px 8px;
+        gap: 6px;
+    }
+    .promptStrip {
+        border-width: 8px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 3px 10px;
+    }
+    .prompt {
+        font-size: var(--font-size-2xs);
+        letter-spacing: 1px;
+    }
+    .selectButton,
+    .skipButton {
+        font-size: var(--font-size-xs);
+        padding: clamp(4px, 0.8vh, 8px) clamp(16px, 2vw, 28px);
+    }
+}
