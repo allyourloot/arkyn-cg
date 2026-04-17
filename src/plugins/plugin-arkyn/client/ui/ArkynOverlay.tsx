@@ -183,11 +183,20 @@ export default function ArkynOverlay() {
         const toY = toRect ? toRect.top + toRect.height / 2 : 40;
         const toSize = toRect ? toRect.width : 60;
 
+        // Keep width/height STATIC at the target size and tween scale +
+        // translate. Animating width/height triggers layout every frame,
+        // which stutters against the shared ItemScene render loop; scale
+        // on a position:fixed element is compositor-only.
+        const startScale = fromRect.width / toSize;
+        const fromCenterX = fromRect.left + fromRect.width / 2;
+        const fromCenterY = fromRect.top + fromRect.height / 2;
+
         gsap.set(el, {
-            x: fromRect.left,
-            y: fromRect.top,
-            width: fromRect.width,
-            height: fromRect.height,
+            width: toSize,
+            height: toSize,
+            x: fromCenterX - toSize / 2,
+            y: fromCenterY - toSize / 2,
+            scale: startScale,
             opacity: 1,
         });
 
@@ -197,8 +206,7 @@ export default function ArkynOverlay() {
         tl.to(el, {
             x: toX - toSize / 2,
             y: toY - toSize / 2,
-            width: toSize,
-            height: toSize,
+            scale: 1,
             duration: 0.45,
             ease: "power2.inOut",
         });
@@ -302,6 +310,19 @@ export default function ArkynOverlay() {
 
         const tl = gsap.timeline();
 
+        // Fade the shop panel out concurrent with the fly-to-center so the
+        // upgrade animation plays in visual isolation — also prevents the
+        // player from clicking another Buy mid-animation.
+        const shopEl = shopScreenRef.current;
+        if (shopEl) {
+            tl.to(shopEl, {
+                opacity: 0,
+                y: 30,
+                duration: 0.25,
+                ease: "power2.in",
+            }, 0);
+        }
+
         // Phase 1: Fly to center + scale up (0.4s)
         tl.to(el, {
             x: centerX - targetSize / 2,
@@ -310,7 +331,7 @@ export default function ArkynOverlay() {
             height: targetSize,
             duration: 0.4,
             ease: "power2.out",
-        });
+        }, 0);
 
         // Show "UPGRADE!" label above the scroll
         tl.call(() => { setShowUpgradeLabel(true); });
@@ -357,6 +378,17 @@ export default function ArkynOverlay() {
             el.style.visibility = "hidden";
         });
 
+        // Fade the shop panel back in concurrent with the dissolve so the
+        // shop is ready for interaction the moment the dissolve finishes.
+        if (shopEl) {
+            tl.to(shopEl, {
+                opacity: 1,
+                y: 0,
+                duration: 0.3,
+                ease: "power2.out",
+            }, "<");
+        }
+
         // Wait for dissolve to finish, then clean up. Extra 100ms buffer
         // so the canvas has fully hidden itself before React unmounts it
         // — prevents a white flash from the GL context teardown.
@@ -368,7 +400,12 @@ export default function ArkynOverlay() {
             },
         });
 
-        return () => { tl.kill(); };
+        return () => {
+            tl.kill();
+            // Guard against interruption (e.g. phase change) leaving the
+            // shop mid-fade. Reset to fully visible so re-entry is clean.
+            if (shopEl) gsap.set(shopEl, { opacity: 1, y: 0 });
+        };
     }, { dependencies: [flyingScroll] });
 
     // Drive the exit animation when displayPhase diverges from renderedPhase.
