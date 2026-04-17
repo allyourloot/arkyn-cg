@@ -99,8 +99,12 @@ export function handleReady(
     if (state.gamePhase === "shop") {
         state.currentRound++;
         // Enemy already spawned on shop entry — just init the player
-        // and apply any boss debuff modifiers.
-        initPlayerForRound(player, client.sessionId, state.currentRound, state.runSeed);
+        // and apply any boss debuff modifiers. Pass enemy affinities so
+        // lifecycle hooks like Binoculars can pick a target at round start.
+        initPlayerForRound(player, client.sessionId, state.currentRound, state.runSeed, {
+            enemyResistances: Array.from(state.enemy.resistances),
+            enemyWeaknesses: Array.from(state.enemy.weaknesses),
+        });
         applyBossDebuff(state, player);
         state.gamePhase = "playing";
         logger.info(`Round ${state.currentRound} started. Enemy: ${state.enemy.name} (HP: ${state.enemy.maxHp})`);

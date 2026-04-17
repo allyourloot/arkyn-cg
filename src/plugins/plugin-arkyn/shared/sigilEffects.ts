@@ -31,6 +31,7 @@ import { createRoundRng } from "./seededRandom";
 //   [ 200000] Shop sigil generation             (shopGeneration)
 //   [ 300000–399999] SIGIL_PROCS                 (this file)
 //   [ 400000–499999] SIGIL_LIFECYCLE_HOOKS       (this file)
+//       slot 0 = Thief, slot 1 = Binoculars
 //   [ 400000 + round + bagIndex*7919] Rune Bag  (rollBagRunes)  ⚠ shares the
 //       lifecycle base; the two streams don't interact today because Thief's
 //       read is  `400000 + round`  (slot 0 only) while RuneBag's read is
@@ -290,7 +291,19 @@ export function getHandMultBonus(
 export type RoundStartEffect =
     | { type: "grantConsumable"; consumableId: string }
     | { type: "grantGold"; amount: number }
-    | { type: "grantStat"; stat: "castsRemaining" | "discardsRemaining" | "handSize"; amount: number };
+    | { type: "grantStat"; stat: "castsRemaining" | "discardsRemaining" | "handSize"; amount: number }
+    | { type: "disableResistance"; element: string };
+
+/**
+ * Context passed to round-start lifecycle hooks. Carries the freshly-spawned
+ * enemy's affinities so hooks can make decisions conditioned on the current
+ * matchup (Binoculars picks one of the enemy's resistances to nullify).
+ * Optional so existing hooks that don't need enemy data (Thief) can ignore it.
+ */
+export interface RoundStartContext {
+    readonly enemyResistances: readonly string[];
+    readonly enemyWeaknesses: readonly string[];
+}
 
 export interface SigilLifecycleHooks {
     /**
@@ -299,10 +312,11 @@ export interface SigilLifecycleHooks {
      * the caller will dispatch — or `void` / `[]` for no-op. Array form is
      * preferred: it keeps the contract uniform as new effect kinds land.
      */
-    onRoundStart?(round: number, runSeed: number): readonly RoundStartEffect[] | void;
+    onRoundStart?(round: number, runSeed: number, ctx: RoundStartContext): readonly RoundStartEffect[] | void;
 }
 
 const THIEF_RNG_OFFSET = lifecycleRngSlot(0);
+const BINOCULARS_RNG_OFFSET = lifecycleRngSlot(1);
 
 export const SIGIL_LIFECYCLE_HOOKS: Record<string, SigilLifecycleHooks> = {
     thief: {
@@ -310,6 +324,17 @@ export const SIGIL_LIFECYCLE_HOOKS: Record<string, SigilLifecycleHooks> = {
             const rng = createRoundRng(runSeed, THIEF_RNG_OFFSET + round);
             const element = ELEMENT_TYPES[Math.floor(rng() * ELEMENT_TYPES.length)];
             return [{ type: "grantConsumable", consumableId: element }];
+        },
+    },
+    binoculars: {
+        onRoundStart(round, runSeed, ctx) {
+            // No-op if the enemy has no resistances to disable. Slot 1 (not 0)
+            // avoids the latent rune-bag RNG collision documented at the top
+            // of this file.
+            if (ctx.enemyResistances.length === 0) return [];
+            const rng = createRoundRng(runSeed, BINOCULARS_RNG_OFFSET + round);
+            const element = ctx.enemyResistances[Math.floor(rng() * ctx.enemyResistances.length)];
+            return [{ type: "disableResistance", element }];
         },
     },
 };
@@ -412,13 +437,28 @@ export const SIGIL_RESIST_IGNORE: Record<string, readonly ElementType[]> = {
  * by any owned sigil is ignored. Call at both the damage formula call sites
  * (to strip matching entries from the enemy's resistances before the
  * per-rune modifier lookup) and in the UI (to decide which chips to X out).
+ *
+ * `dynamicIgnored` merges in per-round dynamically-picked elements (today
+ * just Binoculars' round-start pick, stored on `player.disabledResistance`).
+ * Pass an empty string or omit when there is no dynamic selection. Mixing
+ * the static registry with the dynamic selection at the aggregation layer
+ * keeps all resist-ignore wiring downstream (damage formula + UI X overlay)
+ * on a single code path.
  */
-export function getIgnoredResistanceElements(sigils: readonly string[]): Set<string> {
+export function getIgnoredResistanceElements(
+    sigils: readonly string[],
+    dynamicIgnored?: string | readonly string[],
+): Set<string> {
     const out = new Set<string>();
     for (const sigilId of sigils) {
         const elements = SIGIL_RESIST_IGNORE[sigilId];
         if (!elements) continue;
         for (const e of elements) out.add(e);
+    }
+    if (typeof dynamicIgnored === "string") {
+        if (dynamicIgnored) out.add(dynamicIgnored);
+    } else if (dynamicIgnored) {
+        for (const e of dynamicIgnored) if (e) out.add(e);
     }
     return out;
 }

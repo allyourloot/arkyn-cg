@@ -444,6 +444,7 @@ function assembleCastBreakdown(args: {
         contributingRunes: contributingRuneData,
         rawResistances: arkynStoreInternal.getEnemyResistances(),
         weaknesses: arkynStoreInternal.getEnemyWeaknesses(),
+        disabledResistance: arkynStoreInternal.getDisabledResistance(),
     });
     const handMultEntries = modifiers.breakdowns.handMult;
     const playedMultEntries = modifiers.breakdowns.playedMult;

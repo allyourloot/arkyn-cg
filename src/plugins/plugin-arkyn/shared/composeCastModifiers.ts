@@ -60,10 +60,18 @@ export interface ComposeCastModifiersArgs {
     rawResistances: readonly string[];
     /** Enemy's weakness elements. Used to derive per-rune crit flags for crit-gated sigils. */
     weaknesses: readonly string[];
+    /**
+     * Element whose resistance is dynamically nullified this round (today:
+     * Binoculars' round-start pick, stored on `player.disabledResistance`).
+     * Merged with the static SIGIL_RESIST_IGNORE registry at the ignore-set
+     * level so both paths feed `effectiveResistances` identically. Empty
+     * string / undefined = no dynamic selection.
+     */
+    disabledResistance?: string;
 }
 
 export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifiersResult {
-    const { sigils, spellElements, hand, selectedIndices, contributingRunes, rawResistances, weaknesses } = args;
+    const { sigils, spellElements, hand, selectedIndices, contributingRunes, rawResistances, weaknesses, disabledResistance } = args;
 
     const handMult = getHandMultBonus(sigils, hand, selectedIndices);
     const playedMult = getPlayedMultBonus(sigils, contributingRunes);
@@ -76,7 +84,7 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
     const isCritical = contributingElements.map(e => weaknesses.includes(e));
     const critRuneBonus = getCriticalRuneBonus(sigils, contributingElements, isCritical);
 
-    const ignoredResistances = getIgnoredResistanceElements(sigils);
+    const ignoredResistances = getIgnoredResistanceElements(sigils, disabledResistance);
     const effectiveResistances = ignoredResistances.size > 0
         ? rawResistances.filter(e => !ignoredResistances.has(e))
         : [...rawResistances];

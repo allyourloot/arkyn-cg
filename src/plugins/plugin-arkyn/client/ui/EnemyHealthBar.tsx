@@ -11,6 +11,7 @@ import {
     useEnemyIsBoss,
     useEnemyDebuff,
     useSigils,
+    useDisabledResistance,
     BAR_SHAKE_FRAME_S,
 } from "../arkynStore";
 import { getDebuffById, getIgnoredResistanceElements } from "../../shared";
@@ -54,11 +55,13 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
     const isBoss = useEnemyIsBoss();
     const debuffId = useEnemyDebuff();
     const debuff = debuffId ? getDebuffById(debuffId) : undefined;
-    // Resistances nullified by owned resist-ignore sigils (Impale-style).
-    // Each matching chip renders with a red X overlay + dimmed icon to show
-    // the player the enemy's resistance is being bypassed this run.
+    // Resistances nullified by owned resist-ignore sigils (Impale-style) or
+    // dynamically picked per-round by Binoculars. Each matching chip renders
+    // with a red X overlay + dimmed icon to show the player the enemy's
+    // resistance is being bypassed.
     const sigils = useSigils();
-    const ignoredResistances = getIgnoredResistanceElements(sigils);
+    const disabledResistance = useDisabledResistance();
+    const ignoredResistances = getIgnoredResistanceElements(sigils, disabledResistance);
 
     // wrapperRef scopes the GSAP context for cleanup; the actual shake
     // target is the inner barShakeRef so the name above and the affinity

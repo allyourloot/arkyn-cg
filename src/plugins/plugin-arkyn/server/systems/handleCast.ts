@@ -62,6 +62,7 @@ export function handleCast(
         player.castsRemaining,
         player.hand,
         indices,
+        player.disabledResistance,
     );
 
     // Move selected runes to played area

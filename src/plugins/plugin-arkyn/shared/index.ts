@@ -117,6 +117,7 @@ export type {
     CriticalRuneBonusEntry,
     SigilLifecycleHooks,
     RoundStartEffect,
+    RoundStartContext,
 } from "./sigilEffects";
 
 export { BOSS_DEBUFFS, isBossRound, pickDebuffForRound, getDebuffById } from "./bossDebuffs";

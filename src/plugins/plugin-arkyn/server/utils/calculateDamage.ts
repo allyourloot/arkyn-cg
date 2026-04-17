@@ -40,6 +40,7 @@ export function calculateDamage(
     castsRemaining?: number,
     hand?: readonly RuneInstance[],
     selectedIndices?: readonly number[],
+    disabledResistance?: string,
 ): CastDamageResult {
     const weaknesses = Array.from(enemy.weaknesses);
     const activeSigils = sigils ? Array.from(sigils) : [];
@@ -66,6 +67,7 @@ export function calculateDamage(
         contributingRunes,
         rawResistances: Array.from(enemy.resistances),
         weaknesses,
+        disabledResistance,
     });
 
     const breakdown = sharedCalculateSpellDamage(

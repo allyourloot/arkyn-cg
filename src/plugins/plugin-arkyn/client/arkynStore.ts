@@ -145,6 +145,11 @@ let sigils: string[] = [];
 // Consumable items — array of element names (scroll consumables).
 let consumables: string[] = [];
 
+// Element whose enemy resistance is nullified this round by Binoculars (or
+// any future dynamic resist-ignore sigil). Mirrors player.disabledResistance
+// on the server. Empty string = no disabled resistance.
+let disabledResistance = "";
+
 // Runes acquired this run from Rune Bag picks. These are rehydrated into
 // the pouch every round on the server side; the client mirrors the list
 // so PouchModal can show the extra slots (with real rarity art) and
@@ -316,6 +321,9 @@ export function setSigils(s: string[]) { sigils = s; notify(); }
 // Consumable setters
 export function setConsumables(c: string[]) { consumables = c; notify(); }
 
+// Dynamic resist-ignore setter — synced from player.disabledResistance.
+export function setDisabledResistance(e: string) { disabledResistance = e; notify(); }
+
 // Rune Bag setters
 export function setAcquiredRunes(r: RuneClientData[]) { acquiredRunes = r; notify(); }
 export function setPendingBagRunes(r: RuneClientData[]) { pendingBagRunes = r; notify(); }
@@ -445,6 +453,7 @@ export const arkynStoreInternal = {
     getEnemyWeaknesses: () => enemyWeaknesses,
     getScrollLevels: () => scrollLevels,
     getSigils: () => sigils,
+    getDisabledResistance: () => disabledResistance,
     getCastsRemaining: () => castsRemaining,
     getCurrentRound: () => currentRound,
     getRunSeed: () => runSeed,
@@ -567,6 +576,10 @@ export function useSigils() { return useSyncExternalStore(subscribe, () => sigil
 
 // Consumable hooks
 export function useConsumables() { return useSyncExternalStore(subscribe, () => consumables); }
+
+// Dynamic resist-ignore hook — the element (if any) that Binoculars picked
+// for this round. Empty string when no dynamic ignore is active.
+export function useDisabledResistance() { return useSyncExternalStore(subscribe, () => disabledResistance); }
 
 // Rune Bag hooks
 export function useAcquiredRunes() { return useSyncExternalStore(subscribe, () => acquiredRunes); }

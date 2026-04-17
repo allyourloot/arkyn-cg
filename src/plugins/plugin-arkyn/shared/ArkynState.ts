@@ -84,6 +84,13 @@ export class ArkynPlayerState extends Schema {
     // Players click USE to apply the scroll (increments scrollLevels).
     @type(["string"]) consumables = new ArraySchema<string>();
 
+    // Element whose enemy resistance is nullified this round by Binoculars
+    // (or any future dynamic resist-ignore sigil). Empty string = nothing
+    // disabled. Picked at round start via the onRoundStart lifecycle hook
+    // and cleared by initPlayerForRound at the next round so stale picks
+    // never leak across matchups.
+    @type("string") disabledResistance = "";
+
     // Current shop inventory — populated on entering the shop phase and
     // synced to the client for rendering. Each entry tracks whether the
     // item has been purchased so the client can grey it out.

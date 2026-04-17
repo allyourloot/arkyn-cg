@@ -157,6 +157,14 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
             elements: ["holy"] as const,
         },
     },
+    binoculars: {
+        id: "binoculars",
+        name: "Binoculars",
+        rarity: "common",
+        description: "Disable {one random enemy resistance} each round.",
+        cost: 3,
+        sellPrice: 1,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

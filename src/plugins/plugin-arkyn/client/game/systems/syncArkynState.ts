@@ -40,6 +40,7 @@ import {
     setShopItems,
     setSigils,
     setConsumables,
+    setDisabledResistance,
     setAcquiredRunes,
     setPendingBagRunes,
     clearSelectedIndices,
@@ -164,6 +165,7 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevShopItems: { itemType: string; element: string; cost: number; purchased: boolean }[] = [];
     let prevSigils: string[] = [];
     let prevConsumables: string[] = [];
+    let prevDisabledResistance = "";
     // Gate the add-consumable SFX so the first sync after join/reconnect
     // doesn't bleep for pre-existing consumables on the player's state.
     // Subsequent grows (Thief at round start, future consumable-granting
@@ -428,6 +430,12 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (!stringArraysEqual(player.sigils, prevSigils)) {
             prevSigils = Array.from(player.sigils);
             setSigils(prevSigils);
+        }
+
+        // Sync dynamic resist-ignore element (Binoculars picks one per round).
+        if (player.disabledResistance !== prevDisabledResistance) {
+            prevDisabledResistance = player.disabledResistance;
+            setDisabledResistance(prevDisabledResistance);
         }
 
         // Sync consumables

@@ -6,6 +6,7 @@ import {
     getPlayerStatDeltas,
     SIGIL_LIFECYCLE_HOOKS,
     type ArkynPlayerState,
+    type RoundStartContext,
 } from "../../shared";
 import { clearArraySchema } from "./clearArraySchema";
 import { createPouch } from "./createPouch";
@@ -25,12 +26,18 @@ import { refillHand } from "./refillHand";
  *
  * @param round  Current round number (1-based). Used by lifecycle hooks.
  * @param runSeed  Run seed for deterministic RNG in lifecycle hooks.
+ * @param enemyCtx  Freshly-spawned enemy's affinities, passed to lifecycle
+ *   hooks that need them (Binoculars picks one of `enemyResistances`).
+ *   Empty arrays are safe — Binoculars no-ops when the enemy has no
+ *   resistances, which also covers the handleJoin/handleNewRun first call
+ *   where the player has zero sigils anyway.
  */
 export function initPlayerForRound(
     player: ArkynPlayerState,
     sessionId: string,
     round = 0,
     runSeed = 0,
+    enemyCtx: RoundStartContext = { enemyResistances: [], enemyWeaknesses: [] },
 ): void {
     clearArraySchema(player.hand);
     clearArraySchema(player.playedRunes);
@@ -50,6 +57,10 @@ export function initPlayerForRound(
     player.lastRoundGoldBase = 0;
     player.lastRoundGoldHandsBonus = 0;
     player.lastRoundGoldHandsCount = 0;
+    // Clear any previous round's dynamic resist-ignore pick. Binoculars
+    // reassigns it below; otherwise stays empty so the enemy's full
+    // resistance set applies normally.
+    player.disabledResistance = "";
 
     // Fire lifecycle hooks — each hook returns zero or more discriminated
     // effects we dispatch over. New effect kinds (grantGold, grantStat, …)
@@ -57,7 +68,7 @@ export function initPlayerForRound(
     for (const sigilId of player.sigils) {
         const hooks = SIGIL_LIFECYCLE_HOOKS[sigilId];
         if (!hooks?.onRoundStart) continue;
-        const effects = hooks.onRoundStart(round, runSeed);
+        const effects = hooks.onRoundStart(round, runSeed, enemyCtx);
         if (!effects) continue;
         for (const effect of effects) {
             switch (effect.type) {
@@ -71,6 +82,9 @@ export function initPlayerForRound(
                     break;
                 case "grantStat":
                     player[effect.stat] += effect.amount;
+                    break;
+                case "disableResistance":
+                    player.disabledResistance = effect.element;
                     break;
             }
         }
