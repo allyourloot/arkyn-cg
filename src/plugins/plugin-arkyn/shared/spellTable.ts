@@ -107,6 +107,16 @@ export const SPELL_TABLE: Record<ElementType, Record<number, SpellInfo>> = {
 // long as the new poker-shape tables (TWO_PAIR_TABLE, FULL_HOUSE_TABLE)
 // did not already match. So 1F+1L → Plasma Cannon, 1F+4L → Plasma Cannon,
 // but 2F+2L → Dragonfire (two pair) and 3F+2L → Dragon's Breath (full house).
+// Signature spell for the Haphazard sigil — a single unified name used at
+// any tier when the resolver's all-unique branch fires. Gives players an
+// instant visual tell in the Spell Preview ("Tier N Abomination" appears
+// the moment a fully-unique hand is selected, regardless of which
+// elements were played).
+export const HAPHAZARD_SPELL: SpellInfo = {
+    name: "Abomination",
+    description: "A chaotic collision of elements collapsed into one strike.",
+};
+
 export const COMBO_TABLE: Record<string, SpellInfo> = {
     "air+fire": { name: "Smoke Signal", description: "Choking smoke and embers" },
     "air+water": { name: "Mist Veil", description: "A blinding fog descends" },

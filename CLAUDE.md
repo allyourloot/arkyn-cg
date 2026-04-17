@@ -108,6 +108,8 @@ Synergy pairs are defined in `SYNERGY_PAIRS` (`shared/spellTable.ts`) — 22 uno
 
 **Loose duo combos** (`COMBO_TABLE`) are **gated behind the Fuze sigil**. The base game resolver skips the loose-duo branch; owning Fuze (registered in `SIGIL_LOOSE_DUO_UNLOCKS`) flips `looseDuosEnabled(sigils)` to true and any 2-distinct-combinable-element cast fires the matching `COMBO_TABLE` entry (Steam Burst, Hailstorm, Plasma Cannon, etc.) with tier = total runes played (capped at 5). Without Fuze, mixed casts fall through to the single-element fallback.
 
+**Haphazard / "Abomination"** (`HAPHAZARD_SPELL` in `spellTable.ts`) is **gated behind the Haphazard sigil** (Rare). Branch placement: AFTER Fuze's loose-duo branch, BEFORE single-element fallback. Condition: ≥ 2 runes played AND every played rune is a distinct element (`shape.distinctCount === runes.length`). The branch produces the single signature spell "Abomination" at tier = rune count (capped at 5), with `comboElements` listing every played element in HAND ORDER (not frequency order) so the Spell Preview's per-char rainbow gradient reads left-to-right the way the player saw them. `spell.element` = first played rune's element, which keeps Supercell / Eruption's element-gated xMult compatible on Haphazard casts. Haphazard's damage profile matches a normal tier-N single-element cast — the value comes from unlocking tier-5 power from diverse hands instead of requiring 5-of-a-kind. Because Fuze's branch runs first, the Fuze + Haphazard overlap on 2-unique-combinable casts falls to Fuze (Steam Burst et al.); Haphazard claims the resolver on 3+ unique or 2-unique-non-combinable casts. The `"haphazard"` SpellShape is a new arm of the `SpellShape` union; `ResolvedSpell.comboElements` was widened from `[ElementType, ElementType]` to `readonly ElementType[]` to support 2-5 entries (the degenerate 2-element case matches existing combo / two-pair / full-house behavior exactly, so the widening was zero-breakage for existing consumers).
+
 ### Damage Model — Base + Mult (`shared/calculateDamage.ts`)
 
 Balatro-style chip × mult system:
@@ -137,7 +139,7 @@ finalDamage = baseTotal × finalMult
 
 ### Sigil System (`shared/sigilEffects.ts`, `shared/sigils.ts`)
 
-Sigils are shop-purchased items that modify a run. **14 sigils are implemented today** across **10 effect categories**, and the system is designed to scale to 50+ via **data-driven effect registries** — adding most new sigils is a single data entry, zero code branches.
+Sigils are shop-purchased items that modify a run. **15 sigils are implemented today** across **10 effect categories**, and the system is designed to scale to 50+ via **data-driven effect registries** — adding most new sigils is a single data entry, zero code branches.
 
 **Two files, clear separation of concerns:**
 - `shared/sigils.ts` — `SIGIL_DEFINITIONS: Record<string, SigilDefinition>` with metadata (id, name, rarity, description with `{highlighted}` markers, cost, sellPrice, optional `explainer` showing trigger-element icons in the tooltip).
@@ -147,11 +149,11 @@ Sigils are shop-purchased items that modify a run. **14 sigils are implemented t
 
 | # | Category | Registry | Helper | Sigils |
 |---|---|---|---|---|
-| 1 | Stat modifiers | `SIGIL_STAT_MODIFIERS` | `getPlayerStatDeltas(sigils)` | Caster: `{ castsPerRound: 1 }` |
+| 1 | Stat modifiers | `SIGIL_STAT_MODIFIERS` | `getPlayerStatDeltas(sigils)` | Caster: `{ castsPerRound: 1 }`, Haphazard: `{ handSize: -1 }` (the trade-off for the Abomination resolver unlock — see Category 5 entry) |
 | 2 | RNG procs on played runes | `SIGIL_PROCS` | `iterateProcs(sigils, elements, seed, round, cast, isCritical?)` | Voltage (25% on lightning → double_damage), Fortune (33% on critical → +2 gold), Hourglass (25% any element → double_damage) |
 | 3 | Hand-based mult | `SIGIL_HAND_MULT` | `getHandMultBonus(sigils, hand, excluded)` | Synapse: `{ element: "psy", multPerRune: 2 }` |
 | 4 | Lifecycle hooks | `SIGIL_LIFECYCLE_HOOKS` | `hooks.onRoundStart(round, seed, ctx)` → `RoundStartEffect[]` | Thief (onRoundStart → `[{ type: "grantConsumable", consumableId }]`), Binoculars (onRoundStart → `[{ type: "disableResistance", element }]` — random pick from `ctx.enemyResistances`) |
-| 5 | Resolver synergy/feature unlocks | `SIGIL_SYNERGY_PAIRS` (in `spellTable.ts`), `SIGIL_LOOSE_DUO_UNLOCKS` | `isSynergyPair(a, b, sigils)`, `looseDuosEnabled(sigils)` | Burnrite (unlocks `"death+fire"` synergy), Fuze (unlocks loose-duo combos for any 2 combinable elements) |
+| 5 | Resolver synergy/feature unlocks | `SIGIL_SYNERGY_PAIRS` (in `spellTable.ts`), `SIGIL_LOOSE_DUO_UNLOCKS`, `SIGIL_ALL_UNIQUE_UNLOCKS` | `isSynergyPair(a, b, sigils)`, `looseDuosEnabled(sigils)`, `allUniqueRunesEnabled(sigils)` | Burnrite (unlocks `"death+fire"` synergy), Fuze (unlocks loose-duo combos for any 2 combinable elements), Haphazard (unlocks the "Abomination" resolver branch — all-unique casts ≥ 2 runes produce a signature spell whose tier equals rune count) |
 | 6 | Spell-element xMult | `SIGIL_SPELL_X_MULT` | `getSpellXMult(sigils, spellElements)` | Supercell (lightning/air spells × 3), Eruption (fire/earth spells × 3) |
 | 7 | Resistance ignore | `SIGIL_RESIST_IGNORE` | `getIgnoredResistanceElements(sigils, dynamicIgnored?)` | Impale (`["steel"]` — static nullification). Binoculars contributes a **dynamic** per-round pick via the lifecycle hook; the helper's optional `dynamicIgnored` param merges `player.disabledResistance` with the static registry so both feed `effectiveResistances` on one code path. |
 | 8 | End-of-round gold | `SIGIL_END_OF_ROUND_GOLD` | `getEndOfRoundSigilGold(sigils)` | Plunder (`{ amount: 5 }`) |
@@ -266,6 +268,8 @@ Browsers limit concurrent WebGL contexts (Chrome: ~16, practical ceiling ~8–12
 ### Shop Item System (`server/systems/handleBuyItem.ts`, `shopItemHandlers.ts`)
 
 Shop purchases dispatch through a data-driven handler registry parallel to the sigil effect registries — `handleBuyItem` validates the request (gold, shop index, item not-already-purchased) then looks up the item's handler in `SHOP_ITEM_HANDLERS`. Each handler runs its own type-specific preconditions and state mutations; the dispatcher charges gold and flips `item.purchased = true` **only after** the handler returns `{ ok: true }`. There is no refund path — gold is never deducted on failure.
+
+**Shop sigil generation** (`shared/shopGeneration.ts::generateShopSigils`) is **rarity-weighted** — each shop slot rolls against `RUNE_BAG_RARITY_WEIGHTS` (Common 60%, Uncommon 25%, Rare 12%, Legendary 3%) so Legendary sigils feel earned when they appear instead of hitting the board on round 1-3. The same weights drive Rune Bag rarity rolls so there's one source of truth for how rare "rare" feels across the game. Picks within a single shop visit are sampling-without-replacement (weights recomputed per slot so removing a Legendary from slot 1 doesn't inflate slot 2's Legendary odds). Owned sigils are filtered out of the pool before weighting.
 
 **Registry** (`server/systems/shopItemHandlers.ts`):
 ```ts

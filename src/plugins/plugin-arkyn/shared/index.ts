@@ -89,6 +89,7 @@ export {
     SIGIL_HAND_MULT,
     SIGIL_LIFECYCLE_HOOKS,
     SIGIL_LOOSE_DUO_UNLOCKS,
+    SIGIL_ALL_UNIQUE_UNLOCKS,
     SIGIL_SPELL_X_MULT,
     SIGIL_RESIST_IGNORE,
     SIGIL_END_OF_ROUND_GOLD,
@@ -103,6 +104,7 @@ export {
     getCriticalRuneBonus,
     iterateProcs,
     looseDuosEnabled,
+    allUniqueRunesEnabled,
 } from "./sigilEffects";
 export type {
     PlayerStatDeltas,

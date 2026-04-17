@@ -82,6 +82,12 @@ export interface PlayerStatDeltas {
 
 export const SIGIL_STAT_MODIFIERS: Record<string, Partial<PlayerStatDeltas>> = {
     caster: { castsPerRound: 1 },
+    // Haphazard is a multi-category sigil: the resolver unlock + stat
+    // penalty combo. -1 hand size is the trade-off for the easy access
+    // to tier-N diverse casts — you see one fewer card per round, which
+    // costs the player Two Pair / Full House / Tier-5 single-element
+    // lookup reliability without making Abomination harder to trigger.
+    haphazard: { handSize: -1 },
 };
 
 /**
@@ -354,6 +360,21 @@ export const SIGIL_LOOSE_DUO_UNLOCKS: Record<string, true> = {
 
 export function looseDuosEnabled(sigils: readonly string[]): boolean {
     return sigils.some(id => SIGIL_LOOSE_DUO_UNLOCKS[id]);
+}
+
+/**
+ * Sigils that unlock the "all-unique runes → Abomination" resolver branch.
+ * When any owned sigil is in this registry, casts with ≥ 2 played runes AND
+ * every played rune being a distinct element fire the Haphazard branch in
+ * `resolveSpell` (signature spell "Abomination", tier = rune count, all
+ * played runes treated as contributing).
+ */
+export const SIGIL_ALL_UNIQUE_UNLOCKS: Record<string, true> = {
+    haphazard: true,
+};
+
+export function allUniqueRunesEnabled(sigils: readonly string[]): boolean {
+    return sigils.some(id => SIGIL_ALL_UNIQUE_UNLOCKS[id]);
 }
 
 // ============================================================================

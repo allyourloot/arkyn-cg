@@ -4,15 +4,19 @@ import {
     TWO_PAIR_TABLE,
     FULL_HOUSE_TABLE,
     COMBO_TABLE,
+    HAPHAZARD_SPELL,
     isSynergyPair,
     type SpellInfo,
 } from "./spellTable";
-import { looseDuosEnabled } from "./sigilEffects";
+import { allUniqueRunesEnabled, looseDuosEnabled } from "./sigilEffects";
 
 // `duo` is kept in the union for the future shop-unlock path that
 // re-enables loose-duo combos (COMBO_TABLE). In the base game, only
 // `single`, `two_pair`, and `full_house` can be resolved.
-export type SpellShape = "single" | "duo" | "two_pair" | "full_house";
+// `haphazard` fires when the Haphazard sigil is owned and all played
+// runes are unique (no duplicates, ≥ 2 played) — the spell name is the
+// fixed signature "Abomination" regardless of tier or elements.
+export type SpellShape = "single" | "duo" | "two_pair" | "full_house" | "haphazard";
 
 export interface ResolvedSpell {
     spellName: string;
@@ -23,12 +27,19 @@ export interface ResolvedSpell {
     /**
      * The pattern this spell matched. `single` for single-element spells,
      * `duo` for the loose 2-element COMBO_TABLE matches (Electrocution
-     * etc.), and `two_pair` / `full_house` for the new poker shapes.
-     * Drives the SpellPreview tier label so the player can see WHY a
-     * combo fired.
+     * etc.), `two_pair` / `full_house` for the new poker shapes, and
+     * `haphazard` for all-unique Abomination casts. Drives the
+     * SpellPreview tier label so the player can see WHY a combo fired.
      */
     shape: SpellShape;
-    comboElements?: [ElementType, ElementType];
+    /**
+     * Elements that drove the cast — 2 for duo/two_pair/full_house,
+     * 2-5 for haphazard (one entry per played unique rune), omitted for
+     * single-element. Order is meaningful for the rainbow name gradient:
+     * Haphazard passes runes in played-hand order so the BouncyText
+     * gradient reads left-to-right the way the player saw them.
+     */
+    comboElements?: readonly ElementType[];
 }
 
 export interface RuneData {
@@ -101,7 +112,7 @@ function buildResolvedSpell(
     tier: number,
     element: string,
     shape: SpellShape,
-    comboElements?: [string, string],
+    comboElements?: readonly string[],
 ): ResolvedSpell {
     return {
         spellName: info.name,
@@ -110,7 +121,7 @@ function buildResolvedSpell(
         description: info.description,
         isCombo: shape !== "single",
         shape,
-        comboElements: comboElements as [ElementType, ElementType] | undefined,
+        comboElements: comboElements as readonly ElementType[] | undefined,
     };
 }
 
@@ -189,7 +200,28 @@ export function resolveSpell(
         }
     }
 
-    // 4. Single-element fallback — most-frequent element wins, tier
+    // 4. Haphazard — gated on the Haphazard sigil (see
+    //    SIGIL_ALL_UNIQUE_UNLOCKS). Fires when every played rune is
+    //    unique AND at least 2 runes are played. Produces the signature
+    //    "Abomination" spell (HAPHAZARD_SPELL), with tier = rune count
+    //    and comboElements = every played element in hand order so the
+    //    Spell Preview's per-char rainbow gradient reads left-to-right.
+    //    The internal `element` still tracks the first played rune so
+    //    spell-element sigils (Supercell/Eruption) can trigger on
+    //    Haphazard casts that happen to include their trigger elements
+    //    via the comboElements path in composeCastModifiers.
+    if (
+        runes.length >= 2
+        && shape.distinctCount === runes.length
+        && allUniqueRunesEnabled(activeSigils ?? [])
+    ) {
+        const firstElement = runes[0].element;
+        const tier = Math.min(runes.length, 5);
+        const allElements = runes.map(r => r.element);
+        return buildResolvedSpell(HAPHAZARD_SPELL, tier, firstElement, "haphazard", allElements);
+    }
+
+    // 5. Single-element fallback — most-frequent element wins, tier
     //    equals that element's count (capped at 5). Hands that don't
     //    fit any combo shape (3-distinct, 4-distinct, 5-distinct, or
     //    [2,1,1]/[3,1,1]) land here, plus non-synergy poker shapes

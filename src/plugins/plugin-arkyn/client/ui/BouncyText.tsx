@@ -18,16 +18,19 @@ interface BouncyTextProps {
      */
     style?: CSSProperties;
     /**
-     * If set, each visible character's color is interpolated between
-     * these two hex strings based on its position in the string. Used
-     * for combo spell names so the gradient effect (e.g. green → red-
-     * orange for Magma Burst) composes with the per-char bounce. The
-     * `background-clip: text` trick can't be used here because nested
-     * char spans break the wrapper's text-clipping mask, so we use
-     * stepped per-char solid colors instead — at typical spell-name
-     * sizes the steps read as a smooth gradient.
+     * If set, each visible character's color is picked from a gradient
+     * built out of these hex stops. N=2 is the classic duo combo case
+     * (Magma Burst, Steam Burst — green → red-orange across the name);
+     * N=3..5 is used for Haphazard's "Abomination" signature spell
+     * where the gradient cycles through every played element's color.
+     * Piecewise-linear: for N stops the visible range is split into
+     * N-1 equal segments, each interpolating between its pair of
+     * adjacent stops. The `background-clip: text` trick can't be used
+     * here because nested char spans break the wrapper's text-clipping
+     * mask, so we paint per-char solid colors instead — at typical
+     * spell-name sizes the steps read as a smooth gradient.
      */
-    colorRange?: readonly [string, string];
+    colorRange?: readonly string[];
 }
 
 // Parse a `#rgb` or `#rrggbb` hex string into a [r, g, b] tuple of 0-255
@@ -101,9 +104,20 @@ const BouncyText = forwardRef<HTMLSpanElement, BouncyTextProps>(
                 const charStyle: CSSProperties = {
                     animationDelay: `${(-(i * stagger)).toFixed(3)}s`,
                 };
-                if (colorRange) {
-                    const t = visibleCount > 1 ? visibleIndex / (visibleCount - 1) : 0;
-                    charStyle.color = lerpColor(colorRange[0], colorRange[1], t);
+                if (colorRange && colorRange.length > 0) {
+                    if (colorRange.length === 1) {
+                        charStyle.color = colorRange[0];
+                    } else {
+                        // Map visibleIndex → [0, 1], then walk piecewise
+                        // through the N-1 segments between stops. The
+                        // N=2 case collapses to the original lerp.
+                        const t = visibleCount > 1 ? visibleIndex / (visibleCount - 1) : 0;
+                        const segments = colorRange.length - 1;
+                        const segPos = t * segments;
+                        const segIdx = Math.min(Math.floor(segPos), segments - 1);
+                        const segT = segPos - segIdx;
+                        charStyle.color = lerpColor(colorRange[segIdx], colorRange[segIdx + 1], segT);
+                    }
                 }
                 out.push(
                     <span

@@ -270,26 +270,19 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
                 {spell.isCombo && spell.comboElements ? (
                     /* Combo spells: pass `colorRange` to BouncyText so each
                        visible character gets a solid color interpolated
-                       between the two element colors. The "gradient" is
-                       technically stepped per-glyph but at typical spell-
-                       name sizes (~20-28px) and short lengths (~10 chars)
-                       it reads as a smooth left-to-right gradient, with
-                       the bonus that:
-                         - per-char bounce still works (each char has its
-                           own solid color and its own translateY)
-                         - text-shadow still works (text-shadow respects
-                           solid colors, unlike the background-clip: text
-                           workaround which forced color: transparent)
-                         - no `display: inline-block` wrapper needed, so
-                           the spell name still flows inline. */
+                       between the element colors. For 2-element combos
+                       (Magma Burst, Steam Burst — two_pair / full_house /
+                       duo) this reads as a smooth two-stop gradient. For
+                       Haphazard's "Abomination" (up to 5 played elements),
+                       the same path produces a rainbow across every played
+                       element — BouncyText's piecewise interpolation makes
+                       N=2..5 stops all render through one code branch. */
                     (() => {
-                        const [el1, el2] = spell.comboElements;
-                        const c1 = ELEMENT_COLORS[el1] ?? "#aaa";
-                        const c2 = ELEMENT_COLORS[el2] ?? "#aaa";
+                        const colors = spell.comboElements.map(el => ELEMENT_COLORS[el] ?? "#aaa");
                         return (
                             <BouncyText
                                 className={styles.spellName}
-                                colorRange={[c1, c2]}
+                                colorRange={colors}
                             >
                                 {spell.spellName}
                             </BouncyText>
@@ -312,6 +305,7 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
                             spell.shape === "full_house" ? " (Full House)"
                             : spell.shape === "two_pair" ? " (Two Pair)"
                             : spell.shape === "duo" ? " (Combo)"
+                            : spell.shape === "haphazard" ? " (Haphazard)"
                             : ""
                         }`}
                     </BouncyText>
