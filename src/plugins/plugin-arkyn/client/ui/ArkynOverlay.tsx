@@ -10,6 +10,7 @@ import {
     onBagRunePick,
     getSigilSlotRect,
     setScrollUpgradeDisplay,
+    setPendingSigilId,
 } from "../arkynStore";
 import type { ScrollPurchaseEvent, SigilPurchaseEvent, BagRunePickEvent, RuneClientData } from "../arkynStore";
 import { ENEMY_DAMAGE_HIT_MS } from "../arkynAnimations";
@@ -28,10 +29,16 @@ import DiscardAnimation from "./DiscardAnimation";
 import DrawAnimation from "./DrawAnimation";
 import MainMenu from "./MainMenu";
 import SigilBar from "./SigilBar";
+import ItemScene from "./ItemScene";
 import MultBubbleOverlay from "./MultBubble";
 import InfoButton from "./InfoButton";
 import BackgroundMusic from "./BackgroundMusic";
 import BackgroundShader from "./BackgroundShader";
+import PerfHud, { isPerfHudEnabled } from "./PerfHud";
+
+// Evaluated once at module load — URL-param check is stable across the
+// session. Writers who want to flip it have to reload anyway.
+const PERF_HUD = isPerfHudEnabled();
 import OverlayShader from "./OverlayShader";
 import { getScrollImageUrl } from "./scrollAssets";
 import { getSigilImageUrl } from "./sigilAssets";
@@ -94,7 +101,7 @@ export default function ArkynOverlay() {
         fromRect: DOMRect;
         targetSlotIndex: number;
     } | null>(null);
-    const flyingSigilRef = useRef<HTMLImageElement>(null);
+    const flyingSigilRef = useRef<HTMLDivElement>(null);
 
     // Flying rune overlay — for the Rune Bag "picked rune flies to the
     // pouch counter" animation. Same pattern as flying sigil, but the
@@ -162,6 +169,10 @@ export default function ArkynOverlay() {
             const imageUrl = getSigilImageUrl(e.sigilId, 128);
             if (!imageUrl) return;
             const targetSlotIndex = sigils.length;
+            // Mark this sigil as in-flight so SigilBar hides its slot until
+            // the flyer arrives; prevents the server echo from popping the
+            // sigil into its slot mid-flight.
+            setPendingSigilId(e.sigilId);
             setFlyingSigil({
                 sigilId: e.sigilId,
                 imageUrl,
@@ -197,7 +208,7 @@ export default function ArkynOverlay() {
             x: fromCenterX - toSize / 2,
             y: fromCenterY - toSize / 2,
             scale: startScale,
-            opacity: 1,
+            autoAlpha: 1,
         });
 
         const tl = gsap.timeline();
@@ -211,14 +222,24 @@ export default function ArkynOverlay() {
             ease: "power2.inOut",
         });
 
-        // Quick pop at destination
-        tl.to(el, { scale: 1.25, duration: 0.08, ease: "power2.out" });
-        tl.to(el, { scale: 1, opacity: 0, duration: 0.15, ease: "power2.in" });
+        // Reveal the sigil in its slot as the flyer lands — the 0.15s
+        // fade below plays on top so the handoff is seamless.
+        tl.call(() => { setPendingSigilId(null); });
+
+        // Fade out in place once landed. autoAlpha flips visibility to
+        // hidden at opacity 0 so the flyer skips paint + stops eating
+        // layer memory.
+        tl.to(el, { autoAlpha: 0, duration: 0.15, ease: "power2.in" });
 
         // Clean up
         tl.call(() => { setFlyingSigil(null); });
 
-        return () => { tl.kill(); };
+        return () => {
+            tl.kill();
+            // Safety: if the timeline is interrupted, don't leave the
+            // slot permanently hidden.
+            setPendingSigilId(null);
+        };
     }, { dependencies: [flyingSigil] });
 
     // Listen for Rune Bag picks and fly the chosen rune to the pouch.
@@ -241,35 +262,45 @@ export default function ArkynOverlay() {
         const toX = toRect ? toRect.left + toRect.width / 2 : window.innerWidth - 60;
         const toY = toRect ? toRect.top + toRect.height / 2 : window.innerHeight - 60;
 
+        // Static width/height at the target size; scale+translate tween
+        // is compositor-only (avoids the per-frame layout cost that
+        // width/height animation triggered during the 0.68s flight).
+        const startScale = fromRect.width / toSize;
+        const fromCenterX = fromRect.left + fromRect.width / 2;
+        const fromCenterY = fromRect.top + fromRect.height / 2;
+        const initialX = fromCenterX - toSize / 2;
+        const initialY = fromCenterY - toSize / 2;
+
         gsap.set(el, {
-            x: fromRect.left,
-            y: fromRect.top,
-            width: fromRect.width,
-            height: fromRect.height,
-            opacity: 1,
-            scale: 1,
+            x: initialX,
+            y: initialY,
+            width: toSize,
+            height: toSize,
+            scale: startScale,
+            autoAlpha: 1,
         });
 
         const tl = gsap.timeline();
 
         // Arc slightly up before diving toward the counter — feels more
-        // like a thrown rune than a linear slide.
+        // like a thrown rune than a linear slide. (40px of lift is in
+        // screen space; translate happens before scale in the transform
+        // matrix, so the visual rise is 40px regardless of scale.)
         tl.to(el, {
-            y: fromRect.top - 40,
+            y: initialY - 40,
             duration: 0.18,
             ease: "power2.out",
         });
         tl.to(el, {
             x: toX - toSize / 2,
             y: toY - toSize / 2,
-            width: toSize,
-            height: toSize,
+            scale: 1,
             duration: 0.5,
             ease: "power2.in",
         });
         // Land pop + fade.
         tl.to(el, { scale: 1.2, duration: 0.08, ease: "power2.out" });
-        tl.to(el, { scale: 1, opacity: 0, duration: 0.14, ease: "power2.in" });
+        tl.to(el, { scale: 1, autoAlpha: 0, duration: 0.14, ease: "power2.in" });
 
         tl.call(() => { setFlyingRune(null); });
 
@@ -299,13 +330,22 @@ export default function ArkynOverlay() {
         const centerY = window.innerHeight / 2;
         const targetSize = Math.min(window.innerWidth, window.innerHeight) * 0.18;
 
-        // Set initial position at the card's scroll image location
+        // Keep width/height STATIC at the target size and tween scale +
+        // translate. Animating width/height triggers layout every frame
+        // for the full 0.4s flight, which collides with the shared item
+        // renderer's load — scale on a position:fixed element is
+        // compositor-only.
+        const startScale = fromRect.width / targetSize;
+        const fromCenterX = fromRect.left + fromRect.width / 2;
+        const fromCenterY = fromRect.top + fromRect.height / 2;
+
         gsap.set(el, {
-            x: fromRect.left + fromRect.width / 2 - targetSize / 2,
-            y: fromRect.top + fromRect.height / 2 - targetSize / 2,
-            width: fromRect.width,
-            height: fromRect.height,
-            opacity: 1,
+            width: targetSize,
+            height: targetSize,
+            x: fromCenterX - targetSize / 2,
+            y: fromCenterY - targetSize / 2,
+            scale: startScale,
+            autoAlpha: 1,
         });
 
         const tl = gsap.timeline();
@@ -327,8 +367,7 @@ export default function ArkynOverlay() {
         tl.to(el, {
             x: centerX - targetSize / 2,
             y: centerY - targetSize / 2,
-            width: targetSize,
-            height: targetSize,
+            scale: 1,
             duration: 0.4,
             ease: "power2.out",
         }, 0);
@@ -523,7 +562,7 @@ export default function ArkynOverlay() {
             <div className={styles.root}>
                 <BackgroundShader />
                 <ShopPanel ref={shopPanelRef} />
-                <div className={styles.centerColumn}>
+                <div className={`${styles.centerColumn} ${styles.centerColumnShop}`}>
                     <ShopScreen ref={shopScreenRef} />
                 </div>
                 <div className={styles.rightSpacer} aria-hidden="true" />
@@ -540,14 +579,21 @@ export default function ArkynOverlay() {
                     />
                 )}
 
-                {/* Flying sigil animation overlay */}
+                {/* Flying sigil animation overlay — uses ItemScene so the
+                    flyer shows the same framed/embossed look as the shop
+                    card and destination slot, instead of a flat PNG. */}
                 {flyingSigil && (
-                    <img
+                    <div
                         ref={flyingSigilRef}
-                        src={flyingSigil.imageUrl}
-                        alt=""
                         className={styles.flyingSigil}
-                    />
+                        aria-hidden="true"
+                    >
+                        <ItemScene
+                            itemId={flyingSigil.sigilId}
+                            index={-1}
+                            className={styles.flyingSigilCard}
+                        />
+                    </div>
                 )}
 
                 {/* Flying rune animation overlay — for Rune Bag picks */}
@@ -585,6 +631,7 @@ export default function ArkynOverlay() {
 
                 <BackgroundMusic />
                 <OverlayShader />
+                {PERF_HUD && <PerfHud />}
             </div>
         );
     }
@@ -615,6 +662,7 @@ export default function ArkynOverlay() {
             {showRoundEnd && <RoundEndOverlay />}
             {showGameOver && <GameOverOverlay />}
             <OverlayShader />
+            {PERF_HUD && <PerfHud />}
         </div>
     );
 }

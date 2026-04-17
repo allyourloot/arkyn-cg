@@ -160,6 +160,13 @@ const TILT_LERP_SPEED = 8;          // smoothing factor
 const IDLE_TILT_AMP = 0.22;         // idle rotation amplitude (radians, ~12 deg)
 const PHASE_STAGGER = 1.2;          // seconds offset per sigil index
 
+// Render-on-demand (A1) + idle throttle (A2). Cards that aren't being
+// hovered and aren't due for an idle-drift tick skip the full render
+// pass entirely. This caps idle shop cost at ~15fps × N cards instead
+// of 60fps × N cards; hovered cards still render at full 60fps.
+const IDLE_TICK_INTERVAL_MS = 67;   // ~15fps per-item idle ticks
+const TILT_EPSILON = 0.001;         // tilt delta below which we call it "at rest"
+
 // Tilt-reactive drop shadow. Shadow translate is driven off the card's
 // live mesh rotation so idle drift produces micro-motion and hover tilt
 // produces a clear "card lifts, shadow slides" cue. Units:
@@ -223,6 +230,21 @@ interface RegisteredItem {
     cssW: number;
     cssH: number;
     resizeObserver: ResizeObserver | null;
+    // ----- Render-on-demand state (A1 + A2) -----
+    // Viewport visibility tracked via IntersectionObserver; off-screen
+    // items skip the render path entirely.
+    isVisible: boolean;
+    intersectionObserver: IntersectionObserver | null;
+    // Last time (ms) an idle-drift tick rendered this item. Throttled
+    // to IDLE_TICK_INTERVAL_MS so ambient bob runs at ~15fps instead of
+    // 60fps.
+    lastIdleRenderTime: number;
+    // ----- Shadow cache (A3) -----
+    // Shadow pixels depend only on the texture + mesh-rotation-(0,0,0),
+    // so they're identical every frame. Render once when the texture
+    // is ready, cache forever. CSS transform on the shadow canvas
+    // (position, not pixels) still updates per render for tilt reactivity.
+    shadowRendered: boolean;
 }
 
 // ----- Module state (lazy-initialized) -----
@@ -253,6 +275,19 @@ let lastFrameTime = 0;
 // (the common case — all sigil cards share a size).
 let lastRendererW = 0;
 let lastRendererH = 0;
+
+// ----- Perf instrumentation (A6) -----
+// Items-rendered-per-frame counter consumed by the dev PerfHud. Updated
+// inside the render loop; published after each frame completes so readers
+// see a stable value between frames. Zero runtime cost when nobody reads.
+let currentFrameItemsRendered = 0;
+let lastFrameItemsRendered = 0;
+export function getItemsRenderedLastFrame(): number {
+    return lastFrameItemsRendered;
+}
+export function getRegisteredItemCount(): number {
+    return registered.size;
+}
 
 // ----- Lazy initialization -----
 
@@ -388,9 +423,29 @@ function stopLoop(): void {
     rafId = 0;
 }
 
+// Decide whether an item needs a render this frame. Returns true if:
+//  - Item is visible AND
+//    - its smoothed tilt isn't yet at its target (hover lerp in-flight), OR
+//    - an idle-drift tick is due (15fps ambient animation)
+// Static-at-rest items return false → skip everything.
+function needsRender(item: RegisteredItem, now: number): boolean {
+    if (!item.isVisible) return false;
+    const tgt = item.tiltTargetRef.current;
+    const cur = item.tiltCurrent;
+    if (Math.abs(tgt.x - cur.x) > TILT_EPSILON) return true;
+    if (Math.abs(tgt.y - cur.y) > TILT_EPSILON) return true;
+    if (now - item.lastIdleRenderTime >= IDLE_TICK_INTERVAL_MS) return true;
+    return false;
+}
+
 function renderFrame(now: number): void {
     if (!running) return;
     rafId = requestAnimationFrame(renderFrame);
+
+    // Publish last frame's counter for the PerfHud, then reset for this
+    // frame. Writers below increment per actual render.
+    lastFrameItemsRendered = currentFrameItemsRendered;
+    currentFrameItemsRendered = 0;
 
     if (contextLost || registered.size === 0 || !renderer || !material || !shadowMaterial || !mesh || !scene || !camera) {
         return;
@@ -409,6 +464,13 @@ function renderFrame(now: number): void {
         const cssH = item.cssH;
         if (cssW <= 0 || cssH <= 0) continue;
 
+        // Render-on-demand gate. Skip the entire per-item work (lerp,
+        // idle-drift math, shader uniform updates, 2× render, 2× blit)
+        // for items that aren't hovered, aren't in lerp transit, and
+        // aren't due for an idle tick. This is the dominant cost saver
+        // for full sigil bars in the shop.
+        if (!needsRender(item, now)) continue;
+
         // Only apply setSize when dimensions actually change. In the common
         // case (all sigils same size) the call is skipped every frame after
         // the first. Three.js's setPixelRatio(dpr) means passing CSS size
@@ -422,7 +484,8 @@ function renderFrame(now: number): void {
         const bufH = renderer.domElement.height;
 
         // Match the display canvas buffer to the offscreen buffer so the
-        // blit below is pixel-perfect 1:1.
+        // blit below is pixel-perfect 1:1. A resize invalidates the
+        // cached shadow since the pixel grid changed.
         if (item.canvas.width !== bufW || item.canvas.height !== bufH) {
             item.canvas.width = bufW;
             item.canvas.height = bufH;
@@ -430,6 +493,7 @@ function renderFrame(now: number): void {
         if (item.shadowCanvas && (item.shadowCanvas.width !== bufW || item.shadowCanvas.height !== bufH)) {
             item.shadowCanvas.width = bufW;
             item.shadowCanvas.height = bufH;
+            item.shadowRendered = false;
         }
 
         // Lerp smoothed mouse tilt toward target.
@@ -439,7 +503,10 @@ function renderFrame(now: number): void {
         cur.y += (tgt.y - cur.y) * lerpFactor;
 
         // Idle tilt drift — different frequencies on each axis so the
-        // motion never loops exactly; looks like gentle floating.
+        // motion never loops exactly; looks like gentle floating. Note:
+        // this function is only evaluated when we render, so with A2 it
+        // samples the idle curve at ~15fps instead of 60fps. Ambient bob
+        // still reads as smooth — no visible stepping at this tempo.
         const phase = item.phase;
         const idleTiltX = Math.sin(t * 0.7 + phase) * IDLE_TILT_AMP
                         + Math.sin(t * 0.3 + phase * 2.1) * IDLE_TILT_AMP * 0.3;
@@ -458,16 +525,26 @@ function renderFrame(now: number): void {
         const cardRotX = idleTiltX - cur.y * MAX_TILT_RAD;
         const cardRotY = idleTiltY - cur.x * MAX_TILT_RAD;
 
-        // ── Shadow pass — flat mesh, shadow material, alpha sourced from
-        //    the item's texture. Runs before the card pass so the shadow
-        //    canvas gets the silhouette even if the card pass errors out.
-        if (item.shadowCtx2d && item.shadowCanvas) {
+        // ── Shadow pass (A3) — cached after first successful render.
+        //    Shadow pixels depend only on texture + mesh rotation (0,0,0),
+        //    so they're identical frame-to-frame. We only run the render
+        //    + blit here on the first render (or after a resize, which
+        //    clears shadowRendered). The tilt-reactive shadow *position*
+        //    (CSS transform on the shadow canvas) still updates every
+        //    render below.
+        if (item.shadowCtx2d && item.shadowCanvas && !item.shadowRendered) {
             mesh.material = shadowMaterial;
             shadowMaterial.uniforms.uTexture.value = item.texture;
             mesh.rotation.set(0, 0, 0);
             renderer.render(scene, camera);
             item.shadowCtx2d.clearRect(0, 0, bufW, bufH);
             item.shadowCtx2d.drawImage(renderer.domElement, 0, 0, bufW, bufH, 0, 0, bufW, bufH);
+            // Only mark cached when the texture has actually loaded — an
+            // empty-texture shadow would get stamped forever otherwise.
+            const img = item.texture.image as HTMLImageElement | undefined;
+            if (img && img.complete && img.naturalWidth > 0) {
+                item.shadowRendered = true;
+            }
         }
 
         // ── Card pass — tilted mesh, glossy-card material.
@@ -499,6 +576,10 @@ function renderFrame(now: number): void {
         // result as rendering directly to the display canvas).
         item.ctx2d.clearRect(0, 0, bufW, bufH);
         item.ctx2d.drawImage(renderer.domElement, 0, 0, bufW, bufH, 0, 0, bufW, bufH);
+
+        // Bookkeeping for the next needsRender() decision + PerfHud counter.
+        item.lastIdleRenderTime = now;
+        currentFrameItemsRendered++;
     }
 }
 
@@ -548,6 +629,16 @@ export function registerItemScene(cfg: ItemSceneRegistration): () => void {
         cssW: 0,
         cssH: 0,
         resizeObserver: null,
+        // A1: assume visible until the IntersectionObserver reports otherwise;
+        // initial callback fires shortly after observe() with the real state.
+        isVisible: true,
+        intersectionObserver: null,
+        // A2: start at 0 so the first frame definitely qualifies as
+        // "idle tick due" and the card paints immediately on mount.
+        lastIdleRenderTime: 0,
+        // A3: shadow not yet rendered; main loop draws it once when
+        // texture is ready, then caches.
+        shadowRendered: false,
     };
     registered.set(id, item);
 
@@ -570,11 +661,25 @@ export function registerItemScene(cfg: ItemSceneRegistration): () => void {
     observer.observe(cfg.canvas);
     item.resizeObserver = observer;
 
+    // A1: Viewport visibility via IntersectionObserver. Covers offscreen
+    // scroll, `display: none`, and `visibility: hidden`. Does NOT catch
+    // opacity: 0 ancestors — that's an acceptable miss for Phase A since
+    // the dominant cost is static-idle-shop, which this fully handles.
+    const io = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+            item.isVisible = entry.isIntersecting;
+        }
+    });
+    io.observe(cfg.canvas);
+    item.intersectionObserver = io;
+
     startLoop();
 
     return () => {
         item.resizeObserver?.disconnect();
         item.resizeObserver = null;
+        item.intersectionObserver?.disconnect();
+        item.intersectionObserver = null;
         registered.delete(id);
         if (registered.size === 0) {
             stopLoop();

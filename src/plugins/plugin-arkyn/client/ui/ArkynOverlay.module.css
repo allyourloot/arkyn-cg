@@ -95,6 +95,12 @@
     padding: 0 clamp(8px, 1.6vw, 24px);
 }
 
+/* Shop-phase variant — nudges the shop content down so it doesn't crowd
+   the Sigil bar pinned to the top. */
+.centerColumnShop {
+    padding-top: clamp(60px, 10vh, 140px);
+}
+
 .centerStage {
     flex: 1;
     display: flex;
@@ -161,8 +167,9 @@
     will-change: transform, opacity, filter;
 }
 
-/* Flying sigil image — flies from shop card to sigil bar slot.
-   Same pattern as flyingScroll but with a subtle glow. */
+/* Flying sigil wrapper — flies from shop card to sigil bar slot. Hosts
+   an inner ItemScene so the flyer shows the framed/embossed sigil
+   rendering instead of a flat PNG. */
 .flyingSigil {
     position: fixed;
     top: 0;
@@ -170,9 +177,17 @@
     pointer-events: none;
     image-rendering: pixelated;
     z-index: 100;
-    object-fit: contain;
-    filter: drop-shadow(0 0 16px rgba(180, 160, 255, 0.5));
     will-change: transform, opacity;
+}
+
+/* Inner ItemScene wrapper — fills the flying overlay. ItemScene's
+   canvas children are absolutely positioned, so this element needs to
+   establish the positioning context (position: absolute + inset:0). */
+.flyingSigilCard {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
 }
 
 /* Flying rune wrapper — mirrors the two-layer <RuneImage> stack so the

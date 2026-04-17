@@ -7,9 +7,11 @@ import {
     useGold,
     useScrollLevels,
     usePendingBagRunes,
+    useSigils,
     emitScrollPurchase,
     emitSigilPurchase,
 } from "../arkynStore";
+import { MAX_SIGILS } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { playButton, playBuy } from "../sfx";
 import { ELEMENT_COLORS, RARITY_COLORS, createPanelStyleVars } from "./styles";
@@ -56,6 +58,8 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     const gold = useGold();
     const scrollLevels = useScrollLevels();
     const pendingBagRunes = usePendingBagRunes();
+    const sigils = useSigils();
+    const sigilBarFull = sigils.length >= MAX_SIGILS;
 
     const panelRef = useRef<HTMLDivElement>(null);
     const shopContentRef = useRef<HTMLDivElement>(null);
@@ -172,6 +176,11 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         const def = SIGIL_DEFINITIONS[item.element];
                         if (!def) return null;
                         const canAfford = gold >= item.cost;
+                        // Disable buying sigils when the bar is full — the
+                        // server would reject the purchase anyway, and the
+                        // flyer animation kicked off client-side looks
+                        // broken when the sigil never actually arrives.
+                        const canBuy = canAfford && !sigilBarFull;
                         const rarityColor = RARITY_COLORS[def.rarity] ?? "#b0b0b0";
                         const isSelected = selectedShopIndex === item.shopIndex;
                         // Tooltip flips side based on card position so it always
@@ -202,7 +211,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                             style={buttonStyleVars}
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                if (!canAfford) return;
+                                                if (!canBuy) return;
                                                 sendBuyItem(item.shopIndex);
                                                 playBuy();
                                                 const card = (e.currentTarget as HTMLElement).closest(`.${styles.itemCard}`);
@@ -213,7 +222,8 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                                 emitSigilPurchase({ sigilId: item.element, fromRect });
                                                 setSelectedShopIndex(null);
                                             }}
-                                            disabled={!canAfford}
+                                            disabled={!canBuy}
+                                            title={sigilBarFull && canAfford ? "Sigil bar full — sell a sigil to make room" : undefined}
                                         >
                                             Buy
                                         </button>

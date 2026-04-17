@@ -3,7 +3,7 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { MAX_SIGILS } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
-import { useSigils, sendSellSigil, useActiveSigilShake, registerSigilSlot } from "../arkynStore";
+import { useSigils, sendSellSigil, useActiveSigilShake, registerSigilSlot, usePendingSigilId } from "../arkynStore";
 import { RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
 import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
@@ -39,6 +39,7 @@ const HOVER_DURATION_S = 0.12;
 export default function SigilBar() {
     const sigils = useSigils();
     const activeSigilShake = useActiveSigilShake();
+    const pendingSigilId = usePendingSigilId();
     const barRef = useRef<HTMLDivElement>(null);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [selectedSigilId, setSelectedSigilId] = useState<string | null>(null);
@@ -117,11 +118,15 @@ export default function SigilBar() {
         <div ref={barRef} className={styles.wrapper}>
             {Array.from({ length: MAX_SIGILS }, (_, i) => {
                 const sigilId = sigils[i];
+                // Treat the in-flight sigil's slot as empty so the server
+                // echo doesn't paint the sigil in its slot before the
+                // flying overlay arrives.
+                const isPending = !!sigilId && sigilId === pendingSigilId;
 
-                if (!sigilId) {
+                if (!sigilId || isPending) {
                     return (
                         <div
-                            key={i}
+                            key={sigilId ?? `empty-${i}`}
                             ref={(el) => { registerSigilSlot(i, el); }}
                             className={styles.slot}
                             style={slotFrameVars}

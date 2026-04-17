@@ -397,6 +397,19 @@ export function getSigilSlotRect(index: number): DOMRect | null {
     return sigilSlotElements[index]?.getBoundingClientRect() ?? null;
 }
 
+// Pending-sigil signal — set while a sigil purchase flight is in the
+// air. SigilBar hides that sigil's slot until the flyer lands, so the
+// slot doesn't pop in early when the server echoes the purchase.
+let pendingSigilId: string | null = null;
+export function setPendingSigilId(id: string | null) {
+    if (pendingSigilId === id) return;
+    pendingSigilId = id;
+    notify();
+}
+export function usePendingSigilId() {
+    return useSyncExternalStore(subscribe, () => pendingSigilId);
+}
+
 // Run stats setters
 export function setRunTotalDamage(d: number) { runTotalDamage = d; notify(); }
 export function setRunTotalCasts(c: number) { runTotalCasts = c; notify(); }

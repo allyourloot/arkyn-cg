@@ -1,0 +1,25 @@
+/* Dev-only perf HUD — pinned top-right, above every other overlay.
+   Monospace for easy scanning; high z-index; pointer-events off so it
+   never blocks UI while measuring. */
+.hud {
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    z-index: 99999;
+    pointer-events: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    color: #d8e0a8;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(200, 220, 160, 0.25);
+    padding: 4px 8px;
+    border-radius: 3px;
+    min-width: 92px;
+    user-select: none;
+}
+
+.value {
+    color: #fff;
+    font-weight: bold;
+}
