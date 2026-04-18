@@ -102,6 +102,32 @@
     line-height: 1.3;
 }
 
+/* Live accumulator row (Executioner "Current: x1.0 Mult"). Centered on
+   its own line under the description; the value chip is a compact
+   red-on-white pill so the live multiplier pops out of the tooltip. */
+.tooltipCurrentRow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
+    color: #c8c0b0;
+    line-height: 1.3;
+}
+
+.tooltipCurrentLabel {
+    color: #c8c0b0;
+}
+
+.tooltipCurrentValue {
+    background: #c13030;
+    color: #fff;
+    padding: 1px 4px;
+    border-radius: 2px;
+    line-height: 1;
+}
+
 /* Rarity badge — below description */
 .tooltipRarity {
     font-size: clamp(var(--font-size-3xs), 0.8vw, var(--font-size-2xs));

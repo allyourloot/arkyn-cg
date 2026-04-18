@@ -171,9 +171,12 @@ export default function SigilBar() {
                                     {renderDescription(def.description)}
                                 </span>
                                 {accumulatorValue !== null && (
-                                    <span className={styles.tooltipDesc}>
-                                        Current: <strong>{`x${accumulatorValue.toFixed(1)} Mult`}</strong>
-                                    </span>
+                                    <div className={styles.tooltipCurrentRow}>
+                                        <span className={styles.tooltipCurrentLabel}>Current:</span>
+                                        <span className={styles.tooltipCurrentValue}>
+                                            {`x${accumulatorValue.toFixed(1)} Mult`}
+                                        </span>
+                                    </div>
                                 )}
                                 {def.explainer && (
                                     <SigilExplainer
