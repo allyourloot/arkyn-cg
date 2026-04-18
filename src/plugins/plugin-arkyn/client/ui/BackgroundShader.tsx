@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useGamePhase, useEnemyIsBoss } from "../arkynStore";
+import { useGamePhase, useEnemyIsBoss, usePendingBagRunes } from "../arkynStore";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./BackgroundShader.frag";
 import { createProgram, createQuadBuffer, bindQuadAttributes } from "./utils/glProgram";
 import { HAS_HOVER } from "./utils/hasHover";
@@ -27,12 +27,14 @@ export default function BackgroundShader() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const gamePhase = useGamePhase();
     const isBoss = useEnemyIsBoss();
+    const pendingBagRunes = usePendingBagRunes();
     // Live-tweened mode values written into uniforms each frame by the
     // render loop. `current` is the displayed value, `target` is where
     // we're easing toward. Refs (not state) so updating them doesn't
     // re-run the GL setup effect.
     const shopModeRef = useRef({ current: 0, target: 0 });
     const bossModeRef = useRef({ current: 0, target: 0 });
+    const pickerModeRef = useRef({ current: 0, target: 0 });
 
     // Flip the targets whenever the game phase / boss state changes.
     useEffect(() => {
@@ -45,6 +47,12 @@ export default function BackgroundShader() {
         const bossActive = isBoss && (gamePhase === "playing" || gamePhase === "round_end" || gamePhase === "game_over");
         bossModeRef.current.target = bossActive ? 1 : 0;
     }, [isBoss, gamePhase]);
+
+    // Rune-picker palette fires whenever the player has pending bag runes
+    // to choose from. Clears automatically once they pick or skip.
+    useEffect(() => {
+        pickerModeRef.current.target = pendingBagRunes.length > 0 ? 1 : 0;
+    }, [pendingBagRunes.length]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -91,6 +99,7 @@ export default function BackgroundShader() {
         const uTime = gl.getUniformLocation(program, "uTime");
         const uShopMode = gl.getUniformLocation(program, "uShopMode");
         const uBossMode = gl.getUniformLocation(program, "uBossMode");
+        const uPickerMode = gl.getUniformLocation(program, "uPickerMode");
 
         // Render at 1/PIXEL_SIZE of the viewport size; CSS upscales the
         // canvas with nearest-neighbor for the chunky pixel-art look.
@@ -153,6 +162,15 @@ export default function BackgroundShader() {
                     bm.current = Math.max(bm.target, bm.current - step);
                 }
             }
+            const pm = pickerModeRef.current;
+            if (pm.current !== pm.target) {
+                const step = dtS / SHOP_MODE_TWEEN_S;
+                if (pm.current < pm.target) {
+                    pm.current = Math.min(pm.target, pm.current + step);
+                } else {
+                    pm.current = Math.max(pm.target, pm.current - step);
+                }
+            }
             lastDrawAt = now;
             resize();
             const t = (now - start) / 1000;
@@ -160,6 +178,7 @@ export default function BackgroundShader() {
             gl.uniform1f(uTime, t);
             gl.uniform1f(uShopMode, sm.current);
             gl.uniform1f(uBossMode, bm.current);
+            gl.uniform1f(uPickerMode, pm.current);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             rafId = requestAnimationFrame(render);
         };

@@ -142,6 +142,11 @@ let shopItems: ShopItemClientData[] = [];
 // Sigils owned this run — array of sigil IDs.
 let sigils: string[] = [];
 
+// Per-sigil persistent accumulator values (Executioner xMult, etc.).
+// Mirrors `player.sigilAccumulators`. Keys are sigil IDs; missing keys
+// fall back to the category's `initialValue` at read time.
+let sigilAccumulators: Record<string, number> = {};
+
 // Consumable items — array of element names (scroll consumables).
 let consumables: string[] = [];
 
@@ -317,6 +322,7 @@ export function setShopItems(items: ShopItemClientData[]) { shopItems = items; n
 
 // Sigil setters
 export function setSigils(s: string[]) { sigils = s; notify(); }
+export function setSigilAccumulators(a: Record<string, number>) { sigilAccumulators = a; notify(); }
 
 // Consumable setters
 export function setConsumables(c: string[]) { consumables = c; notify(); }
@@ -466,6 +472,7 @@ export const arkynStoreInternal = {
     getEnemyWeaknesses: () => enemyWeaknesses,
     getScrollLevels: () => scrollLevels,
     getSigils: () => sigils,
+    getSigilAccumulators: () => sigilAccumulators,
     getDisabledResistance: () => disabledResistance,
     getCastsRemaining: () => castsRemaining,
     getCurrentRound: () => currentRound,
@@ -586,6 +593,7 @@ export function useShopItems() { return useSyncExternalStore(subscribe, () => sh
 
 // Sigil hooks
 export function useSigils() { return useSyncExternalStore(subscribe, () => sigils); }
+export function useSigilAccumulators() { return useSyncExternalStore(subscribe, () => sigilAccumulators); }
 
 // Consumable hooks
 export function useConsumables() { return useSyncExternalStore(subscribe, () => consumables); }

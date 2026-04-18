@@ -38,6 +38,13 @@ export function handleSellSigil(
     // Remove sigil and credit gold
     player.sigils.splice(idx, 1);
     player.gold += def.sellPrice;
+    // Clear any persistent accumulator the sigil owned. Re-buying a sold
+    // Executioner starts from scratch rather than inheriting a previous
+    // run's built-up xMult — prevents a sell/re-buy exploit and matches
+    // the cleaner "fresh sigil = fresh state" semantic.
+    if (player.sigilAccumulators.has(sigilId)) {
+        player.sigilAccumulators.delete(sigilId);
+    }
 
     logger.info(
         `Player ${client.sessionId} sold sigil "${sigilId}" for ${def.sellPrice} gold. ` +

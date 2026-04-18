@@ -11,7 +11,7 @@ import {
     emitScrollPurchase,
     emitSigilPurchase,
 } from "../arkynStore";
-import { MAX_SIGILS } from "../../shared";
+import { MAX_SIGILS, getScrollLevelsPerUse } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { playButton, playBuy } from "../sfx";
 import { ELEMENT_COLORS, RARITY_COLORS, createPanelStyleVars } from "./styles";
@@ -134,6 +134,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     const handleBuy = (shopIndex: number, element: string, e: React.MouseEvent) => {
         e.stopPropagation();
         const currentLevel = scrollLevels.get(element) ?? 0;
+        const levelsGained = getScrollLevelsPerUse(sigils);
         sendBuyItem(shopIndex);
         playBuy();
         // Find the scroll image in the card to get its bounding rect
@@ -145,7 +146,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         emitScrollPurchase({
             element,
             oldLevel: currentLevel + 1,
-            newLevel: currentLevel + 2,
+            newLevel: currentLevel + 1 + levelsGained,
             fromRect,
         });
         setSelectedShopIndex(null);

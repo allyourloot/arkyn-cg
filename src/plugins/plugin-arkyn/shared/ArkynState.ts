@@ -79,6 +79,12 @@ export class ArkynPlayerState extends Schema {
     // ID (e.g. "voltage"). Resets on new run (fresh schema).
     @type(["string"]) sigils = new ArraySchema<string>();
 
+    // Per-sigil persistent accumulator values (Executioner pattern). Keys
+    // are sigil IDs in `SIGIL_ACCUMULATOR_XMULT`; values are the current
+    // xMult factor that grew from in-game events (e.g. critical hits).
+    // Persists across rounds within a run. Resets on new run (fresh schema).
+    @type({ map: "number" }) sigilAccumulators = new MapSchema<number>();
+
     // Consumable items — up to MAX_CONSUMABLES (2). Each entry is an
     // element name representing a scroll consumable (e.g. "fire").
     // Players click USE to apply the scroll (increments scrollLevels).

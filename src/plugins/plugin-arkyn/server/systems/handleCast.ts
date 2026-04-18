@@ -1,4 +1,8 @@
-import { type ArkynState, getEndOfRoundSigilGold } from "../../shared";
+import {
+    type ArkynState,
+    applyAccumulatorIncrements,
+    getEndOfRoundSigilGold,
+} from "../../shared";
 import { resolveSpell } from "../../shared/resolveSpell";
 import { Logger } from "@core/shared/utils";
 import { calculateDamage } from "../utils/calculateDamage";
@@ -51,7 +55,7 @@ export function handleCast(
     // calculateDamage using the sigil effect registries. Proc gold (from
     // Fortune-style grant_gold effects) is returned alongside the damage
     // and applied to player.gold below in the same state patch.
-    const { finalDamage: damage, procGold } = calculateDamage(
+    const { finalDamage: damage, procGold, criticalCount } = calculateDamage(
         spell,
         selectedRunes,
         state.enemy,
@@ -63,6 +67,7 @@ export function handleCast(
         player.hand,
         indices,
         player.disabledResistance,
+        player.sigilAccumulators,
     );
 
     // Move selected runes to played area
@@ -98,6 +103,23 @@ export function handleCast(
     if (procGold > 0) {
         player.gold += procGold;
         if (stats) stats.goldEarned += procGold;
+    }
+
+    // Patch accumulator-driven sigils (Executioner et al.) based on the
+    // events this cast produced. Post-cast increment means the CURRENT
+    // cast used the pre-cast accumulator value as xMult; future casts
+    // read the updated value via schema sync.
+    if (criticalCount > 0) {
+        const accumulatorsPlain: Record<string, number> = {};
+        player.sigilAccumulators.forEach((value, key) => { accumulatorsPlain[key] = value; });
+        const updates = applyAccumulatorIncrements(
+            Array.from(player.sigils),
+            accumulatorsPlain,
+            { criticalHit: criticalCount },
+        );
+        for (const sigilId of Object.keys(updates)) {
+            player.sigilAccumulators.set(sigilId, updates[sigilId]);
+        }
     }
 
     logger.info(`${spell.spellName} (Tier ${spell.tier}) deals ${damage} damage! Enemy HP: ${state.enemy.currentHp}/${state.enemy.maxHp}`);

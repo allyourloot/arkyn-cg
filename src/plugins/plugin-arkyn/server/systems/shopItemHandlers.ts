@@ -1,4 +1,5 @@
 import {
+    getScrollLevelsPerUse,
     type ArkynPlayerState,
     type ArkynState,
     type ShopItemState,
@@ -27,13 +28,14 @@ export type ShopItemHandler = (ctx: ShopPurchaseCtx) => ShopPurchaseResult;
 // after the handler succeeds).
 function handleScrollPurchase({ player, item, sessionId }: ShopPurchaseCtx): ShopPurchaseResult {
     const currentLevel = player.scrollLevels.get(item.element) ?? 0;
-    const newLevel = currentLevel + 1;
+    const levelsGained = getScrollLevelsPerUse(Array.from(player.sigils));
+    const newLevel = currentLevel + levelsGained;
     player.scrollLevels.set(item.element, newLevel);
     return {
         ok: true,
         logMessage:
             `Player ${sessionId} bought ${item.element} scroll ` +
-            `(level ${newLevel}).`,
+            `(level ${newLevel}${levelsGained > 1 ? `, +${levelsGained}` : ""}).`,
     };
 }
 

@@ -596,32 +596,35 @@ export function getPlayedMultBonus(
 }
 
 // ============================================================================
-// Category 10 — Critical-Rune Bonus (Lex Divina pattern)
+// Category 10 — Element-Rune Bonus (Engine / Lex Divina pattern)
 // ============================================================================
 
 /**
- * Per-rune base + mult bonus applied only to runes that score a CRITICAL
- * hit (rune element is in the enemy's weaknesses). Optionally gated by a
- * specific element so a sigil can target one rune type (Lex Divina only
- * fires on Holy crits). Both base and mult stack per matching rune — 3
- * holy crits with Lex Divina = +24 Base, +6 Mult.
+ * Per-rune base + mult bonus applied to contributing runes whose element
+ * matches the effect's filter. Optionally gated by CRITICAL hit (rune
+ * element is in the enemy's weaknesses) — Lex Divina only fires on Holy
+ * crits; Engine fires on every Steel rune. Both base and mult stack per
+ * matching rune — 3 steel runes with Engine = +12 Base, +6 Mult.
  *
  * The base bonus is added POST-modifier: it's a flat +N on the rune's
- * final post-weakness/resist contribution, not pre-weakness. A "+8" in
- * the description reads as "+8 to the number that lands" rather than
- * compounding with ×2 weakness.
+ * final post-weakness/resist contribution, not pre-weakness. A "+4" in
+ * the description reads as "+4 to the number that lands" rather than
+ * compounding with ×2 weakness or ×0.5 resistance.
  */
-export interface CriticalRuneBonusEffect {
-    /** Optional element filter. Omit to trigger on any critical rune. */
+export interface ElementRuneBonusEffect {
+    /** Optional element filter. Omit to trigger on any matching rune. */
     element?: ElementType;
-    /** Flat base damage added per matching crit rune (post resist/weak mod). */
+    /** If true, the bonus only fires when the rune hit a weakness (crit). */
+    requireCritical?: boolean;
+    /** Flat base damage added per matching rune (post resist/weak mod). */
     baseBonus: number;
-    /** Additive mult added per matching crit rune. Same channel as Arcana. */
+    /** Additive mult added per matching rune. Same channel as Arcana. */
     multBonus: number;
 }
 
-export const SIGIL_CRITICAL_RUNE_BONUS: Record<string, CriticalRuneBonusEffect> = {
-    lex_divina: { element: "holy", baseBonus: 8, multBonus: 2 },
+export const SIGIL_ELEMENT_RUNE_BONUS: Record<string, ElementRuneBonusEffect> = {
+    lex_divina: { element: "holy", requireCritical: true, baseBonus: 8, multBonus: 2 },
+    engine: { element: "steel", baseBonus: 4, multBonus: 2 },
 };
 
 /**
@@ -629,7 +632,7 @@ export const SIGIL_CRITICAL_RUNE_BONUS: Record<string, CriticalRuneBonusEffect> 
  * `isMultTick` events interleaved after the parent rune's damage bubble,
  * so the Mult counter ticks + the triggering sigil shakes generically.
  */
-export interface CriticalRuneBonusEntry {
+export interface ElementRuneBonusEntry {
     sigilId: string;
     /** Index into the CONTRIBUTING-runes array. */
     contributingRuneIdx: number;
@@ -638,31 +641,32 @@ export interface CriticalRuneBonusEntry {
 }
 
 /**
- * Walk owned crit-rune-bonus sigils, check each contributing rune against
- * both the element filter and the crit flag, and emit per-rune base deltas
+ * Walk owned element-rune-bonus sigils, check each contributing rune against
+ * the element filter + optional crit gate, and emit per-rune base deltas
  * + a running mult total.
  *
  * @param isCritical - parallel to `contributingRuneElements`. `true` = rune's
  *   element is in the enemy's weaknesses (same definition as the damage
- *   formula's `breakdown.isCritical`).
+ *   formula's `breakdown.isCritical`). Only consulted when a sigil sets
+ *   `requireCritical: true`.
  * @returns `perRuneBase[i]` is the total base bonus across all owned sigils
  *   for the i-th contributing rune; `totalMult` is the sum of per-rune mult
  *   deltas across all triggers; `entries` lists each (sigil × rune) trigger
  *   for the animation layer.
  */
-export function getCriticalRuneBonus(
+export function getElementRuneBonus(
     sigils: readonly string[],
     contributingRuneElements: readonly string[],
     isCritical: readonly boolean[],
-): { totalMult: number; perRuneBase: number[]; entries: CriticalRuneBonusEntry[] } {
+): { totalMult: number; perRuneBase: number[]; entries: ElementRuneBonusEntry[] } {
     const perRuneBase = new Array(contributingRuneElements.length).fill(0);
     let totalMult = 0;
-    const entries: CriticalRuneBonusEntry[] = [];
+    const entries: ElementRuneBonusEntry[] = [];
     for (const sigilId of sigils) {
-        const effect = SIGIL_CRITICAL_RUNE_BONUS[sigilId];
+        const effect = SIGIL_ELEMENT_RUNE_BONUS[sigilId];
         if (!effect) continue;
         for (let i = 0; i < contributingRuneElements.length; i++) {
-            if (!isCritical[i]) continue;
+            if (effect.requireCritical && !isCritical[i]) continue;
             if (effect.element !== undefined && contributingRuneElements[i] !== effect.element) continue;
             perRuneBase[i] += effect.baseBonus;
             totalMult += effect.multBonus;
@@ -675,6 +679,124 @@ export function getCriticalRuneBonus(
         }
     }
     return { totalMult, perRuneBase, entries };
+}
+
+// ============================================================================
+// Category 12 — Accumulator xMult (Executioner pattern)
+// ============================================================================
+
+/**
+ * Sigils whose xMult factor is read from a persistent per-player accumulator
+ * field that grows as the player triggers specific in-game events. The
+ * accumulator persists across rounds within a run and resets on a fresh run.
+ *
+ * Storage: `ArkynPlayerState.sigilAccumulators` (MapSchema<string, number>)
+ * keyed by sigil ID. Missing keys fall back to the definition's
+ * `initialValue` so newly-acquired sigils behave correctly before the first
+ * increment.
+ *
+ * Timing: the pre-cast accumulator value applies to the CURRENT cast as an
+ * xMult factor. After the cast resolves, the server increments the
+ * accumulator by `perEventDelta × eventCount` — so the current cast's
+ * crits feed future casts. The client reads the same pre-cast value via
+ * schema sync so server/client animation stay in lockstep.
+ */
+export type AccumulatorTrigger = "criticalHit";
+
+export interface AccumulatorXMultDefinition {
+    /** What game event feeds the accumulator. */
+    trigger: AccumulatorTrigger;
+    /** How much the accumulator grows per trigger event (e.g. 0.2 per crit). */
+    perEventDelta: number;
+    /** Starting xMult when the sigil is newly acquired. 1 = neutral. */
+    initialValue: number;
+}
+
+export const SIGIL_ACCUMULATOR_XMULT: Record<string, AccumulatorXMultDefinition> = {
+    executioner: { trigger: "criticalHit", perEventDelta: 0.2, initialValue: 1.0 },
+};
+
+export interface AccumulatorXMultEntry {
+    sigilId: string;
+    xMult: number;
+}
+
+/**
+ * Multiplicative xMult factor contributed by owned accumulator-driven sigils.
+ * Entries are for the animation layer (sigil shake + xMult ticks); the total
+ * stacks with Category 6's static xMult entries inside
+ * `composeCastModifiers`. Neutral (1.0) accumulators are filtered so the
+ * cast animation doesn't fire a no-op xMult reveal for freshly-bought
+ * sigils with no crits built up yet.
+ */
+export function getAccumulatorXMult(
+    sigils: readonly string[],
+    accumulators: Readonly<Record<string, number>>,
+): { total: number; entries: AccumulatorXMultEntry[] } {
+    let total = 1;
+    const entries: AccumulatorXMultEntry[] = [];
+    for (const sigilId of sigils) {
+        const def = SIGIL_ACCUMULATOR_XMULT[sigilId];
+        if (!def) continue;
+        const value = accumulators[sigilId] ?? def.initialValue;
+        if (value === 1) continue;
+        total *= value;
+        entries.push({ sigilId, xMult: value });
+    }
+    return { total, entries };
+}
+
+/**
+ * Given the counts of trigger events that fired during a cast, compute the
+ * updated accumulator values for each owned accumulator sigil. Server calls
+ * this after resolving a cast and patches the updates into
+ * `player.sigilAccumulators`. Returned map only includes sigils whose
+ * accumulators actually changed.
+ */
+export function applyAccumulatorIncrements(
+    sigils: readonly string[],
+    accumulators: Readonly<Record<string, number>>,
+    eventCounts: Readonly<Partial<Record<AccumulatorTrigger, number>>>,
+): Record<string, number> {
+    const updates: Record<string, number> = {};
+    for (const sigilId of sigils) {
+        const def = SIGIL_ACCUMULATOR_XMULT[sigilId];
+        if (!def) continue;
+        const count = eventCounts[def.trigger] ?? 0;
+        if (count <= 0) continue;
+        const current = accumulators[sigilId] ?? def.initialValue;
+        updates[sigilId] = current + count * def.perEventDelta;
+    }
+    return updates;
+}
+
+// ============================================================================
+// Category 11 — Scroll Level Bonus (Scroll God pattern)
+// ============================================================================
+
+/**
+ * Extra scroll levels granted per scroll use. When a player uses a scroll
+ * (shop purchase or scroll consumable), they gain `1 + Σ(bonus)` levels on
+ * the matching element's scroll counter. Multiple sigils stack additively.
+ *
+ * Consumers (shop handler, consumable handler, upgrade animation) all call
+ * `getScrollLevelsPerUse(sigils)` — single source of truth so server and
+ * client agree on how many levels a scroll grants.
+ */
+export const SIGIL_SCROLL_LEVEL_BONUS: Record<string, number> = {
+    scroll_god: 1,
+};
+
+/**
+ * Returns the number of scroll levels granted per scroll use, including
+ * the base +1 level. `1` when no owned sigil boosts scrolls.
+ */
+export function getScrollLevelsPerUse(sigils: readonly string[]): number {
+    let bonus = 0;
+    for (const sigilId of sigils) {
+        bonus += SIGIL_SCROLL_LEVEL_BONUS[sigilId] ?? 0;
+    }
+    return 1 + bonus;
 }
 
 // ============================================================================

@@ -1,4 +1,4 @@
-import { type ArkynState, getConsumableDefinition } from "../../shared";
+import { type ArkynState, getConsumableDefinition, getScrollLevelsPerUse } from "../../shared";
 import { Logger } from "@core/shared/utils";
 
 const logger = new Logger("ArkynUseConsumable");
@@ -45,8 +45,10 @@ export function handleUseConsumable(
         case "upgradeScroll": {
             const element = def.effect.element;
             const currentLevel = player.scrollLevels.get(element) ?? 0;
-            player.scrollLevels.set(element, currentLevel + 1);
-            logDetail = `${element} scroll → level ${currentLevel + 1}`;
+            const levelsGained = getScrollLevelsPerUse(Array.from(player.sigils));
+            const newLevel = currentLevel + levelsGained;
+            player.scrollLevels.set(element, newLevel);
+            logDetail = `${element} scroll → level ${newLevel}${levelsGained > 1 ? ` (+${levelsGained})` : ""}`;
             break;
         }
     }

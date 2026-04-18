@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { MAX_CONSUMABLES, getConsumableDefinition } from "../../shared";
+import { MAX_CONSUMABLES, getConsumableDefinition, getScrollLevelsPerUse } from "../../shared";
 import {
     useConsumables,
     useScrollLevels,
     useGamePhase,
+    useSigils,
     sendUseConsumable,
     emitScrollPurchase,
     setScrollUpgradeDisplay,
@@ -22,6 +23,7 @@ export default function ConsumableBar() {
     const consumables = useConsumables();
     const scrollLevels = useScrollLevels();
     const gamePhase = useGamePhase();
+    const sigils = useSigils();
     const barRef = useRef<HTMLDivElement>(null);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
@@ -50,6 +52,7 @@ export default function ConsumableBar() {
 
     const handleUse = (index: number, element: string) => {
         const currentLevel = scrollLevels.get(element) ?? 0;
+        const levelsGained = getScrollLevelsPerUse(sigils);
         const slotEl = slotRefs.current[index];
         const fromRect = slotEl?.getBoundingClientRect() ?? new DOMRect(
             window.innerWidth / 2, window.innerHeight / 2, 0, 0,
@@ -60,14 +63,18 @@ export default function ConsumableBar() {
             emitScrollPurchase({
                 element,
                 oldLevel: currentLevel + 1,
-                newLevel: currentLevel + 2,
+                newLevel: currentLevel + 1 + levelsGained,
                 fromRect,
             });
         } else {
+            // Playing phase — no fly animation; just show the final upgrade
+            // display and clear after a hold. Intermediate steps aren't
+            // staged here because there's no orchestrator timeline outside
+            // of the shop; the player reads the final value only.
             setScrollUpgradeDisplay({
                 element,
                 oldLevel: currentLevel + 1,
-                newLevel: currentLevel + 2,
+                newLevel: currentLevel + 1 + levelsGained,
             });
             if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
             clearTimerRef.current = setTimeout(() => {

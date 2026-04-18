@@ -1,10 +1,12 @@
 import {
-    getCriticalRuneBonus,
+    getAccumulatorXMult,
+    getElementRuneBonus,
     getHandMultBonus,
     getIgnoredResistanceElements,
     getPlayedMultBonus,
     getSpellXMult,
-    type CriticalRuneBonusEntry,
+    type AccumulatorXMultEntry,
+    type ElementRuneBonusEntry,
     type HandMultEntry,
     type PlayedMultEntry,
     type SpellXMultEntry,
@@ -21,19 +23,20 @@ import {
  *  - `xMult`: multiplicative factor applied after additive bonuses
  *  - `effectiveResistances`: enemy resistances with resist-ignore sigils' elements stripped
  *  - `perRuneBaseBonus`: parallel to `contributingRunes`; flat base damage added to
- *    each rune's POST-modifier contribution (today driven by crit-rune-bonus sigils
- *    like Lex Divina). Feed this into `calculateSpellDamage` so the bonus lands
- *    inside `runeBaseContributions[i]` — bubble displays + proc double-damage
- *    automatically pick it up.
+ *    each rune's POST-modifier contribution (today driven by element-rune-bonus
+ *    sigils like Engine and Lex Divina). Feed this into `calculateSpellDamage`
+ *    so the bonus lands inside `runeBaseContributions[i]` — bubble displays +
+ *    proc double-damage automatically pick it up.
  *  - `breakdowns`: per-sigil entries the client animation layer consumes for
- *    hand bubbles, played-rune mult ticks, xMult reveals, and crit-rune-bonus
+ *    hand bubbles, played-rune mult ticks, xMult reveals, and element-rune-bonus
  *    mult ticks. The server uses only the totals.
  */
 export interface CastModifiersBreakdown {
     handMult: HandMultEntry[];
     playedMult: PlayedMultEntry[];
     xMult: SpellXMultEntry[];
-    critRuneBonus: CriticalRuneBonusEntry[];
+    accumulatorXMult: AccumulatorXMultEntry[];
+    elementRuneBonus: ElementRuneBonusEntry[];
 }
 
 export interface CastModifiersResult {
@@ -68,21 +71,29 @@ export interface ComposeCastModifiersArgs {
      * string / undefined = no dynamic selection.
      */
     disabledResistance?: string;
+    /**
+     * Per-sigil persistent accumulator values (Executioner pattern). Keyed
+     * by sigil ID; read from `player.sigilAccumulators`. Missing keys fall
+     * back to the category definition's `initialValue`. Empty object / omit
+     * = no accumulator sigils owned.
+     */
+    sigilAccumulators?: Readonly<Record<string, number>>;
 }
 
 export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifiersResult {
-    const { sigils, spellElements, hand, selectedIndices, contributingRunes, rawResistances, weaknesses, disabledResistance } = args;
+    const { sigils, spellElements, hand, selectedIndices, contributingRunes, rawResistances, weaknesses, disabledResistance, sigilAccumulators } = args;
 
     const handMult = getHandMultBonus(sigils, hand, selectedIndices);
     const playedMult = getPlayedMultBonus(sigils, contributingRunes);
     const xMult = getSpellXMult(sigils, spellElements);
+    const accumulatorXMult = getAccumulatorXMult(sigils, sigilAccumulators ?? {});
 
     // Per-rune crit flag, identical to the damage formula's derivation
     // (weakness match = critical). Computed here so crit-gated sigils
     // (Lex Divina et al.) can short-circuit without re-running the formula.
     const contributingElements = contributingRunes.map(r => r.element);
     const isCritical = contributingElements.map(e => weaknesses.includes(e));
-    const critRuneBonus = getCriticalRuneBonus(sigils, contributingElements, isCritical);
+    const elementRuneBonus = getElementRuneBonus(sigils, contributingElements, isCritical);
 
     const ignoredResistances = getIgnoredResistanceElements(sigils, disabledResistance);
     const effectiveResistances = ignoredResistances.size > 0
@@ -90,15 +101,16 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
         : [...rawResistances];
 
     return {
-        bonusMult: handMult.total + playedMult.total + critRuneBonus.totalMult,
-        xMult: xMult.total,
+        bonusMult: handMult.total + playedMult.total + elementRuneBonus.totalMult,
+        xMult: xMult.total * accumulatorXMult.total,
         effectiveResistances,
-        perRuneBaseBonus: critRuneBonus.perRuneBase,
+        perRuneBaseBonus: elementRuneBonus.perRuneBase,
         breakdowns: {
             handMult: handMult.perSigil,
             playedMult: playedMult.perSigil,
             xMult: xMult.entries,
-            critRuneBonus: critRuneBonus.entries,
+            accumulatorXMult: accumulatorXMult.entries,
+            elementRuneBonus: elementRuneBonus.entries,
         },
     };
 }

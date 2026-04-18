@@ -445,11 +445,13 @@ function assembleCastBreakdown(args: {
         rawResistances: arkynStoreInternal.getEnemyResistances(),
         weaknesses: arkynStoreInternal.getEnemyWeaknesses(),
         disabledResistance: arkynStoreInternal.getDisabledResistance(),
+        sigilAccumulators: arkynStoreInternal.getSigilAccumulators(),
     });
     const handMultEntries = modifiers.breakdowns.handMult;
     const playedMultEntries = modifiers.breakdowns.playedMult;
     const xMultEntries = modifiers.breakdowns.xMult;
-    const critRuneBonusEntries = modifiers.breakdowns.critRuneBonus;
+    const accumulatorXMultEntries = modifiers.breakdowns.accumulatorXMult;
+    const elementRuneBonusEntries = modifiers.breakdowns.elementRuneBonus;
 
     const breakdown = resolvedSpell
         ? calculateSpellDamage(
@@ -610,12 +612,13 @@ function assembleCastBreakdown(args: {
                 eventIdx++;
             }
 
-            // Crit-rune-bonus mult events (Lex Divina-style) — one per
-            // matching sigil × critical rune. Same event shape as Arcana;
-            // the base portion is already baked into this rune's bubble
-            // via `perRuneBaseBonus`, so only the mult part needs a tick.
-            for (const crb of critRuneBonusEntries) {
-                if (crb.contributingRuneIdx !== i) continue;
+            // Element-rune-bonus mult events (Engine / Lex Divina-style) —
+            // one per matching sigil × qualifying rune. Same event shape as
+            // Arcana; the base portion is already baked into this rune's
+            // bubble via `perRuneBaseBonus`, so only the mult part needs a
+            // tick.
+            for (const erb of elementRuneBonusEntries) {
+                if (erb.contributingRuneIdx !== i) continue;
                 runeBreakdown.push({
                     base: 0,
                     final: 0,
@@ -623,8 +626,8 @@ function assembleCastBreakdown(args: {
                     isCritical: false,
                     isProc: false,
                     isMultTick: true,
-                    multDelta: crb.multDelta,
-                    sigilId: crb.sigilId,
+                    multDelta: erb.multDelta,
+                    sigilId: erb.sigilId,
                 });
                 eventIdx++;
             }
@@ -676,9 +679,25 @@ function assembleCastBreakdown(args: {
         });
         eventIdx++;
     }
-    const hasAnyXMult = xMultEntries.length > 0;
-    const hasAnyCritRuneBonus = critRuneBonusEntries.length > 0;
-    const hasAnyMultEvent = hasAnyHandMultProc || hasAnyPlayedMult || hasAnyXMult || hasAnyCritRuneBonus;
+    // Accumulator xMult entries (Executioner et al.) — same event shape as
+    // static xMult. Appended after so the reveal reads "static first, then
+    // accumulator" when both apply in a single cast.
+    for (const entry of accumulatorXMultEntries) {
+        runeBreakdown.push({
+            base: 0,
+            final: 0,
+            isResisted: false,
+            isCritical: false,
+            isProc: false,
+            isXMult: true,
+            xMultFactor: entry.xMult,
+            sigilId: entry.sigilId,
+        });
+        eventIdx++;
+    }
+    const hasAnyXMult = xMultEntries.length > 0 || accumulatorXMultEntries.length > 0;
+    const hasAnyElementRuneBonus = elementRuneBonusEntries.length > 0;
+    const hasAnyMultEvent = hasAnyHandMultProc || hasAnyPlayedMult || hasAnyXMult || hasAnyElementRuneBonus;
 
     return {
         runeBreakdown,

@@ -19,6 +19,11 @@ uniform float uShopMode;
 // 0.0 = normal enemy.  1.0 = boss round.
 // Tweened on the JS side for a smooth palette shift into danger.
 uniform float uBossMode;
+// 0.0 = shop palette displayed normally.
+// 1.0 = rune-picker palette (deep violet / arcane magenta / gold) while
+// the player is on the rune bag selection screen. Overlays on top of
+// the shop palette so picker → back-to-shop eases smoothly.
+uniform float uPickerMode;
 
 // --- Hash & noise ---
 
@@ -128,12 +133,33 @@ void main() {
     vec3 darkRuby     = vec3(0.48, 0.12, 0.12);
     vec3 bloodEmber   = vec3(0.28, 0.07, 0.04);
 
+    // Rune-picker palette — deep arcane violet with magenta + gold
+    // accents. Chosen to read as "unboxing mystical loot" and to sit
+    // distinctly apart from the shop's ocean-teal so the phase change
+    // is unmistakable.
+    vec3 deepMystic    = vec3(0.06, 0.02, 0.14);
+    vec3 midVeil       = vec3(0.22, 0.08, 0.36);
+    vec3 moonlight     = vec3(0.75, 0.55, 0.95);
+    vec3 arcaneMagenta = vec3(0.78, 0.25, 0.85);
+    vec3 goldrune      = vec3(0.95, 0.70, 0.25);
+    vec3 voidPurple    = vec3(0.12, 0.04, 0.20);
+
     deepPurple = mix(deepPurple, deepNavy,  uShopMode);
     midPurple  = mix(midPurple,  midTeal,   uShopMode);
     amber      = mix(amber,      seafoam,   uShopMode);
     violet     = mix(violet,     oceanBlue, uShopMode);
     teal       = mix(teal,       kelp,      uShopMode);
     ember      = mix(ember,      abyss,     uShopMode);
+
+    // Picker mix applied AFTER shop so the transition eases smoothly
+    // from shop palette → picker palette (the shop uniform stays at 1
+    // during the picker, so the picker mix overrides on top of shop).
+    deepPurple = mix(deepPurple, deepMystic,    uPickerMode);
+    midPurple  = mix(midPurple,  midVeil,       uPickerMode);
+    amber      = mix(amber,      moonlight,     uPickerMode);
+    violet     = mix(violet,     arcaneMagenta, uPickerMode);
+    teal       = mix(teal,       goldrune,      uPickerMode);
+    ember      = mix(ember,      voidPurple,    uPickerMode);
 
     deepPurple = mix(deepPurple, deepCrimson,  uBossMode);
     midPurple  = mix(midPurple,  midCrimson,   uBossMode);

@@ -41,7 +41,8 @@ export function calculateDamage(
     hand?: readonly RuneInstance[],
     selectedIndices?: readonly number[],
     disabledResistance?: string,
-): CastDamageResult {
+    sigilAccumulators?: MapSchema<number>,
+): CastDamageResult & { criticalCount: number } {
     const weaknesses = Array.from(enemy.weaknesses);
     const activeSigils = sigils ? Array.from(sigils) : [];
 
@@ -53,6 +54,14 @@ export function calculateDamage(
     const contributingRuneRarities = contributingIndices.map(
         i => selectedRunes[i].rarity as RarityType,
     );
+
+    // Flatten the accumulator MapSchema once so the shared helper gets a
+    // plain object — avoids forcing composeCastModifiers to know about
+    // Colyseus Schema types.
+    const accumulatorsPlain: Record<string, number> = {};
+    if (sigilAccumulators) {
+        sigilAccumulators.forEach((value, key) => { accumulatorsPlain[key] = value; });
+    }
 
     // Compose all sigil-driven cast modifiers through the shared helper.
     // The client runs the exact same helper so bonusMult / xMult / stripped
@@ -68,6 +77,7 @@ export function calculateDamage(
         rawResistances: Array.from(enemy.resistances),
         weaknesses,
         disabledResistance,
+        sigilAccumulators: accumulatorsPlain,
     });
 
     const breakdown = sharedCalculateSpellDamage(
@@ -113,5 +123,11 @@ export function calculateDamage(
         }
     }
 
-    return { finalDamage: totalDamage, procGold };
+    // Count critical hits for accumulator sigils (Executioner). Only
+    // contributing runes participate — kickers and non-primary runes don't
+    // count. `isCritical` is already per-contributing-rune.
+    let criticalCount = 0;
+    for (const c of breakdown.isCritical) if (c) criticalCount++;
+
+    return { finalDamage: totalDamage, procGold, criticalCount };
 }

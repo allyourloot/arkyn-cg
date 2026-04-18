@@ -375,29 +375,39 @@ export default function ArkynOverlay() {
         // Show "UPGRADE!" label above the scroll
         tl.call(() => { setShowUpgradeLabel(true); });
 
-        // Phase 2: Shake (0.35s)
-        tl.to(el, {
-            keyframes: [
-                { rotation: -6, duration: 0.05 },
-                { rotation: 6, duration: 0.05 },
-                { rotation: -4, duration: 0.05 },
-                { rotation: 4, duration: 0.05 },
-                { rotation: -2, duration: 0.05 },
-                { rotation: 2, duration: 0.05 },
-                { rotation: 0, duration: 0.05 },
-            ],
-        });
+        // Phase 2-4: For each level step, shake + display + hold. Default
+        // scrolls grant +1 level → one iteration. Scroll God grants +2
+        // levels → two iterations, where the player watches "+0 → +2"
+        // commit, then the animation replays "+2 → +4".
+        const steps = Math.max(1, newLevel - oldLevel);
+        for (let i = 0; i < steps; i++) {
+            const stepOldLevel = oldLevel + i;
+            const stepNewLevel = stepOldLevel + 1;
 
-        // Phase 3: Show upgrade display in ShopPanel + 3× count SFX
-        tl.call(() => {
-            setScrollUpgradeDisplay({ element, oldLevel, newLevel });
-            playCount(1.0);
-        });
-        tl.call(() => { playCount(1.15); }, [], "+=0.15");
-        tl.call(() => { playCount(1.3); }, [], "+=0.15");
+            // Shake (0.35s)
+            tl.to(el, {
+                keyframes: [
+                    { rotation: -6, duration: 0.05 },
+                    { rotation: 6, duration: 0.05 },
+                    { rotation: -4, duration: 0.05 },
+                    { rotation: 4, duration: 0.05 },
+                    { rotation: -2, duration: 0.05 },
+                    { rotation: 2, duration: 0.05 },
+                    { rotation: 0, duration: 0.05 },
+                ],
+            });
 
-        // Phase 4: Hold (0.5s) — let the player read the upgrade info
-        tl.to(el, { duration: 0.5 });
+            // Show upgrade display in ShopPanel + 3× count SFX
+            tl.call(() => {
+                setScrollUpgradeDisplay({ element, oldLevel: stepOldLevel, newLevel: stepNewLevel });
+                playCount(1.0);
+            });
+            tl.call(() => { playCount(1.15); }, [], "+=0.15");
+            tl.call(() => { playCount(1.3); }, [], "+=0.15");
+
+            // Hold (0.5s) — let the player read the upgrade info
+            tl.to(el, { duration: 0.5 });
+        }
 
         // Phase 5: Swap img for WebGL dissolve shader
         tl.call(() => {

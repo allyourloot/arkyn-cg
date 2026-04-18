@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
-import { MAX_SIGILS } from "../../shared";
+import { MAX_SIGILS, SIGIL_ACCUMULATOR_XMULT } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
-import { useSigils, sendSellSigil, useActiveSigilShake, registerSigilSlot, usePendingSigilId } from "../arkynStore";
+import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, usePendingSigilId } from "../arkynStore";
 import { RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
 import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
@@ -38,6 +38,7 @@ const HOVER_DURATION_S = 0.12;
 
 export default function SigilBar() {
     const sigils = useSigils();
+    const accumulators = useSigilAccumulators();
     const activeSigilShake = useActiveSigilShake();
     const pendingSigilId = usePendingSigilId();
     const barRef = useRef<HTMLDivElement>(null);
@@ -141,6 +142,14 @@ export default function SigilBar() {
 
                 const isSelected = selectedSigilId === sigilId;
 
+                // Accumulator sigils (Executioner et al.) expose a live xMult
+                // value that grows with gameplay — surface it in the tooltip
+                // so the player can check the current multiplier at a glance.
+                const accumulatorDef = SIGIL_ACCUMULATOR_XMULT[sigilId];
+                const accumulatorValue = accumulatorDef
+                    ? (accumulators[sigilId] ?? accumulatorDef.initialValue)
+                    : null;
+
                 return (
                     <div
                         key={sigilId}
@@ -161,6 +170,11 @@ export default function SigilBar() {
                                 <span className={styles.tooltipDesc}>
                                     {renderDescription(def.description)}
                                 </span>
+                                {accumulatorValue !== null && (
+                                    <span className={styles.tooltipDesc}>
+                                        Current: <strong>{`x${accumulatorValue.toFixed(1)} Mult`}</strong>
+                                    </span>
+                                )}
                                 {def.explainer && (
                                     <SigilExplainer
                                         label={def.explainer.label}

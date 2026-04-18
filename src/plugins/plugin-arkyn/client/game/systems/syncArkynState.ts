@@ -39,6 +39,7 @@ import {
     setScrollLevels,
     setShopItems,
     setSigils,
+    setSigilAccumulators,
     setConsumables,
     setDisabledResistance,
     setAcquiredRunes,
@@ -94,6 +95,19 @@ function scrollLevelsEqual(
     let equal = true;
     schemaMap.forEach((value, key) => {
         if (prev.get(key) !== value) equal = false;
+    });
+    return equal;
+}
+
+function sigilAccumulatorsEqual(
+    schemaMap: MapSchema<number>,
+    prev: Record<string, number>,
+): boolean {
+    const prevKeys = Object.keys(prev);
+    if (schemaMap.size !== prevKeys.length) return false;
+    let equal = true;
+    schemaMap.forEach((value, key) => {
+        if (prev[key] !== value) equal = false;
     });
     return equal;
 }
@@ -164,6 +178,7 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevScrollLevels: Map<string, number> = new Map();
     let prevShopItems: { itemType: string; element: string; cost: number; purchased: boolean }[] = [];
     let prevSigils: string[] = [];
+    let prevSigilAccumulators: Record<string, number> = {};
     let prevConsumables: string[] = [];
     let prevDisabledResistance = "";
     // Gate the add-consumable SFX so the first sync after join/reconnect
@@ -430,6 +445,14 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (!stringArraysEqual(player.sigils, prevSigils)) {
             prevSigils = Array.from(player.sigils);
             setSigils(prevSigils);
+        }
+
+        // Sync per-sigil accumulator values (Executioner xMult, etc.).
+        if (!sigilAccumulatorsEqual(player.sigilAccumulators, prevSigilAccumulators)) {
+            const next: Record<string, number> = {};
+            player.sigilAccumulators.forEach((value, key) => { next[key] = value; });
+            prevSigilAccumulators = next;
+            setSigilAccumulators(next);
         }
 
         // Sync dynamic resist-ignore element (Binoculars picks one per round).

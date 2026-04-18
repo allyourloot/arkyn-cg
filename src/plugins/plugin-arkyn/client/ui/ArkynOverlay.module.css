@@ -136,7 +136,7 @@
     position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, calc(-50% - clamp(60px, 10vh, 100px)));
+    transform: translate(-50%, calc(-50% - clamp(110px, 16vh, 170px)));
     font-size: clamp(var(--font-size-md), 3.4vw, var(--font-size-xl));
     color: #ffd700;
     text-transform: uppercase;
@@ -148,8 +148,8 @@
 }
 
 @keyframes upgradeLabelPop {
-    from { transform: translate(-50%, calc(-50% - clamp(60px, 10vh, 100px))) scale(0.5); opacity: 0; }
-    to { transform: translate(-50%, calc(-50% - clamp(60px, 10vh, 100px))) scale(1); opacity: 1; }
+    from { transform: translate(-50%, calc(-50% - clamp(110px, 16vh, 170px))) scale(0.5); opacity: 0; }
+    to { transform: translate(-50%, calc(-50% - clamp(110px, 16vh, 170px))) scale(1); opacity: 1; }
 }
 
 /* Flying scroll image — fixed-position overlay for the purchase animation.
