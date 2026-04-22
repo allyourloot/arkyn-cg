@@ -17,8 +17,16 @@ export interface RuneInstanceData {
  * this run — these carry their original element/rarity/level but get a
  * fresh id on every round build so the pouch/hand diff (keyed on id) in
  * the client sync can't collide with a stale round's runes.
+ * Minus any permanently banished runes (Banish sigil) — each entry in
+ * `banished` removes one matching (element, rarity, level) rune from the
+ * built pool before the shuffle. Banished entries that no longer match
+ * anything in the pool (e.g. mutated acquired list) silently no-op so a
+ * stale banish can never crash the round-start.
  */
-export function createPouch(acquired: RuneInstanceData[] = []): RuneInstanceData[] {
+export function createPouch(
+    acquired: RuneInstanceData[] = [],
+    banished: RuneInstanceData[] = [],
+): RuneInstanceData[] {
     const pouch: RuneInstanceData[] = [];
 
     for (const element of ELEMENT_TYPES) {
@@ -39,6 +47,13 @@ export function createPouch(acquired: RuneInstanceData[] = []): RuneInstanceData
             rarity: r.rarity,
             level: r.level,
         });
+    }
+
+    for (const b of banished) {
+        const idx = pouch.findIndex(r =>
+            r.element === b.element && r.rarity === b.rarity && r.level === b.level,
+        );
+        if (idx >= 0) pouch.splice(idx, 1);
     }
 
     return shuffleArray(pouch);

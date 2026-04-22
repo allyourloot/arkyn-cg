@@ -9,6 +9,7 @@ import {
     emitScrollPurchase,
     setScrollUpgradeDisplay,
 } from "../arkynStore";
+import { playCount } from "../sfx";
 import { getScrollImageUrl } from "./scrollAssets";
 import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
@@ -28,6 +29,11 @@ export default function ConsumableBar() {
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
     const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Per-use scheduled animation timeouts (level-step display + count SFX
+    // pitches). Kept as an array so a rapid second Use cleanly cancels any
+    // still-pending ticks from the previous use, preventing the "+0 → +2"
+    // of use N from overlapping the "+0 → ?" of use N+1.
+    const stepTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
     useEffect(() => {
         if (selectedIdx === null) return;
@@ -47,7 +53,11 @@ export default function ConsumableBar() {
     }, [consumables, selectedIdx]);
 
     useEffect(() => {
-        return () => { if (clearTimerRef.current) clearTimeout(clearTimerRef.current); };
+        return () => {
+            if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+            for (const t of stepTimeoutsRef.current) clearTimeout(t);
+            stepTimeoutsRef.current = [];
+        };
     }, []);
 
     const handleUse = (index: number, element: string) => {
@@ -67,20 +77,49 @@ export default function ConsumableBar() {
                 fromRect,
             });
         } else {
-            // Playing phase — no fly animation; just show the final upgrade
-            // display and clear after a hold. Intermediate steps aren't
-            // staged here because there's no orchestrator timeline outside
-            // of the shop; the player reads the final value only.
-            setScrollUpgradeDisplay({
-                element,
-                oldLevel: currentLevel + 1,
-                newLevel: currentLevel + 1 + levelsGained,
-            });
+            // Playing phase — no fly animation, but step through each level
+            // gain one at a time with the same per-step display + count SFX
+            // the shop orchestrator uses. With Scroll God, +2 levels read as
+            // "+0 → +2" then "+2 → +4" (two distinct pops) instead of a
+            // single "+0 → +4" flash. Matches ArkynOverlay's shop scroll
+            // animation step loop byte-for-byte: same step timing (850ms),
+            // same 3 count-SFX pitches per step.
             if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+            for (const t of stepTimeoutsRef.current) clearTimeout(t);
+            stepTimeoutsRef.current = [];
+
+            const oldLevelBase = currentLevel + 1;
+            const STEP_MS = 850;
+            const COUNT_PITCH_DELAYS_MS = [0, 150, 300];
+            const COUNT_PITCHES = [1.0, 1.15, 1.3];
+
+            const steps = Math.max(1, levelsGained);
+            for (let i = 0; i < steps; i++) {
+                const stepOldLevel = oldLevelBase + i;
+                const stepNewLevel = stepOldLevel + 1;
+                const stepStartMs = i * STEP_MS;
+                stepTimeoutsRef.current.push(setTimeout(() => {
+                    setScrollUpgradeDisplay({
+                        element,
+                        oldLevel: stepOldLevel,
+                        newLevel: stepNewLevel,
+                    });
+                }, stepStartMs));
+                for (let p = 0; p < COUNT_PITCHES.length; p++) {
+                    const pitch = COUNT_PITCHES[p];
+                    stepTimeoutsRef.current.push(setTimeout(() => {
+                        playCount(pitch);
+                    }, stepStartMs + COUNT_PITCH_DELAYS_MS[p]));
+                }
+            }
+
+            // Tail hold so the final "+N → +M" stays up long enough to read
+            // after the last step's count SFX has played.
+            const totalDurationMs = steps * STEP_MS + 1500;
             clearTimerRef.current = setTimeout(() => {
                 setScrollUpgradeDisplay(null);
                 clearTimerRef.current = null;
-            }, 2500);
+            }, totalDurationMs);
         }
 
         setSelectedIdx(null);

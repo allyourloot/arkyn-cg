@@ -12,6 +12,8 @@ import {
     useScrollLevels,
     useSigils,
     useScrollUpgradeDisplay,
+    useCastsRemaining,
+    useDiscardsRemaining,
 } from "../arkynStore";
 import { useCastMultCounter } from "../arkynAnimations";
 import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
@@ -20,9 +22,6 @@ import {
     SPELL_TIER_MULT,
     SCROLL_RUNE_BONUS,
     calculateSpellDamage,
-    CASTS_PER_ROUND,
-    DISCARDS_PER_ROUND,
-    getPlayerStatDeltas,
 } from "../../shared";
 import type { RarityType } from "../../shared/arkynConstants";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
@@ -346,38 +345,15 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
 
 /**
  * Bottom bento row — Bank (gold, left 70%) + Casts / Discards stacked
- * (right 30%). Mirrors ShopPanel's bottom section so the preview panel
- * and shop panel share the same visual footprint. Effective casts /
- * discards include sigil modifiers (Caster adds +1 cast). The Casts
- * chip flashes "+N" when the effective cast budget rises mid-run.
+ * (right 30%). Mirrors ShopPanel's bottom section's visual footprint but
+ * shows LIVE remaining action budgets here (matching the Cast/Discard
+ * button bubbles in ActionButtons) — ShopPanel, which renders between
+ * rounds, shows the max budget instead since "remaining" has no meaning
+ * in the shop context.
  */
 function BentoStats() {
-    const sigils = useSigils();
-    const statDeltas = getPlayerStatDeltas(sigils);
-    const effectiveCasts = CASTS_PER_ROUND + statDeltas.castsPerRound;
-    const effectiveDiscards = DISCARDS_PER_ROUND + statDeltas.discardsPerRound;
-
-    const prevCastsRef = useRef(effectiveCasts);
-    const [castsDisplay, setCastsDisplay] = useState<string>(String(effectiveCasts));
-    const chipRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const prev = prevCastsRef.current;
-        prevCastsRef.current = effectiveCasts;
-        if (effectiveCasts <= prev) {
-            setCastsDisplay(String(effectiveCasts));
-            return;
-        }
-        setCastsDisplay(`+${effectiveCasts - prev}`);
-        if (chipRef.current) {
-            gsap.fromTo(chipRef.current,
-                { scale: 1 },
-                { scale: 1.15, duration: 0.12, ease: "power2.out", yoyo: true, repeat: 1 },
-            );
-        }
-        const t = setTimeout(() => setCastsDisplay(String(effectiveCasts)), 500);
-        return () => clearTimeout(t);
-    }, [effectiveCasts]);
+    const castsRemaining = useCastsRemaining();
+    const discardsRemaining = useDiscardsRemaining();
 
     return (
         <div className={styles.bottomSection}>
@@ -388,12 +364,9 @@ function BentoStats() {
             <div className={styles.statsSection}>
                 <div className={styles.statColumn}>
                     <span className={styles.statLabel}>Casts</span>
-                    <div
-                        ref={chipRef}
-                        className={`${styles.statChip} ${styles.statChipHands}`}
-                    >
+                    <div className={`${styles.statChip} ${styles.statChipHands}`}>
                         <BouncyText className={styles.statChipValue}>
-                            {castsDisplay}
+                            {castsRemaining}
                         </BouncyText>
                     </div>
                 </div>
@@ -401,7 +374,7 @@ function BentoStats() {
                     <span className={styles.statLabel}>Discards</span>
                     <div className={`${styles.statChip} ${styles.statChipDiscards}`}>
                         <BouncyText className={styles.statChipValue}>
-                            {effectiveDiscards}
+                            {discardsRemaining}
                         </BouncyText>
                     </div>
                 </div>

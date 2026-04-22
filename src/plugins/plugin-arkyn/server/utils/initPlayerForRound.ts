@@ -61,6 +61,9 @@ export function initPlayerForRound(
     // reassigns it below; otherwise stays empty so the enemy's full
     // resistance set applies normally.
     player.disabledResistance = "";
+    // Reset the per-round discard counter so discard-hook sigils (Banish)
+    // see `discardNumber: 1` on the first discard of the new round.
+    player.discardsUsedThisRound = 0;
 
     // Fire lifecycle hooks — each hook returns zero or more discriminated
     // effects we dispatch over. New effect kinds (grantGold, grantStat, …)
@@ -103,6 +106,12 @@ export function initPlayerForRound(
         rarity: r.rarity,
         level: r.level,
     }));
-    setPouch(sessionId, createPouch(acquired));
+    const banished = Array.from(player.banishedRunes).map(r => ({
+        id: r.id,
+        element: r.element,
+        rarity: r.rarity,
+        level: r.level,
+    }));
+    setPouch(sessionId, createPouch(acquired, banished));
     refillHand(player, sessionId);
 }

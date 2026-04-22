@@ -166,6 +166,25 @@ let acquiredRunes: RuneClientData[] = [];
 // Next Round button, then shows the picker with these 4 runes.
 let pendingBagRunes: RuneClientData[] = [];
 
+// Runes permanently banished this run (Banish sigil). Mirrored from the
+// server so PouchCounter can shrink its denominator and future UI
+// (e.g. a "Banished Runes" row in PouchModal) can enumerate them.
+let banishedRunes: RuneClientData[] = [];
+
+// How many discards the player has used this round. Mirrors
+// `player.discardsUsedThisRound`. The client reads this pre-discard to
+// predict whether a discard-hook sigil (Banish) would proc, so it can
+// swap the standard discard animation for a dissolve + gold-bubble
+// celebration without waiting on the server echo.
+let discardsUsedThisRound = 0;
+
+// Per-sigil proc bubble — renders a floating "+N Gold" overlay anchored
+// to the matching sigil's SigilBar slot. Single active bubble at a time
+// (new procs replace the old); monotonic `seq` forces a fresh React
+// mount so GSAP replays the pop animation on back-to-back procs.
+let sigilProcBubble: { sigilId: string; amount: number; kind: "gold"; seq: number } | null = null;
+let sigilProcSeq = 0;
+
 // Run stats — synced from server for the game-over screen.
 let runTotalDamage = 0;
 let runTotalCasts = 0;
@@ -333,6 +352,8 @@ export function setDisabledResistance(e: string) { disabledResistance = e; notif
 // Rune Bag setters
 export function setAcquiredRunes(r: RuneClientData[]) { acquiredRunes = r; notify(); }
 export function setPendingBagRunes(r: RuneClientData[]) { pendingBagRunes = r; notify(); }
+export function setBanishedRunes(r: RuneClientData[]) { banishedRunes = r; notify(); }
+export function setDiscardsUsedThisRound(n: number) { discardsUsedThisRound = n; notify(); }
 
 // Scroll purchase event — lightweight pub-sub. ShopScreen fires this on
 // buy; ArkynOverlay orchestrates the fly/shake/dissolve animation and
@@ -477,6 +498,7 @@ export const arkynStoreInternal = {
     getCastsRemaining: () => castsRemaining,
     getCurrentRound: () => currentRound,
     getRunSeed: () => runSeed,
+    getDiscardsUsedThisRound: () => discardsUsedThisRound,
 
     // Mutators (caller is responsible for calling notify() once per batch)
     clearSelection() {
@@ -521,6 +543,19 @@ export const arkynStoreInternal = {
     /** Clear the overlay after the cast timeline completes. */
     clearGoldProcBubble() {
         goldProcBubble = null;
+    },
+    /**
+     * Show a floating proc bubble (currently gold-only) over a specific
+     * sigil slot in the SigilBar. Used by Banish's on-proc UX to surface
+     * the reward visually on the sigil that fired it, in parallel with
+     * (or in place of) the GoldCounter's own "+N" overlay. Fresh `seq`
+     * remounts the bubble so back-to-back procs replay the animation.
+     */
+    triggerSigilProcBubble(sigilId: string, amount: number, kind: "gold" = "gold") {
+        sigilProcBubble = { sigilId, amount, kind, seq: ++sigilProcSeq };
+    },
+    clearSigilProcBubble() {
+        sigilProcBubble = null;
     },
 
     /**
@@ -605,6 +640,9 @@ export function useDisabledResistance() { return useSyncExternalStore(subscribe,
 // Rune Bag hooks
 export function useAcquiredRunes() { return useSyncExternalStore(subscribe, () => acquiredRunes); }
 export function usePendingBagRunes() { return useSyncExternalStore(subscribe, () => pendingBagRunes); }
+export function useBanishedRunes() { return useSyncExternalStore(subscribe, () => banishedRunes); }
+export function useDiscardsUsedThisRound() { return useSyncExternalStore(subscribe, () => discardsUsedThisRound); }
+export function useSigilProcBubble() { return useSyncExternalStore(subscribe, () => sigilProcBubble); }
 
 // Run stats hooks
 export function useRunTotalDamage() { return useSyncExternalStore(subscribe, () => runTotalDamage); }

@@ -1,6 +1,7 @@
-import { type ArkynState } from "../../shared";
+import { SIGIL_DISCARD_HOOKS, type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
 import { refillHand } from "../utils/refillHand";
+import { createRuneInstance } from "../utils/drawRunes";
 import { removeRunesFromHand, validateRuneSelection } from "./utils/runeSelection";
 import { getRunStats } from "../resources/runStats";
 
@@ -18,6 +19,54 @@ export function handleDiscard(
     });
     if (!result) return;
     const { player, indices } = result;
+
+    // Snapshot the discarded runes BEFORE removing them from the hand so
+    // discard-hook sigils (Banish) can inspect element/rarity/level. Indices
+    // are used in their original hand-order so a future hook targeting a
+    // specific rune position behaves predictably.
+    const discardedRunes = indices.map(i => {
+        const r = player.hand[i];
+        return { id: r.id, element: r.element, rarity: r.rarity, level: r.level };
+    });
+
+    // Increment BEFORE dispatching hooks so the first discard of the round
+    // sees `discardNumber: 1`.
+    player.discardsUsedThisRound++;
+
+    // Dispatch discard hooks. Each sigil can return zero or more effects
+    // the caller dispatches over — new effect kinds slot in as switch arms.
+    for (const sigilId of player.sigils) {
+        const hook = SIGIL_DISCARD_HOOKS[sigilId];
+        if (!hook?.onDiscard) continue;
+        const effects = hook.onDiscard({
+            discardNumber: player.discardsUsedThisRound,
+            runeCount: discardedRunes.length,
+            runes: discardedRunes,
+        });
+        if (!effects) continue;
+        for (const effect of effects) {
+            switch (effect.type) {
+                case "banishRune": {
+                    const rune = discardedRunes[effect.runeIndex];
+                    if (!rune) break;
+                    // IDs rotate on each pouch rebuild, so persist the
+                    // banish by (element, rarity, level) — the id is just
+                    // a record of which specific hand rune was sacrificed.
+                    // Factory validates rarity so the invariant "every
+                    // RuneInstance has a canonical rarity" still holds.
+                    player.banishedRunes.push(createRuneInstance(rune));
+                    logger.info(
+                        `Player ${client.sessionId} banished ${rune.rarity} ${rune.element} ` +
+                        `via "${sigilId}". Total banished: ${player.banishedRunes.length}.`,
+                    );
+                    break;
+                }
+                case "grantGold":
+                    player.gold += effect.amount;
+                    break;
+            }
+        }
+    }
 
     // Remove discarded runes from hand
     removeRunesFromHand(player, indices);

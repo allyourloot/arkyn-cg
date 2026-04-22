@@ -217,6 +217,26 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         cost: 3,
         sellPrice: 1,
     },
+    zephyr: {
+        id: "zephyr",
+        name: "Zephyr",
+        rarity: "uncommon",
+        description: "Air spells gain {x2 Mult}.",
+        cost: 4,
+        sellPrice: 2,
+        explainer: {
+            label: "Applies to:",
+            elements: ["air"] as const,
+        },
+    },
+    banish: {
+        id: "banish",
+        name: "Banish",
+        rarity: "uncommon",
+        description: "If your {first discard} is one rune, {destroy it} and gain {+4 Gold}.",
+        cost: 4,
+        sellPrice: 2,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

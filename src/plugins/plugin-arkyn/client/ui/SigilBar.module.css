@@ -67,6 +67,37 @@
     pointer-events: auto;
 }
 
+/* Floating "+N [gold icon]" proc bubble — pops below the sigil slot when
+   a discard-hook sigil (Banish) procs. GSAP-driven in SigilBar.tsx: the
+   bubble spawns at the bottom of the slot, rises, then fades. Uses the
+   warm-gold palette to match the GoldCounter's own proc overlay. */
+.procBubble {
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    transform: translate(-50%, 0);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: none;
+    z-index: 25;
+    font-size: clamp(var(--font-size-sm), 2vw, var(--font-size-lg));
+    color: #ffd770;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    will-change: transform, opacity;
+    image-rendering: pixelated;
+}
+
+.procBubbleIcon {
+    width: clamp(16px, 2vw, 24px);
+    height: clamp(16px, 2vw, 24px);
+    image-rendering: pixelated;
+    filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.7));
+}
+
 /* ================================================================
    Tooltip — hover trigger via the shared Tooltip component's
    global .arkyn-tooltip class.

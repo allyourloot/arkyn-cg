@@ -3,7 +3,7 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { MAX_SIGILS, SIGIL_ACCUMULATOR_XMULT, SIGIL_INVENTORY_MULT } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
-import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, usePendingSigilId } from "../arkynStore";
+import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, usePendingSigilId, useSigilProcBubble } from "../arkynStore";
 import { RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
 import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
@@ -41,6 +41,7 @@ export default function SigilBar() {
     const accumulators = useSigilAccumulators();
     const activeSigilShake = useActiveSigilShake();
     const pendingSigilId = usePendingSigilId();
+    const sigilProcBubble = useSigilProcBubble();
     const barRef = useRef<HTMLDivElement>(null);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [selectedSigilId, setSelectedSigilId] = useState<string | null>(null);
@@ -227,11 +228,48 @@ export default function SigilBar() {
                                 </span>
                             </button>
                         )}
+                        {/* Floating "+N Gold" proc bubble — fires under a
+                            sigil when its discard-hook (Banish) grants gold. */}
+                        {sigilProcBubble && sigilProcBubble.sigilId === sigilId && sigilProcBubble.kind === "gold" && (
+                            <SigilGoldProcBubble
+                                amount={sigilProcBubble.amount}
+                                seq={sigilProcBubble.seq}
+                            />
+                        )}
                     </div>
                 );
             })}
             <span className={styles.countLabel}>{sigils.length}/{MAX_SIGILS}</span>
             <ConsumableBar />
         </div>
+    );
+}
+
+/**
+ * Floating "+N [gold icon]" overlay that pops under a sigil slot when
+ * its discard-hook (Banish) grants gold. Seq-keyed remount replays the
+ * GSAP tween on back-to-back procs. Positioned by the `.procBubble`
+ * class in SigilBar.module.css (anchored to bottom of the slot); GSAP
+ * animates translate-y + scale + opacity.
+ */
+function SigilGoldProcBubble({ amount, seq }: { amount: number; seq: number }) {
+    const ref = useRef<HTMLSpanElement>(null);
+
+    useGSAP(() => {
+        const el = ref.current;
+        if (!el) return;
+        gsap.set(el, { y: -6, scale: 0.55, opacity: 0 });
+        const tl = gsap.timeline();
+        tl.to(el, { y: 8, scale: 1.2, opacity: 1, duration: 0.14, ease: "back.out(2.5)" });
+        tl.to(el, { y: 12, scale: 1, duration: 0.08, ease: "power2.out" });
+        tl.to({}, { duration: 0.35 });
+        tl.to(el, { y: 32, opacity: 0, duration: 0.35, ease: "power1.in" });
+    }, { dependencies: [seq], scope: ref });
+
+    return (
+        <span key={seq} ref={ref} className={styles.procBubble}>
+            +{amount}
+            <img src={goldIconUrl} alt="Gold" className={styles.procBubbleIcon} />
+        </span>
     );
 }

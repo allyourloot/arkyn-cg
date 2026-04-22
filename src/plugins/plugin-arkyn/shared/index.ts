@@ -98,6 +98,7 @@ export {
     SIGIL_SCROLL_LEVEL_BONUS,
     SIGIL_ACCUMULATOR_XMULT,
     SIGIL_INVENTORY_MULT,
+    SIGIL_DISCARD_HOOKS,
     getPlayerStatDeltas,
     getHandMultBonus,
     getSpellXMult,
@@ -132,6 +133,9 @@ export type {
     AccumulatorXMultEntry,
     InventoryMultDefinition,
     InventoryMultEntry,
+    DiscardContext,
+    DiscardEffect,
+    DiscardHookDefinition,
 } from "./sigilEffects";
 
 export { BOSS_DEBUFFS, isBossRound, pickDebuffForRound, getDebuffById } from "./bossDebuffs";

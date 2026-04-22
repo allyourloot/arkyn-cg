@@ -10,6 +10,7 @@ import {
     useCastingRuneIds,
     useHandSize,
 } from "../arkynStore";
+import { useBanishingRuneIds } from "../arkynAnimations";
 import RuneCard from "./RuneCard";
 import { useHandDragReorder } from "./hooks/useHandDragReorder";
 import handFrameUrl from "/assets/ui/hand-frame.png?url";
@@ -26,6 +27,7 @@ export default function HandDisplay() {
     const isDiscardAnimating = useIsDiscardAnimating();
     const drawingRuneIds = useDrawingRuneIds();
     const castingRuneIds = useCastingRuneIds();
+    const banishingRuneIds = useBanishingRuneIds();
     const maxHandSize = useHandSize();
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -260,7 +262,12 @@ export default function HandDisplay() {
                     // sequence — the deferred server hand-sync would otherwise
                     // leave them visible until the dissolve completes.
                     const isCastingOut = castingRuneIds.includes(rune.id);
-                    const isHidden = isHiddenForCast || isDrawingIn || isCastingOut;
+                    // Same reason for Banish: the dissolving flyer is
+                    // absolutely positioned over the hand slot, and
+                    // painting a fully-intact hand rune underneath would
+                    // poke through the semi-transparent dissolve pixels.
+                    const isBanishingOut = banishingRuneIds.includes(rune.id);
+                    const isHidden = isHiddenForCast || isDrawingIn || isCastingOut || isBanishingOut;
                     const isDragging = dragInfo !== null && dragInfo.runeId === rune.id;
 
                     // Slot transform x is GSAP-driven (see useGSAP above and

@@ -27,6 +27,7 @@ import ShopScreen from "./ShopScreen";
 import CastAnimation from "./CastAnimation";
 import DiscardAnimation from "./DiscardAnimation";
 import DrawAnimation from "./DrawAnimation";
+import BanishAnimation from "./BanishAnimation";
 import MainMenu from "./MainMenu";
 import SigilBar from "./SigilBar";
 import ItemScene from "./ItemScene";
@@ -666,6 +667,7 @@ export default function ArkynOverlay() {
             <InfoButton />
             <CastAnimation />
             <DiscardAnimation />
+            <BanishAnimation />
             <DrawAnimation />
             <MultBubbleOverlay />
             <BackgroundMusic />

@@ -117,6 +117,19 @@ export class ArkynPlayerState extends Schema {
     // Reset to 0 on shop entry. Used to uniquely seed each bag's RNG and
     // to enforce MAX_RUNE_BAGS_PER_SHOP.
     @type("number") bagPurchaseCount = 0;
+
+    // How many times the player has discarded during the current round.
+    // Reset to 0 in `initPlayerForRound`; incremented on each successful
+    // discard BEFORE sigil discard-hooks fire, so the first discard carries
+    // `discardNumber: 1` (consumed by hooks like Banish).
+    @type("number") discardsUsedThisRound = 0;
+
+    // Runes permanently removed from the pouch this run (Banish-style
+    // deckbuilding). Each entry represents one specific rune copy to
+    // subtract from the pouch on every rebuild — `createPouch` walks this
+    // list and splices one matching (element, rarity, level) rune per
+    // entry. Persists across rounds within a run; resets on new run.
+    @type([RuneInstance]) banishedRunes = new ArraySchema<RuneInstance>();
 }
 
 export class ArkynState extends PluginState {

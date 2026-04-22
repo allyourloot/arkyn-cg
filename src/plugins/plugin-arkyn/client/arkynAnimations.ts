@@ -5,6 +5,7 @@ import {
     ARKYN_CAST,
     ARKYN_DISCARD,
     CASTS_PER_ROUND,
+    SIGIL_DISCARD_HOOKS,
     SPELL_TIER_MULT,
     composeCastModifiers,
     iterateProcs,
@@ -50,7 +51,9 @@ export {
 } from "./animations/timingConstants";
 import {
     BUBBLE_STAGGER_MS,
+    DISSOLVE_DURATION_MS,
 } from "./animations/timingConstants";
+import { playGold } from "./sfx";
 
 // Fly / discard / draw durations live inside `animations/castTimeline.ts`
 // (in seconds, ready for GSAP). Component-level fly tweens reference them
@@ -149,6 +152,21 @@ let isCastAnimating = false;
 let castingRuneIds: string[] = [];
 let discardingRunes: DiscardingRune[] = [];
 let isDiscardAnimating = false;
+// Runes currently being banished (Banish sigil consumed the first solo
+// discard of the round). Rendered by BanishAnimation at the captured
+// hand-slot position via DissolveCanvas — the rune tears apart in place
+// instead of sliding off-screen. `banishStartTime` is set to
+// `performance.now()` on trigger so the dissolve shader's `uThreshold`
+// advances from the exact frame the flyer mounts.
+let banishingRunes: DiscardingRune[] = [];
+let banishStartTime = 0;
+let isBanishAnimating = false;
+// Rune IDs currently dissolving in the banish flyer layer. HandDisplay
+// reads this list to keep the original hand-slot rune hidden while the
+// flyer plays, so the dissolving image isn't painted on top of an
+// identical intact hand rune during the brief window before the server
+// sync removes it from `hand`.
+let banishingRuneIds: string[] = [];
 let drawingRuneIds: string[] = [];
 let drawingRunes: DrawingRune[] = [];
 
@@ -233,6 +251,15 @@ export function useDiscardingRunes() {
 export function useIsDiscardAnimating() {
     return useSyncExternalStore(subscribe, () => isDiscardAnimating);
 }
+export function useBanishingRunes() {
+    return useSyncExternalStore(subscribe, () => banishingRunes);
+}
+export function useBanishStartTime() {
+    return useSyncExternalStore(subscribe, () => banishStartTime);
+}
+export function useBanishingRuneIds() {
+    return useSyncExternalStore(subscribe, () => banishingRuneIds);
+}
 export function useDrawingRuneIds() {
     return useSyncExternalStore(subscribe, () => drawingRuneIds);
 }
@@ -267,7 +294,7 @@ export function useHandMultBubbles() {
 // ----- Helpers -----
 
 function isAnimating(): boolean {
-    return isCastAnimating || isDiscardAnimating;
+    return isCastAnimating || isDiscardAnimating || isBanishAnimating;
 }
 
 /**
@@ -979,6 +1006,46 @@ export function castSpell() {
     });
 }
 
+/**
+ * Run the owned discard-hook sigils through `SIGIL_DISCARD_HOOKS` with the
+ * same inputs the server will see, and flatten the resulting effects. The
+ * client uses this to pick the right animation path (dissolve vs slide-down)
+ * BEFORE sending `ARKYN_DISCARD`, so the visual fires in lockstep with the
+ * server's authoritative resolution instead of waiting on an echo.
+ *
+ * Works because the current discard-hook sigils (Banish) are pure
+ * predicates over `discardNumber` / `runeCount` / `runes` — no server-side
+ * RNG, no hidden state. If a future discard sigil needs server-only
+ * information (e.g. a deterministic roll), its hook must return an
+ * EMPTY effect list here and signal via schema instead.
+ */
+function previewDiscardEffects(
+    sigils: readonly string[],
+    discardNumber: number,
+    runes: readonly { id: string; element: string; rarity: string; level: number }[],
+): { banishIndex: number; grantedGold: number; sigilId: string } | null {
+    for (const sigilId of sigils) {
+        const hook = SIGIL_DISCARD_HOOKS[sigilId];
+        if (!hook?.onDiscard) continue;
+        const effects = hook.onDiscard({
+            discardNumber,
+            runeCount: runes.length,
+            runes,
+        });
+        if (!effects || effects.length === 0) continue;
+        let banishIndex = -1;
+        let grantedGold = 0;
+        for (const e of effects) {
+            if (e.type === "banishRune") banishIndex = e.runeIndex;
+            else if (e.type === "grantGold") grantedGold += e.amount;
+        }
+        if (banishIndex >= 0 || grantedGold > 0) {
+            return { banishIndex, grantedGold, sigilId };
+        }
+    }
+    return null;
+}
+
 export function discardRunes() {
     const selectedRuneIds = arkynStoreInternal.getSelectedRuneIds();
     const selectedIndices = arkynStoreInternal.getSelectedIndices();
@@ -1010,6 +1077,31 @@ export function discardRunes() {
         return;
     }
 
+    // Check whether a discard-hook sigil (Banish) would proc on this
+    // discard. Mirrors the server: `discardNumber` is 1-indexed, and the
+    // client reads `discardsUsedThisRound` (the count BEFORE this discard)
+    // from the store, so `+1` gives the correct number for the hook.
+    const sigils = arkynStoreInternal.getSigils();
+    const priorDiscards = arkynStoreInternal.getDiscardsUsedThisRound();
+    const discardedRuneData = discs.map(d => ({
+        id: d.rune.id,
+        element: d.rune.element,
+        rarity: d.rune.rarity,
+        level: d.rune.level,
+    }));
+    const discardPreview = previewDiscardEffects(
+        sigils,
+        priorDiscards + 1,
+        discardedRuneData,
+    );
+
+    if (discardPreview && discardPreview.banishIndex >= 0) {
+        // Sigil hook is firing — route to the banish orchestrator which
+        // plays a dissolve (not a slide-down) and pops the reward UX.
+        runBanishFlow(discs, serverIndices, discardPreview);
+        return;
+    }
+
     // flushSync forces React to commit before we build the orchestrator
     // timeline, so DiscardAnimation's useGSAP fires (and the discard tween
     // starts) BEFORE the timeline's clock starts running. Same fix as the
@@ -1034,4 +1126,82 @@ export function discardRunes() {
             notify();
         },
     });
+}
+
+/**
+ * Alternate discard path taken when a SIGIL_DISCARD_HOOKS sigil (Banish)
+ * fires on this discard. Instead of the standard slide-down-and-fade
+ * discard flyer, the rune plays the same dissolve shader casts use —
+ * making the "permanent destruction" read as a decisive event rather than
+ * a routine toss. While the dissolve plays:
+ *  - the Banish sigil shakes (via activeSigilShake)
+ *  - a "+N Gold" proc bubble pops over the Banish slot in the SigilBar
+ *  - the gold counter ticks up and the gold SFX plays
+ * The `ARKYN_DISCARD` message is sent at t=0 so the server's schema patch
+ * (pouch rebuild + banishedRunes update) lands while the visual plays out.
+ */
+function runBanishFlow(
+    discs: DiscardingRune[],
+    serverIndices: number[],
+    preview: { banishIndex: number; grantedGold: number; sigilId: string },
+) {
+    flushSync(() => {
+        banishingRunes = discs;
+        banishingRuneIds = discs.map(d => d.rune.id);
+        banishStartTime = performance.now();
+        isBanishAnimating = true;
+        // Freeze the gold display so the "+N" bubble pops over the
+        // counter's pre-proc value; the commit tick below unlocks it in
+        // sync with the SFX.
+        arkynStoreInternal.lockGoldDisplay();
+        arkynStoreInternal.clearSelection();
+        notify();
+    });
+
+    // Send the server message now — the server will process the discard,
+    // add the rune to banishedRunes, and credit gold. Client schema sync
+    // will arrive mid-dissolve; `lockGoldDisplay` holds the counter at its
+    // pre-proc value until we commit it alongside the SFX below.
+    sendArkynMessage(ARKYN_DISCARD, { selectedIndices: serverIndices });
+
+    // Trigger the SigilBar sigil shake + the "+N Gold" proc bubble.
+    // Delayed a hair so the dissolve starts first and the UX reads as
+    // "rune tears apart → sigil reacts → gold awarded" rather than all
+    // three firing on the same frame.
+    const SIGIL_REACT_DELAY_MS = 120;
+    const GOLD_COMMIT_DELAY_MS = 260;
+
+    setTimeout(() => {
+        // Sigil shake — same channel Voltage/Fortune use during casts.
+        sigilShakeSeq++;
+        activeSigilShake = { sigilId: preview.sigilId, seq: sigilShakeSeq };
+        // Gold proc bubble over the SigilBar slot.
+        arkynStoreInternal.triggerSigilProcBubble(preview.sigilId, preview.grantedGold);
+        // Also fire the GoldCounter's own "+N" overlay — matches Fortune's
+        // mid-cast proc UX and gives the player a second read of the reward.
+        arkynStoreInternal.triggerGoldProcBubble(preview.grantedGold);
+        notify();
+    }, SIGIL_REACT_DELAY_MS);
+
+    setTimeout(() => {
+        // Commit the gold: tick the displayed counter + play the gold SFX.
+        playGold();
+        arkynStoreInternal.addDisplayedGold(preview.grantedGold);
+        arkynStoreInternal.unlockGoldDisplayAndSyncToServer();
+        notify();
+    }, GOLD_COMMIT_DELAY_MS);
+
+    // Clean up after the dissolve completes. DISSOLVE_DURATION_MS comes
+    // from the shared timing constants so any future tuning of the dissolve
+    // visual automatically carries to the banish cleanup.
+    const cleanupDelayMs = DISSOLVE_DURATION_MS + 120;
+    setTimeout(() => {
+        banishingRunes = [];
+        banishingRuneIds = [];
+        banishStartTime = 0;
+        isBanishAnimating = false;
+        arkynStoreInternal.clearSigilProcBubble();
+        arkynStoreInternal.clearGoldProcBubble();
+        notify();
+    }, cleanupDelayMs);
 }

@@ -44,6 +44,8 @@ import {
     setDisabledResistance,
     setAcquiredRunes,
     setPendingBagRunes,
+    setBanishedRunes,
+    setDiscardsUsedThisRound,
     clearSelectedIndices,
     triggerDrawAnimation,
     getHandIndex,
@@ -189,6 +191,8 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let hasSyncedConsumables = false;
     let prevAcquired: RuneClientData[] = [];
     let prevPending: RuneClientData[] = [];
+    let prevBanished: RuneClientData[] = [];
+    let prevDiscardsUsedThisRound = -1;
 
     return () => {
         const player = state.players.get(sessionId);
@@ -481,6 +485,14 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (!runeArraysEqualById(player.pendingBagRunes, prevPending)) {
             prevPending = snapshotRunes(player.pendingBagRunes);
             setPendingBagRunes(prevPending);
+        }
+        if (!runeArraysEqualById(player.banishedRunes, prevBanished)) {
+            prevBanished = snapshotRunes(player.banishedRunes);
+            setBanishedRunes(prevBanished);
+        }
+        if (player.discardsUsedThisRound !== prevDiscardsUsedThisRound) {
+            prevDiscardsUsedThisRound = player.discardsUsedThisRound;
+            setDiscardsUsedThisRound(prevDiscardsUsedThisRound);
         }
     };
 }

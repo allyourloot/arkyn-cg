@@ -401,6 +401,7 @@ export interface SpellXMultEffect {
 export const SIGIL_SPELL_X_MULT: Record<string, SpellXMultEffect> = {
     supercell: { elements: ["lightning", "air"], xMult: 3 },
     eruption: { elements: ["fire", "earth"], xMult: 3 },
+    zephyr: { elements: ["air"], xMult: 2 },
 };
 
 export interface SpellXMultEntry {
@@ -871,6 +872,68 @@ export function getInventoryMultBonus(
     }
     return { total, entries };
 }
+
+// ============================================================================
+// Category 14 — Discard Hooks (Banish pattern)
+// ============================================================================
+
+/**
+ * Sigils that react when the player discards. Dispatched by `handleDiscard`
+ * after validation succeeds but BEFORE the runes are removed from the hand,
+ * so hooks can inspect the discarded runes and request effects (destroy one
+ * permanently, grant gold, etc.). The caller walks the returned effect
+ * array and dispatches each `DiscardEffect` over its `type` — new effect
+ * kinds add as switch arms in the dispatcher.
+ *
+ * Today this is Banish ("destroy the rune + gain gold on a solo first
+ * discard"); the plumbing is generic so future sigils (e.g. "every 3rd
+ * discard grants +2 Gold", "discarding ≥3 runes adds +1 Mult next cast")
+ * slot in as single data entries.
+ */
+
+export interface DiscardContext {
+    /** 1-indexed: 1 = first discard of round, 2 = second, ... */
+    readonly discardNumber: number;
+    /** How many runes were in this discard. */
+    readonly runeCount: number;
+    /** The runes being discarded, in hand-index order. */
+    readonly runes: readonly {
+        id: string;
+        element: string;
+        rarity: string;
+        level: number;
+    }[];
+}
+
+/**
+ * Discriminated effects a discard hook can request. `banishRune` references
+ * the rune by its index into `ctx.runes` so the hook can target a specific
+ * discarded rune (today always 0, since Banish only activates on solo
+ * discards).
+ */
+export type DiscardEffect =
+    | { type: "banishRune"; runeIndex: number }
+    | { type: "grantGold"; amount: number };
+
+export interface DiscardHookDefinition {
+    onDiscard(ctx: DiscardContext): readonly DiscardEffect[] | void;
+}
+
+export const SIGIL_DISCARD_HOOKS: Record<string, DiscardHookDefinition> = {
+    banish: {
+        onDiscard(ctx) {
+            // Only fires on the FIRST discard of the round AND only when
+            // the player discarded exactly one rune. This is the deckbuilding
+            // gate: trades one discard "slot" for a permanent rune removal.
+            if (ctx.discardNumber !== 1) return [];
+            if (ctx.runeCount !== 1) return [];
+            return [
+                { type: "banishRune", runeIndex: 0 },
+                { type: "grantGold", amount: 4 },
+            ];
+        },
+    },
+};
 
 // ============================================================================
 // Module-Load Validation
