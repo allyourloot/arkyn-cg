@@ -32,6 +32,7 @@ const panelStyleVars = {
     ["--hands-bg" as string]: INNER_FRAME_BGS.green,
     ["--discards-bg" as string]: INNER_FRAME_BGS.orange,
     ["--shop-chip-bg" as string]: INNER_FRAME_BGS.orange,
+    ["--bank-bg" as string]: INNER_FRAME_BGS.gold,
 } as CSSProperties;
 
 type ShopPanelProps = {
@@ -163,32 +164,33 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
                 )}
             </div>
 
-            {/* --- Bottom: Stats + Gold (pinned via margin-top: auto) --- */}
+            {/* --- Bottom: Bento row — Gold (left 70%) + Casts/Discards stacked (right 30%) --- */}
             <div className={styles.bottomSection}>
+                <div className={styles.goldCell}>
+                    <span className={styles.statLabel}>Bank</span>
+                    <GoldCounter />
+                </div>
                 <div className={styles.statsSection}>
-                    <div className={styles.statsRow}>
-                        <div className={styles.statColumn}>
-                            <span className={styles.statLabel}>Casts</span>
-                            <div
-                                ref={chipRef}
-                                className={`${styles.statChip} ${styles.statChipHands}`}
-                            >
-                                <BouncyText className={styles.statChipValue}>
-                                    {castsDisplay}
-                                </BouncyText>
-                            </div>
+                    <div className={styles.statColumn}>
+                        <span className={styles.statLabel}>Casts</span>
+                        <div
+                            ref={chipRef}
+                            className={`${styles.statChip} ${styles.statChipHands}`}
+                        >
+                            <BouncyText className={styles.statChipValue}>
+                                {castsDisplay}
+                            </BouncyText>
                         </div>
-                        <div className={styles.statColumn}>
-                            <span className={styles.statLabel}>Discards</span>
-                            <div className={`${styles.statChip} ${styles.statChipDiscards}`}>
-                                <BouncyText className={styles.statChipValue}>
-                                    {effectiveDiscards}
-                                </BouncyText>
-                            </div>
+                    </div>
+                    <div className={styles.statColumn}>
+                        <span className={styles.statLabel}>Discards</span>
+                        <div className={`${styles.statChip} ${styles.statChipDiscards}`}>
+                            <BouncyText className={styles.statChipValue}>
+                                {effectiveDiscards}
+                            </BouncyText>
                         </div>
                     </div>
                 </div>
-                <GoldCounter />
             </div>
         </div>
     );

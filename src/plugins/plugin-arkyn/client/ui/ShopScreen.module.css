@@ -132,7 +132,10 @@
     z-index: 30;
 }
 
-.itemCardCantAfford {
+/* Dim only the gold price chip when the player can't afford the item —
+   the sigil/item art and tooltip stay full-opacity so the player can
+   still read what's on offer while they build up gold. */
+.itemCardCantAfford .priceChip {
     opacity: 0.45;
 }
 

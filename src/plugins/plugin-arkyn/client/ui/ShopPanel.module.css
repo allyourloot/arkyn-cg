@@ -341,38 +341,75 @@
     line-height: 1;
 }
 
-/* --- Bottom section: stats + gold pinned to bottom --- */
+/* --- Bottom section: bento row — Gold (left 70%) + Casts/Discards stack (right 30%) --- */
 .bottomSection {
     margin-top: auto;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: stretch;
-    gap: clamp(6px, 1vh, 12px);
+    gap: clamp(6px, 1vw, 12px);
     width: 100%;
 }
 
-/* Stats section — two labeled chips in a row (Hands + Discards). */
+/* Left cell — BANK label on top, GoldCounter below. Column-flex so the
+   label + chip stack mirrors the right cell's statColumn shape, and
+   `justify-content: flex-start` keeps both cells' labels top-aligned so
+   "Bank" and "Casts" sit on the same baseline. Gap matches the CASTS
+   column gap so the two chips' outer frame tops align — and because we
+   also override the gold chip's border-width below to match statChip's
+   12px, the two chips' INNER frame tops align too. */
+.goldCell {
+    flex: 7 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: clamp(2px, 0.4vh, 6px);
+}
+
+/* Override GoldCounter's own `margin-top: auto` + natural content height
+   so the chip stretches to fill the bento cell's remaining vertical
+   space instead of sitting at the bottom. Scoped to `:last-child` so the
+   BANK label keeps its intrinsic text height.
+   Also tightens the 9-slice border-width from GoldCounter's default 24px
+   to 12px so the chip's inner frame top sits at the same y as the Casts
+   chip's inner frame top — the user was seeing the gold chip's inner
+   start too low because its border was twice as thick. */
+.goldCell > :last-child {
+    margin-top: 0;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    border-width: 12px;
+    border-image: var(--bank-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+}
+
+/* Override GoldCounter's default gold-yellow count color (#ffd770) to
+   white inside the shop's bento cell. Targets the inner BouncyText
+   wrapper (which carries GoldCounter's `.count` class) via its structural
+   position — img is child 1, countPop is child 2, its only child span is
+   the BouncyText wrapper where the gold color lives. SpellPreview's
+   GoldCounter is untouched since it doesn't render inside .goldCell. */
+.goldCell > :last-child > :nth-child(2) > span {
+    color: #ffffff;
+}
+
+/* Right cell — Casts + Discards chips stacked vertically in the other 30%.
+   Top-aligned (flex-start) so the Casts label sits at the same baseline
+   as the Bank label in the left cell. */
 .statsSection {
     box-sizing: border-box;
-    width: 100%;
+    flex: 3 1 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: stretch;
+    justify-content: flex-start;
     gap: clamp(6px, 1vh, 12px);
-}
-
-.statsRow {
-    box-sizing: border-box;
-    width: 100%;
-    display: flex;
-    align-items: stretch;
-    justify-content: center;
-    gap: clamp(6px, 1vw, 12px);
 }
 
 .statColumn {
-    flex: 1 1 0;
-    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -398,7 +435,7 @@
     border-style: solid;
     border-color: transparent;
     border-width: 12px;
-    padding: 4px 6px 6px;
+    padding: 1px 6px 2px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -524,11 +561,15 @@
     }
 
     .statsSection {
-        gap: clamp(6px, 1.2vh, 14px);
+        gap: clamp(4px, 0.8vh, 10px);
     }
 
-    .statsRow {
-        gap: clamp(3px, 0.6vw, 8px);
+    /* Landscape: statChip border-width drops to 6px, so the gold chip's
+       overridden border-width tracks to keep the inner-frame tops aligned
+       with the Casts chip. */
+    .goldCell > :last-child {
+        border-width: 6px;
+        border-image: var(--bank-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
     }
 
     .statLabel {
@@ -538,7 +579,7 @@
 
     .statChip {
         border-width: 6px;
-        padding: 2px 4px 3px;
+        padding: 0 4px 1px;
     }
 
     .statChipHands {
