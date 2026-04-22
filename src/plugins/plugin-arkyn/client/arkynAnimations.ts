@@ -452,6 +452,7 @@ function assembleCastBreakdown(args: {
     const xMultEntries = modifiers.breakdowns.xMult;
     const accumulatorXMultEntries = modifiers.breakdowns.accumulatorXMult;
     const elementRuneBonusEntries = modifiers.breakdowns.elementRuneBonus;
+    const inventoryMultEntries = modifiers.breakdowns.inventoryMult;
 
     const breakdown = resolvedSpell
         ? calculateSpellDamage(
@@ -661,6 +662,27 @@ function assembleCastBreakdown(args: {
     const hasAnyHandMultProc = handMultEntries.length > 0;
     const hasAnyPlayedMult = playedMultEntries.length > 0;
 
+    // ----- Inventory-mult entries (Elixir-style sigils) -----
+    // Flat additive mult derived from the sigil inventory (not held/played
+    // runes). One event per owned inventory-mult sigil — no bubble, just a
+    // Mult-counter tick + sigil shake. Appended AFTER hand-mult so the
+    // reveal reads "per-rune mults first, then sigil-inventory mult, then
+    // xMult" during the cast animation.
+    for (const entry of inventoryMultEntries) {
+        runeBreakdown.push({
+            base: 0,
+            final: 0,
+            isResisted: false,
+            isCritical: false,
+            isProc: false,
+            isMultTick: true,
+            multDelta: entry.multDelta,
+            sigilId: entry.sigilId,
+        });
+        eventIdx++;
+    }
+    const hasAnyInventoryMult = inventoryMultEntries.length > 0;
+
     // ----- Spell-element xMult entries (Supercell-style sigils) -----
     // Appended AFTER synapse entries so the animation reveals the
     // multiplicative factor as the final dramatic mult event before the
@@ -697,7 +719,7 @@ function assembleCastBreakdown(args: {
     }
     const hasAnyXMult = xMultEntries.length > 0 || accumulatorXMultEntries.length > 0;
     const hasAnyElementRuneBonus = elementRuneBonusEntries.length > 0;
-    const hasAnyMultEvent = hasAnyHandMultProc || hasAnyPlayedMult || hasAnyXMult || hasAnyElementRuneBonus;
+    const hasAnyMultEvent = hasAnyHandMultProc || hasAnyPlayedMult || hasAnyXMult || hasAnyElementRuneBonus || hasAnyInventoryMult;
 
     return {
         runeBreakdown,

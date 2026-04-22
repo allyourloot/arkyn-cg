@@ -97,6 +97,7 @@ export {
     SIGIL_ELEMENT_RUNE_BONUS,
     SIGIL_SCROLL_LEVEL_BONUS,
     SIGIL_ACCUMULATOR_XMULT,
+    SIGIL_INVENTORY_MULT,
     getPlayerStatDeltas,
     getHandMultBonus,
     getSpellXMult,
@@ -107,6 +108,7 @@ export {
     getScrollLevelsPerUse,
     getAccumulatorXMult,
     applyAccumulatorIncrements,
+    getInventoryMultBonus,
     iterateProcs,
     looseDuosEnabled,
     allUniqueRunesEnabled,
@@ -128,6 +130,8 @@ export type {
     AccumulatorTrigger,
     AccumulatorXMultDefinition,
     AccumulatorXMultEntry,
+    InventoryMultDefinition,
+    InventoryMultEntry,
 } from "./sigilEffects";
 
 export { BOSS_DEBUFFS, isBossRound, pickDebuffForRound, getDebuffById } from "./bossDebuffs";

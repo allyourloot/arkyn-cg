@@ -201,6 +201,22 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         cost: 6,
         sellPrice: 3,
     },
+    elixir: {
+        id: "elixir",
+        name: "Elixir",
+        rarity: "common",
+        description: "Gain {+Mult} equal to the total {Sell value} of your Sigils.",
+        cost: 3,
+        sellPrice: 1,
+    },
+    spellcaster: {
+        id: "spellcaster",
+        name: "Spellcaster",
+        rarity: "common",
+        description: "{+5 Mult} to every cast.",
+        cost: 3,
+        sellPrice: 1,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

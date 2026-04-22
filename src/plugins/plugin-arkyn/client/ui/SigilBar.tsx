@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
-import { MAX_SIGILS, SIGIL_ACCUMULATOR_XMULT } from "../../shared";
+import { MAX_SIGILS, SIGIL_ACCUMULATOR_XMULT, SIGIL_INVENTORY_MULT } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, usePendingSigilId } from "../arkynStore";
 import { RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
@@ -150,6 +150,15 @@ export default function SigilBar() {
                     ? (accumulators[sigilId] ?? accumulatorDef.initialValue)
                     : null;
 
+                // Inventory-mult sigils (Elixir et al.) derive their +Mult
+                // from the current sigil inventory — show the live computed
+                // bonus so the player can see how much the sigil is worth
+                // right now without casting a spell to find out.
+                const inventoryMultDef = SIGIL_INVENTORY_MULT[sigilId];
+                const inventoryMultValue = inventoryMultDef
+                    ? inventoryMultDef.compute(sigils)
+                    : null;
+
                 return (
                     <div
                         key={sigilId}
@@ -175,6 +184,14 @@ export default function SigilBar() {
                                         <span className={styles.tooltipCurrentLabel}>Current:</span>
                                         <span className={styles.tooltipCurrentValue}>
                                             {`x${accumulatorValue.toFixed(1)} Mult`}
+                                        </span>
+                                    </div>
+                                )}
+                                {inventoryMultValue !== null && (
+                                    <div className={styles.tooltipCurrentRow}>
+                                        <span className={styles.tooltipCurrentLabel}>Current:</span>
+                                        <span className={styles.tooltipCurrentValue}>
+                                            {`+${inventoryMultValue} Mult`}
                                         </span>
                                     </div>
                                 )}

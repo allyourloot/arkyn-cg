@@ -3,11 +3,13 @@ import {
     getElementRuneBonus,
     getHandMultBonus,
     getIgnoredResistanceElements,
+    getInventoryMultBonus,
     getPlayedMultBonus,
     getSpellXMult,
     type AccumulatorXMultEntry,
     type ElementRuneBonusEntry,
     type HandMultEntry,
+    type InventoryMultEntry,
     type PlayedMultEntry,
     type SpellXMultEntry,
 } from "./sigilEffects";
@@ -37,6 +39,7 @@ export interface CastModifiersBreakdown {
     xMult: SpellXMultEntry[];
     accumulatorXMult: AccumulatorXMultEntry[];
     elementRuneBonus: ElementRuneBonusEntry[];
+    inventoryMult: InventoryMultEntry[];
 }
 
 export interface CastModifiersResult {
@@ -87,6 +90,7 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
     const playedMult = getPlayedMultBonus(sigils, contributingRunes);
     const xMult = getSpellXMult(sigils, spellElements);
     const accumulatorXMult = getAccumulatorXMult(sigils, sigilAccumulators ?? {});
+    const inventoryMult = getInventoryMultBonus(sigils);
 
     // Per-rune crit flag, identical to the damage formula's derivation
     // (weakness match = critical). Computed here so crit-gated sigils
@@ -101,7 +105,7 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
         : [...rawResistances];
 
     return {
-        bonusMult: handMult.total + playedMult.total + elementRuneBonus.totalMult,
+        bonusMult: handMult.total + playedMult.total + elementRuneBonus.totalMult + inventoryMult.total,
         xMult: xMult.total * accumulatorXMult.total,
         effectiveResistances,
         perRuneBaseBonus: elementRuneBonus.perRuneBase,
@@ -111,6 +115,7 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
             xMult: xMult.entries,
             accumulatorXMult: accumulatorXMult.entries,
             elementRuneBonus: elementRuneBonus.entries,
+            inventoryMult: inventoryMult.entries,
         },
     };
 }

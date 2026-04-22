@@ -1,5 +1,6 @@
 import { ARCANE_CLUSTER_ELEMENTS, ELEMENT_TYPES, type ElementType } from "./arkynConstants";
 import { createRoundRng } from "./seededRandom";
+import { SIGIL_DEFINITIONS } from "./sigils";
 
 /**
  * Sigil effect registries — data-driven tables that drive sigil behavior.
@@ -797,6 +798,78 @@ export function getScrollLevelsPerUse(sigils: readonly string[]): number {
         bonus += SIGIL_SCROLL_LEVEL_BONUS[sigilId] ?? 0;
     }
     return 1 + bonus;
+}
+
+// ============================================================================
+// Category 13 — Flat / Inventory-Derived Additive Mult (Elixir / Spellcaster)
+// ============================================================================
+
+/**
+ * Additive mult bonus computed once per cast from the player's sigil
+ * inventory context — NOT from held/played runes, not from cast events.
+ * Fires once per cast as a single flat bonus per owned sigil.
+ *
+ * `compute` receives the full owned-sigils list (including the sigil whose
+ * effect is being evaluated) so the implementation can look up any
+ * SigilDefinition field (sellPrice, cost, rarity, …). Implementations that
+ * don't depend on inventory simply ignore the argument and return a
+ * constant — that covers the "flat +N Mult" pattern (Spellcaster) without a
+ * separate category. Keep `compute` pure and cheap: server and client both
+ * call this on every cast.
+ */
+export interface InventoryMultDefinition {
+    compute(sigils: readonly string[]): number;
+}
+
+export const SIGIL_INVENTORY_MULT: Record<string, InventoryMultDefinition> = {
+    elixir: {
+        compute: (sigils) => {
+            let total = 0;
+            for (const id of sigils) {
+                const def = SIGIL_DEFINITIONS[id];
+                if (def) total += def.sellPrice;
+            }
+            return total;
+        },
+    },
+    spellcaster: {
+        // Flat +5 Mult per cast — inventory argument ignored.
+        compute: () => 5,
+    },
+};
+
+/**
+ * Per-sigil entry fed to the animation layer. One `isMultTick` event per
+ * owned inventory-mult sigil per cast — no rune correlation, so this isn't
+ * a per-rune tick like Arcana's.
+ */
+export interface InventoryMultEntry {
+    sigilId: string;
+    multDelta: number;
+}
+
+/**
+ * Aggregate the flat inventory-mult bonus across all owned inventory-mult
+ * sigils. Server uses `total`; client uses `entries` to pop one mult-counter
+ * tick + sigil shake per contributing sigil during the cast animation.
+ * Zero-delta entries (e.g. future effects that could evaluate to 0 for an
+ * edge-case inventory) are filtered so the animation doesn't stall on a
+ * no-op tick.
+ */
+export function getInventoryMultBonus(
+    sigils: readonly string[],
+): { total: number; entries: InventoryMultEntry[] } {
+    let total = 0;
+    const entries: InventoryMultEntry[] = [];
+    for (const sigilId of sigils) {
+        const def = SIGIL_INVENTORY_MULT[sigilId];
+        if (!def) continue;
+        const delta = def.compute(sigils);
+        if (delta === 0) continue;
+        total += delta;
+        entries.push({ sigilId, multDelta: delta });
+    }
+    return { total, entries };
 }
 
 // ============================================================================
