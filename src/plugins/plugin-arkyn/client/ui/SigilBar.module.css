@@ -15,10 +15,43 @@
     gap: clamp(8px, 1.2vw, 18px);
 }
 
-/* Sigil count label — pinned under the last slot */
+/* Single shared hand-frame containing all owned sigils. Width is
+   calibrated to hold 6 sigil slots (MAX_SIGILS) + the between-slot gaps
+   + the border-image padding. Sigils populate from the left edge; unused
+   capacity reads as negative space inside the frame. */
+.sigilFrame {
+    position: relative;
+    box-sizing: border-box;
+    /* 6 × slot + 5 × gap + 2 × border-image thickness (~24px).
+       At max:  6*100 + 5*18 + 48 = 738. At min:  6*68 + 5*8 + 48 = 496.
+       At mid:  6*8.4vw + 5*1.2vw + 4vw = 60.4vw. */
+    width: clamp(496px, 60.4vw, 738px);
+    height: clamp(96px, 11.4vw, 128px);
+    padding: clamp(6px, 0.7vw, 12px) clamp(12px, 1.6vw, 24px);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: clamp(8px, 1.2vw, 18px);
+    touch-action: none;
+}
+
+.sigilFrame::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px;
+    border-image: var(--slot-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    image-rendering: pixelated;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Sigil count label — pinned under the frame's right edge */
 .countLabel {
     position: absolute;
-    right: 0;
+    right: clamp(8px, 1vw, 20px);
     top: 100%;
     margin-top: 4px;
     font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
@@ -27,22 +60,8 @@
     line-height: 1;
 }
 
-/* ----- Individual slot — each gets its own hand-frame ----- */
-
-.slot {
-    box-sizing: border-box;
-    width: clamp(68px, 8.4vw, 100px);
-    height: clamp(68px, 8.4vw, 100px);
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 10px;
-    border-image: var(--slot-bg) 24 24 24 24 fill / 10px;
-    image-rendering: pixelated;
-    flex-shrink: 0;
-}
-
-/* Filled slot — no hand-frame, sigil canvas fills the entire slot */
+/* Filled slot — no individual frame, sigil canvas fills the slot box.
+   Each slot is the same size as the hand-frame's old per-slot cell. */
 .filledSlot {
     position: relative;
     box-sizing: border-box;
@@ -50,12 +69,20 @@
     height: clamp(68px, 8.4vw, 100px);
     flex-shrink: 0;
     cursor: pointer;
+    z-index: 1;
 }
 
 /* Selected slot — lifted above neighbors so its Sell button paints on
    top of the next slot instead of getting hidden behind it. */
 .filledSlotSelected {
     z-index: 30;
+}
+
+/* Slot currently being dragged — above all neighbors so the dragged
+   sigil's tooltip / overlay paints above the rest. */
+.filledSlotDragging {
+    z-index: 200;
+    cursor: grabbing;
 }
 
 /* Three.js canvas — fills the sigil slot, shader handles corner rounding */
@@ -157,6 +184,39 @@
     padding: 1px 4px;
     border-radius: 2px;
     line-height: 1;
+}
+
+/* Mimic "Copying: ..." dynamic row — shows the live neighbor-sigil the
+   Mimic is currently copying (or a hint when it's a no-op). Kept compact
+   so the tooltip doesn't grow tall. */
+.tooltipMimicSection {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(200, 192, 176, 0.25);
+    font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
+    color: #c8c0b0;
+    line-height: 1.3;
+}
+
+.tooltipMimicLabel {
+    color: #8a8070;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    display: block;
+    margin-bottom: 3px;
+}
+
+.tooltipMimicName {
+    color: #e8e0d4;
+    font-weight: normal;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.tooltipMimicHint {
+    color: #8a8070;
+    font-style: italic;
 }
 
 /* Rarity badge — below description */

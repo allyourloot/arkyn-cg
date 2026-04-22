@@ -11,6 +11,7 @@ import {
     ARKYN_NEW_RUN,
     ARKYN_BUY_ITEM,
     ARKYN_SELL_SIGIL,
+    ARKYN_REORDER_SIGILS,
     ARKYN_USE_CONSUMABLE,
     ARKYN_PICK_BAG_RUNE,
     ARKYN_DEBUG_GRANT_SIGIL,
@@ -25,6 +26,7 @@ import { handleCollectRoundGold } from "./systems/handleCollectRoundGold";
 import { handleNewRun } from "./systems/handleNewRun";
 import { handleBuyItem } from "./systems/handleBuyItem";
 import { handleSellSigil } from "./systems/handleSellSigil";
+import { handleReorderSigils } from "./systems/handleReorderSigils";
 import { handleUseConsumable } from "./systems/handleUseConsumable";
 import { handleBagChoice } from "./systems/handleBagChoice";
 import { handleDebugGrantSigil } from "./systems/handleDebugGrantSigil";
@@ -74,6 +76,10 @@ export function PluginArkynServer(): ServerPlugin {
 
             runtime.onMessage(ARKYN_SELL_SIGIL, (client: ServerClientRef, payload: unknown) => {
                 handleSellSigil(state, client, payload);
+            });
+
+            runtime.onMessage(ARKYN_REORDER_SIGILS, (client: ServerClientRef, payload: unknown) => {
+                handleReorderSigils(state, client, payload);
             });
 
             runtime.onMessage(ARKYN_USE_CONSUMABLE, (client: ServerClientRef, payload: unknown) => {

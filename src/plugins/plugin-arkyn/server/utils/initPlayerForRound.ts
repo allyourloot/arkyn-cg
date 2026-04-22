@@ -3,10 +3,10 @@ import {
     CASTS_PER_ROUND,
     DISCARDS_PER_ROUND,
     MAX_CONSUMABLES,
+    expandMimicSigilsDetailed,
     getPlayerStatDeltas,
     SIGIL_LIFECYCLE_HOOKS,
     type ArkynPlayerState,
-    type RoundStartContext,
 } from "../../shared";
 import { clearArraySchema } from "./clearArraySchema";
 import { createPouch } from "./createPouch";
@@ -37,7 +37,10 @@ export function initPlayerForRound(
     sessionId: string,
     round = 0,
     runSeed = 0,
-    enemyCtx: RoundStartContext = { enemyResistances: [], enemyWeaknesses: [] },
+    enemyCtx: {
+        readonly enemyResistances: readonly string[];
+        readonly enemyWeaknesses: readonly string[];
+    } = { enemyResistances: [], enemyWeaknesses: [] },
 ): void {
     clearArraySchema(player.hand);
     clearArraySchema(player.playedRunes);
@@ -72,10 +75,19 @@ export function initPlayerForRound(
     // Fire lifecycle hooks — each hook returns zero or more discriminated
     // effects we dispatch over. New effect kinds (grantGold, grantStat, …)
     // slot into the switch without touching the hooks themselves.
-    for (const sigilId of player.sigils) {
-        const hooks = SIGIL_LIFECYCLE_HOOKS[sigilId];
+    //
+    // `expandMimicSigilsDetailed` injects a neighbor-copy entry for each
+    // Mimic sigil whose right neighbor is Mimic-compatible. The entry's
+    // `copyIndex` feeds into the hook ctx so seeded-RNG hooks (Thief)
+    // roll a different result for the copy than for the original.
+    for (const entry of expandMimicSigilsDetailed(Array.from(player.sigils))) {
+        const hooks = SIGIL_LIFECYCLE_HOOKS[entry.sigilId];
         if (!hooks?.onRoundStart) continue;
-        const effects = hooks.onRoundStart(round, runSeed, enemyCtx);
+        const effects = hooks.onRoundStart(round, runSeed, {
+            enemyResistances: enemyCtx.enemyResistances,
+            enemyWeaknesses: enemyCtx.enemyWeaknesses,
+            copyIndex: entry.copyIndex,
+        });
         if (!effects) continue;
         for (const effect of effects) {
             switch (effect.type) {

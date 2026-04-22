@@ -1,4 +1,5 @@
 import type { ElementType, RarityType } from "./arkynConstants";
+import { expandMimicSigils } from "./sigilEffects";
 
 export interface SpellInfo {
     name: string;
@@ -189,7 +190,7 @@ export function isSynergyPair(
     const key = a < b ? `${a}+${b}` : `${b}+${a}`;
     if (SYNERGY_PAIRS.has(key)) return true;
     if (!activeSigils) return false;
-    for (const sigilId of activeSigils) {
+    for (const sigilId of expandMimicSigils(activeSigils)) {
         if (SIGIL_SYNERGY_PAIRS[sigilId]?.includes(key)) return true;
     }
     return false;

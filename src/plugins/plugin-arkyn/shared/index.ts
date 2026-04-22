@@ -28,6 +28,7 @@ export {
     ARKYN_NEW_RUN,
     ARKYN_BUY_ITEM,
     ARKYN_SELL_SIGIL,
+    ARKYN_REORDER_SIGILS,
     ARKYN_USE_CONSUMABLE,
     ARKYN_PICK_BAG_RUNE,
     ARKYN_DEBUG_GRANT_SIGIL,
@@ -115,6 +116,10 @@ export {
     iterateProcs,
     looseDuosEnabled,
     allUniqueRunesEnabled,
+    MIMIC_INCOMPATIBLE,
+    expandMimicSigils,
+    expandMimicSigilsDetailed,
+    getMimicCopyTarget,
 } from "./sigilEffects";
 export type {
     PlayerStatDeltas,
@@ -141,6 +146,7 @@ export type {
     CastContext,
     CastEffect,
     CastHookDefinition,
+    ExpandedMimicEntry,
 } from "./sigilEffects";
 
 export { BOSS_DEBUFFS, isBossRound, pickDebuffForRound, getDebuffById } from "./bossDebuffs";

@@ -245,6 +245,14 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         cost: 6,
         sellPrice: 3,
     },
+    mimic: {
+        id: "mimic",
+        name: "Mimic",
+        rarity: "rare",
+        description: "Copies the {Sigil effect} to the right.",
+        cost: 6,
+        sellPrice: 3,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

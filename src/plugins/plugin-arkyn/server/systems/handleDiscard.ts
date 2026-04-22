@@ -1,4 +1,4 @@
-import { SIGIL_DISCARD_HOOKS, type ArkynState } from "../../shared";
+import { expandMimicSigilsDetailed, SIGIL_DISCARD_HOOKS, type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
 import { refillHand } from "../utils/refillHand";
 import { createRuneInstance } from "../utils/drawRunes";
@@ -35,8 +35,11 @@ export function handleDiscard(
 
     // Dispatch discard hooks. Each sigil can return zero or more effects
     // the caller dispatches over — new effect kinds slot in as switch arms.
-    for (const sigilId of player.sigils) {
-        const hook = SIGIL_DISCARD_HOOKS[sigilId];
+    // Banish is MIMIC_INCOMPATIBLE, so mimic copies never appear for it
+    // today; the expansion call is for future-proofing any additional
+    // discard-hook sigil that IS Mimic-compatible.
+    for (const entry of expandMimicSigilsDetailed(Array.from(player.sigils))) {
+        const hook = SIGIL_DISCARD_HOOKS[entry.sigilId];
         if (!hook?.onDiscard) continue;
         const effects = hook.onDiscard({
             discardNumber: player.discardsUsedThisRound,
@@ -57,7 +60,7 @@ export function handleDiscard(
                     player.banishedRunes.push(createRuneInstance(rune));
                     logger.info(
                         `Player ${client.sessionId} banished ${rune.rarity} ${rune.element} ` +
-                        `via "${sigilId}". Total banished: ${player.banishedRunes.length}.`,
+                        `via "${entry.sigilId}". Total banished: ${player.banishedRunes.length}.`,
                     );
                     break;
                 }

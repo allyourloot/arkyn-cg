@@ -9,6 +9,7 @@ import {
     SIGIL_CAST_HOOKS,
     SPELL_TIER_MULT,
     composeCastModifiers,
+    expandMimicSigilsDetailed,
     iterateProcs,
     resolveSpell,
     calculateSpellDamage,
@@ -845,8 +846,13 @@ export function castSpell() {
         })),
     };
     const pendingMirrorProcs: { duplicate: RuneClientData; sigilId: string }[] = [];
-    for (const sigilId of ownedSigilsForPrediction) {
-        const hook = SIGIL_CAST_HOOKS[sigilId];
+    // `expandMimicSigilsDetailed` mirrors the server's handleCast dispatcher —
+    // when a Mimic sits next to a Mimic-compatible cast hook, the hook fires
+    // twice (once for the original sigil, once for the Mimic copy). The
+    // copyIndex is mixed into the synthesized duplicate id so the two
+    // runes have distinct ids matching the server's scheme.
+    for (const entry of expandMimicSigilsDetailed(ownedSigilsForPrediction)) {
+        const hook = SIGIL_CAST_HOOKS[entry.sigilId];
         if (!hook?.onCast) continue;
         const effects = hook.onCast(predictedCastContext);
         if (!effects || effects.length === 0) continue;
@@ -856,12 +862,12 @@ export function castSpell() {
             if (!source) continue;
             pendingMirrorProcs.push({
                 duplicate: {
-                    id: `mirror-${source.id}`,
+                    id: `mirror-${source.id}-${entry.copyIndex}`,
                     element: source.element,
                     rarity: source.rarity,
                     level: source.level,
                 },
-                sigilId,
+                sigilId: entry.sigilId,
             });
         }
     }
@@ -1128,7 +1134,10 @@ function previewDiscardEffects(
     discardNumber: number,
     runes: readonly { id: string; element: string; rarity: string; level: number }[],
 ): { banishIndex: number; grantedGold: number; sigilId: string } | null {
-    for (const sigilId of sigils) {
+    // Mirrors the server's handleDiscard dispatcher — Mimic copies only show
+    // up for Mimic-compatible discard hooks, which today is none (Banish is
+    // incompatible), so this is future-proofing.
+    for (const sigilId of expandMimicSigilsDetailed(sigils).map(e => e.sigilId)) {
         const hook = SIGIL_DISCARD_HOOKS[sigilId];
         if (!hook?.onDiscard) continue;
         const effects = hook.onDiscard({

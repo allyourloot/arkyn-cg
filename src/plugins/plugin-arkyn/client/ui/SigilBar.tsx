@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
-import { MAX_SIGILS, SIGIL_ACCUMULATOR_XMULT, SIGIL_INVENTORY_MULT } from "../../shared";
+import { MAX_SIGILS, MIMIC_INCOMPATIBLE, SIGIL_ACCUMULATOR_XMULT, SIGIL_INVENTORY_MULT } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, usePendingSigilId, useSigilProcBubble } from "../arkynStore";
 import { RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
@@ -12,6 +12,7 @@ import handFrameUrl from "/assets/ui/hand-frame.png?url";
 import innerFrameUrl from "/assets/ui/inner-frame.png?url";
 import { HAS_HOVER } from "./utils/hasHover";
 import { renderDescription, SigilExplainer } from "./descriptionText";
+import { useSigilDragReorder } from "./hooks/useSigilDragReorder";
 import ConsumableBar from "./ConsumableBar";
 import styles from "./SigilBar.module.css";
 
@@ -43,13 +44,22 @@ export default function SigilBar() {
     const pendingSigilId = usePendingSigilId();
     const sigilProcBubble = useSigilProcBubble();
     const barRef = useRef<HTMLDivElement>(null);
+    const frameRef = useRef<HTMLDivElement>(null);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [selectedSigilId, setSelectedSigilId] = useState<string | null>(null);
     const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
+    const { dragInfo, onSlotPointerDown } = useSigilDragReorder({
+        sigils,
+        containerRef: frameRef,
+        onTap: (sigilId) => {
+            setSelectedSigilId(prev => prev === sigilId ? null : sigilId);
+        },
+    });
+
     // Deselect when the user clicks outside the sigil bar. The slot's own
-    // onClick toggles selection, so in-bar clicks are handled by React state
-    // updates and this listener only fires for genuinely-outside clicks.
+    // tap handler toggles selection, so in-bar taps are handled by React
+    // state updates and this listener only fires for genuinely-outside clicks.
     useEffect(() => {
         if (!selectedSigilId) return;
         const handleDocClick = (e: MouseEvent) => {
@@ -92,9 +102,9 @@ export default function SigilBar() {
         });
     }, { dependencies: [activeSigilShake], scope: barRef });
 
-    // Combined hover + selection animation — single source of truth for each
-    // slot's transform so the two states don't fight. Selection wins over
-    // hover (selected slot stays lifted regardless of hover state).
+    // Combined hover + selection animation — tweens y / scale only, so it
+    // does not conflict with the drag-aside x tween below (or the drag
+    // hook's live x quickSetter on the dragged slot).
     useGSAP(() => {
         const selectedIdx = selectedSigilId ? sigils.indexOf(selectedSigilId) : -1;
         for (let i = 0; i < slotRefs.current.length; i++) {
@@ -116,130 +126,192 @@ export default function SigilBar() {
         }
     }, { dependencies: [selectedSigilId, hoveredIdx, sigils], scope: barRef });
 
+    // Drag-aside: when a sigil is being dragged, slide non-dragged slots
+    // aside so the player can see the insertion target. Only tweens `x` —
+    // hover/selection (y/scale) and the shake animation coexist without
+    // overwrite conflicts.
+    useGSAP(() => {
+        const frame = frameRef.current;
+        if (!frame) return;
+        const slots = frame.querySelectorAll<HTMLElement>("[data-sigil-index]");
+        if (slots.length === 0) return;
+        if (!dragInfo) {
+            // Drag ended (or never started) — zero x on all non-dragged
+            // slots. The dragged slot was already zeroed by the hook.
+            gsap.to(slots, { x: 0, duration: 0.18, ease: "power2.out", overwrite: "auto" });
+            return;
+        }
+        const { originalIdx, previewIdx, sigilId: draggedId, slotStride } = dragInfo;
+        slots.forEach((slot, index) => {
+            // Skip the dragged slot — hook's quickSetter owns its x.
+            if (slot.getAttribute("data-sigil-id") === draggedId) return;
+            let targetX = 0;
+            if (originalIdx < previewIdx && index > originalIdx && index <= previewIdx) {
+                targetX = -slotStride;
+            } else if (originalIdx > previewIdx && index < originalIdx && index >= previewIdx) {
+                targetX = slotStride;
+            }
+            gsap.to(slot, { x: targetX, duration: 0.18, ease: "power2.out", overwrite: "auto" });
+        });
+    }, { dependencies: [dragInfo?.originalIdx, dragInfo?.previewIdx, dragInfo?.sigilId], scope: frameRef });
+
     return (
         <div ref={barRef} className={styles.wrapper}>
-            {Array.from({ length: MAX_SIGILS }, (_, i) => {
-                const sigilId = sigils[i];
-                // Treat the in-flight sigil's slot as empty so the server
-                // echo doesn't paint the sigil in its slot before the
-                // flying overlay arrives.
-                const isPending = !!sigilId && sigilId === pendingSigilId;
+            <div ref={frameRef} className={styles.sigilFrame} style={slotFrameVars}>
+                {sigils.map((sigilId, i) => {
+                    const def = SIGIL_DEFINITIONS[sigilId];
+                    if (!def) return null;
+                    // When a sigil is mid-purchase (flying in from the shop)
+                    // the slot is already in place (so the fly-in has a
+                    // target rect) but the ItemScene + tooltip + tap handler
+                    // are suppressed until the flyer lands.
+                    const isPending = sigilId === pendingSigilId;
 
-                if (!sigilId || isPending) {
+                    const rarityBg = RARITY_BG_COLORS[def.rarity] ?? "#6b6b6b";
+                    const isSelected = selectedSigilId === sigilId;
+                    const isDragging = dragInfo?.sigilId === sigilId;
+
+                    // Accumulator sigils (Executioner et al.) expose a live xMult
+                    // value that grows with gameplay — surface it in the tooltip
+                    // so the player can check the current multiplier at a glance.
+                    const accumulatorDef = SIGIL_ACCUMULATOR_XMULT[sigilId];
+                    const accumulatorValue = accumulatorDef
+                        ? (accumulators[sigilId] ?? accumulatorDef.initialValue)
+                        : null;
+
+                    // Inventory-mult sigils (Elixir et al.) derive their +Mult
+                    // from the current sigil inventory — show the live computed
+                    // bonus so the player can see how much the sigil is worth
+                    // right now without casting a spell to find out.
+                    const inventoryMultDef = SIGIL_INVENTORY_MULT[sigilId];
+                    const inventoryMultValue = inventoryMultDef
+                        ? inventoryMultDef.compute(sigils)
+                        : null;
+
+                    // Mimic "Copying: [Neighbor]" live readout — shows which
+                    // sigil to the right is currently being copied. Three
+                    // cases: no neighbor / incompatible neighbor / good
+                    // neighbor. The dynamic section re-renders whenever the
+                    // sigils array changes (drag reorder, buy, sell).
+                    const mimicNeighborId = def.id === "mimic" ? sigils[i + 1] ?? null : null;
+                    const mimicNeighborDef = mimicNeighborId
+                        ? SIGIL_DEFINITIONS[mimicNeighborId] ?? null
+                        : null;
+                    const mimicNeighborIsIncompatible = !!mimicNeighborId
+                        && MIMIC_INCOMPATIBLE.has(mimicNeighborId);
+
+                    const slotClassName = `${styles.filledSlot}`
+                        + (isSelected ? ` ${styles.filledSlotSelected}` : "")
+                        + (isDragging ? ` ${styles.filledSlotDragging}` : "");
+
                     return (
                         <div
-                            key={sigilId ?? `empty-${i}`}
-                            ref={(el) => { registerSigilSlot(i, el); }}
-                            className={styles.slot}
-                            style={slotFrameVars}
-                        />
+                            key={sigilId}
+                            data-sigil-index={i}
+                            data-sigil-id={sigilId}
+                            ref={(el) => { slotRefs.current[i] = el; registerSigilSlot(i, el); }}
+                            className={slotClassName}
+                            style={{ opacity: isPending ? 0 : 1 }}
+                            onPointerEnter={HAS_HOVER && !isPending ? () => setHoveredIdx(i) : undefined}
+                            onPointerLeave={HAS_HOVER ? () => setHoveredIdx(prev => prev === i ? null : prev) : undefined}
+                            onPointerDown={isPending ? undefined : (e) => onSlotPointerDown(e, sigilId, i)}
+                            onDragStart={(e) => e.preventDefault()}
+                        >
+                            {!isPending && <ItemScene itemId={sigilId} index={i} />}
+                            {/* Tooltip — centered below, hover-only (info) */}
+                            {!isPending && (
+                                <Tooltip placement="bottom" arrow variant="framed">
+                                    <span className={styles.tooltipName}>
+                                        {def.name}
+                                    </span>
+                                    <div className={styles.tooltipDescWrap}>
+                                        <span className={styles.tooltipDesc}>
+                                            {renderDescription(def.description)}
+                                        </span>
+                                        {accumulatorValue !== null && (
+                                            <div className={styles.tooltipCurrentRow}>
+                                                <span className={styles.tooltipCurrentLabel}>Current:</span>
+                                                <span className={styles.tooltipCurrentValue}>
+                                                    {`x${accumulatorValue.toFixed(1)} Mult`}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {inventoryMultValue !== null && (
+                                            <div className={styles.tooltipCurrentRow}>
+                                                <span className={styles.tooltipCurrentLabel}>Current:</span>
+                                                <span className={styles.tooltipCurrentValue}>
+                                                    {`+${inventoryMultValue} Mult`}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {def.explainer && (
+                                            <SigilExplainer
+                                                label={def.explainer.label}
+                                                elements={def.explainer.elements}
+                                            />
+                                        )}
+                                        {def.id === "mimic" && (
+                                            <div className={styles.tooltipMimicSection}>
+                                                {mimicNeighborDef && !mimicNeighborIsIncompatible ? (
+                                                    <>
+                                                        <span className={styles.tooltipMimicLabel}>Copying</span>
+                                                        <span className={styles.tooltipMimicName}>
+                                                            {mimicNeighborDef.name}
+                                                        </span>
+                                                        <span>{renderDescription(mimicNeighborDef.description)}</span>
+                                                    </>
+                                                ) : mimicNeighborDef && mimicNeighborIsIncompatible ? (
+                                                    <span className={styles.tooltipMimicHint}>
+                                                        Cannot copy {mimicNeighborDef.name} — incompatible.
+                                                    </span>
+                                                ) : (
+                                                    <span className={styles.tooltipMimicHint}>
+                                                        Place another sigil to the right to copy its effect.
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span
+                                        className={styles.tooltipRarity}
+                                        style={{ backgroundColor: rarityBg }}
+                                    >
+                                        {def.rarity}
+                                    </span>
+                                </Tooltip>
+                            )}
+                            {/* Sell button — tap-to-reveal, stays until dismissed */}
+                            {isSelected && !isPending && (
+                                <button
+                                    type="button"
+                                    className={styles.sellButton}
+                                    onPointerDown={(e) => { e.stopPropagation(); }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        sendSellSigil(sigilId);
+                                        setSelectedSigilId(null);
+                                    }}
+                                >
+                                    <span>Sell</span>
+                                    <span className={styles.sellValue}>
+                                        <img src={goldIconUrl} alt="Gold" className={styles.sellIcon} />
+                                        {def.sellPrice}
+                                    </span>
+                                </button>
+                            )}
+                            {/* Floating "+N Gold" proc bubble — fires under a
+                                sigil when its discard-hook (Banish) grants gold. */}
+                            {sigilProcBubble && sigilProcBubble.sigilId === sigilId && sigilProcBubble.kind === "gold" && (
+                                <SigilGoldProcBubble
+                                    amount={sigilProcBubble.amount}
+                                    seq={sigilProcBubble.seq}
+                                />
+                            )}
+                        </div>
                     );
-                }
-
-                const def = SIGIL_DEFINITIONS[sigilId];
-                if (!def) return <div key={i} className={styles.slot} style={slotFrameVars} />;
-
-                const rarityBg = RARITY_BG_COLORS[def.rarity] ?? "#6b6b6b";
-
-                const isSelected = selectedSigilId === sigilId;
-
-                // Accumulator sigils (Executioner et al.) expose a live xMult
-                // value that grows with gameplay — surface it in the tooltip
-                // so the player can check the current multiplier at a glance.
-                const accumulatorDef = SIGIL_ACCUMULATOR_XMULT[sigilId];
-                const accumulatorValue = accumulatorDef
-                    ? (accumulators[sigilId] ?? accumulatorDef.initialValue)
-                    : null;
-
-                // Inventory-mult sigils (Elixir et al.) derive their +Mult
-                // from the current sigil inventory — show the live computed
-                // bonus so the player can see how much the sigil is worth
-                // right now without casting a spell to find out.
-                const inventoryMultDef = SIGIL_INVENTORY_MULT[sigilId];
-                const inventoryMultValue = inventoryMultDef
-                    ? inventoryMultDef.compute(sigils)
-                    : null;
-
-                return (
-                    <div
-                        key={sigilId}
-                        ref={(el) => { slotRefs.current[i] = el; registerSigilSlot(i, el); }}
-                        className={`${styles.filledSlot} ${isSelected ? styles.filledSlotSelected : ""}`}
-                        style={slotFrameVars}
-                        onPointerEnter={HAS_HOVER ? () => setHoveredIdx(i) : undefined}
-                        onPointerLeave={HAS_HOVER ? () => setHoveredIdx(prev => prev === i ? null : prev) : undefined}
-                        onClick={() => setSelectedSigilId(prev => prev === sigilId ? null : sigilId)}
-                    >
-                        <ItemScene itemId={sigilId} index={i} />
-                        {/* Tooltip — centered below, hover-only (info) */}
-                        <Tooltip placement="bottom" arrow variant="framed">
-                            <span className={styles.tooltipName}>
-                                {def.name}
-                            </span>
-                            <div className={styles.tooltipDescWrap}>
-                                <span className={styles.tooltipDesc}>
-                                    {renderDescription(def.description)}
-                                </span>
-                                {accumulatorValue !== null && (
-                                    <div className={styles.tooltipCurrentRow}>
-                                        <span className={styles.tooltipCurrentLabel}>Current:</span>
-                                        <span className={styles.tooltipCurrentValue}>
-                                            {`x${accumulatorValue.toFixed(1)} Mult`}
-                                        </span>
-                                    </div>
-                                )}
-                                {inventoryMultValue !== null && (
-                                    <div className={styles.tooltipCurrentRow}>
-                                        <span className={styles.tooltipCurrentLabel}>Current:</span>
-                                        <span className={styles.tooltipCurrentValue}>
-                                            {`+${inventoryMultValue} Mult`}
-                                        </span>
-                                    </div>
-                                )}
-                                {def.explainer && (
-                                    <SigilExplainer
-                                        label={def.explainer.label}
-                                        elements={def.explainer.elements}
-                                    />
-                                )}
-                            </div>
-                            <span
-                                className={styles.tooltipRarity}
-                                style={{ backgroundColor: rarityBg }}
-                            >
-                                {def.rarity}
-                            </span>
-                        </Tooltip>
-                        {/* Sell button — click-to-reveal, stays until dismissed */}
-                        {isSelected && (
-                            <button
-                                type="button"
-                                className={styles.sellButton}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    sendSellSigil(sigilId);
-                                    setSelectedSigilId(null);
-                                }}
-                            >
-                                <span>Sell</span>
-                                <span className={styles.sellValue}>
-                                    <img src={goldIconUrl} alt="Gold" className={styles.sellIcon} />
-                                    {def.sellPrice}
-                                </span>
-                            </button>
-                        )}
-                        {/* Floating "+N Gold" proc bubble — fires under a
-                            sigil when its discard-hook (Banish) grants gold. */}
-                        {sigilProcBubble && sigilProcBubble.sigilId === sigilId && sigilProcBubble.kind === "gold" && (
-                            <SigilGoldProcBubble
-                                amount={sigilProcBubble.amount}
-                                seq={sigilProcBubble.seq}
-                            />
-                        )}
-                    </div>
-                );
-            })}
-            <span className={styles.countLabel}>{sigils.length}/{MAX_SIGILS}</span>
+                })}
+                <span className={styles.countLabel}>{sigils.length}/{MAX_SIGILS}</span>
+            </div>
             <ConsumableBar />
         </div>
     );

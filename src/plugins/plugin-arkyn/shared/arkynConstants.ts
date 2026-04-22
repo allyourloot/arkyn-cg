@@ -88,6 +88,10 @@ export const ARKYN_COLLECT_ROUND_GOLD = "arkyn:collect_round_gold";
 export const ARKYN_NEW_RUN = "arkyn:new_run";
 export const ARKYN_BUY_ITEM = "arkyn:buy_item";
 export const ARKYN_SELL_SIGIL = "arkyn:sell_sigil";
+// Reorder owned sigils. Payload: { fromIndex: number; toIndex: number }
+// Required because sigil order is load-bearing (e.g. Mimic copies the
+// effect of the sigil immediately to its right — see sigilEffects.ts).
+export const ARKYN_REORDER_SIGILS = "arkyn:reorder_sigils";
 export const ARKYN_USE_CONSUMABLE = "arkyn:use_consumable";
 // Rune-bag picker flow. Payload: { index: number | null }
 //   index = number  -> player selected that rune (adds to pouch permanently)

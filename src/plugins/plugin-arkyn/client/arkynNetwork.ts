@@ -1,4 +1,4 @@
-import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_USE_CONSUMABLE, ARKYN_PICK_BAG_RUNE, ARKYN_DEBUG_GRANT_SIGIL } from "../shared";
+import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_REORDER_SIGILS, ARKYN_USE_CONSUMABLE, ARKYN_PICK_BAG_RUNE, ARKYN_DEBUG_GRANT_SIGIL } from "../shared";
 
 /**
  * Network layer for Arkyn. Owns the connection sender and exposes
@@ -48,6 +48,17 @@ export function sendBuyItem(shopIndex: number): void {
 
 export function sendSellSigil(sigilId: string): void {
     sendArkynMessage(ARKYN_SELL_SIGIL, { sigilId });
+}
+
+/**
+ * Reorder a sigil in the player's sigil bar from `fromIndex` to `toIndex`.
+ * Fired by the drag-to-reorder interaction. The server is authoritative —
+ * we do NOT optimistically mutate the local sigils array; when the server
+ * echoes the new ArraySchema state, the usual Colyseus sync path updates
+ * the UI. Roundtrip is effectively zero for local play.
+ */
+export function sendReorderSigils(fromIndex: number, toIndex: number): void {
+    sendArkynMessage(ARKYN_REORDER_SIGILS, { fromIndex, toIndex });
 }
 
 export function sendUseConsumable(index: number): void {

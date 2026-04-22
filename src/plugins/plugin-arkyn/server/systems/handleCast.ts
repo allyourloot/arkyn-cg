@@ -1,6 +1,7 @@
 import {
     type ArkynState,
     applyAccumulatorIncrements,
+    expandMimicSigilsDetailed,
     getEndOfRoundSigilGold,
     SIGIL_CAST_HOOKS,
 } from "../../shared";
@@ -217,8 +218,13 @@ export function handleCast(
     // deck addition — next round's `createPouch` rebuilds with the
     // duplicate in the pool, enabling the "duplicate to build your
     // Fire deck" loop Magic Mirror is designed around.
-    for (const sigilId of player.sigils) {
-        const hook = SIGIL_CAST_HOOKS[sigilId];
+    // `expandMimicSigilsDetailed` injects a Mimic-copy entry when a Mimic
+    // sigil sits next to a Mimic-compatible hook sigil. `entry.copyIndex`
+    // (0 for the original, 1 for the copy) is mixed into the synthesized
+    // duplicate ids so two Magic Mirror firings in the same cast produce
+    // distinct rune instances (Colyseus schema requires unique ids).
+    for (const entry of expandMimicSigilsDetailed(Array.from(player.sigils))) {
+        const hook = SIGIL_CAST_HOOKS[entry.sigilId];
         if (!hook?.onCast) continue;
         const effects = hook.onCast({
             castNumber: player.castsUsedThisRound,
@@ -235,8 +241,9 @@ export function handleCast(
                     // this duplicate locally at fly-complete time (its
                     // "mirror-" prefix is what the client's hand sync
                     // uses to skip the draw-in animation).
+                    const duplicateId = `mirror-${source.id}-${entry.copyIndex}`;
                     const duplicate = createRuneInstance({
-                        id: `mirror-${source.id}`,
+                        id: duplicateId,
                         element: source.element,
                         rarity: source.rarity,
                         level: source.level,
@@ -248,14 +255,15 @@ export function handleCast(
                     // RuneInstance (same fields) because Colyseus
                     // schema objects are single-parent.
                     player.acquiredRunes.push(createRuneInstance({
-                        id: `mirror-${source.id}`,
+                        id: duplicateId,
                         element: source.element,
                         rarity: source.rarity,
                         level: source.level,
                     }));
                     logger.info(
                         `Player ${client.sessionId} duplicated ${source.rarity} ${source.element} ` +
-                        `via "${sigilId}". Hand size now: ${player.hand.length}.`,
+                        `via "${entry.sigilId}"${entry.isMimicCopy ? " (mimic copy)" : ""}. ` +
+                        `Hand size now: ${player.hand.length}.`,
                     );
                     break;
                 }

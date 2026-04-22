@@ -68,6 +68,127 @@ export function lifecycleRngSlot(slot: number): number {
 }
 
 // ============================================================================
+// Mimic — "Copies the effect of the sigil to the right"
+// ============================================================================
+//
+// Every category helper below loops `sigils` and looks up a registry entry.
+// Mimic plugs into that iteration with a single pure transform:
+// `expandMimicSigils` walks player.sigils and — for each Mimic — appends
+// the id of its right neighbor in its place, so the helper iterates the
+// neighbor's registry entry twice (original + copy).
+//
+// Certain sigils can't be cleanly duplicated and are excluded from the
+// copy. Each exclusion has a specific architectural or design reason:
+//   - caster:      design choice — avoid stacking +casts from one slot
+//   - voltage/hourglass/fortune: SIGIL_PROCS share an rngOffset across
+//                  copies, so two iterations of the same proc produce
+//                  identical rolls (deterministic but unintuitive)
+//   - burnrite/fuze/impale/haphazard: binary unlocks / set-membership —
+//                  duplicating has no observable effect
+//   - executioner: SIGIL_ACCUMULATOR_XMULT keys `player.sigilAccumulators`
+//                  by sigil id, so a "second" executioner shares the same
+//                  storage slot — can't carry a separate counter
+//   - binoculars:  writes `player.disabledResistance` (single @type string
+//                  field) — a second fire overwrites the first
+//   - banish:      SIGIL_DISCARD_HOOKS dispatcher can't banish the same
+//                  rune index twice safely in one pass
+//   - mimic:       prevents `[mimic, mimic]` infinite chain / recursion
+//
+// Mimic-incompatible neighbors silently make Mimic a no-op. Mimic at the
+// rightmost sigil slot (no neighbor) is likewise a no-op.
+
+export const MIMIC_INCOMPATIBLE: ReadonlySet<string> = new Set([
+    "caster",
+    "voltage",
+    "hourglass",
+    "fortune",
+    "burnrite",
+    "fuze",
+    "impale",
+    "haphazard",
+    "executioner",
+    "binoculars",
+    "banish",
+    "mimic",
+]);
+
+export interface ExpandedMimicEntry {
+    /** The effective sigil id to process at this position. */
+    sigilId: string;
+    /**
+     * The original index this entry came from in `player.sigils`. For mimic
+     * copies, this is the Mimic's slot, NOT the neighbor's — callers that
+     * key state off position (future per-slot accumulators, hand bubbles)
+     * can distinguish the copy's anchor from the original sigil's anchor.
+     */
+    sourceIndex: number;
+    /** True if this entry was synthesized by a Mimic copying its neighbor. */
+    isMimicCopy: boolean;
+    /**
+     * 0 for originals, 1 for a single Mimic copy. Lifecycle hooks use this
+     * as an RNG seed jitter so deterministic rolls (Thief's scroll pick)
+     * produce DIFFERENT results for the copy vs the original.
+     */
+    copyIndex: number;
+}
+
+/**
+ * Walk `sigils` and produce an effective sigil list, expanding each Mimic
+ * into its right-neighbor's id. Incompatible neighbors and Mimic at the
+ * rightmost slot drop out (no-op). Detailed entries carry slot + copy
+ * metadata for hook dispatchers that need it; most helpers just iterate
+ * ids via `expandMimicSigils`.
+ */
+export function expandMimicSigilsDetailed(sigils: readonly string[]): ExpandedMimicEntry[] {
+    const out: ExpandedMimicEntry[] = [];
+    for (let i = 0; i < sigils.length; i++) {
+        const id = sigils[i];
+        if (id !== "mimic") {
+            out.push({ sigilId: id, sourceIndex: i, isMimicCopy: false, copyIndex: 0 });
+            continue;
+        }
+        const neighborId = sigils[i + 1];
+        if (!neighborId) continue;
+        if (MIMIC_INCOMPATIBLE.has(neighborId)) continue;
+        out.push({ sigilId: neighborId, sourceIndex: i, isMimicCopy: true, copyIndex: 1 });
+    }
+    return out;
+}
+
+export function expandMimicSigils(sigils: readonly string[]): string[] {
+    const out: string[] = [];
+    for (let i = 0; i < sigils.length; i++) {
+        const id = sigils[i];
+        if (id !== "mimic") {
+            out.push(id);
+            continue;
+        }
+        const neighborId = sigils[i + 1];
+        if (!neighborId) continue;
+        if (MIMIC_INCOMPATIBLE.has(neighborId)) continue;
+        out.push(neighborId);
+    }
+    return out;
+}
+
+/**
+ * Look up what sigil (if any) a given Mimic slot is currently copying.
+ * Returns the neighbor's id when the neighbor is compatible, `null` when
+ * Mimic at this slot is a no-op (no neighbor, or incompatible neighbor).
+ * Used by the tooltip to show the live "Copying: [Neighbor]" hint.
+ */
+export function getMimicCopyTarget(
+    sigils: readonly string[],
+    mimicSlotIndex: number,
+): string | null {
+    if (sigils[mimicSlotIndex] !== "mimic") return null;
+    const neighborId = sigils[mimicSlotIndex + 1];
+    if (!neighborId) return null;
+    if (MIMIC_INCOMPATIBLE.has(neighborId)) return null;
+    return neighborId;
+}
+
+// ============================================================================
 // Category 1 — Stat Modifiers (Caster pattern)
 // ============================================================================
 
@@ -97,7 +218,7 @@ export const SIGIL_STAT_MODIFIERS: Record<string, Partial<PlayerStatDeltas>> = {
  */
 export function getPlayerStatDeltas(sigils: readonly string[]): PlayerStatDeltas {
     const out: PlayerStatDeltas = { castsPerRound: 0, discardsPerRound: 0, handSize: 0 };
-    for (const sigilId of sigils) {
+    for (const sigilId of expandMimicSigils(sigils)) {
         const delta = SIGIL_STAT_MODIFIERS[sigilId];
         if (!delta) continue;
         if (delta.castsPerRound) out.castsPerRound += delta.castsPerRound;
@@ -201,7 +322,11 @@ export function* iterateProcs(
      */
     isCritical?: readonly boolean[],
 ): Generator<ProcEvent, void, unknown> {
-    for (const sigilId of sigils) {
+    // Note: SIGIL_PROCS sigils are all in MIMIC_INCOMPATIBLE, so the
+    // expansion here is a no-op in practice. Kept for consistency with
+    // the other helpers and future-proofing if any proc-category sigil
+    // later becomes Mimic-compatible.
+    for (const sigilId of expandMimicSigils(sigils)) {
         const proc = SIGIL_PROCS[sigilId];
         if (!proc) continue;
         const rng = createRoundRng(runSeed, proc.rngOffset + round * 10 + castNumber);
@@ -262,7 +387,7 @@ export function getHandMultBonus(
 
     let total = 0;
     const perSigil: HandMultEntry[] = [];
-    for (const sigilId of sigils) {
+    for (const sigilId of expandMimicSigils(sigils)) {
         const effect = SIGIL_HAND_MULT[sigilId];
         if (!effect) continue;
         for (let i = 0; i < hand.length; i++) {
@@ -306,10 +431,15 @@ export type RoundStartEffect =
  * enemy's affinities so hooks can make decisions conditioned on the current
  * matchup (Binoculars picks one of the enemy's resistances to nullify).
  * Optional so existing hooks that don't need enemy data (Thief) can ignore it.
+ *
+ * `copyIndex` is 0 for the original sigil invocation and ≥1 for Mimic-
+ * generated copies — seeded-RNG hooks (Thief) use it as a jitter so the
+ * copy rolls a different result than the original. Non-RNG hooks ignore it.
  */
 export interface RoundStartContext {
     readonly enemyResistances: readonly string[];
     readonly enemyWeaknesses: readonly string[];
+    readonly copyIndex: number;
 }
 
 export interface SigilLifecycleHooks {
@@ -327,8 +457,13 @@ const BINOCULARS_RNG_OFFSET = lifecycleRngSlot(1);
 
 export const SIGIL_LIFECYCLE_HOOKS: Record<string, SigilLifecycleHooks> = {
     thief: {
-        onRoundStart(round, runSeed) {
-            const rng = createRoundRng(runSeed, THIEF_RNG_OFFSET + round);
+        onRoundStart(round, runSeed, ctx) {
+            // `copyIndex * 1000` jitters the seed for Mimic-generated copies
+            // so the copy picks a DIFFERENT scroll element than the original.
+            // 1000 keeps the seed within the lifecycle RNG band (400000-
+            // 499999) for any round < 1000, which is far beyond realistic
+            // run lengths.
+            const rng = createRoundRng(runSeed, THIEF_RNG_OFFSET + round + ctx.copyIndex * 1000);
             const element = ELEMENT_TYPES[Math.floor(rng() * ELEMENT_TYPES.length)];
             return [{ type: "grantConsumable", consumableId: element }];
         },
@@ -337,9 +472,10 @@ export const SIGIL_LIFECYCLE_HOOKS: Record<string, SigilLifecycleHooks> = {
         onRoundStart(round, runSeed, ctx) {
             // No-op if the enemy has no resistances to disable. Slot 1 (not 0)
             // avoids the latent rune-bag RNG collision documented at the top
-            // of this file.
+            // of this file. Binoculars is Mimic-incompatible so `copyIndex`
+            // is always 0 — kept in the seed for consistency.
             if (ctx.enemyResistances.length === 0) return [];
-            const rng = createRoundRng(runSeed, BINOCULARS_RNG_OFFSET + round);
+            const rng = createRoundRng(runSeed, BINOCULARS_RNG_OFFSET + round + ctx.copyIndex * 1000);
             const element = ctx.enemyResistances[Math.floor(rng() * ctx.enemyResistances.length)];
             return [{ type: "disableResistance", element }];
         },
@@ -360,7 +496,7 @@ export const SIGIL_LOOSE_DUO_UNLOCKS: Record<string, true> = {
 };
 
 export function looseDuosEnabled(sigils: readonly string[]): boolean {
-    return sigils.some(id => SIGIL_LOOSE_DUO_UNLOCKS[id]);
+    return expandMimicSigils(sigils).some(id => SIGIL_LOOSE_DUO_UNLOCKS[id]);
 }
 
 /**
@@ -375,7 +511,7 @@ export const SIGIL_ALL_UNIQUE_UNLOCKS: Record<string, true> = {
 };
 
 export function allUniqueRunesEnabled(sigils: readonly string[]): boolean {
-    return sigils.some(id => SIGIL_ALL_UNIQUE_UNLOCKS[id]);
+    return expandMimicSigils(sigils).some(id => SIGIL_ALL_UNIQUE_UNLOCKS[id]);
 }
 
 // ============================================================================
@@ -423,7 +559,7 @@ export function getSpellXMult(
 ): { total: number; entries: SpellXMultEntry[] } {
     let total = 1;
     const entries: SpellXMultEntry[] = [];
-    for (const sigilId of sigils) {
+    for (const sigilId of expandMimicSigils(sigils)) {
         const effect = SIGIL_SPELL_X_MULT[sigilId];
         if (!effect) continue;
         if (spellElements.some(e => (effect.elements as readonly string[]).includes(e))) {
@@ -473,7 +609,7 @@ export function getIgnoredResistanceElements(
     dynamicIgnored?: string | readonly string[],
 ): Set<string> {
     const out = new Set<string>();
-    for (const sigilId of sigils) {
+    for (const sigilId of expandMimicSigils(sigils)) {
         const elements = SIGIL_RESIST_IGNORE[sigilId];
         if (!elements) continue;
         for (const e of elements) out.add(e);
@@ -523,7 +659,7 @@ export function getEndOfRoundSigilGold(
 ): { total: number; entries: EndOfRoundGoldEntry[] } {
     let total = 0;
     const entries: EndOfRoundGoldEntry[] = [];
-    for (const sigilId of sigils) {
+    for (const sigilId of expandMimicSigils(sigils)) {
         const effect = SIGIL_END_OF_ROUND_GOLD[sigilId];
         if (!effect) continue;
         total += effect.amount;
@@ -584,7 +720,7 @@ export function getPlayedMultBonus(
 ): { total: number; perSigil: PlayedMultEntry[] } {
     let total = 0;
     const perSigil: PlayedMultEntry[] = [];
-    for (const sigilId of sigils) {
+    for (const sigilId of expandMimicSigils(sigils)) {
         const effect = SIGIL_PLAYED_MULT[sigilId];
         if (!effect) continue;
         const triggers = effect.elements as readonly string[];
@@ -664,7 +800,7 @@ export function getElementRuneBonus(
     const perRuneBase = new Array(contributingRuneElements.length).fill(0);
     let totalMult = 0;
     const entries: ElementRuneBonusEntry[] = [];
-    for (const sigilId of sigils) {
+    for (const sigilId of expandMimicSigils(sigils)) {
         const effect = SIGIL_ELEMENT_RUNE_BONUS[sigilId];
         if (!effect) continue;
         for (let i = 0; i < contributingRuneElements.length; i++) {
@@ -737,7 +873,12 @@ export function getAccumulatorXMult(
 ): { total: number; entries: AccumulatorXMultEntry[] } {
     let total = 1;
     const entries: AccumulatorXMultEntry[] = [];
-    for (const sigilId of sigils) {
+    // Note: Executioner (the only accumulator sigil today) is in
+    // MIMIC_INCOMPATIBLE, so Mimic never duplicates accumulator reads.
+    // Future accumulator sigils that ARE Mimic-compatible would re-read
+    // the same `accumulators[sigilId]` value twice — acceptable and
+    // matches the "copy the effect" intent.
+    for (const sigilId of expandMimicSigils(sigils)) {
         const def = SIGIL_ACCUMULATOR_XMULT[sigilId];
         if (!def) continue;
         const value = accumulators[sigilId] ?? def.initialValue;
@@ -795,7 +936,7 @@ export const SIGIL_SCROLL_LEVEL_BONUS: Record<string, number> = {
  */
 export function getScrollLevelsPerUse(sigils: readonly string[]): number {
     let bonus = 0;
-    for (const sigilId of sigils) {
+    for (const sigilId of expandMimicSigils(sigils)) {
         bonus += SIGIL_SCROLL_LEVEL_BONUS[sigilId] ?? 0;
     }
     return 1 + bonus;
@@ -862,7 +1003,11 @@ export function getInventoryMultBonus(
 ): { total: number; entries: InventoryMultEntry[] } {
     let total = 0;
     const entries: InventoryMultEntry[] = [];
-    for (const sigilId of sigils) {
+    // `compute` receives the RAW sigils array (not the expanded one) so
+    // Elixir's sum-of-sellPrices isn't inflated by Mimic copies — a Mimic
+    // that copies Elixir adds one additional Elixir evaluation, NOT a
+    // doubled sellPrice sum inside a single evaluation.
+    for (const sigilId of expandMimicSigils(sigils)) {
         const def = SIGIL_INVENTORY_MULT[sigilId];
         if (!def) continue;
         const delta = def.compute(sigils);
