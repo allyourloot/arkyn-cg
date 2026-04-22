@@ -116,7 +116,7 @@ export function calculateDamage(
             if (proc.effect.type === "double_damage") {
                 // Adds the rune's base contribution again, multiplied by the
                 // cast's final mult — matches legacy Voltage behavior.
-                totalDamage += breakdown.runeBaseContributions[proc.runeIdx] * breakdown.mult;
+                totalDamage += Math.round(breakdown.runeBaseContributions[proc.runeIdx] * breakdown.mult);
             } else if (proc.effect.type === "grant_gold") {
                 procGold += proc.effect.amount;
             }

@@ -129,7 +129,7 @@ export function calculateSpellDamage(
     }
 
     const baseTotal = spellBase + runeBaseSum;
-    const finalDamage = baseTotal * mult;
+    const finalDamage = Math.round(baseTotal * mult);
 
     return {
         spellBase,

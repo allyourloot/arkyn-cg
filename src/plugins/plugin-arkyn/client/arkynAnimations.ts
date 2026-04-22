@@ -505,7 +505,7 @@ function assembleCastBreakdown(args: {
         )) {
             procsPerRune[proc.runeIdx] = { sigilId: proc.sigilId, effect: proc.effect };
             if (proc.effect.type === "double_damage") {
-                procDamageTotal += breakdown.runeBaseContributions[proc.runeIdx] * breakdown.mult;
+                procDamageTotal += Math.round(breakdown.runeBaseContributions[proc.runeIdx] * breakdown.mult);
             }
             // grant_gold: no damage contribution — handled below when
             // building the proc bubble (kind: "gold").

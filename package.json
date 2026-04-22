@@ -9,6 +9,7 @@
   "scripts": {
     "client": "vite --port 8180",
     "server": "tsx watch --tsconfig tsconfig.server.json src/server.ts",
+    "dev": "pnpm run --parallel \"/^(client|server)$/\"",
     "package": "npm run build:client && npm run build:server && npm run build:package",
     "build:client": "vite build --outDir dist/assets/__client",
     "build:server": "tsx ./scripts/build-server.ts",
