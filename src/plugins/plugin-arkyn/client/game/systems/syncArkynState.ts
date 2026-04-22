@@ -46,6 +46,7 @@ import {
     setPendingBagRunes,
     setBanishedRunes,
     setDiscardsUsedThisRound,
+    setCastsUsedThisRound,
     clearSelectedIndices,
     triggerDrawAnimation,
     getHandIndex,
@@ -193,6 +194,7 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevPending: RuneClientData[] = [];
     let prevBanished: RuneClientData[] = [];
     let prevDiscardsUsedThisRound = -1;
+    let prevCastsUsedThisRound = -1;
 
     return () => {
         const player = state.players.get(sessionId);
@@ -242,9 +244,17 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
 
             // Trigger draw animation (skip initial draw). Look up display
             // indices AFTER setHand so animations land in the right slots.
+            //
+            // Runes whose id begins with `mirror-` are Magic Mirror duplicates
+            // — the cast-hook client prediction already injected them into
+            // the hand when the player clicked Cast, so they shouldn't
+            // animate as pouch draws. They'd otherwise get the
+            // "flew in from the pouch" visual, which makes the duplicate
+            // read like the next draw instead of an instant cast-proc pop.
             if (freshRunes.length > 0 && freshRunes.length < handData.length) {
                 const draws: { rune: RuneClientData; handIndex: number }[] = [];
                 for (const r of freshRunes) {
+                    if (r.id.startsWith("mirror-")) continue;
                     const handIndex = getHandIndex(r.id);
                     if (handIndex >= 0) draws.push({ rune: r, handIndex });
                 }
@@ -493,6 +503,10 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (player.discardsUsedThisRound !== prevDiscardsUsedThisRound) {
             prevDiscardsUsedThisRound = player.discardsUsedThisRound;
             setDiscardsUsedThisRound(prevDiscardsUsedThisRound);
+        }
+        if (player.castsUsedThisRound !== prevCastsUsedThisRound) {
+            prevCastsUsedThisRound = player.castsUsedThisRound;
+            setCastsUsedThisRound(prevCastsUsedThisRound);
         }
     };
 }

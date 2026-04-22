@@ -2,11 +2,13 @@ import {
     type ArkynState,
     applyAccumulatorIncrements,
     getEndOfRoundSigilGold,
+    SIGIL_CAST_HOOKS,
 } from "../../shared";
 import { resolveSpell } from "../../shared/resolveSpell";
 import { Logger } from "@core/shared/utils";
 import { calculateDamage } from "../utils/calculateDamage";
 import { refillHand } from "../utils/refillHand";
+import { createRuneInstance } from "../utils/drawRunes";
 import { removeRunesFromHand, validateRuneSelection } from "./utils/runeSelection";
 import type { ArkynContext } from "../types/ArkynContext";
 import { getRunStats } from "../resources/runStats";
@@ -48,6 +50,23 @@ export function handleCast(
         logger.warn(`Cast rejected: could not resolve spell`);
         return;
     }
+
+    // Increment the per-round cast counter BEFORE dispatching cast hooks
+    // so the first cast sees `castNumber: 1` — same 1-indexed convention
+    // discard hooks use.
+    player.castsUsedThisRound++;
+
+    // Snapshot the cast rune data — used by the SIGIL_CAST_HOOKS dispatch
+    // at the bottom of this function (after refillHand), which is where
+    // Magic Mirror's duplicateRune effect fires. Placed here because
+    // `selectedRunes` references get mutated by `removeRunesFromHand`
+    // below — the snapshot keeps element/rarity/level alive for the hook.
+    const castRuneData = selectedRunes.map(r => ({
+        id: r.id,
+        element: r.element,
+        rarity: r.rarity,
+        level: r.level,
+    }));
 
     // Calculate damage — each contributing rune is evaluated against the
     // enemy's resistances/weaknesses individually, then summed. Sigil effects
@@ -187,6 +206,66 @@ export function handleCast(
         return;
     }
 
+    // Dispatch SIGIL_CAST_HOOKS BEFORE refillHand so the duplicate-rune
+    // effect (Magic Mirror) lands in the slot that would have been
+    // filled by a pouch draw — the hand reaches `handSize` via the
+    // duplicate, refill then no-ops, and no new pouch rune is drawn.
+    // Net effect: played rune is "swapped" for its mirror copy, pouch
+    // is preserved, hand stays at handSize.
+    //
+    // The duplicate is ALSO pushed to `acquiredRunes` as a permanent
+    // deck addition — next round's `createPouch` rebuilds with the
+    // duplicate in the pool, enabling the "duplicate to build your
+    // Fire deck" loop Magic Mirror is designed around.
+    for (const sigilId of player.sigils) {
+        const hook = SIGIL_CAST_HOOKS[sigilId];
+        if (!hook?.onCast) continue;
+        const effects = hook.onCast({
+            castNumber: player.castsUsedThisRound,
+            runeCount: castRuneData.length,
+            runes: castRuneData,
+        });
+        if (!effects) continue;
+        for (const effect of effects) {
+            switch (effect.type) {
+                case "duplicateRune": {
+                    const source = castRuneData[effect.runeIndex];
+                    if (!source) break;
+                    // Deterministic id so the client can predict + inject
+                    // this duplicate locally at fly-complete time (its
+                    // "mirror-" prefix is what the client's hand sync
+                    // uses to skip the draw-in animation).
+                    const duplicate = createRuneInstance({
+                        id: `mirror-${source.id}`,
+                        element: source.element,
+                        rarity: source.rarity,
+                        level: source.level,
+                    });
+                    player.hand.push(duplicate);
+                    // Permanent deck addition — `createPouch` on the
+                    // next round rebuilds from acquiredRunes so the
+                    // duplicate rejoins the pool. Push a SECOND
+                    // RuneInstance (same fields) because Colyseus
+                    // schema objects are single-parent.
+                    player.acquiredRunes.push(createRuneInstance({
+                        id: `mirror-${source.id}`,
+                        element: source.element,
+                        rarity: source.rarity,
+                        level: source.level,
+                    }));
+                    logger.info(
+                        `Player ${client.sessionId} duplicated ${source.rarity} ${source.element} ` +
+                        `via "${sigilId}". Hand size now: ${player.hand.length}.`,
+                    );
+                    break;
+                }
+            }
+        }
+    }
+
     // Draw back to hand size (only when the player still has casts left).
+    // With Magic Mirror fired, hand is already at `handSize` via the
+    // duplicate — this call no-ops. Without Magic Mirror, this fills
+    // the hand normally from the pouch.
     refillHand(player, client.sessionId);
 }

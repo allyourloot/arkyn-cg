@@ -20,8 +20,9 @@ export default function PouchCounter() {
     const spellbook = SPELLBOOKS[DEFAULT_SPELLBOOK_ID];
     const spellbookUrl = getSpellbookImageUrl(spellbook.id);
     // Total deck size grows past POUCH_SIZE as the player picks runes from
-    // Rune Bags and shrinks as Banish destroys them — each banished rune
-    // removes one permanent slot from the round-start pool.
+    // Rune Bags or duplicates them via Magic Mirror (both funnel into
+    // `acquiredRunes` as permanent-across-rounds additions) and shrinks
+    // as Banish destroys them.
     const deckSize = POUCH_SIZE + acquiredRunes.length - banishedRunes.length;
     const [isOpen, setIsOpen] = useState(false);
 

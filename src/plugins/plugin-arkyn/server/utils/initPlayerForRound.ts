@@ -64,6 +64,10 @@ export function initPlayerForRound(
     // Reset the per-round discard counter so discard-hook sigils (Banish)
     // see `discardNumber: 1` on the first discard of the new round.
     player.discardsUsedThisRound = 0;
+    // Same for cast-hook sigils (Magic Mirror) — the counter tracks how
+    // many casts have fired so the hook's `castNumber` can gate on "first
+    // cast of round" without re-computing from effective-casts deltas.
+    player.castsUsedThisRound = 0;
 
     // Fire lifecycle hooks — each hook returns zero or more discriminated
     // effects we dispatch over. New effect kinds (grantGold, grantStat, …)

@@ -1,4 +1,4 @@
-import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_USE_CONSUMABLE, ARKYN_PICK_BAG_RUNE } from "../shared";
+import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_USE_CONSUMABLE, ARKYN_PICK_BAG_RUNE, ARKYN_DEBUG_GRANT_SIGIL } from "../shared";
 
 /**
  * Network layer for Arkyn. Owns the connection sender and exposes
@@ -57,4 +57,13 @@ export function sendUseConsumable(index: number): void {
 // `index = null` means Skip. `index = number` means Select that rune.
 export function sendBagChoice(index: number | null): void {
     sendArkynMessage(ARKYN_PICK_BAG_RUNE, { index });
+}
+
+/**
+ * Dev-only — grant a sigil directly. No gold cost, bypasses the shop.
+ * Exposed on the browser `window.arkyn.grantSigil(id)` console helper
+ * via `debugCommands.ts`; avoid calling from production UI code.
+ */
+export function sendDebugGrantSigil(sigilId: string): void {
+    sendArkynMessage(ARKYN_DEBUG_GRANT_SIGIL, { sigilId });
 }

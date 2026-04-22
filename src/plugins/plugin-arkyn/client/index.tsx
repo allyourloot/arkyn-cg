@@ -7,6 +7,9 @@ import ArkynOverlay from "./ui/ArkynOverlay";
 // Side-effect import: registers GSAP's `useGSAP` plugin once at app load.
 // MUST be imported before any UI component calls `useGSAP()`.
 import "./animations/registerGsap";
+// Side-effect import: attaches `window.arkyn` debug helpers for dev
+// testing (see debugCommands.ts for usage). Remove before shipping.
+import "./debugCommands";
 
 const logger = new Logger("ArkynClient");
 

@@ -49,6 +49,16 @@ export interface DissolveRegistration {
     duration: number;
     /** Explicit CSS pixel size. Defaults to 96 (rune slot size). */
     size?: number;
+    /**
+     * When true, inverts the dissolve direction — threshold goes 1 → 0
+     * instead of 0 → 1, producing a "materialize" effect: the rune
+     * starts fully torn apart and coalesces into its intact form over
+     * the duration. Used by Magic Mirror's duplicate-rune proc so the
+     * new rune visibly "appears" instead of just popping in. Also
+     * skips the auto-hide on completion (reverse ends at threshold=0,
+     * fully visible — the parent unmounts this canvas when done).
+     */
+    reverse?: boolean;
     // --- Dual-texture mode (runes) ---
     /** Image URLs for the two-layer rune composite. */
     rune?: { baseUrl: string; runeUrl: string };
@@ -72,6 +82,7 @@ interface RegisteredDissolve {
     edgeColor: [number, number, number];
     startTime: number;
     duration: number;
+    reverse: boolean;
     isDual: boolean;
     /** Buffer dimensions (pxSize * dpr) — both width and height are square. */
     bufSize: number;
@@ -285,14 +296,18 @@ function renderFrame(): void {
         const elapsed = now - slot.startTime;
         const t = Math.min(1, Math.max(0, elapsed / slot.duration));
 
-        // On completion: hide the display canvas exactly as the old
-        // per-instance component did (visibility + display none). This
-        // preserves the "rune is gone" end-state while keeping the DOM
-        // node around until React unmounts it.
+        // On completion: for forward dissolves, hide the display canvas
+        // exactly as the old per-instance component did (visibility +
+        // display none) to preserve the "rune is gone" end-state. For
+        // reverse (materialize) dissolves, the end state is "fully
+        // visible" — keep the canvas painted at threshold=0 so the
+        // rune stays on screen until the parent unmounts this canvas.
         if (elapsed >= slot.duration) {
             slot.completed = true;
-            slot.canvas.style.visibility = "hidden";
-            slot.canvas.style.display = "none";
+            if (!slot.reverse) {
+                slot.canvas.style.visibility = "hidden";
+                slot.canvas.style.display = "none";
+            }
             continue;
         }
 
@@ -332,9 +347,12 @@ function renderFrame(): void {
             lastBoundProgram = program;
         }
 
-        // Uniforms.
+        // Uniforms. Reverse mode inverts the threshold so the rune
+        // materializes (starts dissolved at t=0 → fully intact at t=1)
+        // instead of tearing apart.
         const u = slot.isDual ? dualUniforms! : singleUniforms!;
-        gl.uniform1f(u.threshold, t);
+        const threshold = slot.reverse ? 1 - t : t;
+        gl.uniform1f(u.threshold, threshold);
         gl.uniform3f(u.edgeColor, slot.edgeColor[0], slot.edgeColor[1], slot.edgeColor[2]);
 
         // Bind textures and sampler uniforms.
@@ -413,6 +431,7 @@ export function registerDissolve(cfg: DissolveRegistration): () => void {
         edgeColor,
         startTime: cfg.startTime,
         duration: cfg.duration,
+        reverse: cfg.reverse ?? false,
         isDual,
         bufSize,
         tex1Url,

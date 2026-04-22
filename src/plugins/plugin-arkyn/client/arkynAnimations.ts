@@ -6,6 +6,7 @@ import {
     ARKYN_DISCARD,
     CASTS_PER_ROUND,
     SIGIL_DISCARD_HOOKS,
+    SIGIL_CAST_HOOKS,
     SPELL_TIER_MULT,
     composeCastModifiers,
     iterateProcs,
@@ -20,7 +21,12 @@ import { sendArkynMessage } from "./arkynNetwork";
 // `arkynStoreInternal` is the data store's internal mutator/getter object.
 // Importing it here is safe despite the cyclic appearance because every
 // access happens inside a function body (call time, not module-eval time).
-import { arkynStoreInternal } from "./arkynStore";
+import {
+    arkynStoreInternal,
+    appendHandRune,
+    appendAcquiredRune,
+    setMaterializingRune,
+} from "./arkynStore";
 import {
     buildCastTimeline,
     buildDiscardTimeline,
@@ -53,7 +59,7 @@ import {
     BUBBLE_STAGGER_MS,
     DISSOLVE_DURATION_MS,
 } from "./animations/timingConstants";
-import { playGold } from "./sfx";
+import { playGold, playAddConsumable } from "./sfx";
 
 // Fly / discard / draw durations live inside `animations/castTimeline.ts`
 // (in seconds, ready for GSAP). Component-level fly tweens reference them
@@ -812,10 +818,65 @@ export function castSpell() {
         return;
     }
 
+    // ----- Cast-hook prediction (Magic Mirror et al.) -----
+    // Run SIGIL_CAST_HOOKS client-side with the SAME inputs the server
+    // will see. The hook is pure, so the server's subsequent dispatch
+    // produces identical effects. We ONLY collect the resulting proc info
+    // here; state mutations (appending the duplicate into hand +
+    // acquiredRunes, sigil shake, materialize, pop SFX) are deferred to
+    // the cast-timeline's `onFlyComplete` so the duplicate visibly
+    // appears the moment the played rune reaches the play area — not on
+    // cast click. Server dispatches the same hook AFTER refillHand, so
+    // the timing lines up: neither the server's damage calc nor the
+    // client's assembleCastBreakdown includes the duplicate in hand-mult
+    // calculations for THIS cast, and both calculations agree byte-for-
+    // byte. Hand-mult sigils (Synapse) will count the duplicate on
+    // FUTURE casts where it's actually held in the hand.
+    const ownedSigilsForPrediction = arkynStoreInternal.getSigils();
+    const castsUsedSoFar = arkynStoreInternal.getCastsUsedThisRound();
+    const predictedCastContext = {
+        castNumber: castsUsedSoFar + 1,
+        runeCount: castRunes.length,
+        runes: castRunes.map(r => ({
+            id: r.id,
+            element: r.element,
+            rarity: r.rarity,
+            level: r.level,
+        })),
+    };
+    const pendingMirrorProcs: { duplicate: RuneClientData; sigilId: string }[] = [];
+    for (const sigilId of ownedSigilsForPrediction) {
+        const hook = SIGIL_CAST_HOOKS[sigilId];
+        if (!hook?.onCast) continue;
+        const effects = hook.onCast(predictedCastContext);
+        if (!effects || effects.length === 0) continue;
+        for (const effect of effects) {
+            if (effect.type !== "duplicateRune") continue;
+            const source = predictedCastContext.runes[effect.runeIndex];
+            if (!source) continue;
+            pendingMirrorProcs.push({
+                duplicate: {
+                    id: `mirror-${source.id}`,
+                    element: source.element,
+                    rarity: source.rarity,
+                    level: source.level,
+                },
+                sigilId,
+            });
+        }
+    }
+    // assembleCastBreakdown below runs on the UNMODIFIED hand (no
+    // duplicate yet) — matching the server's damage-calc input.
+    const predictionHand = hand;
+    const predictionSortedSelected = sortedSelected;
+
     // Assemble the full cast breakdown (resolver, composed modifiers, damage
     // formula, proc iteration, per-slot bubble arrays, and the flat
-    // `runeBreakdown[]` event list the timeline consumes). See the helper's
-    // docstring for what it reads / mutates.
+    // `runeBreakdown[]` event list the timeline consumes). Magic Mirror
+    // duplicates are NOT in hand here — they're appended at fly-complete,
+    // matching the server's post-refill dispatch timing — so hand-mult
+    // sigils don't count the duplicate for THIS cast's damage (server and
+    // client agree). The duplicate influences future casts only.
     const {
         runeBreakdown,
         bubbles,
@@ -830,7 +891,11 @@ export function castSpell() {
         hasAnyProc,
         hasAnyMultEvent,
         spellElement,
-    } = assembleCastBreakdown({ castRunes, hand, sortedSelected });
+    } = assembleCastBreakdown({
+        castRunes,
+        hand: predictionHand,
+        sortedSelected: predictionSortedSelected,
+    });
 
     // Snapshot the round accumulator BEFORE this cast so the total reveal
     // tween can offset its values. This avoids the double-counting window
@@ -932,6 +997,45 @@ export function castSpell() {
             // rune this whole time (dissolveStartTime is still in the
             // future), so the handoff is seamless.
             flyingRunes = [];
+
+            // Fire the deferred Magic Mirror proc UX — at this point the
+            // played rune has just reached the play area, so the player
+            // is primed to read the duplicate's entrance as the sigil's
+            // reaction to the cast. Sequence per proc:
+            //   1. Set `materializingRune` BEFORE the hand mutates so
+            //      HandDisplay renders the new slot via
+            //      `<DissolveCanvas reverse>` the frame it arrives.
+            //   2. Append the duplicate to hand + acquiredRunes. Hand
+            //      grows past handSize (e.g. 8 → 9) — `refillHand`
+            //      no-ops until subsequent casts bring it below, so the
+            //      player legitimately holds an oversized hand until
+            //      they play enough to trim back to 8.
+            //   3. Sigil shake on the triggering sigil in the bar.
+            //   4. Pop SFX (reuses the add-consumable "item arrived"
+            //      sound).
+            //   5. Clear materializingRune after the duration so the
+            //      slot falls back to the normal RuneCard render.
+            if (pendingMirrorProcs.length > 0) {
+                for (const proc of pendingMirrorProcs) {
+                    const startTime = performance.now();
+                    setMaterializingRune({
+                        id: proc.duplicate.id,
+                        startTime,
+                        duration: DISSOLVE_DURATION_MS,
+                    });
+                    appendHandRune(proc.duplicate);
+                    // `acquiredRunes` is the permanent-across-rounds deck
+                    // tracker — the duplicate rejoins the pool on next
+                    // round's createPouch. Server does the same push so
+                    // sync overwrites with the authoritative list (same
+                    // id → no churn).
+                    appendAcquiredRune(proc.duplicate);
+                    sigilShakeSeq++;
+                    activeSigilShake = { sigilId: proc.sigilId, seq: sigilShakeSeq };
+                    playAddConsumable();
+                    setTimeout(() => setMaterializingRune(null), DISSOLVE_DURATION_MS);
+                }
+            }
             notify();
         },
         onRaiseStart: () => {

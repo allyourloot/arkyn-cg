@@ -64,6 +64,10 @@ export default function PouchModal({ onClose }: PouchModalProps) {
         list.push(r);
         handByElement.set(r.element, list);
     }
+    // Per-element bonus count that gets added on top of RUNES_PER_ELEMENT.
+    // Acquired runes cover both Rune Bag picks AND Magic Mirror
+    // duplicates — both are permanent-across-rounds additions funneled
+    // into the same list.
     const bonusByElement = new Map<string, number>();
     for (const r of acquiredRunes) {
         bonusByElement.set(r.element, (bonusByElement.get(r.element) ?? 0) + 1);

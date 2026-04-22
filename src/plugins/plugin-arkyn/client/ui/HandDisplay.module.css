@@ -63,6 +63,19 @@
     opacity: 0;
 }
 
+/* Materialize wrapper — mirrors RuneCard's `.card` dimensions so the hand
+   layout doesn't jitter when we swap a RuneCard for a DissolveCanvas
+   during Magic Mirror's proc. Without this, the DissolveCanvas (a raw
+   <canvas> element) would fall back to its 300x150 default size, visibly
+   growing the hand's bounding box for the 550ms materialize. Keep these
+   clamp values in sync with `.card` in RuneCard.module.css. */
+.materializeWrap {
+    width: clamp(56px, 6.2vw, 96px);
+    height: clamp(56px, 6.2vw, 96px);
+    position: relative;
+    pointer-events: none;
+}
+
 .dragging {
     transition: opacity 0.1s ease;
     cursor: grabbing;

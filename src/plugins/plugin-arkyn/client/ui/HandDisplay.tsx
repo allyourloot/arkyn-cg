@@ -9,9 +9,12 @@ import {
     useDrawingRuneIds,
     useCastingRuneIds,
     useHandSize,
+    useMaterializingRune,
 } from "../arkynStore";
 import { useBanishingRuneIds } from "../arkynAnimations";
 import RuneCard from "./RuneCard";
+import DissolveCanvas from "./DissolveCanvas";
+import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
 import { useHandDragReorder } from "./hooks/useHandDragReorder";
 import handFrameUrl from "/assets/ui/hand-frame.png?url";
 import styles from "./HandDisplay.module.css";
@@ -28,6 +31,7 @@ export default function HandDisplay() {
     const drawingRuneIds = useDrawingRuneIds();
     const castingRuneIds = useCastingRuneIds();
     const banishingRuneIds = useBanishingRuneIds();
+    const materializingRune = useMaterializingRune();
     const maxHandSize = useHandSize();
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -267,6 +271,14 @@ export default function HandDisplay() {
                     // painting a fully-intact hand rune underneath would
                     // poke through the semi-transparent dissolve pixels.
                     const isBanishingOut = banishingRuneIds.includes(rune.id);
+                    // Magic Mirror reveal state: the proc just fired and
+                    // this rune is playing its reverse-dissolve
+                    // "coalesce into existence" animation. HandDisplay
+                    // swaps the normal RuneCard for a DissolveCanvas for
+                    // the duration of the materialize; once the store
+                    // clears `materializingRune`, the slot falls back
+                    // to the standard RuneCard render.
+                    const isMaterializing = materializingRune?.id === rune.id;
                     const isHidden = isHiddenForCast || isDrawingIn || isCastingOut || isBanishingOut;
                     const isDragging = dragInfo !== null && dragInfo.runeId === rune.id;
 
@@ -290,13 +302,33 @@ export default function HandDisplay() {
                             onPointerDown={(e) => onSlotPointerDown(e, rune.id, index)}
                             onDragStart={(e) => e.preventDefault()}
                         >
-                            <RuneCard
-                                rune={rune}
-                                isSelected={isSelected}
-                                index={index}
-                                rotation={rotation}
-                                tiltDisabled={dragInfo !== null}
-                            />
+                            {isMaterializing && materializingRune ? (
+                                // Wrapper gives the DissolveCanvas explicit
+                                // clamped dimensions matching RuneCard — the
+                                // canvas otherwise falls back to its 300x150
+                                // default and visibly grows the hand frame
+                                // during the materialize (~550ms).
+                                <div className={styles.materializeWrap}>
+                                    <DissolveCanvas
+                                        reverse
+                                        element={rune.element}
+                                        rune={{
+                                            baseUrl: getBaseRuneImageUrl(rune.rarity),
+                                            runeUrl: getRuneImageUrl(rune.element),
+                                        }}
+                                        startTime={materializingRune.startTime}
+                                        duration={materializingRune.duration}
+                                    />
+                                </div>
+                            ) : (
+                                <RuneCard
+                                    rune={rune}
+                                    isSelected={isSelected}
+                                    index={index}
+                                    rotation={rotation}
+                                    tiltDisabled={dragInfo !== null}
+                                />
+                            )}
                         </div>
                     );
                 })}

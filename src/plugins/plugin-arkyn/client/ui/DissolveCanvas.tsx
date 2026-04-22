@@ -13,6 +13,13 @@ interface DissolveCanvasProps {
     startTime: number;
     /** Total dissolve duration in milliseconds. */
     duration: number;
+    /**
+     * When true, runs the dissolve in reverse — the rune starts fully
+     * dissolved and coalesces into place over `duration` ms. Used by
+     * Magic Mirror's proc to "materialize" the duplicate rune instead
+     * of popping it in. Default: false (normal tear-apart dissolve).
+     */
+    reverse?: boolean;
 
     // --- Dual-texture mode (runes) ---
     /** Image URLs for the two-layer rune composite. */
@@ -43,6 +50,7 @@ export default function DissolveCanvas({
     element,
     startTime,
     duration,
+    reverse,
     rune,
     imageUrl,
     size,
@@ -64,11 +72,12 @@ export default function DissolveCanvas({
             element,
             startTime,
             duration,
+            reverse,
             size,
             rune: baseUrl && runeUrl ? { baseUrl, runeUrl } : undefined,
             imageUrl,
         });
-    }, [element, startTime, duration, size, baseUrl, runeUrl, imageUrl]);
+    }, [element, startTime, duration, reverse, size, baseUrl, runeUrl, imageUrl]);
 
     // Rune mode: fills its parent slot via CSS class.
     // Single-texture mode: explicit pixel size with inline styles.

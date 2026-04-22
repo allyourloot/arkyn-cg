@@ -124,6 +124,12 @@ export class ArkynPlayerState extends Schema {
     // `discardNumber: 1` (consumed by hooks like Banish).
     @type("number") discardsUsedThisRound = 0;
 
+    // How many times the player has cast during the current round. Mirrors
+    // `discardsUsedThisRound` on the cast side. Incremented in `handleCast`
+    // BEFORE sigil cast-hooks fire, so the first cast carries
+    // `castNumber: 1` (consumed by hooks like Magic Mirror).
+    @type("number") castsUsedThisRound = 0;
+
     // Runes permanently removed from the pouch this run (Banish-style
     // deckbuilding). Each entry represents one specific rune copy to
     // subtract from the pouch on every rebuild — `createPouch` walks this

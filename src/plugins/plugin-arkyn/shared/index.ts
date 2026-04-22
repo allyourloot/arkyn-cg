@@ -30,6 +30,7 @@ export {
     ARKYN_SELL_SIGIL,
     ARKYN_USE_CONSUMABLE,
     ARKYN_PICK_BAG_RUNE,
+    ARKYN_DEBUG_GRANT_SIGIL,
     MAX_CONSUMABLES,
     RUNE_BAG_COST,
     SHOP_RUNE_BAG_COUNT,
@@ -99,6 +100,7 @@ export {
     SIGIL_ACCUMULATOR_XMULT,
     SIGIL_INVENTORY_MULT,
     SIGIL_DISCARD_HOOKS,
+    SIGIL_CAST_HOOKS,
     getPlayerStatDeltas,
     getHandMultBonus,
     getSpellXMult,
@@ -136,6 +138,9 @@ export type {
     DiscardContext,
     DiscardEffect,
     DiscardHookDefinition,
+    CastContext,
+    CastEffect,
+    CastHookDefinition,
 } from "./sigilEffects";
 
 export { BOSS_DEBUFFS, isBossRound, pickDebuffForRound, getDebuffById } from "./bossDebuffs";

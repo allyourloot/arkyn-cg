@@ -93,3 +93,9 @@ export const ARKYN_USE_CONSUMABLE = "arkyn:use_consumable";
 //   index = number  -> player selected that rune (adds to pouch permanently)
 //   index = null    -> player skipped (no rune added, no refund)
 export const ARKYN_PICK_BAG_RUNE = "arkyn:pick_bag_rune";
+
+// Debug-only message for dev testing. Grants a specific sigil to the
+// player without going through the shop (no gold cost, bypasses the
+// rarity-weighted shop roll). Wired to a browser-console helper on the
+// client — see `client/debugCommands.ts`. Payload: { sigilId: string }
+export const ARKYN_DEBUG_GRANT_SIGIL = "arkyn:debug_grant_sigil";

@@ -237,6 +237,14 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         cost: 4,
         sellPrice: 2,
     },
+    magic_mirror: {
+        id: "magic_mirror",
+        name: "Magic Mirror",
+        rarity: "rare",
+        description: "If your {first cast} is one rune, {duplicate it} into your hand.",
+        cost: 6,
+        sellPrice: 3,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

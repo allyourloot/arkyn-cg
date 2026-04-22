@@ -936,6 +936,83 @@ export const SIGIL_DISCARD_HOOKS: Record<string, DiscardHookDefinition> = {
 };
 
 // ============================================================================
+// Category 15 — Cast Hooks (Magic Mirror pattern)
+// ============================================================================
+
+/**
+ * Sigils that react when the player casts. Dispatched by `handleCast`
+ * AFTER the played runes are removed from the hand but BEFORE
+ * `refillHand` runs. The hook's effects (Magic Mirror's `duplicateRune`)
+ * push a rune into the hand to fill the slot the played rune vacated,
+ * so `refillHand` — which tops up until `hand.length >= handSize` —
+ * no-ops on that proc and NO extra pouch rune is drawn. The played
+ * rune is effectively "swapped" for its mirror copy; the hand stays at
+ * `handSize` and the pouch is preserved.
+ *
+ * The duplicate is ALSO pushed to `acquiredRunes` as a permanent deck
+ * addition (same path Rune Bag picks take), so next round's
+ * `createPouch` rebuilds the pool with the duplicate in it — enabling
+ * the "duplicate a rune to build your Fire deck" loop Magic Mirror is
+ * designed around.
+ *
+ * Hand-mult sigils (Synapse) do NOT count the duplicate for the
+ * CURRENT cast — the hook fires after `calculateDamage`, so the
+ * duplicate isn't in hand during that call. It will count for future
+ * casts where the duplicate is held.
+ *
+ * Hooks are pure predicates over the cast context — server and client
+ * run them with the same inputs and produce the same effects, so the
+ * client can preview the proc at fly-complete without waiting on the
+ * server echo (see `castSpell` in arkynAnimations.ts).
+ *
+ * This is the cast-side analog of `SIGIL_DISCARD_HOOKS`; the two
+ * categories share the same "first action → special effect" shape and
+ * can be extended independently (e.g. a future "every 3rd cast grants
+ * +2 Mult" sigil would slot in here with a new effect arm).
+ */
+
+export interface CastContext {
+    /** 1-indexed: 1 = first cast of round, 2 = second, ... */
+    readonly castNumber: number;
+    /** How many runes contributed to this cast (selection length). */
+    readonly runeCount: number;
+    /** The runes played this cast, in hand-index order. */
+    readonly runes: readonly {
+        id: string;
+        element: string;
+        rarity: string;
+        level: number;
+    }[];
+}
+
+/**
+ * Discriminated effects a cast hook can request. `duplicateRune` points
+ * at a specific played rune by index into `ctx.runes` — the caller
+ * creates a fresh RuneInstance with the same element/rarity/level and
+ * appends it to the player's hand.
+ */
+export type CastEffect =
+    | { type: "duplicateRune"; runeIndex: number };
+
+export interface CastHookDefinition {
+    onCast(ctx: CastContext): readonly CastEffect[] | void;
+}
+
+export const SIGIL_CAST_HOOKS: Record<string, CastHookDefinition> = {
+    magic_mirror: {
+        onCast(ctx) {
+            // Only fires on the FIRST cast of the round AND only when the
+            // player played exactly one rune — mirrors Banish's "first solo
+            // discard" gate. The hand grows by +1 after the duplicate is
+            // appended post-refill.
+            if (ctx.castNumber !== 1) return [];
+            if (ctx.runeCount !== 1) return [];
+            return [{ type: "duplicateRune", runeIndex: 0 }];
+        },
+    },
+};
+
+// ============================================================================
 // Module-Load Validation
 // ============================================================================
 

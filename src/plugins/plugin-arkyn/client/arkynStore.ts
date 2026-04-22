@@ -178,6 +178,18 @@ let banishedRunes: RuneClientData[] = [];
 // celebration without waiting on the server echo.
 let discardsUsedThisRound = 0;
 
+// Same counter on the cast side. Used by `castSpell` to preview cast-hook
+// sigils (Magic Mirror) and inject predicted hand mutations locally
+// before the cast animation starts.
+let castsUsedThisRound = 0;
+
+// The rune currently playing the reverse-dissolve "materialize" animation
+// (Magic Mirror's duplicate rune at the proc moment). HandDisplay renders
+// this rune's slot as a `<DissolveCanvas reverse>` for `duration` ms
+// instead of the normal rune card, then the store clears this field and
+// the slot falls back to the standard card render.
+let materializingRune: { id: string; startTime: number; duration: number } | null = null;
+
 // Per-sigil proc bubble — renders a floating "+N Gold" overlay anchored
 // to the matching sigil's SigilBar slot. Single active bubble at a time
 // (new procs replace the old); monotonic `seq` forces a fresh React
@@ -353,7 +365,41 @@ export function setDisabledResistance(e: string) { disabledResistance = e; notif
 export function setAcquiredRunes(r: RuneClientData[]) { acquiredRunes = r; notify(); }
 export function setPendingBagRunes(r: RuneClientData[]) { pendingBagRunes = r; notify(); }
 export function setBanishedRunes(r: RuneClientData[]) { banishedRunes = r; notify(); }
+
+/**
+ * Append a single rune to the per-run `acquiredRunes` list client-side.
+ * Used by Magic Mirror's cast-hook prediction so PouchCounter /
+ * PouchModal reflect the new rune at the moment of cast rather than
+ * lagging until the server echo lands. The next `setAcquiredRunes`
+ * from server sync overwrites with the authoritative list — because
+ * the prediction uses the same deterministic id (`mirror-${source.id}`)
+ * the server generates, there's no visible churn.
+ */
+export function appendAcquiredRune(rune: RuneClientData) {
+    acquiredRunes = [...acquiredRunes, rune];
+    notify();
+}
 export function setDiscardsUsedThisRound(n: number) { discardsUsedThisRound = n; notify(); }
+export function setCastsUsedThisRound(n: number) { castsUsedThisRound = n; notify(); }
+
+/**
+ * Append a single rune to the hand WITHOUT triggering the normal sort —
+ * preserving insertion order. Used exclusively by Magic Mirror's cast-hook
+ * prediction so the duplicate visibly lands at the END of the hand
+ * (matching the "mirror copy pops in at the right edge" UX). The next
+ * full `setHand(...)` from server sync will sort the hand as usual.
+ */
+export function appendHandRune(rune: RuneClientData) {
+    hand = [...hand, rune];
+    serverHand = [...serverHand, rune];
+    recomputeSelectedIndices();
+    notify();
+}
+
+export function setMaterializingRune(r: { id: string; startTime: number; duration: number } | null) {
+    materializingRune = r;
+    notify();
+}
 
 // Scroll purchase event — lightweight pub-sub. ShopScreen fires this on
 // buy; ArkynOverlay orchestrates the fly/shake/dissolve animation and
@@ -499,6 +545,8 @@ export const arkynStoreInternal = {
     getCurrentRound: () => currentRound,
     getRunSeed: () => runSeed,
     getDiscardsUsedThisRound: () => discardsUsedThisRound,
+    getCastsUsedThisRound: () => castsUsedThisRound,
+    getHandSize: () => handSize,
 
     // Mutators (caller is responsible for calling notify() once per batch)
     clearSelection() {
@@ -642,6 +690,8 @@ export function useAcquiredRunes() { return useSyncExternalStore(subscribe, () =
 export function usePendingBagRunes() { return useSyncExternalStore(subscribe, () => pendingBagRunes); }
 export function useBanishedRunes() { return useSyncExternalStore(subscribe, () => banishedRunes); }
 export function useDiscardsUsedThisRound() { return useSyncExternalStore(subscribe, () => discardsUsedThisRound); }
+export function useCastsUsedThisRound() { return useSyncExternalStore(subscribe, () => castsUsedThisRound); }
+export function useMaterializingRune() { return useSyncExternalStore(subscribe, () => materializingRune); }
 export function useSigilProcBubble() { return useSyncExternalStore(subscribe, () => sigilProcBubble); }
 
 // Run stats hooks

@@ -8,6 +8,10 @@ import { generateShopScrolls, generateShopSigils } from "../../shared/shopGenera
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { Logger } from "@core/shared/utils";
 import { initPlayerForRound } from "../utils/initPlayerForRound";
+import { createPouch } from "../utils/createPouch";
+import { setPouch } from "../resources/playerPouch";
+import { syncPlayerPouch } from "../utils/drawRunes";
+import { clearArraySchema } from "../utils/clearArraySchema";
 import { spawnEnemy, applyBossDebuff } from "./handleJoin";
 
 const logger = new Logger("ArkynReady");
@@ -39,6 +43,34 @@ export function handleReady(
         // `handleCollectRoundGold` fired at the moment the RoundEnd
         // overlay's "Total" line reveals — not here. By the time the
         // player hits Continue the gold is already in their bank.
+
+        // Rebuild the pouch for the shop so the PouchCounter and
+        // PouchModal show the player's FULL deck composition, not the
+        // leftover from the just-finished round. `initPlayerForRound`
+        // will run again on shop → playing to build a fresh seeded
+        // pouch for the actual round; this rebuild is purely for the
+        // shop-phase UI state. Also clears the hand + played runes so
+        // the modal doesn't display any stale "drawn"/"spent" slots
+        // during the shop visit — every owned rune is visually in the
+        // pouch column while the player browses.
+        clearArraySchema(player.hand);
+        clearArraySchema(player.playedRunes);
+        const acquired = Array.from(player.acquiredRunes).map(r => ({
+            id: r.id,
+            element: r.element,
+            rarity: r.rarity,
+            level: r.level,
+        }));
+        const banished = Array.from(player.banishedRunes).map(r => ({
+            id: r.id,
+            element: r.element,
+            rarity: r.rarity,
+            level: r.level,
+        }));
+        const shopPouch = createPouch(acquired, banished);
+        setPouch(client.sessionId, shopPouch);
+        syncPlayerPouch(player, shopPouch);
+        player.pouchSize = shopPouch.length;
 
         // Pre-spawn the next enemy so the shop panel can show boss/debuff
         // info as part of the "Next Enemy" preview. The round counter
