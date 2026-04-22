@@ -385,15 +385,6 @@
     border-image: var(--bank-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
 }
 
-/* Override GoldCounter's default gold-yellow count color (#ffd770) to
-   white inside the shop's bento cell. Targets the inner BouncyText
-   wrapper (which carries GoldCounter's `.count` class) via its structural
-   position — img is child 1, countPop is child 2, its only child span is
-   the BouncyText wrapper where the gold color lives. SpellPreview's
-   GoldCounter is untouched since it doesn't render inside .goldCell. */
-.goldCell > :last-child > :nth-child(2) > span {
-    color: #ffffff;
-}
 
 /* Right cell — Casts + Discards chips stacked vertically in the other 30%.
    Top-aligned (flex-start) so the Casts label sits at the same baseline

@@ -15,7 +15,15 @@ import {
 } from "../arkynStore";
 import { useCastMultCounter } from "../arkynAnimations";
 import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSpell";
-import { SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT, SCROLL_RUNE_BONUS, calculateSpellDamage } from "../../shared";
+import {
+    SPELL_TIER_BASE_DAMAGE,
+    SPELL_TIER_MULT,
+    SCROLL_RUNE_BONUS,
+    calculateSpellDamage,
+    CASTS_PER_ROUND,
+    DISCARDS_PER_ROUND,
+    getPlayerStatDeltas,
+} from "../../shared";
 import type { RarityType } from "../../shared/arkynConstants";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
 import { useEnemyIsBoss } from "../arkynStore";
@@ -50,8 +58,12 @@ import styles from "./SpellPreview.module.css";
 const basePanelStyleVars = {
     ...createPanelStyleVars("blue"),
     ["--base-bg" as string]: INNER_FRAME_BGS.blue,
-    ["--mult-bg" as string]: INNER_FRAME_BGS.green,
-    ["--total-bg" as string]: INNER_FRAME_BGS.red,
+    ["--mult-bg" as string]: INNER_FRAME_BGS.red,
+    ["--total-bg" as string]: INNER_FRAME_BGS.default,
+    // Bento bottom section — mirrors ShopPanel's Bank/Casts/Discards chips.
+    ["--bank-bg" as string]: INNER_FRAME_BGS.default,
+    ["--hands-bg" as string]: INNER_FRAME_BGS.green,
+    ["--discards-bg" as string]: INNER_FRAME_BGS.orange,
 } as CSSProperties;
 
 const bossPanelStyleVars = {
@@ -181,7 +193,7 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
                     <ScrollUpgradeDisplay />
                 </div>
                 <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} multRef={multRef} totalRef={totalRef} />
-                <GoldCounter />
+                <BentoStats />
             </div>
         );
     }
@@ -327,7 +339,73 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
 
             <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} multRef={multRef} totalRef={totalRef} />
 
-            <GoldCounter />
+            <BentoStats />
+        </div>
+    );
+}
+
+/**
+ * Bottom bento row — Bank (gold, left 70%) + Casts / Discards stacked
+ * (right 30%). Mirrors ShopPanel's bottom section so the preview panel
+ * and shop panel share the same visual footprint. Effective casts /
+ * discards include sigil modifiers (Caster adds +1 cast). The Casts
+ * chip flashes "+N" when the effective cast budget rises mid-run.
+ */
+function BentoStats() {
+    const sigils = useSigils();
+    const statDeltas = getPlayerStatDeltas(sigils);
+    const effectiveCasts = CASTS_PER_ROUND + statDeltas.castsPerRound;
+    const effectiveDiscards = DISCARDS_PER_ROUND + statDeltas.discardsPerRound;
+
+    const prevCastsRef = useRef(effectiveCasts);
+    const [castsDisplay, setCastsDisplay] = useState<string>(String(effectiveCasts));
+    const chipRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const prev = prevCastsRef.current;
+        prevCastsRef.current = effectiveCasts;
+        if (effectiveCasts <= prev) {
+            setCastsDisplay(String(effectiveCasts));
+            return;
+        }
+        setCastsDisplay(`+${effectiveCasts - prev}`);
+        if (chipRef.current) {
+            gsap.fromTo(chipRef.current,
+                { scale: 1 },
+                { scale: 1.15, duration: 0.12, ease: "power2.out", yoyo: true, repeat: 1 },
+            );
+        }
+        const t = setTimeout(() => setCastsDisplay(String(effectiveCasts)), 500);
+        return () => clearTimeout(t);
+    }, [effectiveCasts]);
+
+    return (
+        <div className={styles.bottomSection}>
+            <div className={styles.goldCell}>
+                <span className={styles.statLabel}>Bank</span>
+                <GoldCounter />
+            </div>
+            <div className={styles.statsSection}>
+                <div className={styles.statColumn}>
+                    <span className={styles.statLabel}>Casts</span>
+                    <div
+                        ref={chipRef}
+                        className={`${styles.statChip} ${styles.statChipHands}`}
+                    >
+                        <BouncyText className={styles.statChipValue}>
+                            {castsDisplay}
+                        </BouncyText>
+                    </div>
+                </div>
+                <div className={styles.statColumn}>
+                    <span className={styles.statLabel}>Discards</span>
+                    <div className={`${styles.statChip} ${styles.statChipDiscards}`}>
+                        <BouncyText className={styles.statChipValue}>
+                            {effectiveDiscards}
+                        </BouncyText>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
@@ -410,6 +488,12 @@ function DamageChips({
 }) {
     return (
         <div className={styles.damageSection}>
+            <div className={styles.damageChipColumn}>
+                <span className={styles.damageChipLabel}>Total</span>
+                <div className={`${styles.damageChip} ${styles.damageChipTotal}`}>
+                    <BouncyText ref={totalRef} className={styles.damageChipValue}>{total}</BouncyText>
+                </div>
+            </div>
             <div className={styles.damageRow}>
                 <div className={styles.damageChipColumn}>
                     <span className={styles.damageChipLabel}>Base</span>
@@ -432,12 +516,6 @@ function DamageChips({
                             {mult}
                         </BouncyText>
                     </div>
-                </div>
-            </div>
-            <div className={styles.damageChipColumn}>
-                <span className={styles.damageChipLabel}>Total</span>
-                <div className={`${styles.damageChip} ${styles.damageChipTotal}`}>
-                    <BouncyText ref={totalRef} className={styles.damageChipValue}>{total}</BouncyText>
                 </div>
             </div>
         </div>

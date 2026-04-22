@@ -409,6 +409,107 @@
     padding: 0 12px;
 }
 
+/* ================================================================
+   Bento bottom section — Bank (gold, left 70%) + Casts/Discards
+   stacked (right 30%). Mirrors ShopPanel.module.css's bottom bento
+   so the two panels share the same visual footprint; keep the two
+   in sync if either layout evolves.
+   ================================================================ */
+
+.bottomSection {
+    margin-top: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: clamp(6px, 1vw, 12px);
+    width: 100%;
+}
+
+.goldCell {
+    flex: 7 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: clamp(2px, 0.4vh, 6px);
+}
+
+/* Override GoldCounter's own `margin-top: auto` + natural content height
+   so the chip fills the bento cell's remaining vertical space. Also
+   tightens GoldCounter's default 24px 9-slice border to 12px to match
+   statChip's thickness so the gold chip's inner frame top aligns with
+   the Casts chip's inner frame top. */
+.goldCell > :last-child {
+    margin-top: 0;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    border-width: 12px;
+    border-image: var(--bank-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+}
+
+.statsSection {
+    box-sizing: border-box;
+    flex: 3 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: clamp(6px, 1vh, 12px);
+}
+
+.statColumn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(2px, 0.4vh, 6px);
+}
+
+.statLabel {
+    font-size: var(--font-size-xs);
+    font-weight: normal;
+    color: #c4a882;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    line-height: 1;
+}
+
+.statChip {
+    box-sizing: border-box;
+    width: 100%;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    padding: 1px 6px 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    image-rendering: pixelated;
+}
+
+.statChipHands {
+    border-image: var(--hands-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+}
+
+.statChipDiscards {
+    border-image: var(--discards-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+}
+
+.statChipValue {
+    font-size: clamp(var(--font-size-md), 3.6vw, var(--font-size-xl));
+    font-weight: normal;
+    color: #ffffff;
+    text-shadow:
+        2px 2px 0 rgba(0, 0, 0, 0.85),
+        0 0 8px rgba(0, 0, 0, 0.5);
+    line-height: 1;
+    display: inline-block;
+    transform-origin: center center;
+}
+
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
     .panel {
@@ -515,5 +616,41 @@
 
     .damageChipValue {
         font-size: clamp(var(--font-size-xs), 2.6vw, var(--font-size-md));
+    }
+
+    /* Bento bottom section — landscape compact. Mirrors ShopPanel's
+       landscape overrides so the layout collapses the same way on short
+       viewports. */
+    .statsSection {
+        gap: clamp(4px, 0.8vh, 10px);
+    }
+
+    .statLabel {
+        font-size: var(--font-size-3xs);
+        letter-spacing: 1px;
+    }
+
+    .statChip {
+        border-width: 6px;
+        padding: 0 4px 1px;
+    }
+
+    .statChipHands {
+        border-image: var(--hands-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+    }
+
+    .statChipDiscards {
+        border-image: var(--discards-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+    }
+
+    .statChipValue {
+        font-size: clamp(var(--font-size-xs), 2.6vw, var(--font-size-md));
+    }
+
+    /* Gold chip's overridden border-width tracks statChip's 6px landscape
+       thickness so the inner-frame tops stay aligned with Casts. */
+    .goldCell > :last-child {
+        border-width: 6px;
+        border-image: var(--bank-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
     }
 }

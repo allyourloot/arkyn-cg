@@ -32,7 +32,7 @@ const panelStyleVars = {
     ["--hands-bg" as string]: INNER_FRAME_BGS.green,
     ["--discards-bg" as string]: INNER_FRAME_BGS.orange,
     ["--shop-chip-bg" as string]: INNER_FRAME_BGS.orange,
-    ["--bank-bg" as string]: INNER_FRAME_BGS.gold,
+    ["--bank-bg" as string]: INNER_FRAME_BGS.default,
 } as CSSProperties;
 
 type ShopPanelProps = {
