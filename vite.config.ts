@@ -5,6 +5,18 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 import { TLS_CERT, TLS_KEY } from "./src/core/shared/SSL";
 import path from "path";
 
+// HMR host selection. Desktop dev needs `hmr.host` pinned — with Vite 7
+// + HTTPS, omitting it causes the WSS handshake to close without
+// opening (reconnect spins forever, no hot updates arrive). Mobile dev
+// needs a DIFFERENT hostname (the *.dns-is-boring-we-do-ip-addresses
+// wildcard) so the phone's WSS target actually resolves to the laptop
+// and not to its own 127.0.0.1. Gate via env var so mobile testing can
+// override without editing the config:
+//   pnpm client                                 (desktop default)
+//   HYTOPIA_DEV_HOST=192-168-1-7.dns-is-... pnpm client   (mobile)
+// Both hostnames are on the TLS cert SAN list so the cert passes.
+const DEV_HOST = process.env.HYTOPIA_DEV_HOST ?? "local.hytopiahosting.com";
+
 export default defineConfig({
   server: {
     host: true,
@@ -14,18 +26,11 @@ export default defineConfig({
       cert: TLS_CERT,
       key: TLS_KEY,
     },
-    // HMR host is intentionally NOT pinned — Vite's HMR client falls back
-    // to the page's current hostname when omitted. Desktop hits
-    // local.hytopiahosting.com:8180 and gets HMR at wss://local.hytopiahosting.com:8180;
-    // mobile hits the 192-168-1-7.dns-is-boring-we-do-ip-addresses.hytopiahosting.com
-    // wildcard and gets HMR at the matching wss host. Both hostnames are
-    // on the cert's SAN list, so TLS passes either way. Previously this
-    // was pinned to local.hytopiahosting.com, which broke mobile because
-    // that host resolves to 127.0.0.1 on the phone — HMR WSS failed and
-    // Vite's reconnect loop triggered an infinite page reload.
     hmr: {
+      host: DEV_HOST,
       protocol: "wss",
       port: 8180,
+      clientPort: 8180,
     },
   },
   plugins: [
