@@ -500,6 +500,7 @@ function assembleCastBreakdown(args: {
         spellElements: resolvedSpell
             ? (resolvedSpell.comboElements ? [...resolvedSpell.comboElements] : [resolvedSpell.element])
             : [],
+        spellTier: resolvedSpell?.tier ?? 0,
         hand,
         selectedIndices: sortedSelected,
         contributingRunes: contributingRuneData,
@@ -514,6 +515,7 @@ function assembleCastBreakdown(args: {
     const accumulatorXMultEntries = modifiers.breakdowns.accumulatorXMult;
     const elementRuneBonusEntries = modifiers.breakdowns.elementRuneBonus;
     const inventoryMultEntries = modifiers.breakdowns.inventoryMult;
+    const spellTierMultEntries = modifiers.breakdowns.spellTierMult;
 
     const breakdown = resolvedSpell
         ? calculateSpellDamage(
@@ -796,6 +798,27 @@ function assembleCastBreakdown(args: {
     }
     const hasAnyInventoryMult = inventoryMultEntries.length > 0;
 
+    // ----- Spell-tier mult entries (Tectonic-style sigils) -----
+    // Flat additive mult gated by the resolved spell's tier. Same event
+    // shape as inventory-mult — one Mult-counter tick + sigil shake per
+    // owned matching sigil, no per-rune correlation. Pushed after
+    // inventory-mult so the animation reveals tier-specific bonuses last
+    // among the additive channels, just before the xMult reveal.
+    for (const entry of spellTierMultEntries) {
+        runeBreakdown.push({
+            base: 0,
+            final: 0,
+            isResisted: false,
+            isCritical: false,
+            isProc: false,
+            isMultTick: true,
+            multDelta: entry.multDelta,
+            sigilId: entry.sigilId,
+        });
+        eventIdx++;
+    }
+    const hasAnySpellTierMult = spellTierMultEntries.length > 0;
+
     // ----- Spell-element xMult entries (Supercell-style sigils) -----
     // Appended AFTER synapse entries so the animation reveals the
     // multiplicative factor as the final dramatic mult event before the
@@ -832,7 +855,7 @@ function assembleCastBreakdown(args: {
     }
     const hasAnyXMult = xMultEntries.length > 0 || accumulatorXMultEntries.length > 0;
     const hasAnyElementRuneBonus = elementRuneBonusEntries.length > 0;
-    const hasAnyMultEvent = hasAnyHandMultProc || hasAnyPlayedMult || hasAnyXMult || hasAnyElementRuneBonus || hasAnyInventoryMult;
+    const hasAnyMultEvent = hasAnyHandMultProc || hasAnyPlayedMult || hasAnyXMult || hasAnyElementRuneBonus || hasAnyInventoryMult || hasAnySpellTierMult;
     const hasAnyAccumulatorInc = runeBreakdown.some(e => e.isAccumulatorInc);
 
     return {

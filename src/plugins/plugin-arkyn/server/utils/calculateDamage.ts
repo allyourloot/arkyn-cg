@@ -71,6 +71,7 @@ export function calculateDamage(
         spellElements: spell.comboElements
             ? [...spell.comboElements]
             : [spell.element],
+        spellTier: spell.tier,
         hand: hand ? hand.map(r => ({ element: r.element })) : [],
         selectedIndices: selectedIndices ?? [],
         contributingRunes,

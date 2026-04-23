@@ -1061,6 +1061,61 @@ export function getInventoryMultBonus(
 }
 
 // ============================================================================
+// Category 16 — Spell-Tier Mult (Tectonic pattern)
+// ============================================================================
+
+/**
+ * Additive mult bonus gated by the resolved spell's tier. Unlike element-
+ * xMult (Supercell) which conditions on the spell's element, this conditions
+ * on the spell's tier — so a "+10 Mult on Tier IV spells" sigil fires for
+ * every Tier 4 resolver outcome (Two Pair combos, 4-of-a-kind single-element,
+ * Abomination on a 4-unique hand) regardless of element.
+ *
+ * Feeds the additive `bonusMult` channel alongside hand-mult / played-mult /
+ * element-rune-bonus / inventory-mult — `finalMult = (tierMult + bonusMult) × xMult`.
+ * One `isMultTick` event per owned matching sigil per cast, no per-rune
+ * correlation (similar to inventory-mult).
+ */
+export interface SpellTierMultEffect {
+    /** The resolved spell tier that triggers this bonus. */
+    tier: number;
+    /** Additive mult bonus applied when the tier matches. */
+    mult: number;
+}
+
+export const SIGIL_SPELL_TIER_MULT: Record<string, SpellTierMultEffect> = {
+    tectonic: { tier: 4, mult: 10 },
+};
+
+export interface SpellTierMultEntry {
+    sigilId: string;
+    multDelta: number;
+}
+
+/**
+ * Compute the total additive mult bonus from spell-tier-matching sigils +
+ * per-sigil breakdown for the animation. Returns `total = 0, entries = []`
+ * when no owned sigil targets this spell's tier (or when `spellTier === 0`,
+ * which means the cast didn't resolve to a scoring spell).
+ */
+export function getSpellTierMultBonus(
+    sigils: readonly string[],
+    spellTier: number,
+): { total: number; entries: SpellTierMultEntry[] } {
+    let total = 0;
+    const entries: SpellTierMultEntry[] = [];
+    if (spellTier <= 0) return { total, entries };
+    for (const sigilId of expandMimicSigils(sigils)) {
+        const effect = SIGIL_SPELL_TIER_MULT[sigilId];
+        if (!effect) continue;
+        if (effect.tier !== spellTier) continue;
+        total += effect.mult;
+        entries.push({ sigilId, multDelta: effect.mult });
+    }
+    return { total, entries };
+}
+
+// ============================================================================
 // Category 14 — Discard Hooks (Banish pattern)
 // ============================================================================
 

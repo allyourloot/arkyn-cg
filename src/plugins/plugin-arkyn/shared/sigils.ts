@@ -269,6 +269,14 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         cost: 4,
         sellPrice: 2,
     },
+    tectonic: {
+        id: "tectonic",
+        name: "Tectonic",
+        rarity: "common",
+        description: "{Tier IV} spells gain {+10 Mult}.",
+        cost: 3,
+        sellPrice: 1,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

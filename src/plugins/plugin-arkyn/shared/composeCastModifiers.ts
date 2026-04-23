@@ -5,12 +5,14 @@ import {
     getIgnoredResistanceElements,
     getInventoryMultBonus,
     getPlayedMultBonus,
+    getSpellTierMultBonus,
     getSpellXMult,
     type AccumulatorXMultEntry,
     type ElementRuneBonusEntry,
     type HandMultEntry,
     type InventoryMultEntry,
     type PlayedMultEntry,
+    type SpellTierMultEntry,
     type SpellXMultEntry,
 } from "./sigilEffects";
 
@@ -40,6 +42,7 @@ export interface CastModifiersBreakdown {
     accumulatorXMult: AccumulatorXMultEntry[];
     elementRuneBonus: ElementRuneBonusEntry[];
     inventoryMult: InventoryMultEntry[];
+    spellTierMult: SpellTierMultEntry[];
 }
 
 export interface CastModifiersResult {
@@ -56,6 +59,13 @@ export interface ComposeCastModifiersArgs {
     sigils: readonly string[];
     /** Elements involved in the resolved spell — `[spell.element]` or `spell.comboElements`. */
     spellElements: readonly string[];
+    /**
+     * The resolved spell's tier. Used by `SIGIL_SPELL_TIER_MULT` (Tectonic
+     * pattern) to gate additive mult bonuses on specific tiers. Pass `0`
+     * when the cast didn't resolve to a scoring spell — the helper no-ops
+     * for tier ≤ 0 so the additive channel stays clean.
+     */
+    spellTier: number;
     /** The player's full hand; used for hand-mult lookup. */
     hand: readonly { element: string }[];
     /** Indices into `hand` that were selected (excluded from hand-mult). */
@@ -84,13 +94,14 @@ export interface ComposeCastModifiersArgs {
 }
 
 export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifiersResult {
-    const { sigils, spellElements, hand, selectedIndices, contributingRunes, rawResistances, weaknesses, disabledResistance, sigilAccumulators } = args;
+    const { sigils, spellElements, spellTier, hand, selectedIndices, contributingRunes, rawResistances, weaknesses, disabledResistance, sigilAccumulators } = args;
 
     const handMult = getHandMultBonus(sigils, hand, selectedIndices);
     const playedMult = getPlayedMultBonus(sigils, contributingRunes);
     const xMult = getSpellXMult(sigils, spellElements);
     const accumulatorXMult = getAccumulatorXMult(sigils, sigilAccumulators ?? {});
     const inventoryMult = getInventoryMultBonus(sigils);
+    const spellTierMult = getSpellTierMultBonus(sigils, spellTier);
 
     // Per-rune crit flag, identical to the damage formula's derivation
     // (weakness match = critical). Computed here so crit-gated sigils
@@ -105,7 +116,7 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
         : [...rawResistances];
 
     return {
-        bonusMult: handMult.total + playedMult.total + elementRuneBonus.totalMult + inventoryMult.total,
+        bonusMult: handMult.total + playedMult.total + elementRuneBonus.totalMult + inventoryMult.total + spellTierMult.total,
         xMult: xMult.total * accumulatorXMult.total,
         effectiveResistances,
         perRuneBaseBonus: elementRuneBonus.perRuneBase,
@@ -116,6 +127,7 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
             accumulatorXMult: accumulatorXMult.entries,
             elementRuneBonus: elementRuneBonus.entries,
             inventoryMult: inventoryMult.entries,
+            spellTierMult: spellTierMult.entries,
         },
     };
 }
