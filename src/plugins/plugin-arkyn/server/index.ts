@@ -14,6 +14,7 @@ import {
     ARKYN_REORDER_SIGILS,
     ARKYN_USE_CONSUMABLE,
     ARKYN_PICK_BAG_RUNE,
+    ARKYN_REROLL_SHOP,
     ARKYN_DEBUG_GRANT_SIGIL,
     ArkynState,
 } from "../shared";
@@ -29,6 +30,7 @@ import { handleSellSigil } from "./systems/handleSellSigil";
 import { handleReorderSigils } from "./systems/handleReorderSigils";
 import { handleUseConsumable } from "./systems/handleUseConsumable";
 import { handleBagChoice } from "./systems/handleBagChoice";
+import { handleRerollShop } from "./systems/handleRerollShop";
 import { handleDebugGrantSigil } from "./systems/handleDebugGrantSigil";
 import { handleLeave } from "./systems/handleLeave";
 
@@ -88,6 +90,10 @@ export function PluginArkynServer(): ServerPlugin {
 
             runtime.onMessage(ARKYN_PICK_BAG_RUNE, (client: ServerClientRef, payload: unknown) => {
                 handleBagChoice(state, client, payload);
+            });
+
+            runtime.onMessage(ARKYN_REROLL_SHOP, (client: ServerClientRef) => {
+                handleRerollShop(state, client);
             });
 
             runtime.onMessage(ARKYN_NEW_RUN, (client: ServerClientRef) => {

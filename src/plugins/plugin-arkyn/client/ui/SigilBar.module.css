@@ -55,7 +55,7 @@
     top: 100%;
     margin-top: 4px;
     font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
-    color: #8a8070;
+    color: #d4c8b0;
     letter-spacing: 1px;
     line-height: 1;
 }

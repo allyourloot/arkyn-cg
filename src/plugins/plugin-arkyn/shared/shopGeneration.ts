@@ -12,6 +12,10 @@ import { SIGIL_DEFINITIONS, SIGIL_IDS } from "./sigils";
 // debuff (50000), and voltage proc (300000) to avoid correlation.
 const SHOP_SCROLL_RNG_OFFSET = 100000;
 const SHOP_SIGIL_RNG_OFFSET = 200000;
+// Stride between reroll iterations of the same (seed, round) shop. 1000
+// is larger than any realistic `round` count so adjacent rounds' sigil
+// rolls can't collide with an earlier round's Nth reroll.
+const SHOP_SIGIL_REROLL_STRIDE = 1000;
 
 // Shop sigils roll against the same rarity table as Rune Bags so there's
 // one source of truth for how rare "rare" feels in the game. Per-shop-slot
@@ -57,8 +61,12 @@ export function generateShopSigils(
     seed: number,
     round: number,
     ownedSigilIds: readonly string[],
+    rerollCount = 0,
 ): string[] {
-    const rng = createRoundRng(seed, round + SHOP_SIGIL_RNG_OFFSET);
+    const rng = createRoundRng(
+        seed,
+        round + SHOP_SIGIL_RNG_OFFSET + rerollCount * SHOP_SIGIL_REROLL_STRIDE,
+    );
     const owned = new Set(ownedSigilIds);
     const pool = SIGIL_IDS.filter(id => !owned.has(id));
     const picks: string[] = [];

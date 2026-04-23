@@ -67,17 +67,21 @@
 
 /* Reserved placeholder section — matches SpellPreview's .section height
    so the panel rhythm (chip / heading / section / stats / gold) reads as
-   balanced even while the section is empty. Fixed `height` (not
-   min-height) so the section stays exactly 32vh regardless of content,
-   preventing a layout shift when the enemy info swaps to the
-   ScrollUpgradeDisplay (shorter content → section would otherwise
-   shrink back to the 32vh min). */
+   balanced even while the section is empty. `min-height` (not fixed
+   `height`) so boss-round content (Boss Round + debuff chip + affinity
+   row) can grow the section past 32vh without clipping. Non-boss content
+   still fits in 32vh exactly. The ScrollUpgradeDisplay renders as an
+   absolute overlay (see `.upgradeOverlay` + `.enemyContent`) and the
+   enemy preview stays mounted with `visibility: hidden` behind it — so
+   the section keeps its sized-by-enemy-content height through the swap,
+   preventing a layout shift. */
 .section {
+    position: relative;
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
     flex-shrink: 0;
-    height: 32vh;
+    min-height: 32vh;
     overflow: hidden;
     background: transparent;
     border-style: solid;
@@ -91,6 +95,37 @@
     justify-content: center;
     gap: clamp(4px, 0.8vw, 10px);
     image-rendering: pixelated;
+}
+
+/* Enemy preview content wrapper — the section's direct flex child.
+   Lays out the stat rows (icon / name / round / boss chip / HP / debuff /
+   affinity). Stays mounted (with `visibility: hidden`) when the upgrade
+   overlay is showing so the section's height keeps being driven by this
+   content's natural size, preventing a collapse on boss rounds when the
+   shorter upgrade preview would otherwise shrink the section. */
+.enemyContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(4px, 0.8vw, 10px);
+    width: 100%;
+}
+
+.enemyContentHidden {
+    visibility: hidden;
+}
+
+/* Absolute overlay hosting the ScrollUpgradeDisplay. Sits inside the
+   section (position: relative) and covers the inner content area so the
+   upgrade reads as replacing the enemy preview, while the hidden enemy
+   content below keeps the section sized. The stacked-variant display
+   has its own `width: 100%; height: 100%` so the overlay just needs to
+   fill the section. */
+.upgradeOverlay {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
 }
 
 .placeholder {
@@ -262,12 +297,16 @@
     }
 
     .section {
-        height: 30vh;
+        min-height: 30vh;
         flex-shrink: 0;
         overflow: hidden;
         border-width: 10px;
         border-image: var(--section-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
         padding: 3px 2px;
+        gap: clamp(2px, 0.5vw, 6px);
+    }
+
+    .enemyContent {
         gap: clamp(2px, 0.5vw, 6px);
     }
 

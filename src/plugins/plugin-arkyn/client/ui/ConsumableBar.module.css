@@ -1,9 +1,11 @@
 /* ----- ConsumableBar — framed container holding up to 2 consumables ----- */
 
 /* Outer frame — absolutely positioned to the right of the SigilBar
-   wrapper so it doesn't affect the bar's centered layout. Uses
-   hand-frame 9-slice. Same height as sigil slots, fixed width for 2
-   consumable items side by side. */
+   wrapper so it doesn't affect the bar's centered layout. Mirrors
+   SigilBar's `.sigilFrame` chrome exactly (height, padding, gap,
+   border-image via a `::before` pseudo) so the two frames read as a
+   matched pair. Only the width differs — the consumable bar is sized
+   to hold MAX_CONSUMABLES slots instead of MAX_SIGILS slots. */
 .wrapper {
     position: absolute;
     left: calc(100% + clamp(36px, 4.5vw, 64px));
@@ -11,38 +13,53 @@
     transform: translateY(-50%);
     box-sizing: border-box;
     width: clamp(130px, 16vw, 192px);
-    height: clamp(68px, 8.4vw, 100px);
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 10px;
-    border-image: var(--slot-bg) 24 24 24 24 fill / 10px;
-    image-rendering: pixelated;
-    flex-shrink: 0;
+    height: clamp(96px, 11.4vw, 128px);
+    padding: clamp(6px, 0.7vw, 12px) clamp(12px, 1.6vw, 24px);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: clamp(4px, 0.6vw, 8px);
+    gap: clamp(8px, 1.2vw, 18px);
+    flex-shrink: 0;
     overflow: visible;
     pointer-events: auto;
+    image-rendering: pixelated;
 }
 
-/* Count label — pinned below the wrapper's border, right-aligned.
-   top: calc(100% + 10px) clears the 10px border-width so the label
-   sits fully outside the frame. */
+/* Border-image chrome painted via a `::before` pseudo (same technique
+   SigilBar uses) — stays out of the flex layout so the frame's content
+   box is the full `.wrapper` height. Keeps the chunky 9-slice border
+   visual without eating into the area the slots occupy. */
+.wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px;
+    border-image: var(--slot-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    image-rendering: pixelated;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Count label — pinned below the wrapper's bottom edge, right-aligned.
+   Mirrors SigilBar's `.countLabel` position exactly (same `right`
+   offset, same `top: 100%` + `margin-top: 4px`) so the two "N/M"
+   readouts land on the same baseline under their frames. */
 .countLabel {
     position: absolute;
-    right: 0;
-    top: calc(100% + 10px);
+    right: clamp(8px, 1vw, 20px);
+    top: 100%;
     margin-top: 4px;
     font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
-    color: #8a8070;
+    color: #d4c8b0;
     letter-spacing: 1px;
     line-height: 1;
 }
 
-/* Individual consumable slot — intentionally larger than the wrapper's
-   content area so the scroll art overflows the frame visually. */
+/* Individual consumable slot. `z-index: 1` lifts it above the frame's
+   `::before` border-image pseudo so the scroll art + tooltip paint on
+   top of the 9-slice chrome — matches SigilBar's `.filledSlot` stacking. */
 .filledSlot {
     position: relative;
     box-sizing: border-box;
@@ -50,6 +67,7 @@
     height: clamp(58px, 7.2vw, 86px);
     flex-shrink: 0;
     cursor: pointer;
+    z-index: 1;
 }
 
 .filledSlotSelected {
@@ -118,16 +136,22 @@
 }
 
 /* ── Landscape phone compact ──
-   Height / slot size / border width mirror SigilBar.module.css's mobile
-   overrides so the two frames read as a matched pair side by side. */
+   Height / padding / gap / border width mirror SigilBar.module.css's
+   mobile overrides exactly so the two frames read as a matched pair
+   side by side. Only the consumable-specific `left` offset and frame
+   `width` (sized for MAX_CONSUMABLES slots) differ. */
 @media (max-height: 500px) {
     .wrapper {
         left: calc(100% + clamp(14px, 2vw, 32px));
         width: clamp(108px, 13vw, 148px);
         height: clamp(56px, 7.2vw, 76px);
+        padding: clamp(1px, 0.2vw, 3px) clamp(6px, 1vw, 14px);
+        gap: clamp(4px, 0.8vw, 10px);
+    }
+
+    .wrapper::before {
         border-width: 8px;
         border-image: var(--slot-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
-        gap: clamp(2px, 0.4vw, 6px);
     }
 
     .filledSlot {
@@ -136,7 +160,7 @@
     }
 
     .countLabel {
-        top: calc(100% + 4px);
         margin-top: 2px;
+        right: clamp(4px, 0.6vw, 10px);
     }
 }

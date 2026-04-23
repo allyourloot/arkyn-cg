@@ -50,6 +50,101 @@
     margin-left: clamp(4px, 0.6vw, 12px);
 }
 
+/* Sigils row — two-column layout: Reroll button on the left, Sigils
+   section filling the rest. Only wraps the Sigils row (the Consumables
+   section still uses the single-column .section below). */
+.sigilRow {
+    box-sizing: border-box;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: clamp(8px, 1.2vw, 18px);
+}
+
+.sigilRow > .section {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Reroll button — `inner-frame-green.png` 9-slice chrome, white label
+   stacked above the `{icon} {cost}` price chip (same style as the
+   GoldCounter / Bank chip so the "this costs gold" signal reads
+   consistently across the panel). */
+.rerollButton {
+    box-sizing: border-box;
+    flex-shrink: 0;
+    width: clamp(88px, 11vw, 150px);
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 16px;
+    border-image: var(--reroll-bg) 24 24 24 24 fill / 16px 16px 16px 16px;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: clamp(var(--font-size-xs), 1.5vw, var(--font-size-md));
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    cursor: pointer;
+    padding: clamp(6px, 1vh, 12px) clamp(4px, 0.6vw, 10px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(4px, 0.8vh, 10px);
+    image-rendering: pixelated;
+    transition: transform 80ms ease-out, filter 80ms ease-out;
+    pointer-events: auto;
+    line-height: 1;
+}
+
+.rerollButton:hover {
+    filter: brightness(1.12);
+    transform: translateY(-2px);
+}
+
+.rerollButton:active {
+    transform: translateY(1px) scale(0.97);
+}
+
+.rerollButton:disabled {
+    cursor: not-allowed;
+    filter: grayscale(0.4) brightness(0.75);
+    pointer-events: none;
+}
+
+.rerollLabel {
+    color: #ffffff;
+    line-height: 1;
+}
+
+/* Cost chip — gold icon + warm-gold number, mirrors the GoldCounter
+   (bank) styling so the button visually reads as "pay N gold". */
+.rerollCost {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1;
+}
+
+.rerollCostIcon {
+    width: clamp(14px, 1.6vw, 22px);
+    height: clamp(14px, 1.6vw, 22px);
+    image-rendering: pixelated;
+    filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.7));
+}
+
+.rerollCostValue {
+    font-size: clamp(var(--font-size-xs), 1.6vw, var(--font-size-md));
+    color: #ffd770;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
 /* --- Section containers (Sigils / Scrolls) --- */
 .section {
     box-sizing: border-box;
@@ -366,6 +461,37 @@
            both top and bottom minimal so the inner frame hugs the item
            cards and the overall panel height stays compact. */
         padding: clamp(2px, 0.4vh, 6px) clamp(2px, 0.4vw, 6px) clamp(1px, 0.2vh, 4px);
+    }
+
+    .sigilRow {
+        gap: clamp(4px, 0.8vw, 10px);
+    }
+
+    .rerollButton {
+        width: clamp(78px, 13vw, 130px);
+        border-width: 6px;
+        border-image: var(--reroll-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        padding: clamp(2px, 0.4vh, 6px) clamp(2px, 0.4vw, 6px);
+        gap: clamp(2px, 0.4vh, 6px);
+        font-size: var(--font-size-3xs);
+        letter-spacing: 0.5px;
+    }
+
+    /* Consumables inner frame reduces its vertical padding on mobile so
+       its rendered frame height matches the Sigils inner frame (which
+       sits alongside the taller-chrome Reroll button on its row). */
+    .consumablesSection {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .rerollCostIcon {
+        width: clamp(10px, 1.2vw, 16px);
+        height: clamp(10px, 1.2vw, 16px);
+    }
+
+    .rerollCostValue {
+        font-size: var(--font-size-3xs);
     }
 
     .itemGrid {

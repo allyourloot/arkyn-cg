@@ -3,6 +3,7 @@ import { gsap } from "gsap";
 import {
     sendReady,
     sendBuyItem,
+    sendRerollShop,
     useShopItems,
     useGold,
     useScrollLevels,
@@ -11,7 +12,7 @@ import {
     emitScrollPurchase,
     emitSigilPurchase,
 } from "../arkynStore";
-import { MAX_SIGILS, getScrollLevelsPerUse } from "../../shared";
+import { MAX_SIGILS, REROLL_COST, getScrollLevelsPerUse } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { playButton, playBuy } from "../sfx";
 import { ELEMENT_COLORS, RARITY_COLORS, createPanelStyleVars } from "./styles";
@@ -37,7 +38,10 @@ import styles from "./ShopScreen.module.css";
 const CONTENT_EXIT_S = 0.22;
 const CONTENT_ENTER_S = 0.32;
 
-const panelStyleVars = createPanelStyleVars();
+const panelStyleVars = {
+    ...createPanelStyleVars(),
+    "--reroll-bg": `url(${innerFrameGreenUrl})`,
+} as CSSProperties;
 const buttonStyleVars = {
     "--btn-bg": `url(${buttonGreenUrl})`,
     "--btn-bg-hover": `url(${buttonGreenHoverUrl})`,
@@ -171,6 +175,25 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         <div ref={panelRef} className={styles.panel} style={panelStyleVars}>
             {/* Sigils section */}
             <span className={styles.sectionLabel}>Sigils</span>
+            <div className={styles.sigilRow}>
+                <button
+                    type="button"
+                    className={styles.rerollButton}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (gold < REROLL_COST) return;
+                        sendRerollShop();
+                        playBuy();
+                        setSelectedShopIndex(null);
+                    }}
+                    disabled={gold < REROLL_COST}
+                >
+                    <span className={styles.rerollLabel}>Reroll</span>
+                    <span className={styles.rerollCost}>
+                        <img src={goldIconUrl} alt="Gold" className={styles.rerollCostIcon} />
+                        <span className={styles.rerollCostValue}>{REROLL_COST}</span>
+                    </span>
+                </button>
             <div className={styles.section}>
                 <div className={styles.itemGrid}>
                     {sigilItems.length > 0 ? sigilItems.map((item, i) => {
@@ -257,10 +280,11 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                     }) : null}
                 </div>
             </div>
+            </div>
 
             {/* Consumables section (scrolls + rune bags) */}
             <span className={styles.sectionLabel}>Consumables</span>
-            <div className={styles.section}>
+            <div className={`${styles.section} ${styles.consumablesSection}`}>
                 <div className={styles.itemGrid}>
                     {consumableItems.map((item, i) => {
                         const canAfford = gold >= item.cost;

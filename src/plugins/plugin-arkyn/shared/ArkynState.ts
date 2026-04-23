@@ -117,6 +117,11 @@ export class ArkynPlayerState extends Schema {
     // to enforce MAX_RUNE_BAGS_PER_SHOP.
     @type("number") bagPurchaseCount = 0;
 
+    // How many times the player has rerolled the sigil slots during the
+    // current shop visit. Reset to 0 on shop entry. Feeds the shop-sigil
+    // RNG so repeat rerolls are deterministic per run seed + round + index.
+    @type("number") shopRerollCount = 0;
+
     // How many times the player has discarded during the current round.
     // Reset to 0 in `initPlayerForRound`; incremented on each successful
     // discard BEFORE sigil discard-hooks fire, so the first discard carries

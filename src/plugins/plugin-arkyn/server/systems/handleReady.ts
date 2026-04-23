@@ -86,6 +86,10 @@ export function handleReady(
         // Fresh shop visit -> reset per-visit bag purchase counter so the
         // cap enforces MAX_RUNE_BAGS_PER_SHOP per shop (not per run).
         player.bagPurchaseCount = 0;
+        // Fresh shop visit -> reset reroll counter. The initial sigil roll
+        // below uses rerollCount=0; the client's Reroll button increments
+        // this and re-generates the sigil slots via handleRerollShop.
+        player.shopRerollCount = 0;
 
         // Sigil items first (top section in shop UI)
         for (const sigilId of sigilIds) {

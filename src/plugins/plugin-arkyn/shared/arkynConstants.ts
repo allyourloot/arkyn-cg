@@ -53,6 +53,12 @@ export const SHOP_SCROLL_COUNT = 2;   // scroll slots shown per shop visit
 export const MAX_SIGILS = 6;          // max sigils a player can hold
 export const SHOP_SIGIL_COUNT = 2;    // sigil slots shown per shop visit
 
+// Shop reroll configuration. Each reroll costs this much gold and
+// re-rolls ONLY the sigil slots (scrolls + rune bags stay put). The
+// player's `shopRerollCount` seeds the new roll so repeat rerolls are
+// deterministic per run seed + round + reroll index.
+export const REROLL_COST = 3;
+
 // Consumable inventory
 export const MAX_CONSUMABLES = 2;     // max consumable items a player can hold
 
@@ -97,6 +103,10 @@ export const ARKYN_USE_CONSUMABLE = "arkyn:use_consumable";
 //   index = number  -> player selected that rune (adds to pouch permanently)
 //   index = null    -> player skipped (no rune added, no refund)
 export const ARKYN_PICK_BAG_RUNE = "arkyn:pick_bag_rune";
+// Reroll the sigil section of the shop. No payload. Costs REROLL_COST
+// gold and regenerates the SHOP_SIGIL_COUNT sigil slots (scrolls + rune
+// bags are preserved in place).
+export const ARKYN_REROLL_SHOP = "arkyn:reroll_shop";
 
 // Debug-only message for dev testing. Grants a specific sigil to the
 // player without going through the shop (no gold cost, bypasses the

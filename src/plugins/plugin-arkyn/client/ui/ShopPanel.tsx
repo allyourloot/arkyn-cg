@@ -101,70 +101,80 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
 
             <span className={styles.heading}>Next Enemy</span>
 
-            {/* Section swaps between the enemy preview and the scroll-upgrade
-                display, mirroring SpellPreview's pattern. Keeps the upgrade
-                animation inside the panel's fixed 30vh section so the
-                bento / casts / gold chips below don't shift when a scroll
-                is bought or used. */}
+            {/* Section holds both the enemy preview and the scroll-upgrade
+                display. The enemy preview stays mounted (visibility: hidden
+                when the upgrade is showing) so the section keeps its
+                sized-by-enemy-content height — swapping to the shorter
+                upgrade preview doesn't shrink the section, and boss-round
+                content (Boss Round chip + debuff + affinity row) can grow
+                the section past the 32vh min without being clipped. */}
             <div className={styles.section}>
-                {upgradeDisplay ? (
-                    <ScrollUpgradeDisplay
-                        element={upgradeDisplay.element}
-                        oldLevel={upgradeDisplay.oldLevel}
-                        newLevel={upgradeDisplay.newLevel}
-                        variant="stacked"
-                    />
-                ) : (
-                    <>
-                        {elementIconUrl && (
-                            <img
-                                src={elementIconUrl}
-                                alt={enemyElement}
-                                className={styles.enemyIcon}
-                            />
-                        )}
-                        <BouncyText
-                            className={styles.enemyName}
-                            style={{ color: elementColor }}
-                        >
-                            {enemyName}
-                        </BouncyText>
-                        <span className={styles.enemyRound}>
-                            <BouncyText>{`Round ${nextRound}`}</BouncyText>
+                <div
+                    className={
+                        upgradeDisplay
+                            ? `${styles.enemyContent} ${styles.enemyContentHidden}`
+                            : styles.enemyContent
+                    }
+                    aria-hidden={upgradeDisplay ? true : undefined}
+                >
+                    {elementIconUrl && (
+                        <img
+                            src={elementIconUrl}
+                            alt={enemyElement}
+                            className={styles.enemyIcon}
+                        />
+                    )}
+                    <BouncyText
+                        className={styles.enemyName}
+                        style={{ color: elementColor }}
+                    >
+                        {enemyName}
+                    </BouncyText>
+                    <span className={styles.enemyRound}>
+                        <BouncyText>{`Round ${nextRound}`}</BouncyText>
+                    </span>
+                    {isBoss && (
+                        <span className={styles.bossWarning}>
+                            <BouncyText>Boss Round</BouncyText>
                         </span>
-                        {isBoss && (
-                            <span className={styles.bossWarning}>
-                                <BouncyText>Boss Round</BouncyText>
-                            </span>
-                        )}
-                        <span className={styles.enemyHp}>
-                            <BouncyText>{`${enemyMaxHp} HP`}</BouncyText>
+                    )}
+                    <span className={styles.enemyHp}>
+                        <BouncyText>{`${enemyMaxHp} HP`}</BouncyText>
+                    </span>
+                    {debuff && (
+                        <span className={styles.debuffChip}>
+                            <BouncyText>{debuff.description}</BouncyText>
                         </span>
-                        {debuff && (
-                            <span className={styles.debuffChip}>
-                                <BouncyText>{debuff.description}</BouncyText>
-                            </span>
-                        )}
+                    )}
 
-                        {(resistances.length > 0 || weaknesses.length > 0) && (
-                            <div className={styles.affinityContainer}>
-                                {resistances.length > 0 && (
-                                    <AffinitySection
-                                        label="Resists"
-                                        labelClass={styles.affinityLabelResist}
-                                        elements={resistances}
-                                    />
-                                )}
-                                {weaknesses.length > 0 && (
-                                    <AffinitySection
-                                        label="Vulnerable"
-                                        labelClass={styles.affinityLabelWeak}
-                                        elements={weaknesses}
-                                    />
-                                )}
-                            </div>
-                        )}
-                    </>
+                    {(resistances.length > 0 || weaknesses.length > 0) && (
+                        <div className={styles.affinityContainer}>
+                            {resistances.length > 0 && (
+                                <AffinitySection
+                                    label="Resists"
+                                    labelClass={styles.affinityLabelResist}
+                                    elements={resistances}
+                                />
+                            )}
+                            {weaknesses.length > 0 && (
+                                <AffinitySection
+                                    label="Vulnerable"
+                                    labelClass={styles.affinityLabelWeak}
+                                    elements={weaknesses}
+                                />
+                            )}
+                        </div>
+                    )}
+                </div>
+                {upgradeDisplay && (
+                    <div className={styles.upgradeOverlay}>
+                        <ScrollUpgradeDisplay
+                            element={upgradeDisplay.element}
+                            oldLevel={upgradeDisplay.oldLevel}
+                            newLevel={upgradeDisplay.newLevel}
+                            variant="stacked"
+                        />
+                    </div>
                 )}
             </div>
 
