@@ -299,3 +299,45 @@
     height: clamp(12px, 1.4vw, 18px);
     image-rendering: pixelated;
 }
+
+/* ── Landscape phone compact ──
+   The desktop sigil frame is ~120px tall × ~640px wide; at a 500-high
+   viewport that eats a quarter of the screen. Scale slots down, thin
+   the 9-slice border from 24px to 8px, and tighten the gap so the
+   six-slot row fits the phone's width without dominating vertical space.
+   Frame height / slot size / border width are shared with ConsumableBar's
+   mobile override so the two frames read as a matched pair. */
+@media (max-height: 500px) {
+    /* On mobile the left SpellPreview panel is wider than the right spacer,
+       so the centerColumn (play area + hand frame) sits right of viewport
+       center. Shift the wrapper right by half that asymmetry so the frame
+       aligns with the play area / hand frame rather than the viewport.
+       ~4vw derived from (SpellPreview.mobile 24vw - rightSpacer.mobile 16vw) / 2. */
+    .wrapper {
+        top: clamp(6px, 1.6vh, 18px);
+        left: calc(50% + clamp(36px, 4vw, 52px));
+        gap: clamp(4px, 0.8vw, 10px);
+    }
+
+    .sigilFrame {
+        width: clamp(332px, 44vw, 468px);
+        height: clamp(56px, 7.2vw, 76px);
+        padding: clamp(1px, 0.2vw, 3px) clamp(6px, 1vw, 14px);
+        gap: clamp(4px, 0.8vw, 10px);
+    }
+
+    .sigilFrame::before {
+        border-width: 8px;
+        border-image: var(--slot-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+    }
+
+    .filledSlot {
+        width: clamp(40px, 5.2vw, 58px);
+        height: clamp(40px, 5.2vw, 58px);
+    }
+
+    .countLabel {
+        margin-top: 2px;
+        right: clamp(4px, 0.6vw, 10px);
+    }
+}

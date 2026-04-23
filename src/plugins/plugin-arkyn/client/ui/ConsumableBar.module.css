@@ -116,3 +116,27 @@
 .useButton:active {
     transform: translateY(-50%) scale(0.95);
 }
+
+/* ── Landscape phone compact ──
+   Height / slot size / border width mirror SigilBar.module.css's mobile
+   overrides so the two frames read as a matched pair side by side. */
+@media (max-height: 500px) {
+    .wrapper {
+        left: calc(100% + clamp(14px, 2vw, 32px));
+        width: clamp(108px, 13vw, 148px);
+        height: clamp(56px, 7.2vw, 76px);
+        border-width: 8px;
+        border-image: var(--slot-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        gap: clamp(2px, 0.4vw, 6px);
+    }
+
+    .filledSlot {
+        width: clamp(40px, 5.2vw, 58px);
+        height: clamp(40px, 5.2vw, 58px);
+    }
+
+    .countLabel {
+        top: calc(100% + 4px);
+        margin-top: 2px;
+    }
+}
