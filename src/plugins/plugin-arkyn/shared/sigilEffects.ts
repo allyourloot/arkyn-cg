@@ -420,7 +420,8 @@ export type RoundStartEffect =
     | { type: "grantConsumable"; consumableId: string }
     | { type: "grantGold"; amount: number }
     | { type: "grantStat"; stat: "castsRemaining" | "discardsRemaining" | "handSize"; amount: number }
-    | { type: "disableResistance"; element: string };
+    | { type: "disableResistance"; element: string }
+    | { type: "setAhoyElement"; element: string };
 
 /**
  * Context passed to round-start lifecycle hooks. Carries the freshly-spawned
@@ -450,6 +451,7 @@ export interface SigilLifecycleHooks {
 
 const THIEF_RNG_OFFSET = lifecycleRngSlot(0);
 const BINOCULARS_RNG_OFFSET = lifecycleRngSlot(1);
+const AHOY_RNG_OFFSET = lifecycleRngSlot(2);
 
 export const SIGIL_LIFECYCLE_HOOKS: Record<string, SigilLifecycleHooks> = {
     thief: {
@@ -474,6 +476,19 @@ export const SIGIL_LIFECYCLE_HOOKS: Record<string, SigilLifecycleHooks> = {
             const rng = createRoundRng(runSeed, BINOCULARS_RNG_OFFSET + round + ctx.copyIndex * 1000);
             const element = ctx.enemyResistances[Math.floor(rng() * ctx.enemyResistances.length)];
             return [{ type: "disableResistance", element }];
+        },
+    },
+    ahoy: {
+        onRoundStart(round, runSeed, ctx) {
+            // Pick this round's "ahoy element" — discarding any rune of this
+            // element during the round earns bonus gold via the discard hook
+            // below. `copyIndex * 1000` jitters the seed so a Mimic copy
+            // rolls a different element than the original (though only one
+            // ahoy element survives on `player.ahoyDiscardElement` — the
+            // last-processed hook wins, same one-slot pattern as Binoculars).
+            const rng = createRoundRng(runSeed, AHOY_RNG_OFFSET + round + ctx.copyIndex * 1000);
+            const element = ELEMENT_TYPES[Math.floor(rng() * ELEMENT_TYPES.length)];
+            return [{ type: "setAhoyElement", element }];
         },
     },
 };
@@ -1044,6 +1059,13 @@ export interface DiscardContext {
         rarity: string;
         level: number;
     }[];
+    /**
+     * The element Ahoy rolled for this round (empty string if Ahoy isn't
+     * owned or hasn't rolled yet). Plumbed through the ctx rather than
+     * read from player state inside the hook so server + client preview
+     * share the same inputs.
+     */
+    readonly ahoyElement: string;
 }
 
 /**
@@ -1072,6 +1094,22 @@ export const SIGIL_DISCARD_HOOKS: Record<string, DiscardHookDefinition> = {
                 { type: "banishRune", runeIndex: 0 },
                 { type: "grantGold", amount: 4 },
             ];
+        },
+    },
+    ahoy: {
+        onDiscard(ctx) {
+            // 5g per discarded rune matching this round's ahoy element. The
+            // element is rolled by the lifecycle hook above and plumbed
+            // through ctx so server + client preview see identical inputs.
+            // Mimic-compatible: a mimic-copied ahoy re-runs this hook, so
+            // the same element pays out twice per matching rune.
+            if (!ctx.ahoyElement) return [];
+            let matches = 0;
+            for (const rune of ctx.runes) {
+                if (rune.element === ctx.ahoyElement) matches++;
+            }
+            if (matches === 0) return [];
+            return [{ type: "grantGold", amount: 5 * matches }];
         },
     },
 };

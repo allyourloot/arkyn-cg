@@ -1182,10 +1182,18 @@ function previewDiscardEffects(
     sigils: readonly string[],
     discardNumber: number,
     runes: readonly { id: string; element: string; rarity: string; level: number }[],
+    ahoyElement: string,
 ): { banishIndex: number; grantedGold: number; sigilId: string } | null {
-    // Mirrors the server's handleDiscard dispatcher — Mimic copies only show
-    // up for Mimic-compatible discard hooks, which today is none (Banish is
-    // incompatible), so this is future-proofing.
+    // Mirrors the server's handleDiscard dispatcher — Mimic copies expand
+    // to whichever Mimic-compatible hook sits to the right (e.g. Ahoy),
+    // so a Mimic+Ahoy pair fires the hook twice and doubles the gold.
+    // Walk every expanded entry and sum gold across all of them so the
+    // preview matches the server's authoritative credit. `sigilId` keeps
+    // the FIRST firing sigil's id for UX anchoring (shake + bubble land
+    // on whichever sigil triggered the proc flow).
+    let banishIndex = -1;
+    let grantedGold = 0;
+    let firstSigilId = "";
     for (const sigilId of expandMimicSigilsDetailed(sigils).map(e => e.sigilId)) {
         const hook = SIGIL_DISCARD_HOOKS[sigilId];
         if (!hook?.onDiscard) continue;
@@ -1193,17 +1201,17 @@ function previewDiscardEffects(
             discardNumber,
             runeCount: runes.length,
             runes,
+            ahoyElement,
         });
         if (!effects || effects.length === 0) continue;
-        let banishIndex = -1;
-        let grantedGold = 0;
         for (const e of effects) {
-            if (e.type === "banishRune") banishIndex = e.runeIndex;
+            if (e.type === "banishRune" && banishIndex < 0) banishIndex = e.runeIndex;
             else if (e.type === "grantGold") grantedGold += e.amount;
         }
-        if (banishIndex >= 0 || grantedGold > 0) {
-            return { banishIndex, grantedGold, sigilId };
-        }
+        if (!firstSigilId) firstSigilId = sigilId;
+    }
+    if (banishIndex >= 0 || grantedGold > 0) {
+        return { banishIndex, grantedGold, sigilId: firstSigilId };
     }
     return null;
 }
@@ -1251,10 +1259,12 @@ export function discardRunes() {
         rarity: d.rune.rarity,
         level: d.rune.level,
     }));
+    const ahoyElement = arkynStoreInternal.getAhoyDiscardElement();
     const discardPreview = previewDiscardEffects(
         sigils,
         priorDiscards + 1,
         discardedRuneData,
+        ahoyElement,
     );
 
     if (discardPreview && discardPreview.banishIndex >= 0) {
@@ -1272,6 +1282,12 @@ export function discardRunes() {
         discardingRunes = discs;
         isDiscardAnimating = true;
         arkynStoreInternal.clearSelection();
+        // Gold-only discard proc (Ahoy) — freeze the displayed gold so the
+        // bubble + sigil reaction pop on the pre-proc value before the
+        // commit tick unlocks it in sync with the SFX.
+        if (discardPreview && discardPreview.grantedGold > 0) {
+            arkynStoreInternal.lockGoldDisplay();
+        }
         notify();
     });
 
@@ -1288,6 +1304,33 @@ export function discardRunes() {
             notify();
         },
     });
+
+    // Gold-only proc (Ahoy): shake the triggering sigil, pop the
+    // "+N Gold" bubble over its slot + over the gold counter, and tick
+    // the counter in sync with the SFX. Same cadence as the Banish flow's
+    // reward beats so the two proc UXes read as siblings.
+    if (discardPreview && discardPreview.grantedGold > 0) {
+        setTimeout(() => {
+            sigilShakeSeq++;
+            activeSigilShake = { sigilId: discardPreview.sigilId, seq: sigilShakeSeq };
+            arkynStoreInternal.triggerSigilProcBubble(discardPreview.sigilId, discardPreview.grantedGold);
+            arkynStoreInternal.triggerGoldProcBubble(discardPreview.grantedGold);
+            notify();
+        }, BANISH_SIGIL_REACT_DELAY_MS);
+
+        setTimeout(() => {
+            playGold();
+            arkynStoreInternal.addDisplayedGold(discardPreview.grantedGold);
+            arkynStoreInternal.unlockGoldDisplayAndSyncToServer();
+            notify();
+        }, BANISH_GOLD_COMMIT_DELAY_MS);
+
+        setTimeout(() => {
+            arkynStoreInternal.clearSigilProcBubble();
+            arkynStoreInternal.clearGoldProcBubble();
+            notify();
+        }, BANISH_GOLD_COMMIT_DELAY_MS + BANISH_CLEANUP_EXTRA_MS);
+    }
 }
 
 /**

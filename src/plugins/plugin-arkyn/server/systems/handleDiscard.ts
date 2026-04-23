@@ -45,6 +45,7 @@ export function handleDiscard(
             discardNumber: player.discardsUsedThisRound,
             runeCount: discardedRunes.length,
             runes: discardedRunes,
+            ahoyElement: player.ahoyDiscardElement,
         });
         if (!effects) continue;
         for (const effect of effects) {

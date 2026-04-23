@@ -153,6 +153,11 @@ let consumables: string[] = [];
 // on the server. Empty string = no disabled resistance.
 let disabledResistance = "";
 
+// Element that Ahoy rolled for this round — discarding runes of this
+// element earns bonus gold. Mirrors player.ahoyDiscardElement on the
+// server. Empty string = no active ahoy element (Ahoy not owned).
+let ahoyDiscardElement = "";
+
 // Runes acquired this run from Rune Bag picks. These are rehydrated into
 // the pouch every round on the server side; the client mirrors the list
 // so PouchModal can show the extra slots (with real rarity art) and
@@ -331,6 +336,9 @@ export function setConsumables(c: string[]) { consumables = c; notify(); }
 
 // Dynamic resist-ignore setter — synced from player.disabledResistance.
 export function setDisabledResistance(e: string) { disabledResistance = e; notify(); }
+
+// Ahoy's per-round element setter — synced from player.ahoyDiscardElement.
+export function setAhoyDiscardElement(e: string) { ahoyDiscardElement = e; notify(); }
 
 // Rune Bag setters
 export function setAcquiredRunes(r: RuneClientData[]) { acquiredRunes = r; notify(); }
@@ -563,6 +571,7 @@ export const arkynStoreInternal = {
     getSigils: () => sigils,
     getSigilAccumulators: () => sigilAccumulators,
     getDisabledResistance: () => disabledResistance,
+    getAhoyDiscardElement: () => ahoyDiscardElement,
     getCastsRemaining: () => castsRemaining,
     getCurrentRound: () => currentRound,
     getRunSeed: () => runSeed,
@@ -705,6 +714,10 @@ export function useConsumables() { return useSyncExternalStore(subscribe, () => 
 // Dynamic resist-ignore hook — the element (if any) that Binoculars picked
 // for this round. Empty string when no dynamic ignore is active.
 export function useDisabledResistance() { return useSyncExternalStore(subscribe, () => disabledResistance); }
+
+// Ahoy's per-round element hook — the element (if any) Ahoy rolled this
+// round. Empty string when Ahoy isn't owned or hasn't rolled yet.
+export function useAhoyDiscardElement() { return useSyncExternalStore(subscribe, () => ahoyDiscardElement); }
 
 // Rune Bag hooks
 export function useAcquiredRunes() { return useSyncExternalStore(subscribe, () => acquiredRunes); }

@@ -42,6 +42,7 @@ import {
     setSigilAccumulators,
     setConsumables,
     setDisabledResistance,
+    setAhoyDiscardElement,
     setAcquiredRunes,
     setPendingBagRunes,
     setBanishedRunes,
@@ -183,6 +184,7 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevSigilAccumulators: Record<string, number> = {};
     let prevConsumables: string[] = [];
     let prevDisabledResistance = "";
+    let prevAhoyDiscardElement = "";
     // Gate the add-consumable SFX so the first sync after join/reconnect
     // doesn't bleep for pre-existing consumables on the player's state.
     // Subsequent grows (Thief at round start, future consumable-granting
@@ -465,6 +467,12 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (player.disabledResistance !== prevDisabledResistance) {
             prevDisabledResistance = player.disabledResistance;
             setDisabledResistance(prevDisabledResistance);
+        }
+
+        // Sync Ahoy's per-round discard-gold element.
+        if (player.ahoyDiscardElement !== prevAhoyDiscardElement) {
+            prevAhoyDiscardElement = player.ahoyDiscardElement;
+            setAhoyDiscardElement(prevAhoyDiscardElement);
         }
 
         // Sync consumables

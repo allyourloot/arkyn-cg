@@ -1,4 +1,4 @@
-import { MAX_SIGILS, SIGIL_DEFINITIONS, type ArkynState } from "../../shared";
+import { MAX_CONSUMABLES, MAX_SIGILS, SIGIL_DEFINITIONS, SIGIL_LIFECYCLE_HOOKS, type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
 
 const logger = new Logger("ArkynDebugGrantSigil");
@@ -48,6 +48,44 @@ export function handleDebugGrantSigil(
     }
 
     player.sigils.push(sigilId);
+
+    // Fire the granted sigil's round-start lifecycle hook immediately so
+    // round-scoped state (Ahoy's discard element, Binoculars' disabled
+    // resistance, Thief's scroll) reflects the sigil on the CURRENT round
+    // instead of waiting for the next round start. Mirrors the dispatch
+    // logic in `initPlayerForRound` but scoped to the newly-granted sigil.
+    const hooks = SIGIL_LIFECYCLE_HOOKS[sigilId];
+    if (hooks?.onRoundStart) {
+        const effects = hooks.onRoundStart(player.currentRound, player.runSeed, {
+            enemyResistances: Array.from(player.enemy.resistances),
+            enemyWeaknesses: Array.from(player.enemy.weaknesses),
+            copyIndex: 0,
+        });
+        if (effects) {
+            for (const effect of effects) {
+                switch (effect.type) {
+                    case "grantConsumable":
+                        if (player.consumables.length < MAX_CONSUMABLES) {
+                            player.consumables.push(effect.consumableId);
+                        }
+                        break;
+                    case "grantGold":
+                        player.gold += effect.amount;
+                        break;
+                    case "grantStat":
+                        player[effect.stat] += effect.amount;
+                        break;
+                    case "disableResistance":
+                        player.disabledResistance = effect.element;
+                        break;
+                    case "setAhoyElement":
+                        player.ahoyDiscardElement = effect.element;
+                        break;
+                }
+            }
+        }
+    }
+
     logger.info(
         `[DEBUG] Player ${client.sessionId} granted "${sigilId}". ` +
         `Sigils: ${Array.from(player.sigils).join(", ")}`,

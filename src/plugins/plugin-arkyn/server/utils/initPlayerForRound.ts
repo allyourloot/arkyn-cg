@@ -63,6 +63,10 @@ export function initPlayerForRound(
     // reassigns it below; otherwise stays empty so the enemy's full
     // resistance set applies normally.
     player.disabledResistance = "";
+    // Same for Ahoy's per-round discard-gold element — lifecycle hook
+    // rerolls below if Ahoy is owned, otherwise stays empty so the
+    // discard hook is a no-op.
+    player.ahoyDiscardElement = "";
     // Reset the per-round discard counter so discard-hook sigils (Banish)
     // see `discardNumber: 1` on the first discard of the new round.
     player.discardsUsedThisRound = 0;
@@ -103,6 +107,9 @@ export function initPlayerForRound(
                     break;
                 case "disableResistance":
                     player.disabledResistance = effect.element;
+                    break;
+                case "setAhoyElement":
+                    player.ahoyDiscardElement = effect.element;
                     break;
             }
         }

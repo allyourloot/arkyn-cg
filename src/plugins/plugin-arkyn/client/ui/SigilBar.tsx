@@ -3,7 +3,7 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { MAX_SIGILS, MIMIC_INCOMPATIBLE, SIGIL_ACCUMULATOR_XMULT, SIGIL_INVENTORY_MULT } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
-import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, registerSigilFrame, usePendingSigilId, useSigilProcBubble } from "../arkynStore";
+import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, registerSigilFrame, usePendingSigilId, useSigilProcBubble, useAhoyDiscardElement } from "../arkynStore";
 import { RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
 import { haptic, HAPTIC_LIGHT } from "../haptics";
 import ItemScene from "./ItemScene";
@@ -13,6 +13,8 @@ import handFrameUrl from "/assets/ui/hand-frame.png?url";
 import innerFrameUrl from "/assets/ui/inner-frame.png?url";
 import { HAS_HOVER } from "./utils/hasHover";
 import { renderDescription, SigilExplainer } from "./descriptionText";
+import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
+import { ELEMENT_COLORS } from "./styles";
 import { useSigilDragReorder } from "./hooks/useSigilDragReorder";
 import ConsumableBar from "./ConsumableBar";
 import styles from "./SigilBar.module.css";
@@ -44,6 +46,7 @@ export default function SigilBar() {
     const activeSigilShake = useActiveSigilShake();
     const pendingSigilId = usePendingSigilId();
     const sigilProcBubble = useSigilProcBubble();
+    const ahoyDiscardElement = useAhoyDiscardElement();
     const barRef = useRef<HTMLDivElement>(null);
     const frameRef = useRef<HTMLDivElement>(null);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -238,7 +241,9 @@ export default function SigilBar() {
                                     </span>
                                     <div className={styles.tooltipDescWrap}>
                                         <span className={styles.tooltipDesc}>
-                                            {renderDescription(def.description)}
+                                            {def.id === "ahoy"
+                                                ? renderAhoyDescription(ahoyDiscardElement)
+                                                : renderDescription(def.description)}
                                         </span>
                                         {def.explainer && (
                                             <SigilExplainer
@@ -268,6 +273,11 @@ export default function SigilBar() {
                                             </div>
                                         )}
                                     </div>
+                                    {def.id === "ahoy" && (
+                                        <span className={styles.tooltipAhoyHint}>
+                                            Rune element changes each round.
+                                        </span>
+                                    )}
                                     {/* Live-value rows (accumulator xMult / inventory-mult) sit
                                         in the slot the rarity badge used to occupy — keeps the
                                         tooltip layout uniform for sigils that have a growing
@@ -333,6 +343,64 @@ export default function SigilBar() {
             </div>
             <ConsumableBar />
         </div>
+    );
+}
+
+/**
+ * Custom description renderer for the Ahoy sigil — inlines the current
+ * round's element icon + capitalized name inside the sentence so the
+ * description reads "Earn +5 Gold for each discarded [icon] Fire." with
+ * the element color applied to the name. Falls back to a generic "rune"
+ * word when no element has been rolled yet (e.g. Ahoy granted mid-run
+ * before its first round-start hook fires).
+ */
+function renderAhoyDescription(element: string) {
+    const runeUrl = element ? getRuneImageUrl(element) : "";
+    const baseUrl = getBaseRuneImageUrl("common");
+    const capitalized = element
+        ? element.charAt(0).toUpperCase() + element.slice(1)
+        : null;
+    const color = element ? ELEMENT_COLORS[element] : undefined;
+    return (
+        <>
+            Earn <span style={{ color: "#309f30" }}>+5 Gold</span> for each discarded{" "}
+            {element ? (
+                <>
+                    <span
+                        style={{
+                            position: "relative",
+                            display: "inline-block",
+                            width: "18px",
+                            height: "18px",
+                            verticalAlign: "text-bottom",
+                            marginRight: "3px",
+                        }}
+                    >
+                        {baseUrl && (
+                            <img
+                                src={baseUrl}
+                                alt=""
+                                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", imageRendering: "pixelated" }}
+                                draggable={false}
+                            />
+                        )}
+                        {runeUrl && (
+                            <img
+                                src={runeUrl}
+                                alt={element}
+                                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", imageRendering: "pixelated" }}
+                                draggable={false}
+                            />
+                        )}
+                    </span>
+                    <span style={{ color }}>{capitalized}</span>
+                    {" "}rune
+                </>
+            ) : (
+                <span style={{ fontStyle: "italic" }}>rune</span>
+            )}
+            .
+        </>
     );
 }
 

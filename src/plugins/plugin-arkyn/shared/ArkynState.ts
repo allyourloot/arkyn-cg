@@ -96,6 +96,12 @@ export class ArkynPlayerState extends Schema {
     // never leak across matchups.
     @type("string") disabledResistance = "";
 
+    // Element whose discards grant bonus gold this round (Ahoy sigil). Empty
+    // string = no ahoy element active. Rolled at round start via the
+    // lifecycle hook and cleared by initPlayerForRound at the next round
+    // so stale picks never leak across matchups.
+    @type("string") ahoyDiscardElement = "";
+
     // Current shop inventory — populated on entering the shop phase and
     // synced to the client for rendering. Each entry tracks whether the
     // item has been purchased so the client can grey it out.
