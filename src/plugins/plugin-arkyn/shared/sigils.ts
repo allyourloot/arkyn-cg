@@ -181,7 +181,7 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         id: "executioner",
         name: "Executioner",
         rarity: "rare",
-        description: "Gain {+0.2x Mult} per Critical Hit. {Persists} across rounds.",
+        description: "Gain [[+0.1x Mult]] per Critical Hit.",
         cost: 6,
         sellPrice: 3,
     },

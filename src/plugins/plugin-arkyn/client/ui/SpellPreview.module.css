@@ -160,20 +160,6 @@
     font-size: 0.85em;
 }
 
-/* Scroll upgrade area — just the bounding box; the actual upgrade content
-   (rune + old→new damage row) lives in the shared ScrollUpgradeDisplay
-   component. position: relative anchors the component's "overlay" variant,
-   which absolute-positions itself inside this container so appearing/
-   disappearing doesn't shift the damage chips below. */
-.upgradeArea {
-    position: relative;
-    flex: 1;
-    min-height: 0;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
 
 /* Damage section — a vertical stack with the Base + Mult horizontal
    chip pair on top and the post-mult Total chip below. The Total chip

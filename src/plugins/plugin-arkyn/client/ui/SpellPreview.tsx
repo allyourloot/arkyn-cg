@@ -85,6 +85,10 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     const castMultCounter = useCastMultCounter();
     const castsRemaining = useCastsRemaining();
     const discardsRemaining = useDiscardsRemaining();
+    // Scroll upgrade takes over the .section inner-frame while active —
+    // we swap the spell-info children for the upgrade row so the two
+    // don't visually overlap. Hook returns null when idle.
+    const upgradeDisplay = useScrollUpgradeDisplay();
 
     const damageRef = useRef<HTMLSpanElement>(null);
     const totalRef = useRef<HTMLSpanElement>(null);
@@ -182,12 +186,18 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
             <div ref={ref} className={styles.panel} style={panelStyleVars}>
                 <RoundInfo />
                 <div className={styles.section}>
-                    <BouncyText className={styles.empty}>
-                        Select runes to preview spell
-                    </BouncyText>
-                </div>
-                <div className={styles.upgradeArea}>
-                    <LiveScrollUpgrade />
+                    {upgradeDisplay ? (
+                        <ScrollUpgradeDisplay
+                            element={upgradeDisplay.element}
+                            oldLevel={upgradeDisplay.oldLevel}
+                            newLevel={upgradeDisplay.newLevel}
+                            variant="stacked"
+                        />
+                    ) : (
+                        <BouncyText className={styles.empty}>
+                            Select runes to preview spell
+                        </BouncyText>
+                    )}
                 </div>
                 <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} multRef={multRef} totalRef={totalRef} />
                 <StatBentoRow castsValue={castsRemaining} discardsValue={discardsRemaining} />
@@ -204,8 +214,23 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
             {/* Header section: rune recipe + spell name + tier + description.
                 Description used to live in its own inner-frame below the
                 damage counter; now it sits inside this section directly
-                under the tier so the spell info reads as one unit. */}
+                under the tier so the spell info reads as one unit.
+
+                When a scroll upgrade is active, we swap the section's
+                entire content for the upgrade animation — hiding spell
+                info while it plays so the two layers don't visually
+                fight for the same real estate. The upgrade auto-expires
+                and the spell info returns. */}
             <div className={styles.section}>
+                {upgradeDisplay ? (
+                    <ScrollUpgradeDisplay
+                        element={upgradeDisplay.element}
+                        oldLevel={upgradeDisplay.oldLevel}
+                        newLevel={upgradeDisplay.newLevel}
+                        variant="stacked"
+                    />
+                ) : (
+                <>
                 {/* Rune recipe — one tile per contributing rune so the
                     player can see the actual element mix that produced
                     this spell (e.g. Hailstorm = 2 Ice + 1 Air) instead
@@ -328,10 +353,8 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
                 <BouncyText className={styles.description}>
                     {spell.description}
                 </BouncyText>
-            </div>
-
-            <div className={styles.upgradeArea}>
-                <LiveScrollUpgrade />
+                </>
+                )}
             </div>
 
             <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} multRef={multRef} totalRef={totalRef} />
@@ -341,23 +364,6 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     );
 }
 
-/**
- * Thin wrapper around the shared `ScrollUpgradeDisplay` that reads the
- * live upgrade hook and renders the overlay variant (absolute-positioned
- * inside the upgradeArea so it doesn't shift the damage chips below).
- */
-function LiveScrollUpgrade() {
-    const upgradeDisplay = useScrollUpgradeDisplay();
-    if (!upgradeDisplay) return null;
-    return (
-        <ScrollUpgradeDisplay
-            element={upgradeDisplay.element}
-            oldLevel={upgradeDisplay.oldLevel}
-            newLevel={upgradeDisplay.newLevel}
-            variant="overlay"
-        />
-    );
-}
 
 type DamageChipsProps = {
     base: number | string;
@@ -367,6 +373,15 @@ type DamageChipsProps = {
     multRef?: RefObject<HTMLSpanElement | null>;
     totalRef: RefObject<HTMLSpanElement | null>;
 };
+
+/**
+ * Round any numeric chip value so the display never shows IEEE 754 drift
+ * (e.g. Executioner's 0.2x increments compound into `6.00000023841857`
+ * once multiplied through Base). Strings like "-" pass through unchanged.
+ */
+function formatChipValue(v: number | string): number | string {
+    return typeof v === "number" ? Math.round(v) : v;
+}
 
 /**
  * Damage section: a vertical stack with the Base + Mult chips on top and
@@ -387,12 +402,15 @@ const DamageChips = memo(function DamageChips({
     multRef,
     totalRef,
 }: DamageChipsProps) {
+    const baseDisplay = formatChipValue(base);
+    const multDisplay = formatChipValue(mult);
+    const totalDisplay = formatChipValue(total);
     return (
         <div className={styles.damageSection}>
             <div className={styles.damageChipColumn}>
                 <span className={styles.damageChipLabel}>Total</span>
                 <div className={`${styles.damageChip} ${styles.damageChipTotal}`}>
-                    <BouncyText ref={totalRef} className={styles.damageChipValue}>{total}</BouncyText>
+                    <BouncyText ref={totalRef} className={styles.damageChipValue}>{totalDisplay}</BouncyText>
                 </div>
             </div>
             <div className={styles.damageRow}>
@@ -405,7 +423,7 @@ const DamageChips = memo(function DamageChips({
                             with the per-char translateY animation on the
                             inner spans. */}
                         <BouncyText ref={baseRef} className={styles.damageChipValue}>
-                            {base}
+                            {baseDisplay}
                         </BouncyText>
                     </div>
                 </div>
@@ -414,7 +432,7 @@ const DamageChips = memo(function DamageChips({
                     <span className={styles.damageChipLabel}>Mult</span>
                     <div className={`${styles.damageChip} ${styles.damageChipMult}`}>
                         <BouncyText ref={multRef} className={styles.damageChipValue}>
-                            {mult}
+                            {multDisplay}
                         </BouncyText>
                     </div>
                 </div>

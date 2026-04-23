@@ -189,11 +189,15 @@ let castsUsedThisRound = 0;
 // the slot falls back to the standard card render.
 let materializingRune: { id: string; startTime: number; duration: number } | null = null;
 
-// Per-sigil proc bubble — renders a floating "+N Gold" overlay anchored
-// to the matching sigil's SigilBar slot. Single active bubble at a time
-// (new procs replace the old); monotonic `seq` forces a fresh React
-// mount so GSAP replays the pop animation on back-to-back procs.
-let sigilProcBubble: { sigilId: string; amount: number; kind: "gold"; seq: number } | null = null;
+// Per-sigil proc bubble — renders a floating overlay anchored to the
+// matching sigil's SigilBar slot. Single active bubble at a time (new
+// procs replace the old); monotonic `seq` forces a fresh React mount
+// so GSAP replays the pop animation on back-to-back procs.
+// Kinds:
+//   - "gold":  "+N [gold icon]" (Fortune / Banish grants).
+//   - "xmult": "+N.Nx" in a red-bg / white-text pill (Executioner's
+//              accumulator increment per critical hit).
+let sigilProcBubble: { sigilId: string; amount: number; kind: "gold" | "xmult"; seq: number } | null = null;
 let sigilProcSeq = 0;
 
 // Run stats — synced from server for the game-over screen.
@@ -597,7 +601,7 @@ export const arkynStoreInternal = {
      * (or in place of) the GoldCounter's own "+N" overlay. Fresh `seq`
      * remounts the bubble so back-to-back procs replay the animation.
      */
-    triggerSigilProcBubble(sigilId: string, amount: number, kind: "gold" = "gold") {
+    triggerSigilProcBubble(sigilId: string, amount: number, kind: "gold" | "xmult" = "gold") {
         sigilProcBubble = { sigilId, amount, kind, seq: ++sigilProcSeq };
     },
     clearSigilProcBubble() {

@@ -224,26 +224,16 @@ export default function SigilBar() {
                                     <span className={styles.tooltipName}>
                                         {def.name}
                                     </span>
+                                    <span
+                                        className={styles.tooltipRarity}
+                                        style={{ backgroundColor: rarityBg }}
+                                    >
+                                        {def.rarity}
+                                    </span>
                                     <div className={styles.tooltipDescWrap}>
                                         <span className={styles.tooltipDesc}>
                                             {renderDescription(def.description)}
                                         </span>
-                                        {accumulatorValue !== null && (
-                                            <div className={styles.tooltipCurrentRow}>
-                                                <span className={styles.tooltipCurrentLabel}>Current:</span>
-                                                <span className={styles.tooltipCurrentValue}>
-                                                    {`x${accumulatorValue.toFixed(1)} Mult`}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {inventoryMultValue !== null && (
-                                            <div className={styles.tooltipCurrentRow}>
-                                                <span className={styles.tooltipCurrentLabel}>Current:</span>
-                                                <span className={styles.tooltipCurrentValue}>
-                                                    {`+${inventoryMultValue} Mult`}
-                                                </span>
-                                            </div>
-                                        )}
                                         {def.explainer && (
                                             <SigilExplainer
                                                 label={def.explainer.label}
@@ -272,12 +262,26 @@ export default function SigilBar() {
                                             </div>
                                         )}
                                     </div>
-                                    <span
-                                        className={styles.tooltipRarity}
-                                        style={{ backgroundColor: rarityBg }}
-                                    >
-                                        {def.rarity}
-                                    </span>
+                                    {/* Live-value rows (accumulator xMult / inventory-mult) sit
+                                        in the slot the rarity badge used to occupy — keeps the
+                                        tooltip layout uniform for sigils that have a growing
+                                        number to surface. */}
+                                    {accumulatorValue !== null && (
+                                        <div className={styles.tooltipCurrentRow}>
+                                            <span className={styles.tooltipCurrentLabel}>Current:</span>
+                                            <span className={styles.tooltipCurrentValue}>
+                                                {`x${accumulatorValue.toFixed(1)} Mult`}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {inventoryMultValue !== null && (
+                                        <div className={styles.tooltipCurrentRow}>
+                                            <span className={styles.tooltipCurrentLabel}>Current:</span>
+                                            <span className={styles.tooltipCurrentValue}>
+                                                {`+${inventoryMultValue} Mult`}
+                                            </span>
+                                        </div>
+                                    )}
                                 </Tooltip>
                             )}
                             {/* Sell button — tap-to-reveal, stays until dismissed */}
@@ -303,6 +307,15 @@ export default function SigilBar() {
                                 sigil when its discard-hook (Banish) grants gold. */}
                             {sigilProcBubble && sigilProcBubble.sigilId === sigilId && sigilProcBubble.kind === "gold" && (
                                 <SigilGoldProcBubble
+                                    amount={sigilProcBubble.amount}
+                                    seq={sigilProcBubble.seq}
+                                />
+                            )}
+                            {/* Floating "+N.Nx" xMult proc bubble — fires under
+                                an accumulator-xMult sigil (Executioner) per
+                                critical hit as it grows the run's build. */}
+                            {sigilProcBubble && sigilProcBubble.sigilId === sigilId && sigilProcBubble.kind === "xmult" && (
+                                <SigilXMultProcBubble
                                     amount={sigilProcBubble.amount}
                                     seq={sigilProcBubble.seq}
                                 />
@@ -342,6 +355,38 @@ function SigilGoldProcBubble({ amount, seq }: { amount: number; seq: number }) {
         <span key={seq} ref={ref} className={styles.procBubble}>
             +{amount}
             <img src={goldIconUrl} alt="Gold" className={styles.procBubbleIcon} />
+        </span>
+    );
+}
+
+/**
+ * Floating "+N.Nx" xMult proc bubble — pops below an accumulator-xMult
+ * sigil (Executioner) on every critical hit. Red pill background + white
+ * text to distinguish it from the warm-gold gold-proc bubble. Same GSAP
+ * pop / drift / fade timing so the two bubble kinds read as siblings.
+ */
+function SigilXMultProcBubble({ amount, seq }: { amount: number; seq: number }) {
+    const ref = useRef<HTMLSpanElement>(null);
+
+    useGSAP(() => {
+        const el = ref.current;
+        if (!el) return;
+        // Slight crooked tilt per pop — left or right, 3-7°. Randomized
+        // each mount (seq-keyed) so rapid back-to-back crits don't all
+        // lean the same way. Held constant through the tween so the pill
+        // reads like a stamped-on sticker rather than a spin animation.
+        const rotation = (Math.random() < 0.5 ? -1 : 1) * (3 + Math.random() * 4);
+        gsap.set(el, { y: -6, scale: 0.55, opacity: 0, rotation });
+        const tl = gsap.timeline();
+        tl.to(el, { y: 8, scale: 1.2, opacity: 1, duration: 0.14, ease: "back.out(2.5)" });
+        tl.to(el, { y: 12, scale: 1, duration: 0.08, ease: "power2.out" });
+        tl.to({}, { duration: 0.35 });
+        tl.to(el, { y: 32, opacity: 0, duration: 0.35, ease: "power1.in" });
+    }, { dependencies: [seq], scope: ref });
+
+    return (
+        <span key={seq} ref={ref} className={`${styles.procBubble} ${styles.procBubbleXMult}`}>
+            +{amount}x
         </span>
     );
 }

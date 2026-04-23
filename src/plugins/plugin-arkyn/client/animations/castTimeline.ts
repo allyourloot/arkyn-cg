@@ -109,11 +109,20 @@ export interface CastTimelineContext {
          * dramatic reveal.
          */
         isXMult?: boolean;
+        /**
+         * Post-cast accumulator increment (Executioner-style). Doesn't tick
+         * Base or Mult — the pre-cast accumulator value already fed this
+         * cast's xMult. Fires a "+Nx" proc bubble below the sigil so the
+         * player sees the accumulator growing in real time.
+         */
+        isAccumulatorInc?: boolean;
         /** Gold payout for the proc — drives the gold-counter tick callbacks. */
         goldDelta?: number;
         multDelta?: number;
         /** Multiplicative factor for xMult events (e.g. 3 for "x3 Mult"). */
         xMultFactor?: number;
+        /** Delta added to the accumulator for isAccumulatorInc events. */
+        accumulatorDelta?: number;
         /** Sigil ID that fired this event (procs + synapse + xMult). Drives onSigilShake dispatch. */
         sigilId?: string;
     }[];
@@ -184,6 +193,11 @@ export interface CastTimelineContext {
      * the player read the "+N" before the counter updates.
      */
     onGoldProcCommit?: (amount: number) => void;
+    /**
+     * Fired when an accumulator-xMult sigil (Executioner) gains a crit-
+     * driven increment. Pops the "+Nx" proc bubble under the sigil slot.
+     */
+    onAccumulatorProc?: (sigilId: string, delta: number) => void;
     /** Starting mult value (tier mult) — used to compute cumulative mult ticks. */
     baseMult?: number;
     /** Fired when the timeline finishes. Clears all animation state. */
@@ -343,6 +357,24 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
             }
             if (ctx.onGoldProcCommit && amount > 0) {
                 tl.call(() => ctx.onGoldProcCommit!(amount), undefined, tickAt + GOLD_COMMIT_DELAY_S);
+            }
+            continue;
+        }
+
+        // Accumulator-increment events (Executioner-style). Don't tick
+        // Base or Mult — the accumulator's CURRENT value already fed this
+        // cast's xMult via composeCastModifiers, so this event is purely
+        // feedback showing the crit growing the per-run build. Fires the
+        // "+Nx" proc bubble under the sigil + sigil shake + count SFX.
+        if (item.isAccumulatorInc) {
+            const sigilId = item.sigilId;
+            const delta = item.accumulatorDelta ?? 0;
+            tl.call(playCount, undefined, tickAt);
+            if (ctx.onSigilShake && sigilId) {
+                tl.call(() => ctx.onSigilShake!(sigilId), undefined, tickAt);
+            }
+            if (ctx.onAccumulatorProc && sigilId && delta > 0) {
+                tl.call(() => ctx.onAccumulatorProc!(sigilId, delta), undefined, tickAt);
             }
             continue;
         }

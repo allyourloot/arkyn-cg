@@ -5,6 +5,7 @@ import {
     ARKYN_CAST,
     ARKYN_DISCARD,
     CASTS_PER_ROUND,
+    SIGIL_ACCUMULATOR_XMULT,
     SIGIL_DISCARD_HOOKS,
     SIGIL_CAST_HOOKS,
     SPELL_TIER_MULT,
@@ -414,9 +415,19 @@ interface CastBreakdownEvent {
     isMultTick?: boolean;
     isGold?: boolean;
     isXMult?: boolean;
+    /**
+     * Post-cast accumulator increment (Executioner-style). Doesn't tick
+     * Base or Mult — the xMult from the OLD accumulator value was already
+     * baked into the cast's damage. This event just flashes a "+Nx" bubble
+     * below the sigil so the player can see the growth in real time rather
+     * than only noticing it via the SigilBar tooltip on the next cast.
+     */
+    isAccumulatorInc?: boolean;
     goldDelta?: number;
     multDelta?: number;
     xMultFactor?: number;
+    /** Delta added to the sigil's accumulator by this event (e.g. 0.2 for Executioner). */
+    accumulatorDelta?: number;
     sigilId?: string;
 }
 
@@ -433,6 +444,7 @@ interface CastBreakdownAssembly {
     hasCritical: boolean;
     hasAnyProc: boolean;
     hasAnyMultEvent: boolean;
+    hasAnyAccumulatorInc: boolean;
     spellElement: string;
 }
 
@@ -670,6 +682,32 @@ function assembleCastBreakdown(args: {
                 });
                 eventIdx++;
             }
+
+            // Accumulator-increment events (Executioner-style). Emit one
+            // per owned accumulator sigil whose trigger matches this
+            // rune's event (today only "criticalHit"). The accumulator
+            // itself is patched server-side post-cast via
+            // applyAccumulatorIncrements — this event is pure feedback
+            // so the player sees the xMult growing as crits land rather
+            // than only noticing it via the SigilBar tooltip next cast.
+            if (isCritical) {
+                for (const sigilId of ownedSigils) {
+                    const def = SIGIL_ACCUMULATOR_XMULT[sigilId];
+                    if (!def) continue;
+                    if (def.trigger !== "criticalHit") continue;
+                    runeBreakdown.push({
+                        base: 0,
+                        final: 0,
+                        isResisted: false,
+                        isCritical: false,
+                        isProc: false,
+                        isAccumulatorInc: true,
+                        accumulatorDelta: def.perEventDelta,
+                        sigilId,
+                    });
+                    eventIdx++;
+                }
+            }
         }
     }
 
@@ -758,6 +796,7 @@ function assembleCastBreakdown(args: {
     const hasAnyXMult = xMultEntries.length > 0 || accumulatorXMultEntries.length > 0;
     const hasAnyElementRuneBonus = elementRuneBonusEntries.length > 0;
     const hasAnyMultEvent = hasAnyHandMultProc || hasAnyPlayedMult || hasAnyXMult || hasAnyElementRuneBonus || hasAnyInventoryMult;
+    const hasAnyAccumulatorInc = runeBreakdown.some(e => e.isAccumulatorInc);
 
     return {
         runeBreakdown,
@@ -772,6 +811,7 @@ function assembleCastBreakdown(args: {
         hasCritical,
         hasAnyProc,
         hasAnyMultEvent,
+        hasAnyAccumulatorInc,
         spellElement,
     };
 }
@@ -900,6 +940,7 @@ export function castSpell() {
         hasCritical,
         hasAnyProc,
         hasAnyMultEvent,
+        hasAnyAccumulatorInc,
         spellElement,
     } = assembleCastBreakdown({
         castRunes,
@@ -1063,8 +1104,12 @@ export function castSpell() {
             castMultCounter = mult;
             notify();
         } : undefined,
-        onSigilShake: (hasAnyProc || hasAnyMultEvent) ? (sigilId: string) => {
+        onSigilShake: (hasAnyProc || hasAnyMultEvent || hasAnyAccumulatorInc) ? (sigilId: string) => {
             activeSigilShake = { sigilId, seq: ++sigilShakeSeq };
+            notify();
+        } : undefined,
+        onAccumulatorProc: hasAnyAccumulatorInc ? (sigilId: string, delta: number) => {
+            arkynStoreInternal.triggerSigilProcBubble(sigilId, delta, "xmult");
             notify();
         } : undefined,
         // Gold-proc two-phase reveal: show the "+N Gold" overlay over the

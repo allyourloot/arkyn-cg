@@ -9,13 +9,18 @@ interface ScrollUpgradeDisplayProps {
     oldLevel: number;
     newLevel: number;
     /**
-     * - "overlay": absolute-positioned, fills parent. Used by SpellPreview
-     *   so appearing during gameplay doesn't shift the damage chips below.
-     *   Requires the parent to have `position: relative`.
-     * - "inline": flex-layout, stretches to parent width. Used by ShopPanel
-     *   where nothing else shares the upgradeArea.
+     * - "overlay": absolute-positioned, fills parent. Requires the parent
+     *   to have `position: relative`. (Legacy — no current caller; kept
+     *   in case a future panel wants a drop-in overlay without reflowing.)
+     * - "inline": horizontal row — rune icon left, label + damage row
+     *   stacked to the right. Used by ShopPanel where the upgradeArea is
+     *   wide enough for the label to sit on one line.
+     * - "stacked": vertical column — rune icon on top, "Per Rune Bonus"
+     *   label below, old → new damage row at the bottom. Used by
+     *   SpellPreview where the section inner frame is narrow and the
+     *   inline label would wrap onto two lines.
      */
-    variant: "overlay" | "inline";
+    variant: "overlay" | "inline" | "stacked";
 }
 
 /**

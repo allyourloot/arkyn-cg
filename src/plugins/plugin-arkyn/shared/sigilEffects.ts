@@ -847,7 +847,7 @@ export interface AccumulatorXMultDefinition {
 }
 
 export const SIGIL_ACCUMULATOR_XMULT: Record<string, AccumulatorXMultDefinition> = {
-    executioner: { trigger: "criticalHit", perEventDelta: 0.2, initialValue: 1.0 },
+    executioner: { trigger: "criticalHit", perEventDelta: 0.1, initialValue: 1.0 },
 };
 
 export interface AccumulatorXMultEntry {

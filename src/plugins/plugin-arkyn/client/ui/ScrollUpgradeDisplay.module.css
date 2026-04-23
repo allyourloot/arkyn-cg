@@ -30,6 +30,31 @@
     width: 100%;
 }
 
+/* Stacked variant: vertical column for narrow containers (SpellPreview's
+   section inner frame). Flips .upgradeRow to column so the rune icon
+   sits on top, the "Per Rune Bonus" label stacks below it, and the
+   old→new damage row lands underneath. The label also centers so it
+   reads as a single line instead of the inline layout's two-line wrap. */
+.upgradeContent.stacked {
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.upgradeContent.stacked .upgradeRow {
+    flex-direction: column;
+    gap: clamp(14px, 2.2vh, 22px);
+}
+
+.upgradeContent.stacked .upgradeRuneInfo {
+    align-items: center;
+}
+
+.upgradeContent.stacked .upgradeRuneDamageLabel {
+    text-align: center;
+}
+
 @keyframes upgradeSlideIn {
     from { transform: translateY(12px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }

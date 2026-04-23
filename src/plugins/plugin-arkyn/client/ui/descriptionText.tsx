@@ -4,6 +4,10 @@ import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
 import { ARCANE_CLUSTER_COLOR, ELEMENTAL_CLUSTER_COLOR } from "./styles";
 
 const HIGHLIGHT_COLOR = "#309f30";
+// Mirrors the Executioner proc bubble's background — using it as text
+// color in tooltip markers ties "the fragment" to "the bubble" visually
+// without the pill chrome cluttering the description.
+const RED_HIGHLIGHT_COLOR = "#9f3030";
 const CLUSTER_WORD_REGEX = /\b(Elemental|Arcane)\b/g;
 
 function applyClusterWordColors(text: string, keyPrefix: string): ReactNode[] {
@@ -32,15 +36,25 @@ function applyClusterWordColors(text: string, keyPrefix: string): ReactNode[] {
 }
 
 /**
- * Renders a sigil description with two levels of styling:
+ * Renders a sigil description with three levels of styling:
  *  - `{text}` markers become green highlight spans (author-controlled emphasis).
- *  - Bare proper-noun occurrences of "Elemental" or "Arcane" (outside `{...}`)
+ *  - `[[text]]` markers become red spans — reserved for fragments that also
+ *    surface as the red proc bubble (Executioner's "+0.1x Mult") so the
+ *    tooltip and the in-game bubble read as the same payload.
+ *  - Bare proper-noun occurrences of "Elemental" or "Arcane" (outside markers)
  *    get their cluster color automatically, so the two element groupings are
  *    visually consistent across every tooltip.
  */
 export function renderDescription(desc: string): ReactNode[] {
-    const parts = desc.split(/(\{[^}]+\})/g);
+    const parts = desc.split(/(\{[^}]+\}|\[\[[^\]]+\]\])/g);
     return parts.map((part, i) => {
+        if (part.startsWith("[[") && part.endsWith("]]")) {
+            return (
+                <span key={i} style={{ color: RED_HIGHLIGHT_COLOR }}>
+                    {part.slice(2, -2)}
+                </span>
+            );
+        }
         if (part.startsWith("{") && part.endsWith("}")) {
             return (
                 <span key={i} style={{ color: HIGHLIGHT_COLOR }}>

@@ -125,6 +125,23 @@
     filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.7));
 }
 
+/* xMult variant — Executioner's accumulator increment. Deeper red pill
+   with white text so it reads as a distinct "crit reward" stripe vs the
+   warm-gold gold-proc bubble. Smaller footprint than the gold bubble —
+   the "+0.2x" increment is a subtler payoff than a gold payout. */
+.procBubbleXMult {
+    padding: 1px 5px 2px;
+    background: #9f3030;
+    color: #ffffff;
+    border-radius: 3px;
+    font-size: clamp(var(--font-size-2xs), 1.4vw, var(--font-size-sm));
+    letter-spacing: 0.5px;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.4),
+        2px 2px 0 rgba(0, 0, 0, 0.55);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+}
+
 /* ================================================================
    Tooltip — hover trigger via the shared Tooltip component's
    global .arkyn-tooltip class.
@@ -160,9 +177,11 @@
     line-height: 1.3;
 }
 
-/* Live accumulator row (Executioner "Current: x1.0 Mult"). Centered on
-   its own line under the description; the value chip is a compact
-   red-on-white pill so the live multiplier pops out of the tooltip. */
+/* Live accumulator row (Executioner "Current: x1.0 Mult" / inventory-mult
+   sigils' "Current: +N Mult"). Sits at the tooltip bottom in the slot the
+   rarity badge used to occupy so every sigil's live value surfaces in a
+   consistent spot; the value chip is a compact red-on-white pill so the
+   live multiplier pops out of the tooltip. */
 .tooltipCurrentRow {
     display: flex;
     align-items: center;
@@ -219,7 +238,7 @@
     font-style: italic;
 }
 
-/* Rarity badge — below description */
+/* Rarity badge — sits between the sigil name and the description. */
 .tooltipRarity {
     font-size: clamp(var(--font-size-3xs), 0.8vw, var(--font-size-2xs));
     text-transform: uppercase;
