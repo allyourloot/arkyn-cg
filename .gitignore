@@ -49,3 +49,6 @@ coverage/
 
 # Misc
 *.local
+
+# Local-only dev notes
+REFACTOR_NOTES.md

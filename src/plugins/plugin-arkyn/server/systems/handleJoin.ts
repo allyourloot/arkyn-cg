@@ -42,20 +42,19 @@ export function handleJoin(
     }
 
     // Generate a fresh run seed and spawn enemy for round 1
-    state.runSeed = generateRunSeed();
-    state.currentRound = 1;
-    spawnEnemy(state);
-    applyBossDebuff(state, player);
+    player.runSeed = generateRunSeed();
+    player.currentRound = 1;
+    spawnEnemy(player, player.currentRound, player.runSeed);
+    applyBossDebuff(player);
 
     // Set game state
-    state.gamePhase = "playing";
+    player.gamePhase = "playing";
 
-    logger.info(`Player ${client.sessionId} joined. Seed: ${state.runSeed}. Hand: ${player.hand.length}, Pouch: ${player.pouchSize}`);
+    logger.info(`Player ${client.sessionId} joined. Seed: ${player.runSeed}. Hand: ${player.hand.length}, Pouch: ${player.pouchSize}`);
 }
 
-function spawnEnemy(state: ArkynState, roundOverride?: number): void {
-    const round = roundOverride ?? Math.max(state.currentRound, 1);
-    const def = getEnemyForRound(round, state.runSeed);
+function spawnEnemy(player: ArkynPlayerState, round: number, runSeed: number): void {
+    const def = getEnemyForRound(round, runSeed);
 
     const enemy = new EnemyState();
     enemy.name = def.name;
@@ -71,7 +70,7 @@ function spawnEnemy(state: ArkynState, roundOverride?: number): void {
     // HP here; other debuffs modify the player state in applyBossDebuff.
     let hp = def.hp;
     if (isBossRound(round)) {
-        const debuff = pickDebuffForRound(round, state.runSeed);
+        const debuff = pickDebuffForRound(round, runSeed);
         enemy.isBoss = true;
         enemy.debuff = debuff.id;
         if (debuff.id === "fortified") {
@@ -81,7 +80,7 @@ function spawnEnemy(state: ArkynState, roundOverride?: number): void {
 
     enemy.maxHp = hp;
     enemy.currentHp = hp;
-    state.enemy = enemy;
+    player.enemy = enemy;
 }
 
 /**
@@ -89,8 +88,8 @@ function spawnEnemy(state: ArkynState, roundOverride?: number): void {
  * Called after both spawnEnemy and initPlayerForRound so the player's
  * fresh-round budgets are set before we subtract from them.
  */
-function applyBossDebuff(state: ArkynState, player: ArkynPlayerState): void {
-    const { debuff } = state.enemy;
+function applyBossDebuff(player: ArkynPlayerState): void {
+    const { debuff } = player.enemy;
     if (!debuff) return;
 
     switch (debuff) {

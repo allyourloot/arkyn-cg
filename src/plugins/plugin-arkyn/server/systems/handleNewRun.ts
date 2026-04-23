@@ -15,20 +15,26 @@ export function handleNewRun(
     client: { sessionId: string },
     ctx: ArkynContext,
 ): void {
-    if (state.gamePhase !== "game_over") {
-        logger.warn(`New run rejected: game phase is ${state.gamePhase}`);
+    // Capture the old run's final round BEFORE the player is deleted so
+    // finalizeRun still has a meaningful currentRound value.
+    const oldPlayer = state.players.get(client.sessionId);
+    if (!oldPlayer) {
+        logger.warn(`New run rejected: player ${client.sessionId} not found`);
         return;
     }
+    if (oldPlayer.gamePhase !== "game_over") {
+        logger.warn(`New run rejected: game phase is ${oldPlayer.gamePhase}`);
+        return;
+    }
+    const oldRound = oldPlayer.currentRound;
 
     // Finalize the old run stats (already done in handleCast on game_over,
     // but safe to call again — getRunStats returns undefined after removal)
-    finalizeRun(client.sessionId, ctx, state.currentRound);
+    finalizeRun(client.sessionId, ctx, oldRound);
 
     // Clean up old player state
-    if (state.players.has(client.sessionId)) {
-        state.players.delete(client.sessionId);
-        removePouch(client.sessionId);
-    }
+    state.players.delete(client.sessionId);
+    removePouch(client.sessionId);
 
     // Fresh player — gold resets to 0 for the new run
     const player = new ArkynPlayerState();
@@ -46,12 +52,12 @@ export function handleNewRun(
     }
 
     // Fresh seed + round 1 enemy
-    state.runSeed = generateRunSeed();
-    state.currentRound = 1;
-    spawnEnemy(state);
-    applyBossDebuff(state, player);
+    player.runSeed = generateRunSeed();
+    player.currentRound = 1;
+    spawnEnemy(player, player.currentRound, player.runSeed);
+    applyBossDebuff(player);
 
-    state.gamePhase = "playing";
+    player.gamePhase = "playing";
 
-    logger.info(`Player ${client.sessionId} started a new run. Seed: ${state.runSeed}`);
+    logger.info(`Player ${client.sessionId} started a new run. Seed: ${player.runSeed}`);
 }

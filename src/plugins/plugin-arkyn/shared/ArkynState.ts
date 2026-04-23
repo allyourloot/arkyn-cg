@@ -140,14 +140,25 @@ export class ArkynPlayerState extends Schema {
     // list and splices one matching (element, rarity, level) rune per
     // entry. Persists across rounds within a run; resets on new run.
     @type([RuneInstance]) banishedRunes = new ArraySchema<RuneInstance>();
+
+    // ── Per-player game progression ─────────────────────────────────
+    // These four fields used to live on the root ArkynState (one game per
+    // server process, singleton). Moved into ArkynPlayerState so multiple
+    // clients on the same server run fully independent solo games — each
+    // player has their own round, seed, enemy, and phase. Local dev and
+    // self-hosted playtests can now host N players on one server.
+    //
+    // Default `gamePhase = "menu"`: during the brief window between the
+    // client connecting and the server's handleJoin writing "playing",
+    // ArkynOverlay.toDisplayPhase reads "menu" and routes to MainMenu
+    // rather than flashing an empty playing layout.
+    @type("string") gamePhase = "menu";
+    @type("number") currentRound = 0;
+    @type("number") runSeed = 0;
+    @type(EnemyState) enemy = new EnemyState();
 }
 
 export class ArkynState extends PluginState {
     @type({ map: ArkynPlayerState })
     players = new MapSchema<ArkynPlayerState>();
-
-    @type(EnemyState) enemy = new EnemyState();
-    @type("number") currentRound = 0;
-    @type("number") runSeed = 0;
-    @type("string") gamePhase = "waiting";
 }

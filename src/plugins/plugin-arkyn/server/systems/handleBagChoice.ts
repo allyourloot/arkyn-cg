@@ -20,13 +20,13 @@ export function handleBagChoice(
     client: { sessionId: string },
     payload: unknown,
 ): void {
-    if (state.gamePhase !== "shop") {
-        logger.warn(`Bag choice rejected: game phase is ${state.gamePhase}`);
-        return;
-    }
-
     const player = state.players.get(client.sessionId);
     if (!player) return;
+
+    if (player.gamePhase !== "shop") {
+        logger.warn(`Bag choice rejected: game phase is ${player.gamePhase}`);
+        return;
+    }
 
     if (player.pendingBagRunes.length === 0) {
         logger.warn(`Bag choice rejected: no bag is open for ${client.sessionId}`);

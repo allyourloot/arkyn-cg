@@ -53,7 +53,7 @@ function handleSigilPurchase({ player, item, sessionId }: ShopPurchaseCtx): Shop
     };
 }
 
-function handleRuneBagPurchase({ state, player, sessionId }: ShopPurchaseCtx): ShopPurchaseResult {
+function handleRuneBagPurchase({ player, sessionId }: ShopPurchaseCtx): ShopPurchaseResult {
     // Reject double-buy while a picker is already open — avoids dropping
     // the first bag's rolls on the floor. Also reject if the per-shop cap
     // is already hit.
@@ -70,8 +70,8 @@ function handleRuneBagPurchase({ state, player, sessionId }: ShopPurchaseCtx): S
     // `currentRound + 1` matches the shop's "next round" seeding
     // convention used by generateShopScrolls / generateShopSigils.
     const rolls = rollBagRunes(
-        state.runSeed,
-        state.currentRound + 1,
+        player.runSeed,
+        player.currentRound + 1,
         player.bagPurchaseCount,
     );
     for (const r of rolls) {

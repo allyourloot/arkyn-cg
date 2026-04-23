@@ -222,8 +222,8 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         // round and gamePhase leaves "round_end".
         if (
             !getIsCastAnimating() &&
-            state.gamePhase !== "round_end" &&
-            state.gamePhase !== "game_over" &&
+            player.gamePhase !== "round_end" &&
+            player.gamePhase !== "game_over" &&
             !runeArraysEqualById(player.hand, prevHand)
         ) {
             const handData = snapshotRunes(player.hand);
@@ -262,52 +262,52 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         }
 
         // Sync game phase
-        if (state.gamePhase !== prevPhase) {
+        if (player.gamePhase !== prevPhase) {
             // New run: game_over → playing. Clear stale cast state so the
             // Spell Preview doesn't show the previous game's last cast.
-            if (state.gamePhase === "playing" && prevPhase === "game_over") {
+            if (player.gamePhase === "playing" && prevPhase === "game_over") {
                 clearLastCastState();
             }
-            setGamePhase(state.gamePhase);
-            prevPhase = state.gamePhase;
+            setGamePhase(player.gamePhase);
+            prevPhase = player.gamePhase;
         }
 
         // Sync enemy
-        if (state.enemy) {
-            if (state.enemy.currentHp !== prevEnemyHp) {
-                setEnemyHp(state.enemy.currentHp);
-                prevEnemyHp = state.enemy.currentHp;
+        if (player.enemy) {
+            if (player.enemy.currentHp !== prevEnemyHp) {
+                setEnemyHp(player.enemy.currentHp);
+                prevEnemyHp = player.enemy.currentHp;
             }
-            if (state.enemy.maxHp !== prevEnemyMaxHp) {
-                setEnemyMaxHp(state.enemy.maxHp);
-                prevEnemyMaxHp = state.enemy.maxHp;
+            if (player.enemy.maxHp !== prevEnemyMaxHp) {
+                setEnemyMaxHp(player.enemy.maxHp);
+                prevEnemyMaxHp = player.enemy.maxHp;
             }
-            if (state.enemy.name !== prevEnemyName) {
-                setEnemyName(state.enemy.name);
-                prevEnemyName = state.enemy.name;
+            if (player.enemy.name !== prevEnemyName) {
+                setEnemyName(player.enemy.name);
+                prevEnemyName = player.enemy.name;
             }
-            if (state.enemy.element !== prevEnemyElement) {
-                setEnemyElement(state.enemy.element);
-                prevEnemyElement = state.enemy.element;
+            if (player.enemy.element !== prevEnemyElement) {
+                setEnemyElement(player.enemy.element);
+                prevEnemyElement = player.enemy.element;
             }
 
             // Resistances / weaknesses — gated so the setters (and the
             // notify they trigger) don't fire on every tick.
-            if (!stringArraysEqual(state.enemy.resistances, prevRes)) {
-                prevRes = Array.from(state.enemy.resistances);
+            if (!stringArraysEqual(player.enemy.resistances, prevRes)) {
+                prevRes = Array.from(player.enemy.resistances);
                 setEnemyResistances(prevRes);
             }
-            if (!stringArraysEqual(state.enemy.weaknesses, prevWeak)) {
-                prevWeak = Array.from(state.enemy.weaknesses);
+            if (!stringArraysEqual(player.enemy.weaknesses, prevWeak)) {
+                prevWeak = Array.from(player.enemy.weaknesses);
                 setEnemyWeaknesses(prevWeak);
             }
-            if (state.enemy.isBoss !== prevEnemyIsBoss) {
-                setEnemyIsBoss(state.enemy.isBoss);
-                prevEnemyIsBoss = state.enemy.isBoss;
+            if (player.enemy.isBoss !== prevEnemyIsBoss) {
+                setEnemyIsBoss(player.enemy.isBoss);
+                prevEnemyIsBoss = player.enemy.isBoss;
             }
-            if (state.enemy.debuff !== prevEnemyDebuff) {
-                setEnemyDebuff(state.enemy.debuff);
-                prevEnemyDebuff = state.enemy.debuff;
+            if (player.enemy.debuff !== prevEnemyDebuff) {
+                setEnemyDebuff(player.enemy.debuff);
+                prevEnemyDebuff = player.enemy.debuff;
             }
         }
 
@@ -326,13 +326,13 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         }
 
         // Sync run seed
-        if (state.runSeed !== prevRunSeed) {
-            setRunSeed(state.runSeed);
-            prevRunSeed = state.runSeed;
+        if (player.runSeed !== prevRunSeed) {
+            setRunSeed(player.runSeed);
+            prevRunSeed = player.runSeed;
         }
 
         // Sync round and pouch
-        if (state.currentRound !== prevRound) {
+        if (player.currentRound !== prevRound) {
             // On round transitions after the initial sync, wipe the
             // Spell Preview's "Last Cast" state so the panel doesn't
             // keep showing the previous round's final cast once the
@@ -340,8 +340,8 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
             if (prevRound >= 1) {
                 clearLastCastState();
             }
-            setCurrentRound(state.currentRound);
-            prevRound = state.currentRound;
+            setCurrentRound(player.currentRound);
+            prevRound = player.currentRound;
         }
         if (player.pouchSize !== prevPouchSize) {
             setPouchSize(player.pouchSize);

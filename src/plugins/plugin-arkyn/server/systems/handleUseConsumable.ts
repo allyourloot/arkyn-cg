@@ -14,8 +14,8 @@ export function handleUseConsumable(
         return;
     }
 
-    if (state.gamePhase !== "playing" && state.gamePhase !== "shop") {
-        logger.warn(`Use-consumable rejected: game phase is ${state.gamePhase}`);
+    if (player.gamePhase !== "playing" && player.gamePhase !== "shop") {
+        logger.warn(`Use-consumable rejected: game phase is ${player.gamePhase}`);
         return;
     }
 

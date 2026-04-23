@@ -38,7 +38,7 @@ export function handleReady(
         return;
     }
 
-    if (state.gamePhase === "round_end") {
+    if (player.gamePhase === "round_end") {
         // NOTE: the round-win gold itself is credited via
         // `handleCollectRoundGold` fired at the moment the RoundEnd
         // overlay's "Total" line reveals — not here. By the time the
@@ -73,15 +73,15 @@ export function handleReady(
         // Pre-spawn the next enemy so the shop panel can show boss/debuff
         // info as part of the "Next Enemy" preview. The round counter
         // hasn't incremented yet, so pass currentRound + 1 explicitly.
-        spawnEnemy(state, state.currentRound + 1);
+        spawnEnemy(player, player.currentRound + 1, player.runSeed);
 
         // Generate seeded shop inventory for this visit. The scroll
         // elements are deterministic given the run seed + round, so
         // replaying the same seed yields the same shop offerings.
-        const nextRound = state.currentRound + 1;
-        const scrollElements = generateShopScrolls(state.runSeed, nextRound);
+        const nextRound = player.currentRound + 1;
+        const scrollElements = generateShopScrolls(player.runSeed, nextRound);
         const ownedSigils = Array.from(player.sigils);
-        const sigilIds = generateShopSigils(state.runSeed, nextRound, ownedSigils);
+        const sigilIds = generateShopSigils(player.runSeed, nextRound, ownedSigils);
         clearArraySchema(player.shopItems);
         // Fresh shop visit -> reset per-visit bag purchase counter so the
         // cap enforces MAX_RUNE_BAGS_PER_SHOP per shop (not per run).
@@ -124,26 +124,26 @@ export function handleReady(
             player.shopItems.push(item);
         }
 
-        state.gamePhase = "shop";
-        const bossTag = state.enemy.isBoss ? ` [BOSS - ${state.enemy.debuff}]` : "";
-        logger.info(`Player ${client.sessionId} entered shop. Sigils: [${sigilIds.join(", ")}], Scrolls: [${scrollElements.join(", ")}]. Next enemy: ${state.enemy.name} (HP: ${state.enemy.maxHp})${bossTag}`);
+        player.gamePhase = "shop";
+        const bossTag = player.enemy.isBoss ? ` [BOSS - ${player.enemy.debuff}]` : "";
+        logger.info(`Player ${client.sessionId} entered shop. Sigils: [${sigilIds.join(", ")}], Scrolls: [${scrollElements.join(", ")}]. Next enemy: ${player.enemy.name} (HP: ${player.enemy.maxHp})${bossTag}`);
         return;
     }
 
-    if (state.gamePhase === "shop") {
-        state.currentRound++;
+    if (player.gamePhase === "shop") {
+        player.currentRound++;
         // Enemy already spawned on shop entry — just init the player
         // and apply any boss debuff modifiers. Pass enemy affinities so
         // lifecycle hooks like Binoculars can pick a target at round start.
-        initPlayerForRound(player, client.sessionId, state.currentRound, state.runSeed, {
-            enemyResistances: Array.from(state.enemy.resistances),
-            enemyWeaknesses: Array.from(state.enemy.weaknesses),
+        initPlayerForRound(player, client.sessionId, player.currentRound, player.runSeed, {
+            enemyResistances: Array.from(player.enemy.resistances),
+            enemyWeaknesses: Array.from(player.enemy.weaknesses),
         });
-        applyBossDebuff(state, player);
-        state.gamePhase = "playing";
-        logger.info(`Round ${state.currentRound} started. Enemy: ${state.enemy.name} (HP: ${state.enemy.maxHp})`);
+        applyBossDebuff(player);
+        player.gamePhase = "playing";
+        logger.info(`Round ${player.currentRound} started. Enemy: ${player.enemy.name} (HP: ${player.enemy.maxHp})`);
         return;
     }
 
-    logger.warn(`Ready rejected: game phase is ${state.gamePhase}`);
+    logger.warn(`Ready rejected: game phase is ${player.gamePhase}`);
 }

@@ -21,14 +21,14 @@ export function handleRerollShop(
     state: ArkynState,
     client: { sessionId: string },
 ): void {
-    if (state.gamePhase !== "shop") {
-        logger.warn(`Reroll rejected: game phase is ${state.gamePhase}`);
-        return;
-    }
-
     const player = state.players.get(client.sessionId);
     if (!player) {
         logger.warn(`Reroll rejected: player ${client.sessionId} not found`);
+        return;
+    }
+
+    if (player.gamePhase !== "shop") {
+        logger.warn(`Reroll rejected: game phase is ${player.gamePhase}`);
         return;
     }
 
@@ -57,8 +57,8 @@ export function handleRerollShop(
 
     const ownedSigils = Array.from(player.sigils);
     const sigilIds = generateShopSigils(
-        state.runSeed,
-        state.currentRound + 1,
+        player.runSeed,
+        player.currentRound + 1,
         ownedSigils,
         player.shopRerollCount,
     );

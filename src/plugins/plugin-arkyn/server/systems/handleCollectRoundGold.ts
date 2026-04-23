@@ -32,7 +32,7 @@ export function handleCollectRoundGold(
         return;
     }
 
-    if (state.gamePhase !== "round_end") {
+    if (player.gamePhase !== "round_end") {
         // Not in round_end — nothing to collect. Silently no-op; a late
         // retry from the client (e.g. flaky network) shouldn't log at
         // warn severity.

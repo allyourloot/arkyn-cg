@@ -9,14 +9,14 @@ export function handleBuyItem(
     client: { sessionId: string },
     payload: unknown,
 ): void {
-    if (state.gamePhase !== "shop") {
-        logger.warn(`Buy rejected: game phase is ${state.gamePhase}`);
-        return;
-    }
-
     const player = state.players.get(client.sessionId);
     if (!player) {
         logger.warn(`Buy rejected: player ${client.sessionId} not found`);
+        return;
+    }
+
+    if (player.gamePhase !== "shop") {
+        logger.warn(`Buy rejected: game phase is ${player.gamePhase}`);
         return;
     }
 

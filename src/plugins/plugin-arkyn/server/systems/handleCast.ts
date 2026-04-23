@@ -79,11 +79,11 @@ export function handleCast(
     const { finalDamage: damage, procGold, criticalCount } = calculateDamage(
         spell,
         selectedRunes,
-        state.enemy,
+        player.enemy,
         player.scrollLevels,
         player.sigils,
-        state.runSeed,
-        state.currentRound,
+        player.runSeed,
+        player.currentRound,
         player.castsRemaining,
         player.hand,
         indices,
@@ -95,7 +95,7 @@ export function handleCast(
     removeRunesFromHand(player, indices);
 
     // Apply damage
-    state.enemy.currentHp = Math.max(0, state.enemy.currentHp - damage);
+    player.enemy.currentHp = Math.max(0, player.enemy.currentHp - damage);
 
     // Update player state
     player.lastSpellName = spell.spellName;
@@ -135,10 +135,10 @@ export function handleCast(
         }
     }
 
-    logger.info(`${spell.spellName} (Tier ${spell.tier}) deals ${damage} damage! Enemy HP: ${state.enemy.currentHp}/${state.enemy.maxHp}`);
+    logger.info(`${spell.spellName} (Tier ${spell.tier}) deals ${damage} damage! Enemy HP: ${player.enemy.currentHp}/${player.enemy.maxHp}`);
 
     // Check if enemy is defeated
-    if (state.enemy.currentHp <= 0) {
+    if (player.enemy.currentHp <= 0) {
         // Stage the gold breakdown onto the player so the Round End
         // overlay can display it:
         //  - 3 base for the kill
@@ -175,9 +175,9 @@ export function handleCast(
             // the player's gold does.
         }
 
-        state.gamePhase = "round_end";
+        player.gamePhase = "round_end";
         logger.info(
-            `Enemy defeated! Round ${state.currentRound} complete. ` +
+            `Enemy defeated! Round ${player.currentRound} complete. ` +
             `Pending gold: ${baseGold} base + ${handsBonus} hands bonus ` +
             `+ ${sigilBonus} sigil bonus ` +
             `= ${baseGold + handsBonus + sigilBonus} (awarded on Continue)`,
@@ -193,10 +193,10 @@ export function handleCast(
         // Sync final run stats to schema before setting game_over so the
         // client receives both in the same Colyseus state patch.
         if (stats) syncRunStatsToSchema(player, stats);
-        finalizeRun(client.sessionId, ctx, state.currentRound);
+        finalizeRun(client.sessionId, ctx, player.currentRound);
 
-        state.gamePhase = "game_over";
-        logger.info(`Game over! Player ${client.sessionId} ran out of casts on round ${state.currentRound}.`);
+        player.gamePhase = "game_over";
+        logger.info(`Game over! Player ${client.sessionId} ran out of casts on round ${player.currentRound}.`);
         return;
     }
 

@@ -30,14 +30,14 @@ export function validateRuneSelection(
 ): ValidatedRuneSelection | null {
     const { logger, action, budgetField } = options;
 
-    if (state.gamePhase !== "playing") {
-        logger.warn(`${action} rejected: game phase is ${state.gamePhase}`);
-        return null;
-    }
-
     const player = state.players.get(client.sessionId);
     if (!player) {
         logger.warn(`${action} rejected: player ${client.sessionId} not found`);
+        return null;
+    }
+
+    if (player.gamePhase !== "playing") {
+        logger.warn(`${action} rejected: game phase is ${player.gamePhase}`);
         return null;
     }
 

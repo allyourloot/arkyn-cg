@@ -12,8 +12,12 @@ export function handleLeave(
     client: { sessionId: string },
     ctx: ArkynContext,
 ): void {
+    // Capture the run's final round BEFORE we delete the player so
+    // finalizeRun records the right value.
+    const currentRound = state.players.get(client.sessionId)?.currentRound ?? 0;
+
     // Finalize any active run before cleanup
-    finalizeRun(client.sessionId, ctx, state.currentRound);
+    finalizeRun(client.sessionId, ctx, currentRound);
     removeRunStats(client.sessionId);
 
     state.players.delete(client.sessionId);
