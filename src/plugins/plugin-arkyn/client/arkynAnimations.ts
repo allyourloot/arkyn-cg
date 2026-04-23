@@ -214,10 +214,14 @@ let roundTotalDamage = 0;
 let lastCastBaseDamage = 0;
 
 // ----- Sigil proc state -----
-// Proc damage bubbles — same structure as runeDamageBubbles, indexed by slot.
-// Non-proc slots are null. Populated when a sigil (e.g. Voltage) procs
-// during a cast, then rendered alongside the normal bubbles in PlayArea.
-let procDamageBubbles: (RuneDamageBubble | null)[] = [];
+// Proc damage bubbles — per-slot ARRAY of bubbles. Each slot holds the
+// ordered list of procs that fired on its rune (empty = none). Multi-
+// proc scenarios (e.g. Mimic copying Chainlink to stack two retriggers
+// per rune) push multiple bubbles here so PlayArea can render one
+// `<RuneDamageBubble>` per entry, each with its own staggered delayMs
+// so the pops sequence visually instead of overlapping into a single
+// bubble.
+let procDamageBubbles: RuneDamageBubble[][] = [];
 // Monotonic seq for sigil shake events — forces remount on every proc.
 let sigilShakeSeq = 0;
 // Active sigil shake event — SigilBar reads this to animate the matching icon.
@@ -434,7 +438,14 @@ interface CastBreakdownEvent {
 interface CastBreakdownAssembly {
     runeBreakdown: CastBreakdownEvent[];
     bubbles: (RuneDamageBubble | null)[];
-    procBubblesForCast: (RuneDamageBubble | null)[];
+    /**
+     * Per-slot ARRAY of proc bubbles — one entry per proc event fired on
+     * the slot's rune. Empty arrays mean no procs. Multiple entries allow
+     * Mimic-stacked retriggers (Mimic+Chainlink → 2 retriggers per rune)
+     * to render as a staggered sequence instead of collapsing into a
+     * single overwritten bubble.
+     */
+    procBubblesForCast: RuneDamageBubble[][];
     handMultBubblesForCast: (HandMultBubble | null)[];
     resolvedSpell: ReturnType<typeof resolveSpell>;
     contributingIndices: number[];
@@ -531,20 +542,32 @@ function assembleCastBreakdown(args: {
     // colorway reads as one cohesive spell impact.
     const spellElement = resolvedSpell?.element ?? "";
     const bubbles: (RuneDamageBubble | null)[] = new Array(MAX_PLAY).fill(null);
-    const procBubblesForCast: (RuneDamageBubble | null)[] = new Array(MAX_PLAY).fill(null);
+    // Per-slot ARRAY of proc bubbles — multi-proc retriggers (Mimic +
+    // Chainlink) push more than one entry per slot so PlayArea can
+    // render each bubble as its own component with its own delayMs,
+    // letting the pops sequence visually instead of overwriting.
+    const procBubblesForCast: RuneDamageBubble[][] = Array.from({ length: MAX_PLAY }, () => []);
 
     // ----- Sigil procs -----
     // Generic proc loop mirrors server's iterateProcs exactly. Each proc
     // event carries the sigilId + effect so the timeline can dispatch
     // shakes generically and branch on effect type (damage vs gold). RNG
     // is deterministic — server and client roll identical sequences.
-    // procsPerRune[i] = { sigilId, effect } | null for the i-th contributing rune.
-    const procsPerRune: ({ sigilId: string; effect: ProcEffect } | null)[] = new Array(contributingIndices.length).fill(null);
+    // procsPerRune[i] = ordered list of procs that fired on the i-th
+    // contributing rune. Multi-proc scenarios (Mimic copying Chainlink
+    // means two retrigger procs fire on every contributing rune) push
+    // an entry per event so damage + bubbles + breakdown all see the
+    // full proc sequence.
+    const procsPerRune: { sigilId: string; effect: ProcEffect }[][] = Array.from({ length: contributingIndices.length }, () => []);
     let procDamageTotal = 0;
     if (breakdown && ownedSigils.length > 0) {
         const castNumber = CASTS_PER_ROUND - arkynStoreInternal.getCastsRemaining();
         const runSeed = arkynStoreInternal.getRunSeed();
         const round = arkynStoreInternal.getCurrentRound();
+        // Matches the server-side gate in calculateDamage: castsRemaining
+        // here is the PRE-cast snapshot (the store hasn't been decremented
+        // yet), so castsRemaining === 1 is Chainlink's final-cast trigger.
+        const isFinalCast = arkynStoreInternal.getCastsRemaining() === 1;
         const contributingElements = contributingIndices.map(idx => castRunes[idx]?.element ?? "");
         for (const proc of iterateProcs(
             ownedSigils,
@@ -553,8 +576,9 @@ function assembleCastBreakdown(args: {
             round,
             castNumber,
             breakdown.isCritical,
+            isFinalCast,
         )) {
-            procsPerRune[proc.runeIdx] = { sigilId: proc.sigilId, effect: proc.effect };
+            procsPerRune[proc.runeIdx].push({ sigilId: proc.sigilId, effect: proc.effect });
             if (proc.effect.type === "double_damage") {
                 procDamageTotal += Math.round(breakdown.runeBaseContributions[proc.runeIdx] * breakdown.mult);
             }
@@ -562,15 +586,18 @@ function assembleCastBreakdown(args: {
             // building the proc bubble (kind: "gold").
         }
     }
-    const hasAnyProc = procsPerRune.some(p => p !== null);
+    const hasAnyProc = procsPerRune.some(arr => arr.length > 0);
     totalDamage += procDamageTotal;
     // Adjust baseTotal to include proc contributions (for lastCastBaseDamage).
     // Only damage-type procs contribute to Base — gold procs are pure economy.
+    // Each damage proc on a rune adds that rune's base again, so N retriggers
+    // add N × the rune's post-modifier base.
     if (breakdown && hasAnyProc) {
         for (let i = 0; i < procsPerRune.length; i++) {
-            const p = procsPerRune[i];
-            if (p && p.effect.type === "double_damage") {
-                baseTotal += breakdown.runeBaseContributions[i];
+            for (const p of procsPerRune[i]) {
+                if (p.effect.type === "double_damage") {
+                    baseTotal += breakdown.runeBaseContributions[i];
+                }
             }
         }
     }
@@ -610,31 +637,41 @@ function assembleCastBreakdown(args: {
             });
             eventIdx++;
 
-            // Interleave proc bubble right after the parent rune. Damage
-            // procs (Voltage) show the rune's base contribution again;
-            // gold procs (Fortune) show the flat gold amount with the
-            // "gold" bubble variant and contribute nothing to damage.
-            const proc = procsPerRune[i];
-            if (proc) {
+            // Interleave proc bubbles right after the parent rune. Damage
+            // procs (Voltage/Hourglass/Chainlink) show the rune's base
+            // contribution again; gold procs (Fortune) show the flat gold
+            // amount with the "gold" bubble variant and contribute nothing
+            // to damage. Multiple procs per rune (Mimic+Chainlink) push
+            // their bubbles consecutively with staggered delayMs so each
+            // pops in sequence.
+            for (const proc of procsPerRune[i]) {
                 const isGoldProc = proc.effect.type === "grant_gold";
                 const bubbleAmount = isGoldProc
                     ? proc.effect.amount
                     : postModifier;
-                procBubblesForCast[slotIdx] = {
+                // Damage retrigger procs (Voltage/Hourglass/Chainlink) fire the
+                // SAME rune a second time, so the retrigger bubble should carry
+                // the parent rune's crit/resist state — otherwise a critical
+                // rune shows a golden crit bubble on the first hit and a plain
+                // bubble on the retrigger. Gold procs (Fortune) don't carry
+                // damage status; their bubble is a separate "gold" variant.
+                const procIsCritical = isGoldProc ? false : isCritical;
+                const procIsResisted = isGoldProc ? false : isResisted;
+                procBubblesForCast[slotIdx].push({
                     amount: bubbleAmount,
                     baseAmount: bubbleAmount,
                     spellElement,
-                    isCritical: false,
-                    isResisted: false,
+                    isCritical: procIsCritical,
+                    isResisted: procIsResisted,
                     seq: ++bubbleSeqCounter,
                     delayMs: eventIdx * BUBBLE_STAGGER_MS,
                     kind: isGoldProc ? "gold" : "damage",
-                };
+                });
                 runeBreakdown.push({
                     base: isGoldProc ? 0 : postModifier,
                     final: isGoldProc ? 0 : postModifier,
-                    isResisted: false,
-                    isCritical: false,
+                    isResisted: procIsResisted,
+                    isCritical: procIsCritical,
                     isProc: true,
                     isGold: isGoldProc,
                     goldDelta: isGoldProc ? proc.effect.amount : undefined,

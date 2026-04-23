@@ -67,15 +67,17 @@ export default function PlayArea() {
     // the shake on each contributing rune wrapper at its bubble's delayMs
     // offset. The shake is intentionally subtle (small translate, gentle
     // rotate, tiny scale) so it reads as "the rune flinched" rather than
-    // a wobble. Proc bubbles get their own shake at their delay.
+    // a wobble. Proc bubbles get their own shake at each proc's delay —
+    // multi-proc slots (Mimic+Chainlink stacking two retriggers) replay
+    // the shake once per proc so the rune visibly reacts to every hit.
     useGSAP(() => {
         for (let i = 0; i < MAX_PLAY; i++) {
             const wrapper = shakeRefs.current[i];
             if (!wrapper) continue;
 
             const bubble = runeDamageBubbles[i];
-            const procBubble = procDamageBubbles[i];
-            if (!bubble && !procBubble) continue;
+            const procBubblesForSlot = procDamageBubbles[i] ?? [];
+            if (!bubble && procBubblesForSlot.length === 0) continue;
 
             const shakeKeyframes = [
                 { x: -1.5, y: -0.5, rotation: -1, scale: 1.04, duration: RUNE_SHAKE_FRAME_S },
@@ -95,8 +97,9 @@ export default function PlayArea() {
                     overwrite: "auto",
                 });
             }
-            // Proc bubble shake — replays the shake at the proc's delay
-            if (procBubble) {
+            // Proc bubble shakes — one per proc at its delay, so Mimic-
+            // stacked retriggers flinch the rune on every hit.
+            for (const procBubble of procBubblesForSlot) {
                 gsap.to(wrapper, {
                     keyframes: shakeKeyframes,
                     ease: "power2.out",
@@ -112,7 +115,7 @@ export default function PlayArea() {
             {Array.from({ length: MAX_PLAY }, (_, i) => {
                 const dissolving = dissolvingRunes[i];
                 const damageBubble = runeDamageBubbles[i] ?? null;
-                const procBubble = procDamageBubbles[i] ?? null;
+                const procBubblesForSlot = procDamageBubbles[i] ?? [];
 
                 return (
                     <div
@@ -164,8 +167,9 @@ export default function PlayArea() {
                                 delayMs={damageBubble.delayMs}
                             />
                         )}
-                        {procBubble && (
+                        {procBubblesForSlot.map((procBubble) => (
                             <RuneDamageBubble
+                                key={procBubble.seq}
                                 amount={procBubble.amount}
                                 baseAmount={procBubble.baseAmount}
                                 spellElement={procBubble.spellElement}
@@ -175,7 +179,7 @@ export default function PlayArea() {
                                 delayMs={procBubble.delayMs}
                                 kind={procBubble.kind}
                             />
-                        )}
+                        ))}
                     </div>
                 );
             })}

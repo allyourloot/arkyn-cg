@@ -82,7 +82,11 @@ export function lifecycleRngSlot(slot: number): number {
 //   - caster:      design choice — avoid stacking +casts from one slot
 //   - voltage/hourglass/fortune: SIGIL_PROCS share an rngOffset across
 //                  copies, so two iterations of the same proc produce
-//                  identical rolls (deterministic but unintuitive)
+//                  identical rolls (deterministic but unintuitive).
+//                  Chainlink is the exception — chance: 1 means every
+//                  roll procs, so the RNG-sharing concern doesn't apply
+//                  and Mimic+Chainlink cleanly stacks a second retrigger
+//                  per rune on the final cast.
 //   - burnrite/fuze/impale/haphazard: binary unlocks / set-membership —
 //                  duplicating has no observable effect
 //   - executioner: SIGIL_ACCUMULATOR_XMULT keys `player.sigilAccumulators`
@@ -251,6 +255,15 @@ export interface ProcDefinition {
      * — a proc can require both, either, or neither.
      */
     requireCritical?: boolean;
+    /**
+     * If true, the proc only fires on the player's FINAL cast of the round
+     * (castsRemaining === 1 pre-cast). Chainlink pattern — pair with
+     * `chance: 1` for a deterministic "big finisher" retrigger on the last
+     * hand. Stacks with other procs: a lightning rune on the final cast
+     * with both Voltage and Chainlink owned can fire both procs in the
+     * same cast.
+     */
+    requireFinalCast?: boolean;
     /** Proc chance, 0-1. */
     chance: number;
     /**
@@ -280,6 +293,16 @@ export const SIGIL_PROCS: Record<string, ProcDefinition> = {
         // element omitted → any element triggers the roll
         chance: 0.25,
         rngOffset: procRngSlot(2),
+        effect: { type: "double_damage" },
+    },
+    chainlink: {
+        // Deterministic retrigger on the player's final cast of the round.
+        // chance: 1 = always fires; requireFinalCast gates the whole proc so
+        // it no-ops on casts 1..N-1. Element omitted → every contributing
+        // rune retriggers, not just a specific element.
+        requireFinalCast: true,
+        chance: 1,
+        rngOffset: procRngSlot(3),
         effect: { type: "double_damage" },
     },
 };
@@ -317,6 +340,13 @@ export function* iterateProcs(
      * never need crit-conditional procs may omit this.
      */
     isCritical?: readonly boolean[],
+    /**
+     * True if this cast consumes the player's final cast slot of the round
+     * (castsRemaining === 1 pre-cast). Required when any owned proc uses
+     * `requireFinalCast` (Chainlink). Default `false` — callers that don't
+     * know the cast-budget can omit and final-cast procs stay dormant.
+     */
+    isFinalCast?: boolean,
 ): Generator<ProcEvent, void, unknown> {
     // Note: SIGIL_PROCS sigils are all in MIMIC_INCOMPATIBLE, so the
     // expansion here is a no-op in practice. Kept for consistency with
@@ -325,6 +355,7 @@ export function* iterateProcs(
     for (const sigilId of expandMimicSigils(sigils)) {
         const proc = SIGIL_PROCS[sigilId];
         if (!proc) continue;
+        if (proc.requireFinalCast && !isFinalCast) continue;
         const rng = createRoundRng(runSeed, proc.rngOffset + round * 10 + castNumber);
         for (let i = 0; i < contributingRuneElements.length; i++) {
             const element = contributingRuneElements[i];

@@ -261,6 +261,14 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         cost: 4,
         sellPrice: 2,
     },
+    chainlink: {
+        id: "chainlink",
+        name: "Chainlink",
+        rarity: "uncommon",
+        description: "{Retrigger all played runes} on the {final hand}.",
+        cost: 4,
+        sellPrice: 2,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

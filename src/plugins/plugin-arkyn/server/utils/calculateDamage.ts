@@ -105,6 +105,10 @@ export function calculateDamage(
         castsRemaining !== undefined
     ) {
         const castNumber = CASTS_PER_ROUND - castsRemaining;
+        // `castsRemaining` here is the PRE-cast value (handleCast decrements
+        // after calling calculateDamage), so castsRemaining === 1 means this
+        // cast consumes the final slot — Chainlink's retrigger trigger.
+        const isFinalCast = castsRemaining === 1;
         for (const proc of iterateProcs(
             activeSigils,
             contributingRunes.map(r => r.element),
@@ -112,6 +116,7 @@ export function calculateDamage(
             currentRound,
             castNumber,
             breakdown.isCritical,
+            isFinalCast,
         )) {
             if (proc.effect.type === "double_damage") {
                 // Adds the rune's base contribution again, multiplied by the
