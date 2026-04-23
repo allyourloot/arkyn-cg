@@ -187,33 +187,78 @@
 }
 
 @media (max-height: 500px) {
+    /* Shorter wrapper moves the rune grid higher in the viewport — the
+       grid centers vertically in whatever height the wrapper claims, so
+       trimming height from 72vh → 56vh pulls the grid up ~40px while
+       keeping the action panel's absolute bottom:0 anchor intact.
+       padding-bottom adds a bottom gutter OUTSIDE the content box: the
+       grid (flex-centered in the content box) stays where it is, but
+       the action panel (absolute, anchored to the padding box bottom)
+       slides down by the padding-bottom amount. Net result: visible
+       gap between rune grid and action panel grows by ~40px without
+       stretching either the wrapper's visible frame content or moving
+       the runes past center-of-screen. */
     .wrapper {
+        height: 56vh;
+        padding-bottom: clamp(30px, 6vh, 50px);
+        /* centerColumnShop's padding-top (~85px) is asymmetric from its
+           padding-bottom (~18px) — sized for the shop's NEXT ROUND
+           button clearance. Picker mode has no such button so it gets
+           shoved visually below viewport center. Pull it back up so
+           the full picker (rune grid + action panel) reads as centered
+           in the viewport. */
+        margin-top: clamp(-40px, -7vh, -25px);
         gap: clamp(8px, 2vh, 16px);
     }
     .grid {
         gap: clamp(10px, 2vw, 24px);
     }
+    /* Bigger runes for mobile — they're the primary interactive element
+       on this screen and the 36-60px range read as too small against the
+       compact action panel below. */
     .runeWrap {
-        width: clamp(36px, 5vw, 60px);
+        width: clamp(48px, 6.5vw, 72px);
     }
+    /* Tighter action panel chrome so the prompt + button row occupies
+       less vertical real estate below the rune grid. Border thins from
+       20→10, inner frame strip thins from 12→6. */
     .actionPanel {
-        border-width: 12px;
-        border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-        padding: 6px 12px 8px;
-        gap: 6px;
+        border-width: 10px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
+        padding: 4px 10px 5px;
+        gap: 4px;
     }
     .promptStrip {
-        border-width: 8px;
-        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
-        padding: 3px 10px;
+        border-width: 6px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        padding: 2px 8px;
     }
     .prompt {
-        font-size: var(--font-size-2xs);
+        font-size: var(--font-size-3xs);
         letter-spacing: 1px;
+    }
+    .buttonRow {
+        gap: clamp(8px, 1.4vw, 18px);
     }
     .selectButton,
     .skipButton {
-        font-size: var(--font-size-xs);
-        padding: clamp(4px, 0.8vh, 8px) clamp(16px, 2vw, 28px);
+        font-size: var(--font-size-2xs);
+        padding: 3px 14px;
+        border-width: 6px;
+    }
+    .selectButton {
+        border-image: var(--btn-bg) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+    .selectButton:hover:not(:disabled) {
+        border-image: var(--btn-bg-hover) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+    .selectButton:disabled {
+        border-image: var(--btn-bg-disabled) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+    .skipButton {
+        border-image: var(--skip-bg) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+    .skipButton:hover {
+        border-image: var(--skip-bg-hover) 10 10 10 10 fill / 6px 6px 6px 6px;
     }
 }

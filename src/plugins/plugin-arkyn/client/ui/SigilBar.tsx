@@ -5,6 +5,7 @@ import { MAX_SIGILS, MIMIC_INCOMPATIBLE, SIGIL_ACCUMULATOR_XMULT, SIGIL_INVENTOR
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, usePendingSigilId, useSigilProcBubble } from "../arkynStore";
 import { RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
+import { haptic, HAPTIC_LIGHT } from "../haptics";
 import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
@@ -53,6 +54,7 @@ export default function SigilBar() {
         sigils,
         containerRef: frameRef,
         onTap: (sigilId) => {
+            haptic(HAPTIC_LIGHT);
             setSelectedSigilId(prev => prev === sigilId ? null : sigilId);
         },
     });

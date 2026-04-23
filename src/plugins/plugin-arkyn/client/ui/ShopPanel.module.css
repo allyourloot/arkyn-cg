@@ -217,33 +217,23 @@
     image-rendering: pixelated;
 }
 
-/* --- Middle: Upgrade display area --- */
-/* Flexible area between the enemy section and the bottom stats that
-   shows scroll upgrade info when a purchase is made. The actual upgrade
-   content lives in the shared ScrollUpgradeDisplay component. */
-.upgradeArea {
-    box-sizing: border-box;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-}
-
 /* Bento bottom section (Bank + Casts + Discards) now lives in
    ./StatBentoRow.module.css — shared across SpellPreview and ShopPanel.
    The --bank-bg / --hands-bg / --discards-bg variables are still set on
    the panel root in ShopPanel.tsx so the shared component picks them up. */
 
 
-/* -- Landscape phone compact -- */
+/* -- Landscape phone compact --
+   Mirrors SpellPreview.module.css's mobile .panel (same width, same
+   margin, same translateX left-shift) so the two panels read as
+   sibling frames that land at identical screen positions when the
+   game toggles between round and shop phase. */
 @media (max-height: 500px) {
     .panel {
-        width: clamp(190px, 24vw, 320px);
+        width: clamp(168px, 21vw, 280px);
         height: 94vh;
-        margin-left: clamp(6px, 1vw, 16px);
+        margin-left: clamp(2px, 0.4vw, 8px);
+        transform: translateX(clamp(-18px, -1.6vw, -10px));
         border-width: 12px;
         border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
         padding: 2px 2px;
@@ -270,9 +260,9 @@
         height: 30vh;
         flex-shrink: 0;
         overflow: hidden;
-        border-width: 12px;
-        border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-        padding: 4px 3px;
+        border-width: 10px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
+        padding: 3px 2px;
         gap: clamp(2px, 0.5vw, 6px);
     }
 
@@ -282,8 +272,8 @@
     }
 
     .enemyIcon {
-        width: clamp(28px, 3.4vw, 46px);
-        height: clamp(28px, 3.4vw, 46px);
+        width: clamp(24px, 3vw, 40px);
+        height: clamp(24px, 3vw, 40px);
     }
 
     .enemyName {
@@ -309,20 +299,24 @@
         padding: 2px 6px;
     }
 
+    /* Affinity row must fit TWO chips (Resists + Vulnerable) inside the
+       narrower panel without clipping. Tighter chrome on the chip frame
+       plus smaller icons keeps the full "RESISTS [🧠] · VULNERABLE [✝️⚡]"
+       row visible on 500vh viewports. */
     .affinityContainer {
-        gap: clamp(2px, 0.4vw, 6px);
+        gap: clamp(2px, 0.4vw, 5px);
         margin-top: clamp(1px, 0.2vh, 3px);
     }
 
     .affinitySection {
-        border-width: 6px;
-        border-image: var(--panel-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
-        padding: clamp(1px, 0.2vw, 2px) clamp(3px, 0.6vw, 6px);
+        border-width: 5px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 5px 5px 5px 5px;
+        padding: 1px 3px;
         gap: 1px;
     }
 
     .affinityLabel {
-        font-size: 8px;
+        font-size: 7px;
         letter-spacing: 0.5px;
     }
 
@@ -331,7 +325,7 @@
     }
 
     .affinityIcon {
-        width: clamp(14px, 1.6vw, 22px);
-        height: clamp(14px, 1.6vw, 22px);
+        width: clamp(12px, 1.4vw, 18px);
+        height: clamp(12px, 1.4vw, 18px);
     }
 }

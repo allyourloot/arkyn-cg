@@ -19,6 +19,7 @@ import buttonUrl from "/assets/audio/sfx/button.mp3?url";
 import typewriterUrl from "/assets/audio/sfx/typewriter.mp3?url";
 import addConsumableUrl from "/assets/audio/sfx/add-consumable.mp3?url";
 import { getAudioContext } from "./audioContext";
+import { haptic, HAPTIC_LIGHT, HAPTIC_MEDIUM } from "./haptics";
 
 // ---- Volume levels ----
 const VOL_MENU = 0.45;        // menu open/close
@@ -90,19 +91,31 @@ function makeDetuneSfx(url: string, volume: number) {
     };
 }
 
+// Tap-triggered SFX also emit a haptic buzz via navigator.vibrate so
+// mobile taps feel tactile (Android only — iOS WebKit no-ops; see
+// haptics.ts). Animation-driven SFX (damage/count/gold/critical/etc.)
+// deliberately skip the haptic so a long cast doesn't feel like a
+// phone call rattling in your hand.
+
 const playRuneSfx = makeSfx(selectRuneUrl, VOL_RUNE);
 
 export function playSelectRune(): void {
+    haptic(HAPTIC_LIGHT);
     playRuneSfx();
 }
 
 const playDeselectSfx = makeSfx(deselectRuneUrl, VOL_RUNE);
 export function playDeselectRune(): void {
+    haptic(HAPTIC_LIGHT);
     playDeselectSfx();
 }
-export const playPickupRune = () => playRuneSfx(1.3);
-export const playDropRune = makeDetuneSfx(dropRuneUrl, VOL_RUNE);
-export const playPlaceRune = makeSfx(placeRuneUrl, VOL_DEFAULT);
+export const playPickupRune = () => { haptic(HAPTIC_LIGHT); playRuneSfx(1.3); };
+const playDropRuneSfx = makeDetuneSfx(dropRuneUrl, VOL_RUNE);
+export const playDropRune = (cents = 0) => { haptic(HAPTIC_LIGHT); playDropRuneSfx(cents); };
+const playPlaceRuneSfx = makeSfx(placeRuneUrl, VOL_DEFAULT);
+export const playPlaceRune = (rate = 1) => { haptic(HAPTIC_LIGHT); playPlaceRuneSfx(rate); };
+// Animation-only (no haptic): count, damage, cast-rune during cast,
+// dissolve, critical, gold/gold-total, round-win, game-over.
 export const playCount = makeSfx(countUrl, VOL_DEFAULT);
 export const playDamage = makeSfx(damageUrl, VOL_DEFAULT);
 export const playCastRune = makeSfx(castRuneUrl, VOL_DEFAULT);
@@ -110,13 +123,19 @@ export const playDissolve = makeSfx(dissolveUrl, VOL_DEFAULT);
 export const playCritical = makeSfx(criticalUrl, VOL_DEFAULT);
 export const playGold = makeSfx(goldUrl, VOL_DEFAULT);
 export const playGoldTotal = makeSfx(goldTotalUrl, VOL_DEFAULT);
-export const playMenuOpen = makeSfx(menuOpenUrl, VOL_MENU);
-export const playMenuClose = makeSfx(menuCloseUrl, VOL_MENU);
 export const playRoundWin = makeSfx(roundWinUrl, VOL_DEFAULT);
 export const playGameOver = makeSfx(gameOverUrl, VOL_DEFAULT);
-export const playBuy = makeSfx(buyUrl, VOL_DEFAULT);
-export const playButton = makeSfx(buttonUrl, VOL_DEFAULT);
-export const playAddConsumable = makeSfx(addConsumableUrl, VOL_DEFAULT);
+// Tap-triggered (haptic).
+const playMenuOpenSfx = makeSfx(menuOpenUrl, VOL_MENU);
+export const playMenuOpen = (rate = 1) => { haptic(HAPTIC_LIGHT); playMenuOpenSfx(rate); };
+const playMenuCloseSfx = makeSfx(menuCloseUrl, VOL_MENU);
+export const playMenuClose = (rate = 1) => { haptic(HAPTIC_LIGHT); playMenuCloseSfx(rate); };
+const playBuySfx = makeSfx(buyUrl, VOL_DEFAULT);
+export const playBuy = (rate = 1) => { haptic(HAPTIC_MEDIUM); playBuySfx(rate); };
+const playButtonSfx = makeSfx(buttonUrl, VOL_DEFAULT);
+export const playButton = (rate = 1) => { haptic(HAPTIC_MEDIUM); playButtonSfx(rate); };
+const playAddConsumableSfx = makeSfx(addConsumableUrl, VOL_DEFAULT);
+export const playAddConsumable = (rate = 1) => { haptic(HAPTIC_LIGHT); playAddConsumableSfx(rate); };
 
 // Typewriter SFX — looping sound that needs clean stop/restart per line.
 // Uses a single live BufferSourceNode with loop=true. playTypewriter

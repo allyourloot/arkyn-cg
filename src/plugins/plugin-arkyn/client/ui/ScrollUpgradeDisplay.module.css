@@ -155,3 +155,70 @@
     text-shadow: 0 0 8px rgba(74, 222, 128, 0.3), 2px 2px 0 rgba(0, 0, 0, 0.8);
     line-height: 1;
 }
+
+/* ── Landscape phone compact ──
+   Shop panel's mobile width is ~21vw (~220px) — the default inline
+   layout (icon left, info right) runs out of horizontal room and the
+   "Per Rune Bonus" label wraps, plus "+N" / "+M" can break across
+   lines if the container is narrow enough. Force the inline variant
+   to stack vertically (mirroring the .stacked variant's behavior) and
+   shrink every dimension so the whole block fits in the upgradeArea. */
+@media (max-height: 500px) {
+    .upgradeRow {
+        gap: clamp(4px, 0.8vh, 10px);
+        padding: clamp(2px, 0.4vh, 6px) clamp(2px, 0.4vw, 6px);
+    }
+
+    .upgradeContent.inline .upgradeRow {
+        flex-direction: column;
+        gap: clamp(4px, 0.8vh, 10px);
+    }
+
+    .upgradeContent.inline .upgradeRuneInfo {
+        align-items: center;
+    }
+
+    .upgradeContent.inline .upgradeRuneDamageLabel {
+        text-align: center;
+    }
+
+    .upgradeContent.stacked .upgradeRow {
+        gap: clamp(4px, 0.8vh, 10px);
+    }
+
+    .upgradeRuneIcon {
+        width: clamp(32px, 4.5vw, 52px);
+        height: clamp(32px, 4.5vw, 52px);
+    }
+
+    .upgradeRuneInfo {
+        gap: clamp(2px, 0.3vh, 4px);
+    }
+
+    .upgradeRuneDamageLabel {
+        font-size: var(--font-size-3xs);
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+    }
+
+    /* Keep the entire `+N → +M` row on a single line — at narrow widths
+       "+N" and the arrow + "+M" can otherwise wrap onto two lines inside
+       the BouncyText per-char span tree. */
+    .upgradeRuneDamageRow {
+        white-space: nowrap;
+        gap: 4px;
+    }
+
+    .upgradeRuneDamageOld,
+    .upgradeRuneDamageNew {
+        font-size: var(--font-size-sm);
+    }
+
+    .upgradeRuneDamageArrow {
+        font-size: var(--font-size-xs);
+    }
+
+    .upgradeRuneDamageResult {
+        gap: 3px;
+    }
+}

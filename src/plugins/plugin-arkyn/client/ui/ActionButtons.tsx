@@ -6,6 +6,7 @@ import {
     castSpell,
     discardRunes,
 } from "../arkynStore";
+import { haptic, HAPTIC_MEDIUM } from "../haptics";
 import buttonGreenUrl from "/assets/ui/button-green.png?url";
 import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
 import buttonGreenDisabledUrl from "/assets/ui/button-green-disabled.png?url";
@@ -42,7 +43,7 @@ export default function ActionButtons() {
         <div className={styles.bar}>
             <div className={styles.group}>
                 <button
-                    onClick={castSpell}
+                    onClick={() => { haptic(HAPTIC_MEDIUM); castSpell(); }}
                     disabled={!canCast}
                     className={`${styles.button} ${styles.cast}`}
                     style={castStateVars}
@@ -50,7 +51,7 @@ export default function ActionButtons() {
                     Cast <span className={styles.countBadge} style={{ backgroundImage: `url(${circleFrameUrl})` }}>{castsRemaining}</span>
                 </button>
                 <button
-                    onClick={discardRunes}
+                    onClick={() => { haptic(HAPTIC_MEDIUM); discardRunes(); }}
                     disabled={!canDiscard}
                     className={`${styles.button} ${styles.discard}`}
                     style={discardStateVars}

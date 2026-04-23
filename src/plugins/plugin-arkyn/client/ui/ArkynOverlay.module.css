@@ -231,4 +231,14 @@
         width: clamp(120px, 16vw, 220px);
         margin-right: clamp(4px, 1vw, 12px);
     }
+
+    /* Push shop content down so the panel's top edge clears the SigilBar
+       (sigil bar bottom ~100px). Explicit bottom padding protects the
+       NEXT ROUND button from the iOS home-indicator strip at the bottom
+       of the viewport — without this the button's bottom border sits
+       flush with the home indicator in standalone PWA mode. */
+    .centerColumnShop {
+        padding-top: clamp(85px, 17vh, 140px);
+        padding-bottom: clamp(18px, 3.6vh, 28px);
+    }
 }

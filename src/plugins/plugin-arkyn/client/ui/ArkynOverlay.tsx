@@ -531,15 +531,23 @@ export default function ArkynOverlay() {
             }
         } else if (renderedPhase === "shop") {
             if (shopPanelRef.current) {
+                // Read the CSS-resolved x (mobile applies a translateX
+                // shift on the panel to match SpellPreview's positioning)
+                // and land the entrance animation on THAT value instead of
+                // a hardcoded 0. Hardcoding 0 would override the CSS
+                // transform and park the shop panel 10-18px to the right
+                // of where the round-phase SpellPreview sits on mobile.
+                const cssX = gsap.getProperty(shopPanelRef.current, "x") as number;
                 gsap.fromTo(shopPanelRef.current,
                     { x: -240, opacity: 0 },
-                    { x: 0, opacity: 1, duration: SCREEN_ENTER_DURATION_S, ease: "power2.out", overwrite: "auto" },
+                    { x: cssX, opacity: 1, duration: SCREEN_ENTER_DURATION_S, ease: "power2.out", overwrite: "auto" },
                 );
             }
             if (shopScreenRef.current) {
+                const cssX = gsap.getProperty(shopScreenRef.current, "x") as number;
                 gsap.fromTo(shopScreenRef.current,
                     { x: 240, opacity: 0 },
-                    { x: 0, opacity: 1, duration: SCREEN_ENTER_DURATION_S, ease: "power2.out", overwrite: "auto" },
+                    { x: cssX, opacity: 1, duration: SCREEN_ENTER_DURATION_S, ease: "power2.out", overwrite: "auto" },
                 );
             }
         }

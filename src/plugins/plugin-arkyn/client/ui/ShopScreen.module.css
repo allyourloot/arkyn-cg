@@ -326,41 +326,115 @@
 
 /* ================================================================
    Landscape phone compact
+   Panel size drops dramatically — 66vw × 80vh was bigger than the
+   centerColumn's usable content area (500vh × ~440px after padding-top)
+   and poked into SigilBar territory. Trimming to ~54vw × 62vh leaves
+   breathing room above (for SigilBar) and below (for NEXT ROUND button).
    ================================================================ */
 @media (max-height: 500px) {
-    .panel {
-        max-width: clamp(320px, 66vw, 560px);
-        height: 80vh;
-        margin-top: auto;
-        margin-bottom: auto;
-        border-width: 12px;
-        border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-        padding: clamp(4px, 0.8vw, 10px) clamp(8px, 1.4vw, 18px) clamp(6px, 1vw, 12px);
-        gap: clamp(4px, 1vh, 10px);
+    .wrapper {
+        gap: clamp(4px, 0.8vh, 10px);
+        max-width: clamp(300px, 56vw, 460px);
     }
 
-    .title {
-        font-size: var(--font-size-sm);
-        letter-spacing: 2px;
+    .shopContent {
+        gap: clamp(4px, 0.8vh, 10px);
+    }
+
+    .panel {
+        max-width: clamp(300px, 56vw, 460px);
+        height: 58vh;
+        margin-top: auto;
+        margin-bottom: auto;
+        border-width: 10px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
+        padding: clamp(2px, 0.4vw, 6px) clamp(6px, 1vw, 12px) clamp(3px, 0.6vw, 8px);
+        gap: clamp(2px, 0.6vh, 6px);
+    }
+
+    .sectionLabel {
+        font-size: var(--font-size-3xs);
+        letter-spacing: 1px;
+        margin-left: clamp(2px, 0.4vw, 8px);
     }
 
     .section {
-        border-width: 12px;
-        border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-        padding: clamp(12px, 1.6vh, 18px) clamp(6px, 1vw, 14px) clamp(4px, 0.8vh, 10px);
+        border-width: 8px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        /* sectionLabel lives OUTSIDE the section (previous flex sibling)
+           so top padding doesn't need to reserve space for it — keep
+           both top and bottom minimal so the inner frame hugs the item
+           cards and the overall panel height stays compact. */
+        padding: clamp(2px, 0.4vh, 6px) clamp(2px, 0.4vw, 6px) clamp(1px, 0.2vh, 4px);
     }
 
-    .sectionTitle {
-        font-size: var(--font-size-3xs);
+    .itemGrid {
+        gap: clamp(8px, 1.4vw, 18px);
+    }
+
+    .itemCard {
+        padding: clamp(2px, 0.4vh, 5px) clamp(1px, 0.2vw, 3px);
     }
 
     .itemImage {
-        width: clamp(36px, 5vw, 56px);
-        height: clamp(36px, 5vw, 56px);
+        width: clamp(44px, 6vw, 72px);
+        height: clamp(44px, 6vw, 72px);
+    }
+
+    .sigilCanvas {
+        width: clamp(44px, 6vw, 72px) !important;
+        height: clamp(44px, 6vw, 72px) !important;
+    }
+
+    /* Gold price chip sits on top edge of each item card — compact chrome
+       so it doesn't dominate the smaller item visually. */
+    .priceChip {
+        top: -10px;
+        border-width: 6px;
+        border-image: var(--card-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        padding: 0 3px;
+        gap: 3px;
+    }
+
+    .priceIcon {
+        width: clamp(12px, 1.6vw, 18px);
+        height: clamp(12px, 1.6vw, 18px);
+    }
+
+    .priceValue {
+        font-size: var(--font-size-2xs);
+    }
+
+    /* Buy-button overlay when a card is tapped. Tighter footprint so it
+       doesn't collide with the neighbor card in the now-smaller grid. */
+    .buyButton {
+        font-size: var(--font-size-2xs);
+        padding: clamp(3px, 0.6vh, 6px) clamp(6px, 1vw, 10px);
+        border-width: 1px;
+    }
+
+    .tooltipName {
+        font-size: var(--font-size-2xs);
+    }
+
+    .tooltipDescWrap {
+        border-width: 8px;
+        border-image: var(--tooltip-desc-bg) 24 24 24 24 fill / 8px;
+        padding: 3px 6px;
+    }
+
+    .tooltipDesc {
+        font-size: var(--font-size-3xs);
     }
 
     .continueButton {
         font-size: var(--font-size-xs);
-        padding: clamp(4px, 0.8vh, 8px) clamp(16px, 2vw, 28px);
+        padding: clamp(3px, 0.6vh, 6px) clamp(14px, 1.8vw, 24px);
+        border-width: 8px;
+        border-image: var(--btn-bg) 10 10 10 10 fill / 8px 8px 8px 8px;
+    }
+
+    .continueButton:hover {
+        border-image: var(--btn-bg-hover) 10 10 10 10 fill / 8px 8px 8px 8px;
     }
 }
