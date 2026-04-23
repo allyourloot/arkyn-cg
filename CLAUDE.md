@@ -34,6 +34,8 @@ cd packages/plugin-<name> && pnpm build
 cd packages/template-sandbox && pnpm package
 ```
 
+> **Note (2026-04-23):** `scripts/build-server.ts` originally did `cp(".hytopia/template", "dist", ...)` and `cp("assets/__generated", ...)`. Both were removed because (a) arkyn-v3 is UI-only — no registered plugin produces `assets/__generated/`, and (b) `.hytopia/template/` is not scaffolded by the `hy` CLI (`hy create` v0.0.17 extracts `https://prod.cdn.hytopia.com/assets/v0.0.2.zip`, which does not contain it — a freshly-created `neo-starter/` has the same missing folder). If a future Hytopia CLI update scaffolds `.hytopia/template/`, restore the cp line so the deploy wrapper is included in `dist.zip`.
+
 ## Architecture Overview
 
 This is a monorepo (`pnpm` workspaces) for **HYTOPIA Neo** — a voxel-based multiplayer game framework built around a plugin-first architecture. Everything beyond core networking is a swappable plugin.

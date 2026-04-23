@@ -1,14 +1,8 @@
 import { build } from "esbuild";
-import { cp, mkdir } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 
 // Create dist/assets directory
 await mkdir("dist/assets", { recursive: true });
-
-// Copy generated assets
-await cp("assets/__generated", "dist/assets/__generated", { recursive: true });
-
-// Copy template
-await cp(".hytopia/template", "dist", { recursive: true });
 
 // Build server
 await build({
