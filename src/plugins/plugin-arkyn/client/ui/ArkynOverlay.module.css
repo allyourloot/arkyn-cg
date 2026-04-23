@@ -224,7 +224,7 @@
 
     .handStack {
         gap: clamp(2px, 0.4vh, 6px);
-        padding-bottom: clamp(4px, 1vh, 10px);
+        padding-bottom: clamp(14px, 3vh, 26px);
     }
 
     .rightSpacer {

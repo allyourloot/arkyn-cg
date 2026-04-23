@@ -1,23 +1,23 @@
-import selectRuneUrl from "/assets/audio/sfx/select-rune.ogg?url";
-import deselectRuneUrl from "/assets/audio/sfx/deselect-rune.ogg?url";
-import dropRuneUrl from "/assets/audio/sfx/drop-rune.ogg?url";
-import placeRuneUrl from "/assets/audio/sfx/place-rune.ogg?url";
-import countUrl from "/assets/audio/sfx/count.ogg?url";
-import damageUrl from "/assets/audio/sfx/damage.ogg?url";
-import castRuneUrl from "/assets/audio/sfx/cast-rune.ogg?url";
-import discardUrl from "/assets/audio/sfx/discard.ogg?url";
-import dissolveUrl from "/assets/audio/sfx/dissolve.ogg?url";
-import criticalUrl from "/assets/audio/sfx/critical.ogg?url";
-import goldUrl from "/assets/audio/sfx/gold.ogg?url";
-import goldTotalUrl from "/assets/audio/sfx/gold-total.ogg?url";
-import menuOpenUrl from "/assets/audio/sfx/menu-open.ogg?url";
-import menuCloseUrl from "/assets/audio/sfx/menu-close.ogg?url";
-import roundWinUrl from "/assets/audio/sfx/round-win.ogg?url";
-import gameOverUrl from "/assets/audio/sfx/game-over.ogg?url";
-import buyUrl from "/assets/audio/sfx/buy.ogg?url";
-import buttonUrl from "/assets/audio/sfx/button.ogg?url";
-import typewriterUrl from "/assets/audio/sfx/typewriter.ogg?url";
-import addConsumableUrl from "/assets/audio/sfx/add-consumable.ogg?url";
+import selectRuneUrl from "/assets/audio/sfx/select-rune.mp3?url";
+import deselectRuneUrl from "/assets/audio/sfx/deselect-rune.mp3?url";
+import dropRuneUrl from "/assets/audio/sfx/drop-rune.mp3?url";
+import placeRuneUrl from "/assets/audio/sfx/place-rune.mp3?url";
+import countUrl from "/assets/audio/sfx/count.mp3?url";
+import damageUrl from "/assets/audio/sfx/damage.mp3?url";
+import castRuneUrl from "/assets/audio/sfx/cast-rune.mp3?url";
+import discardUrl from "/assets/audio/sfx/discard.mp3?url";
+import dissolveUrl from "/assets/audio/sfx/dissolve.mp3?url";
+import criticalUrl from "/assets/audio/sfx/critical.mp3?url";
+import goldUrl from "/assets/audio/sfx/gold.mp3?url";
+import goldTotalUrl from "/assets/audio/sfx/gold-total.mp3?url";
+import menuOpenUrl from "/assets/audio/sfx/menu-open.mp3?url";
+import menuCloseUrl from "/assets/audio/sfx/menu-close.mp3?url";
+import roundWinUrl from "/assets/audio/sfx/round-win.mp3?url";
+import gameOverUrl from "/assets/audio/sfx/game-over.mp3?url";
+import buyUrl from "/assets/audio/sfx/buy.mp3?url";
+import buttonUrl from "/assets/audio/sfx/button.mp3?url";
+import typewriterUrl from "/assets/audio/sfx/typewriter.mp3?url";
+import addConsumableUrl from "/assets/audio/sfx/add-consumable.mp3?url";
 import { getAudioContext } from "./audioContext";
 
 // ---- Volume levels ----
@@ -161,7 +161,7 @@ export function stopTypewriter(): void {
 }
 
 // Discard SFX with built-in pitch randomization. Plays one shot of
-// `discard.ogg` at a slightly randomized playback rate so a multi-rune
+// `discard.mp3` at a slightly randomized playback rate so a multi-rune
 // discard doesn't read as N identical clicks. The ±8% range is subtle
 // enough that the sound stays recognisable but distinct per rune.
 const playDiscardSfx = makeSfx(discardUrl, VOL_DEFAULT);

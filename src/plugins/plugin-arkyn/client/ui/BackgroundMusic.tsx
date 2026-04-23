@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import arkynThemeUrl from "/assets/audio/music/arkyn-theme.ogg?url";
-import shopThemeUrl from "/assets/audio/music/shop.ogg?url";
-import bossThemeUrl from "/assets/audio/music/boss.ogg?url";
+import arkynThemeUrl from "/assets/audio/music/arkyn-theme.mp3?url";
+import shopThemeUrl from "/assets/audio/music/shop.mp3?url";
+import bossThemeUrl from "/assets/audio/music/boss.mp3?url";
 import { useGamePhase, useEnemyIsBoss } from "../arkynStore";
 import { getAudioContext } from "../audioContext";
 

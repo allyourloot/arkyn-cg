@@ -288,9 +288,14 @@
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
     .panel {
-        width: clamp(190px, 24vw, 320px);
+        width: clamp(168px, 21vw, 280px);
         height: 94vh;
-        margin-left: clamp(6px, 1vw, 16px);
+        margin-left: clamp(2px, 0.4vw, 8px);
+        /* Transform-based left shift (not margin) — transform doesn't
+           participate in flex layout, so the panel slides visually left
+           without dragging the centerColumn / rightSpacer along. Margin
+           stays minimal; the extra pull comes from translateX. */
+        transform: translateX(clamp(-18px, -1.6vw, -10px));
         border-width: 12px;
         border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
         padding: 2px 2px;

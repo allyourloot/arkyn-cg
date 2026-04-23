@@ -312,10 +312,11 @@
        so the centerColumn (play area + hand frame) sits right of viewport
        center. Shift the wrapper right by half that asymmetry so the frame
        aligns with the play area / hand frame rather than the viewport.
-       ~4vw derived from (SpellPreview.mobile 24vw - rightSpacer.mobile 16vw) / 2. */
+       ~2.5vw derived from (SpellPreview.mobile 21vw - rightSpacer.mobile 16vw) / 2.
+       Keep in sync with SpellPreview.module.css's mobile `.panel` width. */
     .wrapper {
-        top: clamp(6px, 1.6vh, 18px);
-        left: calc(50% + clamp(36px, 4vw, 52px));
+        top: clamp(14px, 3vh, 28px);
+        left: calc(50% + clamp(22px, 2.5vw, 34px));
         gap: clamp(4px, 0.8vw, 10px);
     }
 
