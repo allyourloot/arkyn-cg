@@ -38,13 +38,18 @@
     width: 100%;
     min-width: 0;
     flex-shrink: 0;
-    /* Reserve enough vertical room to comfortably hold the largest spell
-       content (rune recipe + name + tier + multi-line description) so the
-       section doesn't grow/shrink between the empty preview state and a
-       resolved spell — that would otherwise shove the damage chips and
-       gold counter up and down. min-height includes the 24px border on
-       both sides because `box-sizing: border-box`. */
-    min-height: 32vh;
+    /* Fixed height (not min-height) so the section stays exactly 32vh
+       regardless of content. Before, `min-height` let tall spell content
+       (runes + name + tier + description) grow the section — then when a
+       scroll consumable's ScrollUpgradeDisplay took over (shorter
+       content), the section snapped back down to the 32vh min and the
+       damage chips / gold counter below shifted a few pixels. Paired
+       with `overflow: hidden` so oversized content clips instead of
+       pushing; empty-state + resolved-spell content both fit comfortably
+       inside 32vh at desktop viewport sizes. Height includes the 24px
+       border on both sides because `box-sizing: border-box`. */
+    height: 32vh;
+    overflow: hidden;
     background: transparent;
     border-style: solid;
     border-color: transparent;

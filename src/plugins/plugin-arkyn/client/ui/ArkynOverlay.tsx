@@ -442,10 +442,17 @@ export default function ArkynOverlay() {
         // Wait for dissolve to finish, then clean up. Extra 100ms buffer
         // so the canvas has fully hidden itself before React unmounts it
         // — prevents a white flash from the GL context teardown.
+        // `setScrollUpgradeDisplay(null)` returns the ShopPanel's NEXT
+        // ENEMY section to the live enemy preview — without this it
+        // stays stuck on "Per Rune Bonus +N" for the rest of the shop
+        // phase, since this flying-scroll animation is the only place
+        // that calls setScrollUpgradeDisplay({...}) and there was no
+        // matching clear at the end of the timeline.
         tl.to(el, {
             duration: DISSOLVE_DURATION_MS / 1000 + 0.1,
             onComplete: () => {
                 setFlyingScroll(null);
+                setScrollUpgradeDisplay(null);
                 requestAnimationFrame(() => setDissolveData(null));
             },
         });

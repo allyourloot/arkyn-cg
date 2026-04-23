@@ -65,15 +65,20 @@
     line-height: 1;
 }
 
-/* Reserved placeholder section — matches SpellPreview's .section min-height
+/* Reserved placeholder section — matches SpellPreview's .section height
    so the panel rhythm (chip / heading / section / stats / gold) reads as
-   balanced even while the section is empty. */
+   balanced even while the section is empty. Fixed `height` (not
+   min-height) so the section stays exactly 32vh regardless of content,
+   preventing a layout shift when the enemy info swaps to the
+   ScrollUpgradeDisplay (shorter content → section would otherwise
+   shrink back to the 32vh min). */
 .section {
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
     flex-shrink: 0;
-    min-height: 32vh;
+    height: 32vh;
+    overflow: hidden;
     background: transparent;
     border-style: solid;
     border-color: transparent;
