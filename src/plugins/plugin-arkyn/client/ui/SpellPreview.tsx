@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, type CSSProperties, type RefObject } from "react";
+import { useRef, memo, type CSSProperties, type RefObject } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
@@ -9,7 +9,6 @@ import {
     useCastBaseCounter,
     useCastTotalDamage,
     useRoundTotalDamage,
-    useScrollLevels,
     useSigils,
     useScrollUpgradeDisplay,
     useCastsRemaining,
@@ -20,16 +19,14 @@ import { resolveSpell, getContributingRuneIndices } from "../../shared/resolveSp
 import {
     SPELL_TIER_BASE_DAMAGE,
     SPELL_TIER_MULT,
-    SCROLL_RUNE_BONUS,
-    calculateSpellDamage,
 } from "../../shared";
-import type { RarityType } from "../../shared/arkynConstants";
 import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
 import { useEnemyIsBoss } from "../arkynStore";
 import RuneImage from "./RuneImage";
 import BouncyText from "./BouncyText";
-import GoldCounter from "./GoldCounter";
 import RoundInfo from "./RoundInfo";
+import StatBentoRow from "./StatBentoRow";
+import ScrollUpgradeDisplay from "./ScrollUpgradeDisplay";
 /** Plays a scale pop (1.45 -> 1) when `value` increments during a cast. */
 function useCounterPop(
     ref: RefObject<HTMLElement | null>,
@@ -84,9 +81,10 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
     const castBaseCounter = useCastBaseCounter();
     const castTotalDamage = useCastTotalDamage();
     const roundTotalDamage = useRoundTotalDamage();
-    const scrollLevels = useScrollLevels();
     const activeSigils = useSigils();
     const castMultCounter = useCastMultCounter();
+    const castsRemaining = useCastsRemaining();
+    const discardsRemaining = useDiscardsRemaining();
 
     const damageRef = useRef<HTMLSpanElement>(null);
     const totalRef = useRef<HTMLSpanElement>(null);
@@ -189,10 +187,10 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
                     </BouncyText>
                 </div>
                 <div className={styles.upgradeArea}>
-                    <ScrollUpgradeDisplay />
+                    <LiveScrollUpgrade />
                 </div>
                 <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} multRef={multRef} totalRef={totalRef} />
-                <BentoStats />
+                <StatBentoRow castsValue={castsRemaining} discardsValue={discardsRemaining} />
             </div>
         );
     }
@@ -333,103 +331,42 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
             </div>
 
             <div className={styles.upgradeArea}>
-                <ScrollUpgradeDisplay />
+                <LiveScrollUpgrade />
             </div>
 
             <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} multRef={multRef} totalRef={totalRef} />
 
-            <BentoStats />
+            <StatBentoRow castsValue={castsRemaining} discardsValue={discardsRemaining} />
         </div>
     );
 }
 
 /**
- * Bottom bento row — Bank (gold, left 70%) + Casts / Discards stacked
- * (right 30%). Mirrors ShopPanel's bottom section's visual footprint but
- * shows LIVE remaining action budgets here (matching the Cast/Discard
- * button bubbles in ActionButtons) — ShopPanel, which renders between
- * rounds, shows the max budget instead since "remaining" has no meaning
- * in the shop context.
+ * Thin wrapper around the shared `ScrollUpgradeDisplay` that reads the
+ * live upgrade hook and renders the overlay variant (absolute-positioned
+ * inside the upgradeArea so it doesn't shift the damage chips below).
  */
-function BentoStats() {
-    const castsRemaining = useCastsRemaining();
-    const discardsRemaining = useDiscardsRemaining();
-
-    return (
-        <div className={styles.bottomSection}>
-            <div className={styles.goldCell}>
-                <span className={styles.statLabel}>Bank</span>
-                <GoldCounter />
-            </div>
-            <div className={styles.statsSection}>
-                <div className={styles.statColumn}>
-                    <span className={styles.statLabel}>Casts</span>
-                    <div className={`${styles.statChip} ${styles.statChipHands}`}>
-                        <BouncyText className={styles.statChipValue}>
-                            {castsRemaining}
-                        </BouncyText>
-                    </div>
-                </div>
-                <div className={styles.statColumn}>
-                    <span className={styles.statLabel}>Discards</span>
-                    <div className={`${styles.statChip} ${styles.statChipDiscards}`}>
-                        <BouncyText className={styles.statChipValue}>
-                            {discardsRemaining}
-                        </BouncyText>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function ScrollUpgradeDisplay() {
+function LiveScrollUpgrade() {
     const upgradeDisplay = useScrollUpgradeDisplay();
-    const [showUpgraded, setShowUpgraded] = useState(false);
-
-    useEffect(() => {
-        if (!upgradeDisplay) { setShowUpgraded(false); return; }
-        setShowUpgraded(false);
-        const t = setTimeout(() => setShowUpgraded(true), 600);
-        return () => clearTimeout(t);
-    }, [upgradeDisplay?.element, upgradeDisplay?.oldLevel, upgradeDisplay?.newLevel]);
-
     if (!upgradeDisplay) return null;
-
-    const { element, oldLevel, newLevel } = upgradeDisplay;
-    // Scrolls add a flat additive bonus per matching-element rune
-    // regardless of rarity — surface that honestly rather than the
-    // old rarity-dependent "8 → 10" framing. Matches ShopPanel's
-    // UpgradeSection.
-    const oldBonus = (oldLevel - 1) * SCROLL_RUNE_BONUS;
-    const newBonus = (newLevel - 1) * SCROLL_RUNE_BONUS;
-
     return (
-        <div className={styles.upgradeContent}>
-            <div className={styles.upgradeRow}>
-                <div className={styles.upgradeRuneIcon}>
-                    <RuneImage rarity="common" element={element} className={styles.upgradeRuneImg} />
-                </div>
-                <div className={styles.upgradeRuneInfo}>
-                    <span className={styles.upgradeRuneDamageLabel}>Per Rune Bonus</span>
-                    <div className={styles.upgradeRuneDamageRow}>
-                        <BouncyText className={styles.upgradeRuneDamageOld}>
-                            {`+${oldBonus}`}
-                        </BouncyText>
-                        {showUpgraded && (
-                            <span className={styles.upgradeRuneDamageResult}>
-                                <span className={styles.upgradeRuneDamageArrow}>→</span>
-                                <BouncyText className={styles.upgradeRuneDamageNew}>
-                                    {`+${newBonus}`}
-                                </BouncyText>
-                            </span>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
+        <ScrollUpgradeDisplay
+            element={upgradeDisplay.element}
+            oldLevel={upgradeDisplay.oldLevel}
+            newLevel={upgradeDisplay.newLevel}
+            variant="overlay"
+        />
     );
 }
+
+type DamageChipsProps = {
+    base: number | string;
+    mult: number | string;
+    total: number | string;
+    baseRef: RefObject<HTMLSpanElement | null>;
+    multRef?: RefObject<HTMLSpanElement | null>;
+    totalRef: RefObject<HTMLSpanElement | null>;
+};
 
 /**
  * Damage section: a vertical stack with the Base + Mult chips on top and
@@ -437,28 +374,19 @@ function ScrollUpgradeDisplay() {
  * frame variable (`--base-bg` blue / `--mult-bg` green / `--total-bg`
  * red) so the three tracks read as visually distinct.
  *
- * The Base chip's value span receives the GSAP pop ref so it animates
- * on every cast tick. The Mult chip prepends a `×` glyph to numeric
- * values; the Total chip is bare (it's already a damage number).
- *
- * Any of `base` / `mult` / `total` may be a number (live / cast / last
- * cast) or `"-"` (empty state).
+ * Memoized so high-frequency counter ticks that only touch one of
+ * base/mult/total don't re-diff the other two chips' subtrees.
+ * Ref identity is stable across renders (refs come from useRef calls
+ * on the parent) so shallow memo comparison is safe.
  */
-function DamageChips({
+const DamageChips = memo(function DamageChips({
     base,
     mult,
     total,
     baseRef,
     multRef,
     totalRef,
-}: {
-    base: number | string;
-    mult: number | string;
-    total: number | string;
-    baseRef: RefObject<HTMLSpanElement | null>;
-    multRef?: RefObject<HTMLSpanElement | null>;
-    totalRef: RefObject<HTMLSpanElement | null>;
-}) {
+}: DamageChipsProps) {
     return (
         <div className={styles.damageSection}>
             <div className={styles.damageChipColumn}>
@@ -493,4 +421,4 @@ function DamageChips({
             </div>
         </div>
     );
-}
+});

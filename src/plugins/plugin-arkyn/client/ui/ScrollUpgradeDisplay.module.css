@@ -1,0 +1,132 @@
+/* ================================================================
+   Scroll upgrade display — shown when a scroll is bought or used.
+   Shared by SpellPreview (overlay variant, absolute-positioned over
+   the spell section) and ShopPanel (inline variant, flex-layout).
+   ================================================================ */
+
+.upgradeContent {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+    image-rendering: pixelated;
+    animation: upgradeSlideIn 350ms ease-out;
+}
+
+/* Overlay variant: absolute-positioned, fills the parent upgradeArea.
+   Used by SpellPreview so appearing/disappearing doesn't shift the
+   damage chips below. Requires the parent to have `position: relative`. */
+.upgradeContent.overlay {
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Inline variant: flex-layout, stretches to parent width. Used by
+   ShopPanel where nothing else lives in the upgradeArea. */
+.upgradeContent.inline {
+    align-items: stretch;
+    width: 100%;
+}
+
+@keyframes upgradeSlideIn {
+    from { transform: translateY(12px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.upgradeRow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(12px, 1.8vw, 24px);
+    width: 100%;
+    padding: clamp(6px, 1vh, 14px) clamp(6px, 1vw, 14px);
+    box-sizing: border-box;
+}
+
+.upgradeRuneIcon {
+    position: relative;
+    width: clamp(56px, 8vw, 96px);
+    height: clamp(56px, 8vw, 96px);
+    flex-shrink: 0;
+    animation: runeUpgradePop 450ms ease-out;
+}
+
+/* 3 pops synced with the count SFX at 0ms, 150ms, 300ms.
+   Each pop scales up then settles back, with a slight rotation
+   shake for tactile feel. Total duration = 450ms. */
+@keyframes runeUpgradePop {
+    0%   { transform: scale(1) rotate(0deg); }
+    5%   { transform: scale(1.25) rotate(-4deg); }
+    15%  { transform: scale(1) rotate(0deg); }
+    33%  { transform: scale(1) rotate(0deg); }
+    38%  { transform: scale(1.25) rotate(4deg); }
+    48%  { transform: scale(1) rotate(0deg); }
+    66%  { transform: scale(1) rotate(0deg); }
+    71%  { transform: scale(1.3) rotate(-3deg); }
+    85%  { transform: scale(1) rotate(0deg); }
+    100% { transform: scale(1) rotate(0deg); }
+}
+
+.upgradeRuneImg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    object-fit: contain;
+}
+
+.upgradeRuneInfo {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(4px, 0.6vh, 8px);
+}
+
+.upgradeRuneDamageLabel {
+    font-size: clamp(var(--font-size-2xs), 1.4vw, var(--font-size-xs));
+    color: #a09888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
+.upgradeRuneDamageRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.upgradeRuneDamageOld {
+    font-size: clamp(var(--font-size-md), 3.4vw, var(--font-size-lg));
+    color: #ffffff;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+}
+
+/* Arrow + new value appear together with a slide-in animation */
+.upgradeRuneDamageResult {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    animation: upgradeValueSlideIn 300ms ease-out;
+}
+
+@keyframes upgradeValueSlideIn {
+    from { transform: translateX(-6px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.upgradeRuneDamageArrow {
+    font-size: clamp(var(--font-size-sm), 2.4vw, var(--font-size-md));
+    color: #a09888;
+    line-height: 1;
+}
+
+.upgradeRuneDamageNew {
+    font-size: clamp(var(--font-size-md), 3.4vw, var(--font-size-lg));
+    color: #4ade80;
+    text-shadow: 0 0 8px rgba(74, 222, 128, 0.3), 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+}

@@ -152,6 +152,8 @@ export type {
 export { BOSS_DEBUFFS, isBossRound, pickDebuffForRound, getDebuffById } from "./bossDebuffs";
 export type { BossDebuff } from "./bossDebuffs";
 
+export { flattenMapSchema } from "./flattenMapSchema";
+
 export { composeCastModifiers } from "./composeCastModifiers";
 export type {
     CastModifiersResult,

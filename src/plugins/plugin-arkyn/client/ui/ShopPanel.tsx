@@ -6,7 +6,6 @@ import {
     getDebuffById,
     getPlayerStatDeltas,
 } from "../../shared";
-import { SCROLL_RUNE_BONUS } from "../../shared/arkynConstants";
 import {
     useCurrentRound,
     useGamePhase,
@@ -22,9 +21,9 @@ import {
 } from "../arkynStore";
 import { ELEMENT_COLORS, createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
-import RuneImage from "./RuneImage";
 import BouncyText from "./BouncyText";
-import GoldCounter from "./GoldCounter";
+import StatBentoRow from "./StatBentoRow";
+import ScrollUpgradeDisplay from "./ScrollUpgradeDisplay";
 import styles from "./ShopPanel.module.css";
 
 const panelStyleVars = {
@@ -156,100 +155,21 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
             {/* --- Middle: Upgrade display area (flex: 1) --- */}
             <div className={styles.upgradeArea}>
                 {upgradeDisplay && (
-                    <UpgradeSection
+                    <ScrollUpgradeDisplay
                         element={upgradeDisplay.element}
                         oldLevel={upgradeDisplay.oldLevel}
                         newLevel={upgradeDisplay.newLevel}
+                        variant="inline"
                     />
                 )}
             </div>
 
             {/* --- Bottom: Bento row — Gold (left 70%) + Casts/Discards stacked (right 30%) --- */}
-            <div className={styles.bottomSection}>
-                <div className={styles.goldCell}>
-                    <span className={styles.statLabel}>Bank</span>
-                    <GoldCounter />
-                </div>
-                <div className={styles.statsSection}>
-                    <div className={styles.statColumn}>
-                        <span className={styles.statLabel}>Casts</span>
-                        <div
-                            ref={chipRef}
-                            className={`${styles.statChip} ${styles.statChipHands}`}
-                        >
-                            <BouncyText className={styles.statChipValue}>
-                                {castsDisplay}
-                            </BouncyText>
-                        </div>
-                    </div>
-                    <div className={styles.statColumn}>
-                        <span className={styles.statLabel}>Discards</span>
-                        <div className={`${styles.statChip} ${styles.statChipDiscards}`}>
-                            <BouncyText className={styles.statChipValue}>
-                                {effectiveDiscards}
-                            </BouncyText>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-/**
- * Upgrade info shown in the middle area after buying a scroll.
- * Shows the rune image with its base damage changing from old → new.
- */
-function UpgradeSection({
-    element,
-    oldLevel,
-    newLevel,
-}: {
-    element: string;
-    oldLevel: number;
-    newLevel: number;
-}) {
-    // Scrolls stack as a flat additive bonus to every matching-element
-    // rune, REGARDLESS of rarity (same +2 whether it hits a common or a
-    // legendary). We used to show this as "Base Damage 8 → 10", which
-    // was misleading once non-common runes existed — it implied scrolls
-    // *replaced* the base. Display the additive bonus directly instead.
-    const oldScrollCount = oldLevel - 1;
-    const newScrollCount = newLevel - 1;
-    const oldBonus = oldScrollCount * SCROLL_RUNE_BONUS;
-    const newBonus = newScrollCount * SCROLL_RUNE_BONUS;
-
-    // Animate from old → new after a delay
-    const [showUpgraded, setShowUpgraded] = useState(false);
-    useEffect(() => {
-        setShowUpgraded(false);
-        const t = setTimeout(() => setShowUpgraded(true), 600);
-        return () => clearTimeout(t);
-    }, [element, oldLevel, newLevel]);
-
-    return (
-        <div className={styles.upgradeContent}>
-            <div className={styles.upgradeRow}>
-                <div className={styles.upgradeRuneIcon}>
-                    <RuneImage rarity="common" element={element} className={styles.upgradeRuneImg} />
-                </div>
-                <div className={styles.upgradeRuneInfo}>
-                    <span className={styles.upgradeRuneDamageLabel}>Per Rune Bonus</span>
-                    <div className={styles.upgradeRuneDamageRow}>
-                        <BouncyText className={styles.upgradeRuneDamageOld}>
-                            {`+${oldBonus}`}
-                        </BouncyText>
-                        {showUpgraded && (
-                            <span className={styles.upgradeRuneDamageResult}>
-                                <span className={styles.upgradeRuneDamageArrow}>→</span>
-                                <BouncyText className={styles.upgradeRuneDamageNew}>
-                                    {`+${newBonus}`}
-                                </BouncyText>
-                            </span>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <StatBentoRow
+                castsValue={castsDisplay}
+                discardsValue={effectiveDiscards}
+                castsChipRef={chipRef}
+            />
         </div>
     );
 }

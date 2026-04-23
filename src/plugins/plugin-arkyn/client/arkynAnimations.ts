@@ -59,6 +59,9 @@ export {
 import {
     BUBBLE_STAGGER_MS,
     DISSOLVE_DURATION_MS,
+    BANISH_SIGIL_REACT_DELAY_MS,
+    BANISH_GOLD_COMMIT_DELAY_MS,
+    BANISH_CLEANUP_EXTRA_MS,
 } from "./animations/timingConstants";
 import { playGold, playAddConsumable } from "./sfx";
 
@@ -137,8 +140,9 @@ export interface DrawingRune {
 
 // ----- Animation state -----
 
-// Runes currently dissolving in the play area. Driven entirely by the client
-// cast flow — server's playedRunes is no longer rendered.
+// Runes currently dissolving in the play area. Driven entirely by the
+// client cast flow — the render pipeline never reads played runes from
+// the server.
 let dissolvingRunes: RuneClientData[] = [];
 let dissolveStartTime = 0;
 // Slot indices (0-based, in display order) of the runes that actually
@@ -1281,9 +1285,6 @@ function runBanishFlow(
     // Delayed a hair so the dissolve starts first and the UX reads as
     // "rune tears apart → sigil reacts → gold awarded" rather than all
     // three firing on the same frame.
-    const SIGIL_REACT_DELAY_MS = 120;
-    const GOLD_COMMIT_DELAY_MS = 260;
-
     setTimeout(() => {
         // Sigil shake — same channel Voltage/Fortune use during casts.
         sigilShakeSeq++;
@@ -1294,7 +1295,7 @@ function runBanishFlow(
         // mid-cast proc UX and gives the player a second read of the reward.
         arkynStoreInternal.triggerGoldProcBubble(preview.grantedGold);
         notify();
-    }, SIGIL_REACT_DELAY_MS);
+    }, BANISH_SIGIL_REACT_DELAY_MS);
 
     setTimeout(() => {
         // Commit the gold: tick the displayed counter + play the gold SFX.
@@ -1302,12 +1303,12 @@ function runBanishFlow(
         arkynStoreInternal.addDisplayedGold(preview.grantedGold);
         arkynStoreInternal.unlockGoldDisplayAndSyncToServer();
         notify();
-    }, GOLD_COMMIT_DELAY_MS);
+    }, BANISH_GOLD_COMMIT_DELAY_MS);
 
     // Clean up after the dissolve completes. DISSOLVE_DURATION_MS comes
     // from the shared timing constants so any future tuning of the dissolve
     // visual automatically carries to the banish cleanup.
-    const cleanupDelayMs = DISSOLVE_DURATION_MS + 120;
+    const cleanupDelayMs = DISSOLVE_DURATION_MS + BANISH_CLEANUP_EXTRA_MS;
     setTimeout(() => {
         banishingRunes = [];
         banishingRuneIds = [];

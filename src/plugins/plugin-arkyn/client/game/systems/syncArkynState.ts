@@ -1,8 +1,8 @@
 import type { ArraySchema, MapSchema } from "@colyseus/schema";
 import type { ArkynState, RuneInstance, ShopItemState } from "../../../shared";
+import { flattenMapSchema } from "../../../shared";
 import {
     setHand,
-    setPlayedRunes,
     setEnemyName,
     setEnemyHp,
     setEnemyMaxHp,
@@ -144,7 +144,6 @@ function snapshotRunes(schemaArr: ArraySchema<RuneInstance>): RuneClientData[] {
 export function createSyncArkynStateSystem(state: ArkynState, sessionId: string) {
     let prevHand: RuneClientData[] = [];
     let prevHandIds = new Set<string>();
-    let prevPlayed: RuneClientData[] = [];
     let prevPouch: RuneClientData[] = [];
     let prevRes: string[] = [];
     let prevWeak: string[] = [];
@@ -260,12 +259,6 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
                 }
                 if (draws.length > 0) triggerDrawAnimation(draws);
             }
-        }
-
-        // Sync played runes
-        if (!runeArraysEqualById(player.playedRunes, prevPlayed)) {
-            prevPlayed = snapshotRunes(player.playedRunes);
-            setPlayedRunes(prevPlayed);
         }
 
         // Sync game phase
@@ -463,8 +456,7 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
 
         // Sync per-sigil accumulator values (Executioner xMult, etc.).
         if (!sigilAccumulatorsEqual(player.sigilAccumulators, prevSigilAccumulators)) {
-            const next: Record<string, number> = {};
-            player.sigilAccumulators.forEach((value, key) => { next[key] = value; });
+            const next = flattenMapSchema(player.sigilAccumulators);
             prevSigilAccumulators = next;
             setSigilAccumulators(next);
         }

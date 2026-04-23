@@ -160,16 +160,11 @@
     font-size: 0.85em;
 }
 
-/* ================================================================
-   Scroll upgrade display — shown when a consumable scroll is used
-   during the playing phase. Same visual as ShopPanel's UpgradeSection.
-
-   The upgradeArea eats the remaining flex space between the spell
-   section and the damage chips. Its size never changes — the upgrade
-   content is absolutely positioned inside it, so appearing/disappearing
-   doesn't shift anything below.
-   ================================================================ */
-
+/* Scroll upgrade area — just the bounding box; the actual upgrade content
+   (rune + old→new damage row) lives in the shared ScrollUpgradeDisplay
+   component. position: relative anchors the component's "overlay" variant,
+   which absolute-positions itself inside this container so appearing/
+   disappearing doesn't shift the damage chips below. */
 .upgradeArea {
     position: relative;
     flex: 1;
@@ -178,116 +173,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.upgradeContent {
-    position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    image-rendering: pixelated;
-    animation: upgradeSlideIn 350ms ease-out;
-}
-
-@keyframes upgradeSlideIn {
-    from { transform: translateY(12px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.upgradeRow {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(12px, 1.8vw, 24px);
-    width: 100%;
-    padding: clamp(6px, 1vh, 14px) clamp(6px, 1vw, 14px);
-    box-sizing: border-box;
-}
-
-.upgradeRuneIcon {
-    position: relative;
-    width: clamp(56px, 8vw, 96px);
-    height: clamp(56px, 8vw, 96px);
-    flex-shrink: 0;
-    animation: runeUpgradePop 450ms ease-out;
-}
-
-@keyframes runeUpgradePop {
-    0%   { transform: scale(1) rotate(0deg); }
-    5%   { transform: scale(1.25) rotate(-4deg); }
-    15%  { transform: scale(1) rotate(0deg); }
-    33%  { transform: scale(1) rotate(0deg); }
-    38%  { transform: scale(1.25) rotate(4deg); }
-    48%  { transform: scale(1) rotate(0deg); }
-    66%  { transform: scale(1) rotate(0deg); }
-    71%  { transform: scale(1.3) rotate(-3deg); }
-    85%  { transform: scale(1) rotate(0deg); }
-    100% { transform: scale(1) rotate(0deg); }
-}
-
-.upgradeRuneImg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    image-rendering: pixelated;
-    object-fit: contain;
-}
-
-.upgradeRuneInfo {
-    display: flex;
-    flex-direction: column;
-    gap: clamp(4px, 0.6vh, 8px);
-}
-
-.upgradeRuneDamageLabel {
-    font-size: clamp(var(--font-size-2xs), 1.4vw, var(--font-size-xs));
-    color: #a09888;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    line-height: 1;
-}
-
-.upgradeRuneDamageRow {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.upgradeRuneDamageOld {
-    font-size: clamp(var(--font-size-md), 3.4vw, var(--font-size-lg));
-    color: #ffffff;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
-    line-height: 1;
-}
-
-.upgradeRuneDamageResult {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    animation: upgradeValueSlideIn 300ms ease-out;
-}
-
-@keyframes upgradeValueSlideIn {
-    from { transform: translateX(-6px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-
-.upgradeRuneDamageArrow {
-    font-size: clamp(var(--font-size-sm), 2.4vw, var(--font-size-md));
-    color: #a09888;
-    line-height: 1;
-}
-
-.upgradeRuneDamageNew {
-    font-size: clamp(var(--font-size-md), 3.4vw, var(--font-size-lg));
-    color: #4ade80;
-    text-shadow: 0 0 8px rgba(74, 222, 128, 0.3), 2px 2px 0 rgba(0, 0, 0, 0.8);
-    line-height: 1;
 }
 
 /* Damage section — a vertical stack with the Base + Mult horizontal
@@ -409,106 +294,10 @@
     padding: 0 12px;
 }
 
-/* ================================================================
-   Bento bottom section — Bank (gold, left 70%) + Casts/Discards
-   stacked (right 30%). Mirrors ShopPanel.module.css's bottom bento
-   so the two panels share the same visual footprint; keep the two
-   in sync if either layout evolves.
-   ================================================================ */
-
-.bottomSection {
-    margin-top: auto;
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-    gap: clamp(6px, 1vw, 12px);
-    width: 100%;
-}
-
-.goldCell {
-    flex: 7 1 0;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    gap: clamp(2px, 0.4vh, 6px);
-}
-
-/* Override GoldCounter's own `margin-top: auto` + natural content height
-   so the chip fills the bento cell's remaining vertical space. Also
-   tightens GoldCounter's default 24px 9-slice border to 12px to match
-   statChip's thickness so the gold chip's inner frame top aligns with
-   the Casts chip's inner frame top. */
-.goldCell > :last-child {
-    margin-top: 0;
-    width: 100%;
-    flex: 1 1 auto;
-    min-height: 0;
-    border-width: 12px;
-    border-image: var(--bank-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-}
-
-.statsSection {
-    box-sizing: border-box;
-    flex: 3 1 0;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: clamp(6px, 1vh, 12px);
-}
-
-.statColumn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: clamp(2px, 0.4vh, 6px);
-}
-
-.statLabel {
-    font-size: var(--font-size-xs);
-    font-weight: normal;
-    color: #c4a882;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    line-height: 1;
-}
-
-.statChip {
-    box-sizing: border-box;
-    width: 100%;
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 12px;
-    padding: 1px 6px 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    image-rendering: pixelated;
-}
-
-.statChipHands {
-    border-image: var(--hands-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-}
-
-.statChipDiscards {
-    border-image: var(--discards-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-}
-
-.statChipValue {
-    font-size: clamp(var(--font-size-md), 3.6vw, var(--font-size-xl));
-    font-weight: normal;
-    color: #ffffff;
-    text-shadow:
-        2px 2px 0 rgba(0, 0, 0, 0.85),
-        0 0 8px rgba(0, 0, 0, 0.5);
-    line-height: 1;
-    display: inline-block;
-    transform-origin: center center;
-}
+/* Bento bottom section (Bank + Casts + Discards) now lives in
+   ./StatBentoRow.module.css — shared across SpellPreview and ShopPanel.
+   The --bank-bg / --hands-bg / --discards-bg variables are still set on
+   the panel root in SpellPreview.tsx so the shared component picks them up. */
 
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
@@ -616,41 +405,5 @@
 
     .damageChipValue {
         font-size: clamp(var(--font-size-xs), 2.6vw, var(--font-size-md));
-    }
-
-    /* Bento bottom section — landscape compact. Mirrors ShopPanel's
-       landscape overrides so the layout collapses the same way on short
-       viewports. */
-    .statsSection {
-        gap: clamp(4px, 0.8vh, 10px);
-    }
-
-    .statLabel {
-        font-size: var(--font-size-3xs);
-        letter-spacing: 1px;
-    }
-
-    .statChip {
-        border-width: 6px;
-        padding: 0 4px 1px;
-    }
-
-    .statChipHands {
-        border-image: var(--hands-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
-    }
-
-    .statChipDiscards {
-        border-image: var(--discards-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
-    }
-
-    .statChipValue {
-        font-size: clamp(var(--font-size-xs), 2.6vw, var(--font-size-md));
-    }
-
-    /* Gold chip's overridden border-width tracks statChip's 6px landscape
-       thickness so the inner-frame tops stay aligned with Casts. */
-    .goldCell > :last-child {
-        border-width: 6px;
-        border-image: var(--bank-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
     }
 }

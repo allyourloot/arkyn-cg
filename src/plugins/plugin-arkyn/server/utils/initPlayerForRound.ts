@@ -43,7 +43,6 @@ export function initPlayerForRound(
     } = { enemyResistances: [], enemyWeaknesses: [] },
 ): void {
     clearArraySchema(player.hand);
-    clearArraySchema(player.playedRunes);
     player.lastSpellName = "";
     player.lastSpellTier = 0;
     player.lastDamage = 0;

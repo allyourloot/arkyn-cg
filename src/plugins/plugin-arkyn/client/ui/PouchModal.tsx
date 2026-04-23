@@ -1,10 +1,11 @@
 import { useCallback, useEffect } from "react";
 import { ELEMENT_TYPES, RUNES_PER_ELEMENT } from "../../shared";
-import { useHand, usePouchContents, useAcquiredRunes, type RuneClientData } from "../arkynStore";
+import { useHand, usePouchContents, type RuneClientData } from "../arkynStore";
 import { playMenuClose, playMenuOpen } from "../sfx";
 import RuneImage from "./RuneImage";
 import { getRuneImageUrl } from "./runeAssets";
 import { createPanelStyleVars } from "./styles";
+import { useAcquiredRuneStats } from "./hooks/useAcquiredRuneStats";
 import closeIconUrl from "/assets/icons/close-64x64.png?url";
 import closeHoverIconUrl from "/assets/icons/close-hover-64x64.png?url";
 import styles from "./PouchModal.module.css";
@@ -24,7 +25,7 @@ type SlotState = "pouch" | "drawn" | "spent";
 export default function PouchModal({ onClose }: PouchModalProps) {
     const pouchContents = usePouchContents();
     const hand = useHand();
-    const acquiredRunes = useAcquiredRunes();
+    const { bonusByElement, totalAll } = useAcquiredRuneStats();
 
     // Play the shared menu-open stinger once on mount.
     useEffect(() => {
@@ -48,10 +49,10 @@ export default function PouchModal({ onClose }: PouchModalProps) {
         return () => window.removeEventListener("keydown", onKey);
     }, [closeWithSfx]);
 
-    // Count pouch + hand runes per element, along with the actual rune
-    // instances so we can render their real rarity art (not just common).
-    // The deck grows past the base 52 via Rune Bag picks — each acquired
-    // rune adds one extra slot to its element's row.
+    // Bucket pouch + hand runes per element so we can render their real
+    // rarity art (not just common). The deck grows past the base 52 via
+    // Rune Bag picks and Magic Mirror duplicates — each acquired rune
+    // adds one extra slot to its element's row (see useAcquiredRuneStats).
     const pouchByElement = new Map<string, RuneClientData[]>();
     for (const r of pouchContents) {
         const list = pouchByElement.get(r.element) ?? [];
@@ -64,19 +65,9 @@ export default function PouchModal({ onClose }: PouchModalProps) {
         list.push(r);
         handByElement.set(r.element, list);
     }
-    // Per-element bonus count that gets added on top of RUNES_PER_ELEMENT.
-    // Acquired runes cover both Rune Bag picks AND Magic Mirror
-    // duplicates — both are permanent-across-rounds additions funneled
-    // into the same list.
-    const bonusByElement = new Map<string, number>();
-    for (const r of acquiredRunes) {
-        bonusByElement.set(r.element, (bonusByElement.get(r.element) ?? 0) + 1);
-    }
 
     const totalPouch = pouchContents.length;
     const totalHand = hand.length;
-    const totalBase = ELEMENT_TYPES.length * RUNES_PER_ELEMENT;
-    const totalAll = totalBase + acquiredRunes.length;
     const totalSpent = totalAll - totalPouch - totalHand;
 
     return (

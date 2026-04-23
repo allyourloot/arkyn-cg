@@ -75,7 +75,6 @@ let serverHand: RuneClientData[] = [];
 // `selectedIndices` is a derived view in display order, kept for the existing API.
 let selectedRuneIds: string[] = [];
 let selectedIndices: number[] = [];
-let playedRunes: RuneClientData[] = [];
 let enemyName = "";
 let enemyHp = 0;
 // Visual HP bar value — normally mirrors `enemyHp`, but during a cast
@@ -301,7 +300,6 @@ export function getHandIndex(runeId: string): number {
     return hand.findIndex(r => r.id === runeId);
 }
 
-export function setPlayedRunes(r: RuneClientData[]) { playedRunes = r; notify(); }
 export function setEnemyName(n: string) { enemyName = n; notify(); }
 export function setEnemyHp(hp: number) {
     enemyHp = hp;
@@ -634,7 +632,6 @@ export const arkynStoreInternal = {
 
 export function useHand() { return useSyncExternalStore(subscribe, () => hand); }
 export function useSelectedIndices() { return useSyncExternalStore(subscribe, () => selectedIndices); }
-export function usePlayedRunes() { return useSyncExternalStore(subscribe, () => playedRunes); }
 export function useEnemyName() { return useSyncExternalStore(subscribe, () => enemyName); }
 export function useEnemyHp() { return useSyncExternalStore(subscribe, () => enemyHp); }
 export function useDisplayedEnemyHp() { return useSyncExternalStore(subscribe, () => displayedEnemyHp); }

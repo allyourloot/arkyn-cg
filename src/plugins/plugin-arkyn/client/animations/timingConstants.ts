@@ -61,3 +61,22 @@ export const BAR_SHAKE_FRAME_S = 0.036;
 // Per-frame duration of the rune count-shake keyframes.
 // PlayArea.tsx uses this for all 5 shake stops.
 export const RUNE_SHAKE_FRAME_S = 0.056;
+
+// --- Banish flow (Banish sigil discard-hook gold proc) ---
+// The banish flow reads as "rune tears apart → sigil reacts → gold awarded";
+// these three delays pace the three beats so they don't all fire on the
+// same frame.
+
+// Delay between the dissolve start and the SigilBar shake + "+N Gold"
+// proc bubble over the banishing slot.
+export const BANISH_SIGIL_REACT_DELAY_MS = 120;
+
+// Delay between the dissolve start and the gold counter tick + gold SFX.
+// Lands after SIGIL_REACT_DELAY so the player reads "sigil reacts, then
+// gold lands" rather than both at once.
+export const BANISH_GOLD_COMMIT_DELAY_MS = 260;
+
+// Extra cleanup buffer on top of DISSOLVE_DURATION_MS before we clear the
+// banishing-runes state. Gives the dissolve a moment to finish visually
+// before the slot goes blank.
+export const BANISH_CLEANUP_EXTRA_MS = 120;

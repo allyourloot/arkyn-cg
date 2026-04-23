@@ -2,6 +2,7 @@ import {
     type ArkynState,
     applyAccumulatorIncrements,
     expandMimicSigilsDetailed,
+    flattenMapSchema,
     getEndOfRoundSigilGold,
     SIGIL_CAST_HOOKS,
 } from "../../shared";
@@ -90,12 +91,6 @@ export function handleCast(
         player.sigilAccumulators,
     );
 
-    // Move selected runes to played area
-    while (player.playedRunes.length > 0) player.playedRunes.pop();
-    for (const rune of selectedRunes) {
-        player.playedRunes.push(rune);
-    }
-
     // Remove played runes from hand
     removeRunesFromHand(player, indices);
 
@@ -130,11 +125,9 @@ export function handleCast(
     // cast used the pre-cast accumulator value as xMult; future casts
     // read the updated value via schema sync.
     if (criticalCount > 0) {
-        const accumulatorsPlain: Record<string, number> = {};
-        player.sigilAccumulators.forEach((value, key) => { accumulatorsPlain[key] = value; });
         const updates = applyAccumulatorIncrements(
             Array.from(player.sigils),
-            accumulatorsPlain,
+            flattenMapSchema(player.sigilAccumulators),
             { criticalHit: criticalCount },
         );
         for (const sigilId of Object.keys(updates)) {

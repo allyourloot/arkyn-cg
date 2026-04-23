@@ -2,6 +2,7 @@ import type { ArraySchema, MapSchema } from "@colyseus/schema";
 import {
     calculateSpellDamage as sharedCalculateSpellDamage,
     composeCastModifiers,
+    flattenMapSchema,
     getContributingRuneIndices,
     iterateProcs,
     type ResolvedSpell,
@@ -58,10 +59,9 @@ export function calculateDamage(
     // Flatten the accumulator MapSchema once so the shared helper gets a
     // plain object — avoids forcing composeCastModifiers to know about
     // Colyseus Schema types.
-    const accumulatorsPlain: Record<string, number> = {};
-    if (sigilAccumulators) {
-        sigilAccumulators.forEach((value, key) => { accumulatorsPlain[key] = value; });
-    }
+    const accumulatorsPlain = sigilAccumulators
+        ? flattenMapSchema(sigilAccumulators)
+        : {};
 
     // Compose all sigil-driven cast modifiers through the shared helper.
     // The client runs the exact same helper so bonusMult / xMult / stripped

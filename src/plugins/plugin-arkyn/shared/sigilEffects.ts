@@ -155,20 +155,16 @@ export function expandMimicSigilsDetailed(sigils: readonly string[]): ExpandedMi
     return out;
 }
 
+/**
+ * Convenience wrapper over {@link expandMimicSigilsDetailed} that drops the
+ * per-entry metadata and returns just the effective sigil id list. Most
+ * category helpers (stat deltas, hand mult, played mult, xMult, resist
+ * ignore, end-of-round gold) iterate ids only and use this form; the
+ * detailed form is for dispatchers that need `sourceIndex` or `copyIndex`
+ * (lifecycle hook rng jitter, discard-hook index tracking).
+ */
 export function expandMimicSigils(sigils: readonly string[]): string[] {
-    const out: string[] = [];
-    for (let i = 0; i < sigils.length; i++) {
-        const id = sigils[i];
-        if (id !== "mimic") {
-            out.push(id);
-            continue;
-        }
-        const neighborId = sigils[i + 1];
-        if (!neighborId) continue;
-        if (MIMIC_INCOMPATIBLE.has(neighborId)) continue;
-        out.push(neighborId);
-    }
-    return out;
+    return expandMimicSigilsDetailed(sigils).map(e => e.sigilId);
 }
 
 /**

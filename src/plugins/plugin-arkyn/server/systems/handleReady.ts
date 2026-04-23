@@ -49,12 +49,10 @@ export function handleReady(
         // leftover from the just-finished round. `initPlayerForRound`
         // will run again on shop → playing to build a fresh seeded
         // pouch for the actual round; this rebuild is purely for the
-        // shop-phase UI state. Also clears the hand + played runes so
-        // the modal doesn't display any stale "drawn"/"spent" slots
-        // during the shop visit — every owned rune is visually in the
-        // pouch column while the player browses.
+        // shop-phase UI state. Also clears the hand so the modal doesn't
+        // display any stale "drawn" slots during the shop visit — every
+        // owned rune is visually in the pouch column while the player browses.
         clearArraySchema(player.hand);
-        clearArraySchema(player.playedRunes);
         const acquired = Array.from(player.acquiredRunes).map(r => ({
             id: r.id,
             element: r.element,
@@ -84,7 +82,7 @@ export function handleReady(
         const scrollElements = generateShopScrolls(state.runSeed, nextRound);
         const ownedSigils = Array.from(player.sigils);
         const sigilIds = generateShopSigils(state.runSeed, nextRound, ownedSigils);
-        while (player.shopItems.length > 0) player.shopItems.pop();
+        clearArraySchema(player.shopItems);
         // Fresh shop visit -> reset per-visit bag purchase counter so the
         // cap enforces MAX_RUNE_BAGS_PER_SHOP per shop (not per run).
         player.bagPurchaseCount = 0;
