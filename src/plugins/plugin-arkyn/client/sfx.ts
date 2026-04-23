@@ -18,6 +18,7 @@ import buyUrl from "/assets/audio/sfx/buy.mp3?url";
 import buttonUrl from "/assets/audio/sfx/button.mp3?url";
 import typewriterUrl from "/assets/audio/sfx/typewriter.mp3?url";
 import addConsumableUrl from "/assets/audio/sfx/add-consumable.mp3?url";
+import blackjackUrl from "/assets/audio/sfx/blackjack.mp3?url";
 import { getAudioContext } from "./audioContext";
 import { haptic, HAPTIC_LIGHT, HAPTIC_MEDIUM } from "./haptics";
 
@@ -131,6 +132,7 @@ export function playCritical(): void {
     playCriticalSfx(pitch);
 }
 export const playGold = makeSfx(goldUrl, VOL_DEFAULT);
+export const playBlackjack = makeSfx(blackjackUrl, VOL_DEFAULT);
 export const playGoldTotal = makeSfx(goldTotalUrl, VOL_DEFAULT);
 export const playRoundWin = makeSfx(roundWinUrl, VOL_DEFAULT);
 export const playGameOver = makeSfx(gameOverUrl, VOL_DEFAULT);

@@ -1,5 +1,8 @@
 import { SIGIL_DEFINITIONS, SIGIL_IDS } from "../shared";
 import { sendDebugGrantSigil } from "./arkynNetwork";
+import { arkynStoreInternal } from "./arkynStore";
+import { playBlackjack } from "./sfx";
+import { notify } from "./arkynStoreCore";
 
 /**
  * Dev-only browser console helpers. Side-effect import from
@@ -31,6 +34,20 @@ function grantSigil(sigilId: string): void {
     console.info(`[arkyn.grantSigil] Requested "${sigilId}" (${SIGIL_DEFINITIONS[sigilId].name}).`);
 }
 
+/**
+ * Fires the Blackjack execute spritesheet + SFX directly, bypassing the
+ * 1-in-21 proc roll. Purely client-side (no server round-trip, no damage
+ * applied, no enemy killed) — it's an isolated replay of the visual +
+ * audio beat so we can preview the animation without grinding casts.
+ * The overlay unmounts itself at the end of the 13-frame sequence.
+ */
+function triggerBlackjack(): void {
+    arkynStoreInternal.triggerBlackjackAnimation();
+    playBlackjack();
+    notify();
+    console.info("[arkyn.triggerBlackjack] Fired Blackjack animation + SFX.");
+}
+
 function listSigils(): void {
     console.table(
         SIGIL_IDS.map(id => ({
@@ -48,10 +65,11 @@ function listSigils(): void {
 (window as unknown as { arkyn: Record<string, unknown> }).arkyn = {
     grantSigil,
     listSigils,
+    triggerBlackjack,
 };
 
 // Print a one-time banner so devs know the helpers exist without having
 // to remember them. Keeps the discovery path obvious during playtest.
 console.info(
-    "[arkyn] Debug helpers ready: arkyn.grantSigil(id), arkyn.listSigils()",
+    "[arkyn] Debug helpers ready: arkyn.grantSigil(id), arkyn.listSigils(), arkyn.triggerBlackjack()",
 );

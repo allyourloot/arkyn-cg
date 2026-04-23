@@ -125,6 +125,11 @@ export function calculateDamage(
                 totalDamage += Math.round(breakdown.runeBaseContributions[proc.runeIdx] * breakdown.mult);
             } else if (proc.effect.type === "grant_gold") {
                 procGold += proc.effect.amount;
+            } else if (proc.effect.type === "execute") {
+                // Force the cast to deal at least enough damage to kill the
+                // enemy outright. Subsequent procs in the same cast can still
+                // stack on top, but the kill is guaranteed from this proc on.
+                totalDamage = Math.max(totalDamage, enemy.currentHp);
             }
         }
     }

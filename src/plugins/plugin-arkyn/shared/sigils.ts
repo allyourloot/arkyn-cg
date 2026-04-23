@@ -277,6 +277,18 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         cost: 3,
         sellPrice: 1,
     },
+    blackjack: {
+        id: "blackjack",
+        name: "Blackjack",
+        rarity: "rare",
+        description: "{Death} runes have a {1 in 21} chance to {execute} the enemy.",
+        cost: 6,
+        sellPrice: 3,
+        explainer: {
+            label: "Applies to:",
+            elements: ["death"] as const,
+        },
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

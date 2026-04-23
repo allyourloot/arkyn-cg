@@ -204,6 +204,14 @@ let materializingRune: { id: string; startTime: number; duration: number } | nul
 let sigilProcBubble: { sigilId: string; amount: number; kind: "gold" | "xmult"; seq: number } | null = null;
 let sigilProcSeq = 0;
 
+// Blackjack execute animation — fullscreen-centered 13-frame spritesheet
+// that plays when Blackjack's execute proc fires during a cast. Single
+// active animation at a time; monotonic `seq` forces the component to
+// remount so the spritesheet restarts from frame 1 on back-to-back procs.
+// Cleared by the animation component itself after the last frame.
+let blackjackAnimation: { seq: number } | null = null;
+let blackjackAnimationSeq = 0;
+
 // Run stats — synced from server for the game-over screen.
 let runTotalDamage = 0;
 let runTotalCasts = 0;
@@ -638,6 +646,21 @@ export const arkynStoreInternal = {
     },
 
     /**
+     * Fire the Blackjack spritesheet + SFX. Called by the cast timeline
+     * when an execute proc event lands. Monotonic `seq` forces a fresh
+     * React mount so the component restarts from frame 1 even when
+     * back-to-back procs fire within the same cast (e.g. two played
+     * Death runes both rolling the 1-in-21 execute).
+     */
+    triggerBlackjackAnimation() {
+        blackjackAnimation = { seq: ++blackjackAnimationSeq };
+    },
+    /** Called by the animation component after the last frame finishes. */
+    clearBlackjackAnimation() {
+        blackjackAnimation = null;
+    },
+
+    /**
      * Convert client selection (by rune id) into server-side hand indices.
      * Used by cast/discard right before sending the message to the server.
      *
@@ -727,6 +750,7 @@ export function useDiscardsUsedThisRound() { return useSyncExternalStore(subscri
 export function useCastsUsedThisRound() { return useSyncExternalStore(subscribe, () => castsUsedThisRound); }
 export function useMaterializingRune() { return useSyncExternalStore(subscribe, () => materializingRune); }
 export function useSigilProcBubble() { return useSyncExternalStore(subscribe, () => sigilProcBubble); }
+export function useBlackjackAnimation() { return useSyncExternalStore(subscribe, () => blackjackAnimation); }
 
 // Run stats hooks
 export function useRunTotalDamage() { return useSyncExternalStore(subscribe, () => runTotalDamage); }

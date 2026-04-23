@@ -106,6 +106,7 @@ export const MIMIC_INCOMPATIBLE: ReadonlySet<string> = new Set([
     "voltage",
     "hourglass",
     "fortune",
+    "blackjack",
     "burnrite",
     "fuze",
     "impale",
@@ -241,10 +242,15 @@ export function getPlayerStatDeltas(sigils: readonly string[]): PlayerStatDeltas
  * - `grant_gold`: awards the player a flat amount of gold. The server
  *   applies it to `player.gold`; the client shows a floating "+N Gold"
  *   bubble over the procced rune. Does NOT contribute to cast damage.
+ * - `execute`: guarantees the enemy dies by forcing the cast's total
+ *   damage up to at least the enemy's current HP. No damage bubble
+ *   (the execute isn't "extra damage" — it's a kill guarantee); the
+ *   client layer plays a spritesheet + SFX to signal the proc instead.
  */
 export type ProcEffect =
     | { type: "double_damage" }
-    | { type: "grant_gold"; amount: number };
+    | { type: "grant_gold"; amount: number }
+    | { type: "execute" };
 
 export interface ProcDefinition {
     /** Element the proc checks for. `undefined` = any element triggers the roll. */
@@ -304,6 +310,17 @@ export const SIGIL_PROCS: Record<string, ProcDefinition> = {
         chance: 1,
         rngOffset: procRngSlot(3),
         effect: { type: "double_damage" },
+    },
+    blackjack: {
+        // 1-in-21 execute on any played Death rune. "21" is the Blackjack
+        // target number — the gamble flavor of the sigil. The execute
+        // effect forces totalDamage up to the enemy's current HP so the
+        // kill is guaranteed (see calculateDamage). Client triggers a
+        // spritesheet + SFX at the proc moment to signal the execute.
+        element: "death",
+        chance: 1 / 21,
+        rngOffset: procRngSlot(4),
+        effect: { type: "execute" },
     },
 };
 

@@ -116,6 +116,13 @@ export interface CastTimelineContext {
          * player sees the accumulator growing in real time.
          */
         isAccumulatorInc?: boolean;
+        /**
+         * Execute proc (Blackjack). No Base/Mult tick, no bubble — the
+         * damage adjustment is baked in up-front. The timeline invokes
+         * `onExecuteProc` at this event's delay to mount the fullscreen
+         * spritesheet + play the SFX.
+         */
+        isExecute?: boolean;
         /** Gold payout for the proc — drives the gold-counter tick callbacks. */
         goldDelta?: number;
         multDelta?: number;
@@ -198,6 +205,13 @@ export interface CastTimelineContext {
      * driven increment. Pops the "+Nx" proc bubble under the sigil slot.
      */
     onAccumulatorProc?: (sigilId: string, delta: number) => void;
+    /**
+     * Fired when a Blackjack-style execute proc event lands in the
+     * timeline. Triggers the fullscreen spritesheet + SFX that signal
+     * the guaranteed kill. No damage bubble, no counter tick — the
+     * total-damage adjustment has already been baked into the assembly.
+     */
+    onExecuteProc?: (sigilId: string) => void;
     /** Starting mult value (tier mult) — used to compute cumulative mult ticks. */
     baseMult?: number;
     /** Fired when the timeline finishes. Clears all animation state. */
@@ -375,6 +389,21 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
             }
             if (ctx.onAccumulatorProc && sigilId && delta > 0) {
                 tl.call(() => ctx.onAccumulatorProc!(sigilId, delta), undefined, tickAt);
+            }
+            continue;
+        }
+
+        // Execute events (Blackjack). No Base/Mult tick and no bubble —
+        // the execute is a kill guarantee, not a damage number. Shake the
+        // triggering sigil and hand off to the consumer's onExecuteProc
+        // callback which mounts the fullscreen spritesheet + plays the SFX.
+        if (item.isExecute) {
+            const sigilId = item.sigilId;
+            if (ctx.onSigilShake && sigilId) {
+                tl.call(() => ctx.onSigilShake!(sigilId), undefined, tickAt);
+            }
+            if (ctx.onExecuteProc && sigilId) {
+                tl.call(() => ctx.onExecuteProc!(sigilId), undefined, tickAt);
             }
             continue;
         }

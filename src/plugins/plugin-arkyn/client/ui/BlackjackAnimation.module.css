@@ -1,0 +1,22 @@
+/* Fullscreen-centered overlay for the Blackjack execute spritesheet.
+   Sits above the cast animation layers but below the round-end overlay
+   so the death screen still reads on top once the kill resolves. */
+
+.layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9998;
+}
+
+/* Frames are 120×120 at source. Upscale pixel-perfect (no smoothing)
+   for punch; clamp keeps it sized against the viewport on phones. */
+.frame {
+    width: clamp(240px, 40vmin, 480px);
+    height: clamp(240px, 40vmin, 480px);
+    image-rendering: pixelated;
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.55));
+}

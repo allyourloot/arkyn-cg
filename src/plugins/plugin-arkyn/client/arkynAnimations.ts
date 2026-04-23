@@ -64,7 +64,7 @@ import {
     BANISH_GOLD_COMMIT_DELAY_MS,
     BANISH_CLEANUP_EXTRA_MS,
 } from "./animations/timingConstants";
-import { playGold, playAddConsumable } from "./sfx";
+import { playBlackjack, playGold, playAddConsumable } from "./sfx";
 
 // Fly / discard / draw durations live inside `animations/castTimeline.ts`
 // (in seconds, ready for GSAP). Component-level fly tweens reference them
@@ -420,6 +420,14 @@ interface CastBreakdownEvent {
     isGold?: boolean;
     isXMult?: boolean;
     /**
+     * Execute proc (Blackjack). No bubble, no counter tick — the timeline
+     * fires a spritesheet + SFX at this event's delay to signal the
+     * guaranteed kill. The damage adjustment happens up-front in the
+     * cast assembly (totalDamage is forced to ≥ enemy HP); this event
+     * purely drives the visual + audio reveal.
+     */
+    isExecute?: boolean;
+    /**
      * Post-cast accumulator increment (Executioner-style). Doesn't tick
      * Base or Mult — the xMult from the OLD accumulator value was already
      * baked into the cast's damage. This event just flashes a "+Nx" bubble
@@ -454,6 +462,7 @@ interface CastBreakdownAssembly {
     baseTotal: number;
     hasCritical: boolean;
     hasAnyProc: boolean;
+    hasAnyExecute: boolean;
     hasAnyMultEvent: boolean;
     hasAnyAccumulatorInc: boolean;
     spellElement: string;
@@ -586,10 +595,21 @@ function assembleCastBreakdown(args: {
             }
             // grant_gold: no damage contribution — handled below when
             // building the proc bubble (kind: "gold").
+            // execute: no incremental damage; forces totalDamage up to the
+            // enemy's current HP so the kill is guaranteed. Spritesheet +
+            // SFX signal the execute to the player at the proc's timeline
+            // moment (see onExecuteProc wiring in castTimeline consumer).
         }
     }
     const hasAnyProc = procsPerRune.some(arr => arr.length > 0);
+    const hasAnyExecute = procsPerRune.some(arr => arr.some(p => p.effect.type === "execute"));
     totalDamage += procDamageTotal;
+    // Execute procs (Blackjack) guarantee the enemy dies — force totalDamage
+    // up to enemy HP so the client and server agree on the killing-blow
+    // value. The `Math.max` lets other stacked procs keep adding on top.
+    if (hasAnyExecute) {
+        totalDamage = Math.max(totalDamage, arkynStoreInternal.getEnemyHp());
+    }
     // Adjust baseTotal to include proc contributions (for lastCastBaseDamage).
     // Only damage-type procs contribute to Base — gold procs are pure economy.
     // Each damage proc on a rune adds that rune's base again, so N retriggers
@@ -643,11 +663,29 @@ function assembleCastBreakdown(args: {
             // procs (Voltage/Hourglass/Chainlink) show the rune's base
             // contribution again; gold procs (Fortune) show the flat gold
             // amount with the "gold" bubble variant and contribute nothing
-            // to damage. Multiple procs per rune (Mimic+Chainlink) push
-            // their bubbles consecutively with staggered delayMs so each
-            // pops in sequence.
+            // to damage. Execute procs (Blackjack) don't add incremental
+            // damage — they force totalDamage up to the enemy's current
+            // HP. No bubble either; the timeline triggers a spritesheet +
+            // SFX at the event's delay to signal the execute. Multiple
+            // procs per rune (Mimic+Chainlink) push their bubbles
+            // consecutively with staggered delayMs so each pops in sequence.
             for (const proc of procsPerRune[i]) {
-                const isGoldProc = proc.effect.type === "grant_gold";
+                const effectType = proc.effect.type;
+                if (effectType === "execute") {
+                    // No bubble for executes — the spritesheet is the visual.
+                    runeBreakdown.push({
+                        base: 0,
+                        final: 0,
+                        isResisted: false,
+                        isCritical: false,
+                        isProc: true,
+                        isExecute: true,
+                        sigilId: proc.sigilId,
+                    });
+                    eventIdx++;
+                    continue;
+                }
+                const isGoldProc = effectType === "grant_gold";
                 const bubbleAmount = isGoldProc
                     ? proc.effect.amount
                     : postModifier;
@@ -870,6 +908,7 @@ function assembleCastBreakdown(args: {
         baseTotal,
         hasCritical,
         hasAnyProc,
+        hasAnyExecute,
         hasAnyMultEvent,
         hasAnyAccumulatorInc,
         spellElement,
@@ -999,6 +1038,7 @@ export function castSpell() {
         baseTotal,
         hasCritical,
         hasAnyProc,
+        hasAnyExecute,
         hasAnyMultEvent,
         hasAnyAccumulatorInc,
         spellElement,
@@ -1170,6 +1210,14 @@ export function castSpell() {
         } : undefined,
         onAccumulatorProc: hasAnyAccumulatorInc ? (sigilId: string, delta: number) => {
             arkynStoreInternal.triggerSigilProcBubble(sigilId, delta, "xmult");
+            notify();
+        } : undefined,
+        // Blackjack execute: fire the fullscreen spritesheet + SFX. Only
+        // wired when an execute actually rolled this cast so the overlay
+        // never mounts gratuitously.
+        onExecuteProc: hasAnyExecute ? () => {
+            arkynStoreInternal.triggerBlackjackAnimation();
+            playBlackjack();
             notify();
         } : undefined,
         // Gold-proc two-phase reveal: show the "+N Gold" overlay over the
