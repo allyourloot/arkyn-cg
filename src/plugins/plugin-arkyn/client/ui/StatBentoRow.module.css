@@ -84,7 +84,7 @@
     border-style: solid;
     border-color: transparent;
     border-width: 12px;
-    padding: 1px 6px 2px;
+    padding: 2px 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -114,35 +114,47 @@
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
     .statsSection {
-        gap: clamp(4px, 0.8vh, 10px);
+        gap: clamp(2px, 0.4vh, 6px);
+    }
+
+    .statColumn {
+        gap: clamp(0px, 0.2vh, 3px);
+    }
+
+    .goldCell {
+        gap: clamp(0px, 0.2vh, 3px);
     }
 
     .statLabel {
-        font-size: var(--font-size-3xs);
+        font-size: 8px;
         letter-spacing: 1px;
     }
 
     .statChip {
-        border-width: 6px;
-        padding: 0 4px 1px;
+        border-width: 4px;
+        padding: 0 2px;
     }
 
     .statChipHands {
-        border-image: var(--hands-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        border-image: var(--hands-bg) 24 24 24 24 fill / 4px 4px 4px 4px;
     }
 
     .statChipDiscards {
-        border-image: var(--discards-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        border-image: var(--discards-bg) 24 24 24 24 fill / 4px 4px 4px 4px;
     }
 
     .statChipValue {
         font-size: clamp(var(--font-size-xs), 2.6vw, var(--font-size-md));
     }
 
-    /* Gold chip's overridden border-width tracks statChip's 6px landscape
-       thickness so the inner-frame tops stay aligned with Casts. */
+    /* Gold chip's overridden border-width tracks statChip's 4px landscape
+       thickness so the inner-frame tops stay aligned with Casts.
+       Padding is also scoped down to match statChip's compact mobile
+       footprint — GoldCounter's own mobile padding of ~5px top/bottom
+       is too generous inside the bento row. */
     .goldCell > :last-child {
-        border-width: 6px;
-        border-image: var(--bank-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        border-width: 4px;
+        border-image: var(--bank-bg) 24 24 24 24 fill / 4px 4px 4px 4px;
+        padding: 0 4px;
     }
 }

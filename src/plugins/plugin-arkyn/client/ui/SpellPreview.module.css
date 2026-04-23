@@ -235,7 +235,7 @@
     border-color: transparent;
     border-width: 12px;
     border-image: var(--base-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-    padding: 4px 6px 6px;
+    padding: 5px 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -303,7 +303,7 @@
         overflow: hidden;
         border-width: 12px;
         border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-        padding: 4px 3px;
+        padding: 2px 2px;
         gap: clamp(2px, 0.5vw, 6px);
     }
 
@@ -358,7 +358,7 @@
     }
 
     .damageSection {
-        gap: clamp(6px, 1.2vh, 14px);
+        gap: clamp(3px, 0.6vh, 8px);
     }
 
     .damageRow {
@@ -370,23 +370,27 @@
         transform: translate(-50%, -10%);
     }
 
+    .damageChipColumn {
+        gap: clamp(0px, 0.2vh, 3px);
+    }
+
     .damageChipLabel {
-        font-size: var(--font-size-3xs);
+        font-size: 8px;
         letter-spacing: 1px;
     }
 
     .damageChip {
-        border-width: 6px;
-        border-image: var(--base-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
-        padding: 2px 4px 3px;
+        border-width: 4px;
+        border-image: var(--base-bg) 24 24 24 24 fill / 4px 4px 4px 4px;
+        padding: 1px 3px;
     }
 
     .damageChipMult {
-        border-image: var(--mult-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        border-image: var(--mult-bg) 24 24 24 24 fill / 4px 4px 4px 4px;
     }
 
     .damageChipTotal {
-        border-image: var(--total-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        border-image: var(--total-bg) 24 24 24 24 fill / 4px 4px 4px 4px;
     }
 
     .damageChipValue {

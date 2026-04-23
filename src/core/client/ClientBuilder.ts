@@ -89,7 +89,16 @@ export class ClientBuilder {
         if (!serverUrl) {
             const protocol = window.location.protocol === "https:" ? "wss" : "ws";
             const requestedPort = resolveRequestedServerPort();
-            const fallbackPort = window.location.hostname === "local.hytopiahosting.com" ? "8181" : window.location.port;
+            // Dev mode heuristic: when the page is served from Vite's dev
+            // port (8180), the Colyseus server lives on 8181 on the same
+            // host. This covers both `local.hytopiahosting.com:8180` and
+            // mobile access via the `*.dns-is-boring-we-do-ip-addresses`
+            // wildcard host — the old exact-hostname check missed the
+            // latter and caused mobile clients to open WSS to 8180, where
+            // Vite is listening (not Colyseus). In production builds the
+            // client is served by Colyseus itself, so the port already
+            // matches and this branch is a no-op.
+            const fallbackPort = window.location.port === "8180" ? "8181" : window.location.port;
             const port = requestedPort ?? fallbackPort;
             serverUrl = `${protocol}://${window.location.hostname}:${port}`;
         }

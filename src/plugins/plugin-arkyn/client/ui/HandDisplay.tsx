@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
@@ -39,29 +39,47 @@ export default function HandDisplay() {
 
     // ── Fixed frame, dynamic overlap ──
     // The hand frame has a fixed CSS width. We measure its inner content
-    // width (minus padding) and a single card's width once on mount via
-    // a ref callback, then compute the negative margin needed to fit N
-    // cards into that fixed space.
+    // width (minus padding) and a single card's width, then compute the
+    // negative margin needed to fit N cards into that fixed space.
+    // A ResizeObserver re-runs the measurement whenever the frame or a
+    // rune card resizes (e.g. viewport breakpoint crossing, orientation
+    // change, devtools device toggle) so the overlap stays accurate and
+    // cards never spill off the frame on mobile after a desktop mount.
     const [frameDims, setFrameDims] = useState<{ innerW: number; cardW: number } | null>(null);
-    const measuredRef = useRef(false);
     const containerCallbackRef = useCallback((el: HTMLDivElement | null) => {
-        // Wire up the imperative ref that the rest of the component uses.
         (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-        if (!el || measuredRef.current) return;
-        // Measure after a frame so layout is settled.
-        requestAnimationFrame(() => {
+    }, []);
+
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const measure = () => {
             const cs = getComputedStyle(el);
             const padL = parseFloat(cs.paddingLeft) || 0;
             const padR = parseFloat(cs.paddingRight) || 0;
             const innerW = el.clientWidth - padL - padR;
             const firstCard = el.querySelector<HTMLElement>("[data-rune-index]");
             const cardW = firstCard ? firstCard.offsetWidth : 0;
-            if (innerW > 0 && cardW > 0) {
-                setFrameDims({ innerW, cardW });
-                measuredRef.current = true;
-            }
-        });
-    }, []);
+            if (innerW <= 0 || cardW <= 0) return;
+            setFrameDims(prev => {
+                if (prev && prev.innerW === innerW && prev.cardW === cardW) return prev;
+                return { innerW, cardW };
+            });
+        };
+        // Initial measure after layout settles.
+        const rafId = requestAnimationFrame(measure);
+        // Re-measure on any size change to the hand container or its first
+        // card — the card's own clamp() resolves at viewport-relative units
+        // so it shrinks on mobile breakpoint crossings too.
+        const ro = new ResizeObserver(measure);
+        ro.observe(el);
+        const firstCard = el.querySelector<HTMLElement>("[data-rune-index]");
+        if (firstCard) ro.observe(firstCard);
+        return () => {
+            cancelAnimationFrame(rafId);
+            ro.disconnect();
+        };
+    }, [hand.length]);
 
     // Compute the overlap needed to fit `hand.length` cards into the
     // fixed inner width. For <= reference count, use the CSS default.
@@ -75,9 +93,12 @@ export default function HandDisplay() {
         // Only apply when we need to compress (negative overlap).
         // Clamp so cards never overlap more than 80% (stay readable).
         const clamped = Math.max(-cardW * 0.8, neededOverlap);
+        // Floor toward -∞ so we bias toward slightly MORE overlap rather
+        // than less — rounding up by a fraction of a pixel can leave the
+        // last card spilling past the frame's right edge on mobile.
         handStyle = {
             ...handStyleVarsBase,
-            "--card-overlap": `${Math.round(clamped)}px`,
+            "--card-overlap": `${Math.floor(clamped)}px`,
         } as React.CSSProperties;
     }
 

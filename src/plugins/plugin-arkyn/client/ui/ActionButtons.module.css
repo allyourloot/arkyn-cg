@@ -5,46 +5,11 @@
 }
 
 /* Cast + Discard live inside an auto-width flex group so they stay
-   centered in .bar. The sort button is absolutely positioned inside
-   the group so its presence doesn't shift Cast/Discard off-center. */
+   centered in .bar. */
 .group {
     position: relative;
     display: flex;
     gap: clamp(8px, 1.4vw, 16px);
-}
-
-.sortButton {
-    position: absolute;
-    left: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    margin-left: clamp(12px, 1.6vw, 20px);
-    pointer-events: auto;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px;
-    opacity: 0.7;
-    transition: opacity 0.15s ease, transform 0.1s ease;
-}
-
-.sortButton:not(:disabled):hover {
-    opacity: 1;
-}
-
-.sortButton:not(:disabled):active {
-    transform: translateY(-50%) scale(0.9);
-}
-
-.sortButton:disabled {
-    cursor: not-allowed;
-    opacity: 0.3;
-}
-
-.sortIcon {
-    width: clamp(48px, 5vw, 72px);
-    height: clamp(48px, 5vw, 72px);
-    image-rendering: pixelated;
 }
 
 .button {

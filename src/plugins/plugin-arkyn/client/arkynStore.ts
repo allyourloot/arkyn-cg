@@ -15,10 +15,9 @@ const ELEMENT_ORDER: Record<string, number> = (() => {
 })();
 
 /**
- * Pure sort helper used by both `sortHand` (the manual button) and
- * `setHand` (the auto-sort on every server-driven hand update). Returns
- * a fresh sorted copy of `arr` so callers can compare against the
- * original to decide whether anything changed.
+ * Pure sort helper used by `setHand` (auto-sort on every server-driven
+ * hand update). Returns a fresh sorted copy of `arr` so callers can
+ * compare against the original to decide whether anything changed.
  *
  * Sort order:
  *   1. Element COUNT descending — triples before pairs before singles.
@@ -265,36 +264,6 @@ export function reorderHand(fromIndex: number, toIndex: number) {
     const next = [...hand];
     const [moved] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, moved);
-    hand = next;
-    recomputeSelectedIndices();
-    notify();
-}
-
-/**
- * Manual hand sort triggered by the Sort button. Mostly redundant
- * since `setHand` auto-sorts on every server sync, but useful as an
- * explicit "snap to sorted" after the player has manually dragged
- * runes around. Also gives the player a tactile re-sort affordance.
- *
- * Selection follows the runes (selectedRuneIds is the source of truth)
- * so re-sorting doesn't lose the player's current pick.
- */
-export function sortHand() {
-    if (hand.length < 2) return;
-    const next = sortHandArray(hand);
-
-    // Bail if the order didn't actually change so the click doesn't
-    // notify subscribers (and re-trigger the HandDisplay GSAP layout
-    // pass) for nothing.
-    let changed = false;
-    for (let i = 0; i < next.length; i++) {
-        if (next[i].id !== hand[i].id) {
-            changed = true;
-            break;
-        }
-    }
-    if (!changed) return;
-
     hand = next;
     recomputeSelectedIndices();
     notify();

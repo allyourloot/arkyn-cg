@@ -94,11 +94,11 @@
         padding: clamp(4px, 0.8vh, 10px) clamp(10px, 1.6vw, 20px);
     }
 
-    /* Thin the 9-slice border from 24px to 12px so the frame's chrome is
+    /* Thin the 9-slice border from 24px to 6px so the frame's chrome is
        proportional to the compact layout — the 24px source slice scales
-       cleanly down to 12px, keeping the pixel-art edge crisp. */
+       cleanly down to 6px, keeping the pixel-art edge crisp. */
     .hand::before {
-        border-width: 12px;
-        border-image: var(--hand-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+        border-width: 6px;
+        border-image: var(--hand-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
     }
 }
