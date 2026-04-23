@@ -120,7 +120,16 @@ export const playCount = makeSfx(countUrl, VOL_DEFAULT);
 export const playDamage = makeSfx(damageUrl, VOL_DEFAULT);
 export const playCastRune = makeSfx(castRuneUrl, VOL_DEFAULT);
 export const playDissolve = makeSfx(dissolveUrl, VOL_DEFAULT);
-export const playCritical = makeSfx(criticalUrl, VOL_DEFAULT);
+// Critical SFX with subtle per-play pitch randomization. Long retrigger
+// chains (e.g. Mimic+Chainlink on a 4-rune critical hand = 12 back-to-
+// back crits) otherwise read as a mechanical rat-a-tat; ±4% keeps the
+// sound recognisable per hit while making the overall sequence feel
+// organic. Same playbackRate mechanism as playDiscard.
+const playCriticalSfx = makeSfx(criticalUrl, VOL_DEFAULT);
+export function playCritical(): void {
+    const pitch = 0.96 + Math.random() * 0.08; // 0.96..1.04
+    playCriticalSfx(pitch);
+}
 export const playGold = makeSfx(goldUrl, VOL_DEFAULT);
 export const playGoldTotal = makeSfx(goldTotalUrl, VOL_DEFAULT);
 export const playRoundWin = makeSfx(roundWinUrl, VOL_DEFAULT);
