@@ -433,12 +433,63 @@ export function emitBagRunePick(e: BagRunePickEvent) {
 }
 
 // Sigil slot rect registry — SigilBar writes, ArkynOverlay reads.
+// The frame element is registered separately so `getSigilSlotRect` can
+// compute the target rect for a not-yet-mounted slot (e.g. the in-flight
+// purchase lands on an index that only appears in the DOM after the
+// server echo, which arrives after the fly animation has already started).
 const sigilSlotElements: (HTMLElement | null)[] = [];
+let sigilFrameElement: HTMLElement | null = null;
 export function registerSigilSlot(index: number, el: HTMLElement | null) {
     sigilSlotElements[index] = el;
 }
+export function registerSigilFrame(el: HTMLElement | null) {
+    sigilFrameElement = el;
+}
 export function getSigilSlotRect(index: number): DOMRect | null {
-    return sigilSlotElements[index]?.getBoundingClientRect() ?? null;
+    const direct = sigilSlotElements[index];
+    if (direct) return direct.getBoundingClientRect();
+
+    // Slot isn't mounted yet — infer its rect from the frame's layout.
+    // Happens when a sigil purchase fires before the server echo adds
+    // the new sigil to `sigils` (the SigilBar render that would mount
+    // this slot). Pack sigils from the left with known slot width + gap.
+    const frame = sigilFrameElement;
+    if (!frame) return null;
+    const frameRect = frame.getBoundingClientRect();
+    const frameStyle = getComputedStyle(frame);
+    const paddingLeft = parseFloat(frameStyle.paddingLeft) || 0;
+    const paddingTop = parseFloat(frameStyle.paddingTop) || 0;
+    const paddingBottom = parseFloat(frameStyle.paddingBottom) || 0;
+    const gap = parseFloat(frameStyle.columnGap || frameStyle.rowGap || "0") || 0;
+
+    // Find any registered sibling — its measured size is authoritative.
+    let sample: { el: HTMLElement; index: number } | null = null;
+    for (let i = 0; i < sigilSlotElements.length; i++) {
+        const el = sigilSlotElements[i];
+        if (el) { sample = { el, index: i }; break; }
+    }
+
+    if (sample) {
+        const sampleRect = sample.el.getBoundingClientRect();
+        const stride = sampleRect.width + gap;
+        return new DOMRect(
+            sampleRect.left + (index - sample.index) * stride,
+            sampleRect.top,
+            sampleRect.width,
+            sampleRect.height,
+        );
+    }
+
+    // Empty bar — no sibling to sample. Approximate the slot as a
+    // square sized to the frame's inner height. Good enough for the
+    // first-sigil edge case; the fly animation finishes with a fade.
+    const slotSize = frameRect.height - paddingTop - paddingBottom;
+    return new DOMRect(
+        frameRect.left + paddingLeft + index * (slotSize + gap),
+        frameRect.top + paddingTop,
+        slotSize,
+        slotSize,
+    );
 }
 
 // Pending-sigil signal — set while a sigil purchase flight is in the

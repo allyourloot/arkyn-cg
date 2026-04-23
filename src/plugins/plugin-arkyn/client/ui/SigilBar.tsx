@@ -3,7 +3,7 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { MAX_SIGILS, MIMIC_INCOMPATIBLE, SIGIL_ACCUMULATOR_XMULT, SIGIL_INVENTORY_MULT } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
-import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, usePendingSigilId, useSigilProcBubble } from "../arkynStore";
+import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, registerSigilFrame, usePendingSigilId, useSigilProcBubble } from "../arkynStore";
 import { RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
 import { haptic, HAPTIC_LIGHT } from "../haptics";
 import ItemScene from "./ItemScene";
@@ -159,7 +159,11 @@ export default function SigilBar() {
 
     return (
         <div ref={barRef} className={styles.wrapper}>
-            <div ref={frameRef} className={styles.sigilFrame} style={slotFrameVars}>
+            <div
+                ref={(el) => { frameRef.current = el; registerSigilFrame(el); }}
+                className={styles.sigilFrame}
+                style={slotFrameVars}
+            >
                 {sigils.map((sigilId, i) => {
                     const def = SIGIL_DEFINITIONS[sigilId];
                     if (!def) return null;
