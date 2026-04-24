@@ -126,9 +126,14 @@ export function calculateDamage(
             } else if (proc.effect.type === "grant_gold") {
                 procGold += proc.effect.amount;
             } else if (proc.effect.type === "execute") {
-                // Force the cast to deal at least enough damage to kill the
-                // enemy outright. Subsequent procs in the same cast can still
-                // stack on top, but the kill is guaranteed from this proc on.
+                // Execute GUARANTEES the kill but PRESERVES natural damage
+                // — `Math.max` means a 300-damage Reaper's Toll on a 168-HP
+                // enemy still records 300 toward the highest-damage stat
+                // (the player's spell mattered), while a 50-damage cast on
+                // the same enemy bumps up to 168 to ensure the kill lands.
+                // The floating damage bubble shows "EXECUTED!" instead of
+                // a number when this fires (see EnemyHealthBar.tsx) — the
+                // numeric value is for stats, not for the on-screen reveal.
                 totalDamage = Math.max(totalDamage, enemy.currentHp);
             }
         }

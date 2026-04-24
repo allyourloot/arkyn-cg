@@ -249,6 +249,20 @@
     will-change: transform, opacity;
 }
 
+/* Execute variant — floats the word "EXECUTED!" instead of a damage
+   number when Blackjack procs. Smaller font + uppercase letterspacing
+   so the longer text reads as a stamped label rather than overflowing
+   the bar; the underlying execute.png burst still pops as the visual
+   anchor. The natural damage number is preserved on the cast's Total
+   chip + run stats for record-keeping — only the on-enemy reveal swaps
+   to the EXECUTED label so the moment reads as a special kill rather
+   than just a big number. */
+.damageFloatExecute {
+    font-size: clamp(var(--font-size-lg), 4.6vw, var(--font-size-xl));
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
 /* Spiky burst graphic behind the damage number on critical (weakness) hits.
    Centered on the text, scaled to overshoot the number so the burst reads
    as an impact flash rather than a tight crop. */
@@ -262,6 +276,14 @@
     pointer-events: none;
     z-index: -1;
     image-rendering: pixelated;
+}
+
+/* Execute variant — the burst hugs the EXECUTED label tighter than the
+   crit burst hugs a damage number. The label is wider than a typical
+   damage number, so a 250% scale ballooned the burst off-screen; 130%
+   keeps it framed snugly around the text. */
+.criticalBgExecute {
+    width: 130%;
 }
 
 /* Positioning anchor for the floating damage number that needs to escape

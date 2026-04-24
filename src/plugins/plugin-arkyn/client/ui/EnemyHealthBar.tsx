@@ -260,17 +260,17 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
                             <span
                                 ref={damageFloatRef}
                                 key={activeHit.seq}
-                                className={styles.damageFloat}
+                                className={`${styles.damageFloat} ${activeHit.isExecute ? styles.damageFloatExecute : ""}`}
                                 style={damageFloatStyle}
                             >
                                 {(activeHit.isExecute || activeHit.isCritical) && (
                                     <img
                                         src={activeHit.isExecute ? executeUrl : criticalUrl}
                                         alt=""
-                                        className={styles.criticalBg}
+                                        className={`${styles.criticalBg} ${activeHit.isExecute ? styles.criticalBgExecute : ""}`}
                                     />
                                 )}
-                                -{activeHit.amount}
+                                {activeHit.isExecute ? "EXECUTED!" : `-${activeHit.amount}`}
                             </span>
                         )}
                     </div>

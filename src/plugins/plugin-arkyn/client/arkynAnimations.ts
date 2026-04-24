@@ -613,9 +613,13 @@ function assembleCastBreakdown(args: {
     const hasAnyProc = procsPerRune.some(arr => arr.length > 0);
     const hasAnyExecute = procsPerRune.some(arr => arr.some(p => p.effect.type === "execute"));
     totalDamage += procDamageTotal;
-    // Execute procs (Blackjack) guarantee the enemy dies — force totalDamage
-    // up to enemy HP so the client and server agree on the killing-blow
-    // value. The `Math.max` lets other stacked procs keep adding on top.
+    // Execute procs (Blackjack) guarantee the kill but PRESERVE natural
+    // damage — `Math.max` keeps a high-damage cast's number intact for
+    // the highest-damage stat / Total chip display, while bumping low-
+    // damage casts up to enemy HP so the kill lands. The floating damage
+    // bubble swaps its number for "EXECUTED!" text when isExecute fires
+    // (see EnemyHealthBar.tsx) — the numeric value is purely for stats
+    // and the cast-flow UI, not for the on-enemy reveal.
     if (hasAnyExecute) {
         totalDamage = Math.max(totalDamage, arkynStoreInternal.getEnemyHp());
     }
