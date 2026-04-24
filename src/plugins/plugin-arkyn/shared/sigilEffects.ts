@@ -252,6 +252,7 @@ export const SIGIL_STAT_MODIFIERS: Record<string, Partial<PlayerStatDeltas>> = {
     // player HAS to commit to tier-5 hands to cash in, and the reduced
     // hand trims redraw depth so bricking a round is a real risk.
     big_bang: { handSize: -2 },
+    orwyns_spellbook: { handSize: 2, castsPerRound: -1 },
 };
 
 /**

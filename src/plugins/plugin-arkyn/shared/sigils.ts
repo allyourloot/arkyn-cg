@@ -317,6 +317,14 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         cost: 6,
         sellPrice: 3,
     },
+    orwyns_spellbook: {
+        id: "orwyns_spellbook",
+        name: "Orwyn's Spellbook",
+        rarity: "uncommon",
+        description: "{+2 Hand Size} {-1 Cast}.",
+        cost: 4,
+        sellPrice: 2,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);
