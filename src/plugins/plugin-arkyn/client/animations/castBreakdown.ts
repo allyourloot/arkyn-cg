@@ -13,7 +13,7 @@ import type { RarityType } from "../../shared/arkynConstants";
 import { BUBBLE_STAGGER_MS } from "./timingConstants";
 import { arkynStoreInternal } from "../arkynStore";
 import type { RuneClientData } from "../arkynStoreCore";
-import type { RuneDamageBubble, HandMultBubble } from "../arkynAnimations";
+import type { RuneDamageBubble, HandMultBubble, RuneXMultBubble } from "../arkynAnimations";
 
 /**
  * Runtime timeline event — the union the cast timeline consumes. Each entry
@@ -46,6 +46,22 @@ export interface CastBreakdownEvent {
      * than only noticing it via the SigilBar tooltip on the next cast.
      */
     isAccumulatorInc?: boolean;
+    /**
+     * xMult reveal came from SIGIL_CUMULATIVE_CAST_X_MULT (Big Bang). The
+     * floating "x{factor}" bubble mounts over the triggering rune's slot
+     * (pre-populated into `xMultBubblesForCast[slotIdx]`), NOT under the
+     * sigil — the per-rune mechanic reads naturally as a ramp across the
+     * play area. Timeline skips the sigil-side bubble path for these.
+     */
+    isPerRuneXMult?: boolean;
+    /**
+     * xMult reveal came from SIGIL_SPELL_X_MULT (Supercell / Eruption /
+     * Zephyr) — a single spell-level bonus. Timeline fires the sigil-side
+     * "x{factor}" proc bubble for these. Accumulator xMult reveals
+     * (Executioner) carry NEITHER flag and produce no reveal bubble —
+     * Executioner already gets per-crit "+0.1x" bubbles during the cast.
+     */
+    isSpellXMult?: boolean;
     goldDelta?: number;
     multDelta?: number;
     xMultFactor?: number;
@@ -65,6 +81,15 @@ export interface CastBreakdownAssembly {
      * single overwritten bubble.
      */
     procBubblesForCast: RuneDamageBubble[][];
+    /**
+     * Per-slot ARRAY of "x{factor}" bubbles — one entry per cumulative
+     * xMult event (Big Bang) fired on the slot's contributing rune. Empty
+     * arrays mean no cumulative-xMult sigil is active. Each entry carries
+     * its own delayMs so the bubbles stagger across contributing slots
+     * in the same order Big Bang's events fire on the timeline (x1 → x1.5
+     * → x2 → x2.5 → x3 for a T5 cast).
+     */
+    xMultBubblesForCast: RuneXMultBubble[][];
     handMultBubblesForCast: (HandMultBubble | null)[];
     resolvedSpell: ReturnType<typeof resolveSpell>;
     contributingIndices: number[];
@@ -76,6 +101,8 @@ export interface CastBreakdownAssembly {
     hasAnyExecute: boolean;
     hasAnyMultEvent: boolean;
     hasAnyAccumulatorInc: boolean;
+    /** True if any spell-level xMult sigil (Supercell/Eruption/Zephyr) fired — drives onXMultReveal wiring. */
+    hasAnySpellXMult: boolean;
     spellElement: string;
 }
 
@@ -185,9 +212,25 @@ function iterateCastProcs(args: {
 /**
  * Walk each contributing rune in cast order, emit one base-damage event per
  * rune, and interleave that rune's procs + played-mult entries + element-
- * rune-bonus entries + accumulator-increment events (Executioner-style).
- * Returns the events list, per-slot bubble arrays, and the next event index
- * for the downstream sub-functions to continue staggering from.
+ * rune-bonus entries + cumulative xMult entries (Big Bang) + accumulator-
+ * increment events (Executioner-style). Returns the events list, per-slot
+ * bubble arrays, and the next event index for the downstream sub-functions
+ * to continue staggering from.
+ *
+ * Ordering within a single rune's sub-sequence:
+ *   1. damage event + bubble
+ *   2. proc events + bubbles (Voltage / Hourglass / Chainlink / Fortune / Blackjack)
+ *   3. played-mult events (Arcana — additive)
+ *   4. element-rune-bonus mult events (Engine / Lex Divina / Alkahest — additive)
+ *   5. cumulative xMult event + rune-slot bubble (Big Bang — multiplicative)
+ *   6. accumulator-inc events (Executioner — per-crit "+0.1x" feedback)
+ *
+ * The Mult counter handles this interleaving correctly because castTimeline
+ * tracks additive + multiplicative pools separately and recomputes the
+ * display as `(baseMult + additive) × xMult` on every event — so a later
+ * additive tick (e.g. Synapse hand-mult in Phase 3) still lands at the
+ * correct final value even though it fires AFTER Big Bang's multiplicative
+ * events.
  */
 function buildRuneDamageEvents(args: {
     breakdown: SpellBreakdown | null;
@@ -196,6 +239,7 @@ function buildRuneDamageEvents(args: {
     procsPerRune: ProcEntry[][];
     playedMultEntries: readonly { sigilId: string; contributingRuneIdx: number; multDelta: number }[];
     elementRuneBonusEntries: readonly { sigilId: string; contributingRuneIdx: number; multDelta: number }[];
+    cumulativeCastXMultEntries: readonly { sigilId: string; xMult: number; runeIdx: number }[];
     ownedSigils: readonly string[];
     spellElement: string;
     startEventIdx: number;
@@ -203,12 +247,14 @@ function buildRuneDamageEvents(args: {
     events: CastBreakdownEvent[];
     bubbles: (RuneDamageBubble | null)[];
     procBubblesForCast: RuneDamageBubble[][];
+    xMultBubblesForCast: RuneXMultBubble[][];
     nextEventIdx: number;
     hasAnyAccumulatorInc: boolean;
 } {
     const {
         breakdown, contributingIndices, castRunes, procsPerRune,
-        playedMultEntries, elementRuneBonusEntries, ownedSigils, spellElement, startEventIdx,
+        playedMultEntries, elementRuneBonusEntries, cumulativeCastXMultEntries,
+        ownedSigils, spellElement, startEventIdx,
     } = args;
 
     const events: CastBreakdownEvent[] = [];
@@ -217,11 +263,16 @@ function buildRuneDamageEvents(args: {
     // Chainlink) push more than one entry per slot so PlayArea can render
     // each bubble as its own component with its own delayMs.
     const procBubblesForCast: RuneDamageBubble[][] = Array.from({ length: MAX_PLAY }, () => []);
+    // Per-slot ARRAY of Big Bang "x{factor}" bubbles — anchors to the
+    // contributing rune's slot so the bubble reads as "this rune just
+    // multiplied damage by N." Interleaved with each rune's damage event
+    // below.
+    const xMultBubblesForCast: RuneXMultBubble[][] = Array.from({ length: MAX_PLAY }, () => []);
     let eventIdx = startEventIdx;
     let hasAnyAccumulatorInc = false;
 
     if (!breakdown) {
-        return { events, bubbles, procBubblesForCast, nextEventIdx: eventIdx, hasAnyAccumulatorInc };
+        return { events, bubbles, procBubblesForCast, xMultBubblesForCast, nextEventIdx: eventIdx, hasAnyAccumulatorInc };
     }
 
     for (let i = 0; i < contributingIndices.length; i++) {
@@ -348,6 +399,35 @@ function buildRuneDamageEvents(args: {
             eventIdx++;
         }
 
+        // Cumulative cast xMult events (Big Bang-style) — interleaved per
+        // rune so each contributing rune plays its full proc sequence
+        // (damage → procs → additive mult → xMult) before moving to the
+        // next rune. Reads as a left-to-right ramp across the play area
+        // with damage bubbles pairing with "x{factor}" bubbles. The rune-
+        // slot bubble is anchored to `slotIdx` (the physical play-area
+        // slot) via `contributingIndices[i]`.
+        for (const cce of cumulativeCastXMultEntries) {
+            if (cce.runeIdx !== i) continue;
+            const delayMs = eventIdx * BUBBLE_STAGGER_MS;
+            xMultBubblesForCast[slotIdx].push({
+                factor: cce.xMult,
+                seq: nextBubbleSeq(),
+                delayMs,
+            });
+            events.push({
+                base: 0,
+                final: 0,
+                isResisted: false,
+                isCritical: false,
+                isProc: false,
+                isXMult: true,
+                isPerRuneXMult: true,
+                xMultFactor: cce.xMult,
+                sigilId: cce.sigilId,
+            });
+            eventIdx++;
+        }
+
         // Accumulator-increment events (Executioner-style). Emit one per
         // owned accumulator sigil whose trigger matches this rune's event
         // (today only "criticalHit"). The accumulator itself is patched
@@ -376,7 +456,7 @@ function buildRuneDamageEvents(args: {
         }
     }
 
-    return { events, bubbles, procBubblesForCast, nextEventIdx: eventIdx, hasAnyAccumulatorInc };
+    return { events, bubbles, procBubblesForCast, xMultBubblesForCast, nextEventIdx: eventIdx, hasAnyAccumulatorInc };
 }
 
 // ----- Sub-function: hand-mult bubbles + breakdown events -----
@@ -470,10 +550,24 @@ function buildFlatMultEvents(args: {
 // ----- Sub-function: xMult reveal events -----
 
 /**
- * Emit the dramatic xMult reveal events — static spell-element xMult
- * (Supercell/Eruption) first, then accumulator xMult (Executioner). These
- * are the final events in the cast breakdown stream; the timeline pops the
- * reveal after all additive mult ticks have played through.
+ * Emit the end-of-cast xMult reveal events — static spell-element xMult
+ * (Supercell/Eruption/Zephyr) first, then accumulator xMult (Executioner).
+ * These fire AFTER all additive mult ticks so the sigil-side bubble lands
+ * as a single dramatic "x{factor}" reveal rather than lost in the middle
+ * of per-rune damage noise.
+ *
+ * Cumulative per-rune xMult (Big Bang) is NOT in this phase — it's
+ * interleaved inside `buildRuneDamageEvents` so each contributing rune
+ * plays damage → xMult in sequence before moving on. The Mult counter
+ * stays correct under either ordering because castTimeline tracks
+ * additive + multiplicative pools separately.
+ *
+ * Bubble routing (see `CastBreakdownEvent` flags):
+ *  - Spell-level events carry `isSpellXMult: true` → sigil-side "x{factor}"
+ *    bubble under the triggering sigil via `onXMultReveal`.
+ *  - Accumulator events carry neither flag — the per-crit "+0.1x" bubbles
+ *    fired during the cast already feedback the accumulator build-up, so
+ *    the final reveal doesn't spawn another bubble on top.
  */
 function buildXMultEvents(args: {
     xMultEntries: readonly { sigilId: string; xMult: number }[];
@@ -486,25 +580,39 @@ function buildXMultEvents(args: {
     const { xMultEntries, accumulatorXMultEntries, startEventIdx } = args;
     const events: CastBreakdownEvent[] = [];
     let eventIdx = startEventIdx;
-    const sources: readonly (readonly { sigilId: string; xMult: number }[])[] = [
-        xMultEntries,
-        accumulatorXMultEntries,
-    ];
-    for (const source of sources) {
-        for (const entry of source) {
-            events.push({
-                base: 0,
-                final: 0,
-                isResisted: false,
-                isCritical: false,
-                isProc: false,
-                isXMult: true,
-                xMultFactor: entry.xMult,
-                sigilId: entry.sigilId,
-            });
-            eventIdx++;
-        }
+
+    // Spell-element xMult (Supercell/Eruption/Zephyr).
+    for (const entry of xMultEntries) {
+        events.push({
+            base: 0,
+            final: 0,
+            isResisted: false,
+            isCritical: false,
+            isProc: false,
+            isXMult: true,
+            isSpellXMult: true,
+            xMultFactor: entry.xMult,
+            sigilId: entry.sigilId,
+        });
+        eventIdx++;
     }
+
+    // Accumulator xMult reveal (Executioner). No bubble — the per-crit
+    // "+0.1x" bubbles during cast are the feedback channel.
+    for (const entry of accumulatorXMultEntries) {
+        events.push({
+            base: 0,
+            final: 0,
+            isResisted: false,
+            isCritical: false,
+            isProc: false,
+            isXMult: true,
+            xMultFactor: entry.xMult,
+            sigilId: entry.sigilId,
+        });
+        eventIdx++;
+    }
+
     return { events, nextEventIdx: eventIdx };
 }
 
@@ -598,7 +706,8 @@ export function assembleCastBreakdown(args: {
 
     // ----- Phase 2: per-rune damage events -----
     // The big "for each contributing rune, emit bubble + interleave procs +
-    // mult ticks + accumulator-incs" loop. Start event index at 0.
+    // mult ticks + cumulative xMult + accumulator-incs" loop. Start event
+    // index at 0.
     const runeSection = buildRuneDamageEvents({
         breakdown,
         contributingIndices,
@@ -606,6 +715,7 @@ export function assembleCastBreakdown(args: {
         procsPerRune: procResult.procsPerRune,
         playedMultEntries: modifiers.breakdowns.playedMult,
         elementRuneBonusEntries: modifiers.breakdowns.elementRuneBonus,
+        cumulativeCastXMultEntries: modifiers.breakdowns.cumulativeCastXMult,
         ownedSigils,
         spellElement,
         startEventIdx: 0,
@@ -627,6 +737,8 @@ export function assembleCastBreakdown(args: {
     });
 
     // ----- Phase 5: xMult reveal (static + accumulator) -----
+    // Cumulative per-rune xMult (Big Bang) is NOT here — interleaved in
+    // Phase 2 so each rune plays its own damage → xMult sequence.
     const xMultSection = buildXMultEvents({
         xMultEntries: modifiers.breakdowns.xMult,
         accumulatorXMultEntries: modifiers.breakdowns.accumulatorXMult,
@@ -645,6 +757,7 @@ export function assembleCastBreakdown(args: {
         modifiers.breakdowns.playedMult.length > 0 ||
         modifiers.breakdowns.xMult.length > 0 ||
         modifiers.breakdowns.accumulatorXMult.length > 0 ||
+        modifiers.breakdowns.cumulativeCastXMult.length > 0 ||
         modifiers.breakdowns.elementRuneBonus.length > 0 ||
         modifiers.breakdowns.inventoryMult.length > 0 ||
         modifiers.breakdowns.spellTierMult.length > 0 ||
@@ -654,6 +767,7 @@ export function assembleCastBreakdown(args: {
         runeBreakdown,
         bubbles: runeSection.bubbles,
         procBubblesForCast: runeSection.procBubblesForCast,
+        xMultBubblesForCast: runeSection.xMultBubblesForCast,
         handMultBubblesForCast: handMultSection.handMultBubblesForCast,
         resolvedSpell,
         contributingIndices,
@@ -665,6 +779,7 @@ export function assembleCastBreakdown(args: {
         hasAnyExecute: procResult.hasAnyExecute,
         hasAnyMultEvent,
         hasAnyAccumulatorInc: runeSection.hasAnyAccumulatorInc,
+        hasAnySpellXMult: modifiers.breakdowns.xMult.length > 0,
         spellElement,
     };
 }

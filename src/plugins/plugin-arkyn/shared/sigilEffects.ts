@@ -123,6 +123,7 @@ export const MIMIC_INCOMPATIBLE: ReadonlySet<string> = new Set([
     "binoculars",
     "banish",
     "boom_bomb",
+    "big_bang",
     "mimic",
 ]);
 
@@ -246,6 +247,11 @@ export const SIGIL_STAT_MODIFIERS: Record<string, Partial<PlayerStatDeltas>> = {
     // costs the player Two Pair / Full House / Tier-5 single-element
     // lookup reliability without making Abomination harder to trigger.
     haphazard: { handSize: -1 },
+    // Big Bang is the Category 18 cumulative-xMult sigil. The -2 hand
+    // size is the trade-off for factorial-scaling xMult at T5 — the
+    // player HAS to commit to tier-5 hands to cash in, and the reduced
+    // hand trims redraw depth so bricking a round is a real risk.
+    big_bang: { handSize: -2 },
 };
 
 /**
@@ -1382,6 +1388,80 @@ export const SIGIL_CAST_HOOKS: Record<string, CastHookDefinition> = {
         },
     },
 };
+
+// ============================================================================
+// Category 18 — Cumulative Cast xMult (Big Bang pattern)
+// ============================================================================
+
+/**
+ * Multiplicative xMult ramp that fires ONCE PER CONTRIBUTING RUNE in cast
+ * order. Rune N contributes `startFactor + stepDelta × N` to the running
+ * xMult, so Big Bang's config (startFactor 1, stepDelta 0.5) yields the
+ * x1 → x1.5 → x2 → x2.5 → x3 sequence the player sees. T5 product lands
+ * at 22.5x (1 × 1.5 × 2 × 2.5 × 3), which is the reason this is a rare-
+ * tier sigil paired with a -2 Hand Size penalty. Originally shipped at
+ * stepDelta 1 (T5 = 120x) but that curve trivialized mid-round enemies
+ * when Big Bang landed early — the gentler ramp preserves the
+ * "committed T5 = dramatic payoff" fantasy without collapsing the
+ * early game.
+ *
+ * Position 0 (the first rune) emitting a factor of 1 is a no-op math-wise
+ * but DELIBERATELY kept visible — the "x1" bubble reads as the start of
+ * the escalation and the sigil shake still fires. If a future variant
+ * wants to skip the leading identity event, add a `skipFirstRune?: boolean`
+ * flag here and gate the loop body on it.
+ *
+ * Feeds the multiplicative channel alongside Category 6 (static spell-
+ * element xMult) and Category 12 (accumulator xMult): final xMult =
+ * static × accumulator × cumulative. Fires as a sequence of `isXMult`
+ * events in `buildXMultEvents` — AFTER all additive mult ticks — so the
+ * Mult counter animation ends at the correct math value. The timeline
+ * handler dispatches `onSigilShake(sigilId)` generically, so no cast
+ * timeline changes were needed to add Big Bang.
+ */
+export interface CumulativeCastXMultEffect {
+    /** xMult factor for rune N = `startFactor + stepDelta × N`. */
+    startFactor: number;
+    stepDelta: number;
+}
+
+export const SIGIL_CUMULATIVE_CAST_X_MULT: Record<string, CumulativeCastXMultEffect> = {
+    big_bang: { startFactor: 1, stepDelta: 0.5 },
+};
+
+export interface CumulativeCastXMultEntry {
+    sigilId: string;
+    /** Position in the contributing-runes array (0-indexed). */
+    runeIdx: number;
+    /** Multiplicative factor for this rune's event. */
+    xMult: number;
+}
+
+/**
+ * Build the per-rune xMult entries + product for all owned cumulative
+ * cast xMult sigils. Entries are in (sigil × rune) order with runes
+ * in contributing-array order, so the animation layer plays them in
+ * the same left-to-right sequence the player saw the runes fly.
+ */
+export function getCumulativeCastXMult(
+    sigils: readonly string[],
+    contributingRuneCount: number,
+): { total: number; entries: CumulativeCastXMultEntry[] } {
+    let total = 1;
+    const entries: CumulativeCastXMultEntry[] = [];
+    // Note: Big Bang (the only sigil in this category today) is in
+    // MIMIC_INCOMPATIBLE — a second copy would stack (N!)² xMult which
+    // is game-breaking at T5. forEachOwnedSigil's Mimic expansion is a
+    // no-op here in practice.
+    forEachOwnedSigil(sigils, SIGIL_CUMULATIVE_CAST_X_MULT, (effect, sigilId) => {
+        for (let i = 0; i < contributingRuneCount; i++) {
+            const factor = effect.startFactor + effect.stepDelta * i;
+            total *= factor;
+            entries.push({ sigilId, runeIdx: i, xMult: factor });
+        }
+    });
+    return { total, entries };
+}
 
 // ============================================================================
 // Module-Load Validation

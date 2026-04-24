@@ -1,0 +1,26 @@
+/* Floating "x{factor}" bubble mounted per play-area slot when a
+   cumulative cast xMult sigil (Big Bang) resolves. Matches the xMult
+   tooltip pill vocabulary (#9f3030 bg, white text) so the description
+   marker and the in-cast reveal read as the same payload. */
+
+.bubble {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    pointer-events: none;
+    user-select: none;
+
+    font-size: clamp(var(--font-size-xs), 2.4vw, var(--font-size-md));
+    line-height: 1;
+    white-space: nowrap;
+    color: #ffffff;
+    background: #9f3030;
+    padding: 2px 6px;
+    border-radius: 3px;
+    will-change: transform, opacity;
+    text-shadow:
+        2px 2px 0 rgba(0, 0, 0, 0.85),
+        0 0 6px rgba(0, 0, 0, 0.4);
+    z-index: 5;
+}

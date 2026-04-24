@@ -1,6 +1,7 @@
 import {
     getAccumulatorXMult,
     getCastRngMultBonus,
+    getCumulativeCastXMult,
     getElementRuneBonus,
     getHandMultBonus,
     getIgnoredResistanceElements,
@@ -10,6 +11,7 @@ import {
     getSpellXMult,
     type AccumulatorXMultEntry,
     type CastRngMultEntry,
+    type CumulativeCastXMultEntry,
     type ElementRuneBonusEntry,
     type HandMultEntry,
     type InventoryMultEntry,
@@ -42,6 +44,7 @@ export interface CastModifiersBreakdown {
     playedMult: PlayedMultEntry[];
     xMult: SpellXMultEntry[];
     accumulatorXMult: AccumulatorXMultEntry[];
+    cumulativeCastXMult: CumulativeCastXMultEntry[];
     elementRuneBonus: ElementRuneBonusEntry[];
     inventoryMult: InventoryMultEntry[];
     spellTierMult: SpellTierMultEntry[];
@@ -114,6 +117,7 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
     const playedMult = getPlayedMultBonus(sigils, contributingRunes);
     const xMult = getSpellXMult(sigils, spellElements);
     const accumulatorXMult = getAccumulatorXMult(sigils, sigilAccumulators ?? {});
+    const cumulativeCastXMult = getCumulativeCastXMult(sigils, contributingRunes.length);
     const inventoryMult = getInventoryMultBonus(sigils);
     const spellTierMult = getSpellTierMultBonus(sigils, spellTier);
     const castRngMult = (runSeed !== undefined && round !== undefined && castNumber !== undefined)
@@ -134,7 +138,7 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
 
     return {
         bonusMult: handMult.total + playedMult.total + elementRuneBonus.totalMult + inventoryMult.total + spellTierMult.total + castRngMult.total,
-        xMult: xMult.total * accumulatorXMult.total,
+        xMult: xMult.total * accumulatorXMult.total * cumulativeCastXMult.total,
         effectiveResistances,
         perRuneBaseBonus: elementRuneBonus.perRuneBase,
         breakdowns: {
@@ -142,6 +146,7 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
             playedMult: playedMult.perSigil,
             xMult: xMult.entries,
             accumulatorXMult: accumulatorXMult.entries,
+            cumulativeCastXMult: cumulativeCastXMult.entries,
             elementRuneBonus: elementRuneBonus.entries,
             inventoryMult: inventoryMult.entries,
             spellTierMult: spellTierMult.entries,

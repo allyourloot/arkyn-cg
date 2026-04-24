@@ -234,6 +234,17 @@ export interface HandMultBubble {
 }
 let handMultBubbles: (HandMultBubble | null)[] = [];
 
+// Big Bang — floating "x{factor}" bubbles shown over contributing runes in
+// the PLAY AREA as the cumulative xMult events resolve. Per-slot ARRAY
+// (parallel to `procDamageBubbles`) so multi-factor Big Bang casts stagger
+// across the contributing runes instead of collapsing onto a single slot.
+export interface RuneXMultBubble {
+    factor: number;     // e.g. 1.5 for "x1.5"
+    seq: number;
+    delayMs: number;
+}
+let runeXMultBubbles: RuneXMultBubble[][] = [];
+
 // ----- Hooks -----
 export function useDissolvingRunes() {
     return useSyncExternalStore(subscribe, () => dissolvingRunes);
@@ -304,6 +315,9 @@ export function useActiveSigilShake() {
 export function useHandMultBubbles() {
     return useSyncExternalStore(subscribe, () => handMultBubbles);
 }
+export function useRuneXMultBubbles() {
+    return useSyncExternalStore(subscribe, () => runeXMultBubbles);
+}
 
 // ----- Helpers -----
 
@@ -346,6 +360,7 @@ export function clearLastCastState(): void {
     roundTotalDamage = 0;
     procDamageBubbles = [];
     handMultBubbles = [];
+    runeXMultBubbles = [];
     activeSigilShake = null;
     arkynStoreInternal.setLastCastRunes([]);
     notify();
@@ -519,6 +534,7 @@ export function castSpell() {
         runeBreakdown,
         bubbles,
         procBubblesForCast,
+        xMultBubblesForCast,
         handMultBubblesForCast,
         resolvedSpell,
         contributingIndices,
@@ -530,6 +546,7 @@ export function castSpell() {
         hasAnyExecute,
         hasAnyMultEvent,
         hasAnyAccumulatorInc,
+        hasAnySpellXMult,
         spellElement,
     } = assembleCastBreakdown({
         castRunes,
@@ -715,6 +732,7 @@ export function castSpell() {
         onBubblesStart: () => {
             runeDamageBubbles = bubbles;
             procDamageBubbles = procBubblesForCast;
+            runeXMultBubbles = xMultBubblesForCast;
             handMultBubbles = handMultBubblesForCast;
             notify();
         },
@@ -729,6 +747,17 @@ export function castSpell() {
         } : undefined,
         onAccumulatorProc: hasAnyAccumulatorInc ? (sigilId: string, delta: number) => {
             arkynStoreInternal.triggerSigilProcBubble(sigilId, delta, "xmult");
+            notify();
+        } : undefined,
+        // Spell-level xMult reveal (Supercell/Eruption/Zephyr). Pops a
+        // floating "x{factor}" proc bubble under the triggering sigil at
+        // the moment the Mult counter multiplies — filling the pre-existing
+        // gap where Supercell's x3 reveal would shake the sigil silently.
+        // Per-rune xMult (Big Bang) and accumulator xMult (Executioner)
+        // don't route here — see the CastBreakdownEvent flag comments in
+        // castBreakdown.ts.
+        onXMultReveal: hasAnySpellXMult ? (sigilId: string, factor: number) => {
+            arkynStoreInternal.triggerSigilProcBubble(sigilId, factor, "xmult_factor");
             notify();
         } : undefined,
         // Blackjack execute: fire the fullscreen spritesheet + SFX. Only
@@ -810,6 +839,7 @@ export function castSpell() {
             raisedSlotIndices = [];
             runeDamageBubbles = [];
             procDamageBubbles = [];
+            runeXMultBubbles = [];
             handMultBubbles = [];
             activeSigilShake = null;
             isCastAnimating = false;

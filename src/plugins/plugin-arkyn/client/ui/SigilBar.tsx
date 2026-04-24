@@ -12,7 +12,7 @@ import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import handFrameUrl from "/assets/ui/hand-frame.png?url";
 import innerFrameUrl from "/assets/ui/inner-frame.png?url";
 import { HAS_HOVER } from "./utils/hasHover";
-import { renderDescription, SigilExplainer } from "./descriptionText";
+import { renderDescription, SigilExplainer, SigilPenaltyLine, splitPenalty } from "./descriptionText";
 import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
 import { ELEMENT_COLORS } from "./styles";
 import { useSigilDragReorder } from "./hooks/useSigilDragReorder";
@@ -240,11 +240,24 @@ export default function SigilBar() {
                                         {def.rarity}
                                     </span>
                                     <div className={styles.tooltipDescWrap}>
-                                        <span className={styles.tooltipDesc}>
-                                            {def.id === "ahoy"
-                                                ? renderAhoyDescription(ahoyDiscardElement)
-                                                : renderDescription(def.description)}
-                                        </span>
+                                        {(() => {
+                                            if (def.id === "ahoy") {
+                                                return (
+                                                    <span className={styles.tooltipDesc}>
+                                                        {renderAhoyDescription(ahoyDiscardElement)}
+                                                    </span>
+                                                );
+                                            }
+                                            const { main, penalty } = splitPenalty(def.description);
+                                            return (
+                                                <>
+                                                    <span className={styles.tooltipDesc}>
+                                                        {renderDescription(main)}
+                                                    </span>
+                                                    {penalty && <SigilPenaltyLine text={penalty} />}
+                                                </>
+                                            );
+                                        })()}
                                         {def.explainer && (
                                             <SigilExplainer
                                                 label={def.explainer.label}
@@ -334,6 +347,16 @@ export default function SigilBar() {
                                 <SigilXMultProcBubble
                                     amount={sigilProcBubble.amount}
                                     seq={sigilProcBubble.seq}
+                                />
+                            )}
+                            {/* Floating "x{factor}" xMult proc bubble — fires
+                                under a spell-level xMult sigil (Supercell /
+                                Eruption / Zephyr) at its cast-end reveal. */}
+                            {sigilProcBubble && sigilProcBubble.sigilId === sigilId && sigilProcBubble.kind === "xmult_factor" && (
+                                <SigilXMultProcBubble
+                                    amount={sigilProcBubble.amount}
+                                    seq={sigilProcBubble.seq}
+                                    format="factor"
                                 />
                             )}
                             {/* "MIMIC!" pill — fires under the sigil being
@@ -481,7 +504,25 @@ function SigilMimicProcBubble({ seq }: { seq: number }) {
     );
 }
 
-function SigilXMultProcBubble({ amount, seq }: { amount: number; seq: number }) {
+/**
+ * Red-pill proc bubble for xMult sigil reveals. Two format modes:
+ *   - "delta"  (default) renders "+{amount}x" — the Executioner
+ *     accumulator increment per critical hit. Reads as "how much the
+ *     accumulator just grew by."
+ *   - "factor" renders "x{amount}" — the spell-level xMult reveal for
+ *     Supercell / Eruption / Zephyr. Reads as "how much the cast is
+ *     getting multiplied by." Shared chrome + GSAP animation with the
+ *     delta mode; only the text template differs.
+ */
+function SigilXMultProcBubble({
+    amount,
+    seq,
+    format = "delta",
+}: {
+    amount: number;
+    seq: number;
+    format?: "delta" | "factor";
+}) {
     const ref = useRef<HTMLSpanElement>(null);
 
     useGSAP(() => {
@@ -500,9 +541,11 @@ function SigilXMultProcBubble({ amount, seq }: { amount: number; seq: number }) 
         tl.to(el, { y: 32, opacity: 0, duration: 0.35, ease: "power1.in" });
     }, { dependencies: [seq], scope: ref });
 
+    const text = format === "factor" ? `x${amount}` : `+${amount}x`;
+
     return (
         <span key={seq} ref={ref} className={`${styles.procBubble} ${styles.procBubbleXMult}`}>
-            +{amount}x
+            {text}
         </span>
     );
 }

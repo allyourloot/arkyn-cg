@@ -30,17 +30,35 @@ export interface EnemyDefinition {
 
 /**
  * Static HP curve by round. Tuned for the Base + Mult damage model.
- * Past the end of this table the last value scales by 25% per extra round.
+ * Past the end of this table the last value scales by 30% per extra round.
+ *
+ * The curve has three phases tuned to the player's learning trajectory:
+ *
+ *   Rounds 1-5 — LEARNING (easy → medium). Values close to the original
+ *   pre-rebalance curve. A new player without any sigils can kill each
+ *   round in 2-3 casts by discarding into matching elements. Round 5 is
+ *   the first boss and introduces real strategy (picking elements to
+ *   match enemy weakness, budgeting casts) but stays reachable.
+ *
+ *   Rounds 6-8 — RAMP (medium → hard). HP climbs faster than player
+ *   damage would from runes alone, so the player feels the pull to buy
+ *   sigils / scrolls / rune bags from the shop. A full-stack T5 cast
+ *   starts becoming necessary rather than optional.
+ *
+ *   Rounds 9+ — CATCHUP (1.3x/round exponential). Keeps pace with the
+ *   player's late-game damage ceiling (~80-110K from a good sigil
+ *   stack), so rounds 15-25 resolve in 1-2 big casts with meaningful
+ *   margin rather than one-shot overkill.
  */
 const HP_CURVE: readonly number[] = [
     60,   // round 1  — warm-up
-    100,  // round 2
-    175,  // round 3
-    300,  // round 4
-    450,  // round 5  (boss)
-    625,  // round 6
-    800,  // round 7
-    1000, // round 8
+    100,  // round 2  — learning
+    170,  // round 3  — learning
+    300,  // round 4  — learning
+    475,  // round 5  — boss (first strategic gate)
+    725,  // round 6  — ramp
+    1100, // round 7  — ramp
+    1600, // round 8  — ramp (feeds exponential tail)
 ];
 
 /** Get the HP value for a given round number. */
@@ -51,7 +69,7 @@ export function getHpForRound(round: number): number {
     }
     const last = HP_CURVE[HP_CURVE.length - 1];
     const extra = r - HP_CURVE.length;
-    return Math.round(last * Math.pow(1.25, extra));
+    return Math.round(last * Math.pow(1.3, extra));
 }
 
 /**

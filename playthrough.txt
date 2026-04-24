@@ -1,0 +1,266 @@
+. server: [INFO] ArkynJoin - Player t0xplkCis joined. Seed: 100925. Hand: 8, Pouch: 44
+. server: [INFO] ArkynDebugGrantSigil - [DEBUG] Player t0xplkCis granted "big_bang". Sigils: big_bang
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 5 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 5 runes. Discards remaining: 1
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 5 runes. Discards remaining: 0
+. server: [INFO] ArkynCast - Wrath of the Sun (Tier 5) deals 11250 damage! Enemy HP: 0/60
+. server: [INFO] ArkynCast - Enemy defeated! Round 1 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 5)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [engine, eruption], Scrolls: [psy, fire]. Next enemy: Wind Sprite (HP: 100)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common arcane, uncommon psy, rare ice, common death]. Gold remaining: 1
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a rare ice rune. Pouch size now 53.
+. server: [INFO] ArkynReady - Round 2 started. Enemy: Wind Sprite (HP: 100)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 5 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 1
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 3 runes. Discards remaining: 0
+. server: [INFO] ArkynCast - Arcane Missile (Tier 1) deals 12 damage! Enemy HP: 88/100
+. server: [INFO] ArkynCast - Toxic Spit (Tier 1) deals 12 damage! Enemy HP: 76/100
+. server: [INFO] ArkynCast - Wind Slash (Tier 2) deals 48 damage! Enemy HP: 28/100
+. server: [INFO] ArkynCast - Game over! Player t0xplkCis ran out of casts on round 2.
+. server: [INFO] ArkynNewRun - Player t0xplkCis started a new run. Seed: 423697
+. server: [INFO] ArkynDebugGrantSigil - [DEBUG] Player t0xplkCis granted "big_bang". Sigils: big_bang
+. server: [INFO] ArkynDebugGrantSigil - [DEBUG] Player t0xplkCis granted "arcana". Sigils: big_bang, arcana
+. server: [INFO] ArkynDebugGrantSigil - [DEBUG] Player t0xplkCis granted "mimic". Sigils: big_bang, arcana, mimic. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 2 to 0.
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 0 to 1.
+. server: [INFO] ArkynCast - Blizzard (Tier 3) deals 324 damage! Enemy HP: 0/60
+. server: [INFO] ArkynCast - Enemy defeated! Round 1 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 5)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [spellcaster, plunder], Scrolls: [death, lightning]. Next enemy: Toxic Slime (HP: 100)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [uncommon arcane, uncommon holy, common arcane, common poison]. Gold remaining: 1
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a uncommon arcane rune. Pouch size now 53.
+. server: [INFO] ArkynReady - Round 2 started. Enemy: Toxic Slime (HP: 100)
+. server: [INFO] ArkynDebugGrantSigil - [DEBUG] Player t0xplkCis granted "fortune". Sigils: big_bang, mimic, arcana, fortune
+. server: [INFO] ArkynDebugGrantSigil - [DEBUG] Player t0xplkCis granted "executioner". Sigils: big_bang, mimic, 
+arcana, fortune, executioner
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 1
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 0
+. server: [INFO] ArkynCast - Tidal Surge (Tier 2) deals 48 damage! Enemy HP: 52/100
+. server: [INFO] ArkynCast - Gust (Tier 1) deals 12 damage! Enemy HP: 40/100
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 1 to 2.
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 2 to 3.
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 3 to 1.
+. server: [INFO] ArkynCast - Fire Blast (Tier 2) deals 120 damage! Enemy HP: 0/100
+. server: [INFO] ArkynCast - Enemy defeated! Round 2 complete. Pending gold: 3 base + 0 hands bonus + 0 sigil bonus = 3 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 0 hands bonus + 0 sigil bonus = 3 (total: 8)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [boom_bomb, blackjack], Scrolls: [ice, lightning]. Next enemy: Flame Wraith (HP: 175)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought sigil "boom_bomb". Gold remaining: 5
+. server: [INFO] ArkynReady - Round 3 started. Enemy: Flame Wraith (HP: 175)
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 1 to 4.
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 4 to 2.
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 5 runes. Discards remaining: 2
+. server: [INFO] ArkynCast - Holy Fire (Tier 4) deals 12096 damage! Enemy HP: 0/175
+. server: [INFO] ArkynCast - Enemy defeated! Round 3 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 12)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [plunder, tectonic], Scrolls: [earth, steel]. Next enemy: Spark Golem (HP: 300)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common shadow, uncommon ice, common arcane, uncommon death]. Gold remaining: 8
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a uncommon death rune. Pouch size now 54.
+. server: [INFO] ArkynReady - Round 4 started. Enemy: Spark Golem (HP: 300)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 1
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 3 runes. Discards remaining: 0
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 2 to 1.
+. server: [INFO] ArkynCast - Steel Barrage (Tier 2) deals 403 damage! Enemy HP: 0/300
+. server: [INFO] ArkynCast - Enemy defeated! Round 4 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 13)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [spellcaster, eruption], Scrolls: [holy, ice]. Next enemy: Steel Sentinel (HP: 450) [BOSS - exhausting]
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [rare death, common psy, common ice, uncommon arcane]. Gold remaining: 9
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a rare death rune. Pouch size now 55.
+. server: [INFO] ArkynReady - Round 5 started. Enemy: Steel Sentinel (HP: 450)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 3 runes. Discards remaining: 1
+. server: [INFO] ArkynCast - Arcane Insight (Tier 5) deals 58464 damage! Enemy HP: 0/450
+. server: [INFO] ArkynCast - Enemy defeated! Round 5 complete. Pending gold: 3 base + 1 hands bonus + 0 sigil bonus = 4 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 1 hands bonus + 0 sigil bonus = 4 (total: 13)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [fuze, binoculars], Scrolls: [psy, holy]. Next enemy: Shadow Wraith (HP: 625)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common death, common water, common death, uncommon fire]. Gold remaining: 9
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a uncommon fire rune. Pouch size now 56.
+. server: [INFO] ArkynReady - Round 6 started. Enemy: Shadow Wraith (HP: 625)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 1
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 0
+. server: [INFO] ArkynCast - Gust (Tier 1) deals 50 damage! Enemy HP: 575/625
+. server: [INFO] ArkynCast - Gust (Tier 1) deals 84 damage! Enemy HP: 491/625
+. server: [INFO] ArkynCast - Lightning Bolt (Tier 2) deals 504 damage! Enemy HP: 0/625
+. server: [INFO] ArkynCast - Enemy defeated! Round 6 complete. Pending gold: 3 base + 0 hands bonus + 0 sigil bonus = 3 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 0 hands bonus + 0 sigil bonus = 3 (total: 12)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [plunder, impale], Scrolls: [steel, earth]. 
+Next enemy: Glacial Beast (HP: 800)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common arcane, common holy, common lightning, common air]. Gold remaining: 8
+. server: [INFO] ArkynBagChoice - Player t0xplkCis skipped Rune Bag.
+. server: [INFO] ArkynReady - Round 7 started. Enemy: Glacial Beast (HP: 800)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 5 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 1
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 3 runes. Discards remaining: 0
+. server: [INFO] ArkynCast - Inferno Wave (Tier 3) deals 2285 damage! Enemy HP: 0/800
+. server: [INFO] ArkynCast - Enemy defeated! Round 7 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 15)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [scroll_god, fuze], Scrolls: [air, holy]. Next enemy: Dirt Wurm (HP: 1000)
+. server: [INFO] ArkynSellSigil - Player t0xplkCis sold sigil "arcana" for 2 gold. Gold remaining: 17
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought sigil "fuze". Gold remaining: 11
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 1 to 2.
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 2 to 4.
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 4 to 3.
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 3 to 0.
+. server: [INFO] ArkynReady - Round 8 started. Enemy: Dirt Wurm (HP: 1000)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 3 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 3 runes. Discards remaining: 1
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 3 runes. Discards remaining: 0
+. server: [INFO] ArkynCast - Hailstorm (Tier 4) deals 18240 damage! Enemy HP: 0/1000
+. server: [INFO] ArkynCast - Enemy defeated! Round 8 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 18)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [plunder, spellcaster], Scrolls: [shadow, holy]. Next enemy: Glacial Beast (HP: 1250)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common arcane, common fire, uncommon 
+poison, rare shadow]. Gold remaining: 14
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a common fire rune. Pouch size now 57.
+. server: [INFO] ArkynReady - Round 9 started. Enemy: Glacial Beast (HP: 1250)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 2
+. server: [INFO] ArkynCast - Necrotic Wave (Tier 3) deals 5985 damage! Enemy HP: 0/1250
+. server: [INFO] ArkynCast - Enemy defeated! Round 9 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 19)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [caster, banish], Scrolls: [poison, holy]. Next enemy: Stone Golem (HP: 1563) [BOSS - exhausting]
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [uncommon air, rare holy, rare psy, common shadow]. Gold remaining: 15
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a uncommon air rune. Pouch size now 58.
+. server: [INFO] ArkynReady - Round 10 started. Enemy: Stone Golem (HP: 1563)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 5 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 3 runes. Discards remaining: 1
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 3 runes. Discards remaining: 0
+. server: [INFO] ArkynCast - Chain Lightning (Tier 4) deals 7560 damage! Enemy HP: 0/1563
+. server: [INFO] ArkynCast - Enemy defeated! Round 10 complete. Pending gold: 3 base + 1 hands bonus + 0 sigil bonus = 4 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 1 hands bonus + 0 sigil bonus = 4 (total: 25)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [tectonic, supercell], Scrolls: [holy, death]. Next enemy: Grave Knight (HP: 1953)
+. server: [INFO] ArkynSellSigil - Player t0xplkCis sold sigil "fuze" for 3 gold. Gold remaining: 28
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought sigil "supercell". Gold remaining: 22
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common holy, common holy, rare steel, rare holy]. Gold remaining: 18
+. server: [INFO] ArkynBagChoice - Player t0xplkCis skipped Rune Bag.
+. server: [INFO] ArkynReady - Round 11 started. Enemy: Grave Knight (HP: 1953)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 2 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 2 runes. Discards remaining: 1
+. server: [INFO] ArkynCast - Firestorm (Tier 5) deals 75600 damage! Enemy HP: 0/1953
+. server: [INFO] ArkynCast - Enemy defeated! Round 11 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 23)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [scroll_god, voltage], Scrolls: [fire, psy]. Next enemy: Dirt Wurm (HP: 2441)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [uncommon ice, uncommon ice, common fire, rare psy]. Gold remaining: 19
+. server: [INFO] ArkynBagChoice - Player t0xplkCis skipped Rune Bag.
+. server: [INFO] ArkynReady - Round 12 started. Enemy: Dirt Wurm (HP: 2441)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 3 runes. Discards remaining: 1
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 2 runes. Discards remaining: 0
+. server: [INFO] ArkynCast - Ice Shard (Tier 1) deals 90 damage! Enemy HP: 2351/2441
+. server: [INFO] ArkynCast - Sea Gale (Tier 5) deals 91125 damage! Enemy HP: 0/2441
+. server: [INFO] ArkynCast - Enemy defeated! Round 12 complete. Pending gold: 3 base + 1 hands bonus + 0 sigil bonus = 4 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 1 hands bonus + 0 sigil bonus = 4 (total: 27)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [alkahest, tectonic], Scrolls: [holy, earth]. Next enemy: Glacial Beast (HP: 3052)
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 0 to 2.
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 2 to 3.
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 3 to 4.
+. server: [INFO] ArkynSellSigil - Player t0xplkCis sold sigil "boom_bomb" for 1 gold. Gold remaining: 28
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought sigil "alkahest". Gold remaining: 24
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common ice, common shadow, uncommon fire, uncommon poison]. Gold remaining: 20
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a uncommon fire rune. Pouch size now 59.
+. server: [INFO] ArkynReady - Round 13 started. Enemy: Glacial Beast (HP: 3052)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 4 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 2 runes. Discards remaining: 1
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 2 runes. Discards remaining: 0
+. server: [INFO] ArkynCast - Rock Throw (Tier 1) deals 24 damage! Enemy HP: 3028/3052
+. server: [INFO] ArkynCast - Death Touch (Tier 1) deals 36 damage! Enemy HP: 2992/3052
+. server: [INFO] ArkynCast - Cyclone (Tier 3) deals 8748 damage! Enemy HP: 0/3052
+. server: [INFO] ArkynCast - Enemy defeated! Round 13 complete. Pending gold: 3 base + 0 hands bonus + 0 sigil bonus = 3 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 0 hands bonus + 0 sigil bonus = 3 (total: 23)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [elixir, voltage], Scrolls: [poison, steel]. Next enemy: Light Sentinel (HP: 3815)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [uncommon ice, common poison, rare lightning, common air]. Gold remaining: 19
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a rare lightning rune. Pouch size now 60.
+. server: [INFO] ArkynRerollShop - Player t0xplkCis rerolled shop (#1). Sigils: [eruption, engine]. Gold remaining: 16
+. server: [INFO] ArkynRerollShop - Player t0xplkCis rerolled shop (#2). Sigils: [spellcaster, engine]. Gold remaining: 13
+. server: [INFO] ArkynRerollShop - Player t0xplkCis rerolled shop (#3). Sigils: [haphazard, thief]. Gold remaining: 10
+. server: [INFO] ArkynSellSigil - Player t0xplkCis sold sigil "fortune" for 2 gold. Gold remaining: 12
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought sigil "haphazard". Gold remaining: 6
+. server: [INFO] ArkynReady - Round 14 started. Enemy: Light Sentinel (HP: 3815)
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 2 to 4.
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 4 to 2.
+. server: [INFO] ArkynReorderSigils - Player t0xplkCis reordered sigil "mimic" from 2 to 3.
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 2 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 1 runes. Discards remaining: 1
+. server: [INFO] ArkynCast - Abomination (Tier 5) deals 77220 damage! Enemy HP: 0/3815
+. server: [INFO] ArkynCast - Enemy defeated! Round 14 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 11)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [engine, impale], Scrolls: [water, poison]. 
+Next enemy: Bone Reaper (HP: 7152) [BOSS - fortified]
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common psy, common holy, common holy, common psy]. Gold remaining: 7
+. server: [INFO] ArkynBagChoice - Player t0xplkCis skipped Rune Bag.
+. server: [INFO] ArkynReady - Round 15 started. Enemy: Bone Reaper (HP: 7152)
+. server: [INFO] ArkynCast - Abomination (Tier 5) deals 87048 damage! Enemy HP: 0/7152
+. server: [INFO] ArkynCast - Enemy defeated! Round 15 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 12)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [tectonic, thief], Scrolls: [poison, ice]. Next enemy: Plague Rat (HP: 5960)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common air, rare air, uncommon shadow, rare steel]. Gold remaining: 8
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a rare air rune. Pouch size now 61.
+. server: [INFO] ArkynReady - Round 16 started. Enemy: Plague Rat (HP: 5960)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 1 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 1 runes. Discards remaining: 1
+. server: [INFO] ArkynCast - Abomination (Tier 5) deals 84942 damage! Enemy HP: 0/5960
+. server: [INFO] ArkynCast - Enemy defeated! Round 16 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 13)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [fortune, engine], Scrolls: [shadow, lightning]. Next enemy: Wind Sprite (HP: 7451)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common death, uncommon earth, uncommon arcane, common fire]. Gold remaining: 9
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a uncommon earth rune. Pouch size now 62.
+. server: [INFO] ArkynReady - Round 17 started. Enemy: Wind Sprite (HP: 7451)
+. server: [INFO] ArkynCast - Abomination (Tier 5) deals 73440 damage! Enemy HP: 0/7451
+. server: [INFO] ArkynCast - Enemy defeated! Round 17 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 14)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [burnrite, caster], Scrolls: [holy, arcane]. Next enemy: Grave Knight (HP: 9313)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common arcane, rare psy, common ice, 
+common ice]. Gold remaining: 10
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a rare psy rune. Pouch size now 63.
+. server: [INFO] ArkynReady - Round 18 started. Enemy: Grave Knight (HP: 9313)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 1 runes. Discards remaining: 2
+. server: [INFO] ArkynCast - Abomination (Tier 5) deals 221130 damage! Enemy HP: 0/9313
+. server: [INFO] ArkynCast - Enemy defeated! Round 18 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 15)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [fortune, engine], Scrolls: [water, poison]. Next enemy: Dirt Wurm (HP: 11642)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought poison scroll (level 1). Gold remaining: 13
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common psy, rare fire, common fire, uncommon death]. Gold remaining: 9
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a rare fire rune. Pouch size now 64.
+. server: [INFO] ArkynReady - Round 19 started. Enemy: Dirt Wurm (HP: 11642)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 2 runes. Discards remaining: 2
+. server: [INFO] ArkynCast - Abomination (Tier 5) deals 77963 damage! Enemy HP: 0/11642
+. server: [INFO] ArkynCast - Enemy defeated! Round 19 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 14)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [tectonic, engine], Scrolls: [lightning, steel]. Next enemy: Stone Golem (HP: 14552) [BOSS - unyielding]
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common water, common death, uncommon 
+arcane, common arcane]. Gold remaining: 10
+. server: [INFO] ArkynBagChoice - Player t0xplkCis skipped Rune Bag.
+. server: [INFO] ArkynReady - Round 20 started. Enemy: Stone Golem (HP: 14552)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 1 runes. Discards remaining: 1
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 1 runes. Discards remaining: 0
+. server: [INFO] ArkynCast - Abomination (Tier 5) deals 81900 damage! Enemy HP: 0/14552
+. server: [INFO] ArkynCast - Enemy defeated! Round 20 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 15)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [thief, fuze], Scrolls: [fire, psy]. Next enemy: Sea Serpent (HP: 18190)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common arcane, uncommon holy, uncommon poison, common fire]. Gold remaining: 11
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a uncommon holy rune. Pouch size now 65.
+. server: [INFO] ArkynReady - Round 21 started. Enemy: Sea Serpent (HP: 18190)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 1 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 1 runes. Discards remaining: 1
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 1 runes. Discards remaining: 0
+. server: [INFO] ArkynCast - Abomination (Tier 5) deals 25200 damage! Enemy HP: 0/18190
+. server: [INFO] ArkynCast - Enemy defeated! Round 21 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 16)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [arcana, fortune], Scrolls: [steel, psy]. Next enemy: Tidal Fiend (HP: 22737)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [uncommon water, common air, legendary steel, rare shadow]. Gold remaining: 12
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a legendary steel rune. Pouch size now 66.
+. server: [INFO] ArkynReady - Round 22 started. Enemy: Tidal Fiend (HP: 22737)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 1 runes. Discards remaining: 2
+. server: [INFO] ArkynCast - Abomination (Tier 5) deals 75600 damage! Enemy HP: 0/22737
+. server: [INFO] ArkynCast - Enemy defeated! Round 22 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 17)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [eruption, synapse], Scrolls: [shadow, psy]. Next enemy: Glacial Beast (HP: 28422)
+. server: [INFO] ArkynBuyItem - Player t0xplkCis bought a Rune Bag. Rolls: [common steel, common arcane, uncommon shadow, uncommon poison]. Gold remaining: 13
+. server: [INFO] ArkynBagChoice - Player t0xplkCis picked a uncommon poison rune. Pouch size now 67.
+. server: [INFO] ArkynReady - Round 23 started. Enemy: Glacial Beast (HP: 28422)
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 1 runes. Discards remaining: 2
+. server: [INFO] ArkynDiscard - Player t0xplkCis discarded 1 runes. Discards remaining: 1
+. server: [INFO] ArkynCast - Abomination (Tier 5) deals 106920 damage! Enemy HP: 0/28422
+. server: [INFO] ArkynCast - Enemy defeated! Round 23 complete. Pending gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (awarded on Continue)
+. server: [INFO] ArkynCollectRoundGold - Player t0xplkCis collected round-win gold: 3 base + 2 hands bonus + 0 sigil bonus = 5 (total: 18)
+. server: [INFO] ArkynReady - Player t0xplkCis entered shop. Sigils: [chainlink, banish], Scrolls: [water, shadow]. Next enemy: Grave Knight (HP: 35527)

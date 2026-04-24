@@ -21,7 +21,7 @@ import { getRuneBagImageUrl } from "./bagAssets";
 import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
 import RuneBagPicker from "./RuneBagPicker";
-import { renderDescription, SigilExplainer } from "./descriptionText";
+import { renderDescription, SigilExplainer, SigilPenaltyLine, splitPenalty } from "./descriptionText";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import frameUrl from "/assets/ui/frame.png?url";
 import innerFrameUrl from "/assets/ui/inner-frame.png?url";
@@ -257,9 +257,17 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                         {def.name}
                                     </span>
                                     <div className={styles.tooltipDescWrap}>
-                                        <span className={styles.tooltipDesc}>
-                                            {renderDescription(def.description)}
-                                        </span>
+                                        {(() => {
+                                            const { main, penalty } = splitPenalty(def.description);
+                                            return (
+                                                <>
+                                                    <span className={styles.tooltipDesc}>
+                                                        {renderDescription(main)}
+                                                    </span>
+                                                    {penalty && <SigilPenaltyLine text={penalty} />}
+                                                </>
+                                            );
+                                        })()}
                                         {def.explainer && (
                                             <SigilExplainer
                                                 label={def.explainer.label}

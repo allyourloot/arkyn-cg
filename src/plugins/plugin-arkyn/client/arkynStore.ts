@@ -198,14 +198,19 @@ let materializingRune: { id: string; startTime: number; duration: number } | nul
 // procs replace the old); monotonic `seq` forces a fresh React mount
 // so GSAP replays the pop animation on back-to-back procs.
 // Kinds:
-//   - "gold":  "+N [gold icon]" (Fortune / Banish grants).
-//   - "xmult": "+N.Nx" in a red-bg / white-text pill (Executioner's
-//              accumulator increment per critical hit).
-//   - "mimic": "MIMIC!" in a deep-purple / white-text pill — fires under
-//              the SIGIL BEING COPIED whenever a Mimic copy procs, so the
-//              player can see "this proc was Mimic copying me" at a glance.
-//              `amount` is unused for this kind.
-let sigilProcBubble: { sigilId: string; amount: number; kind: "gold" | "xmult" | "mimic"; seq: number } | null = null;
+//   - "gold":         "+N [gold icon]" (Fortune / Banish grants).
+//   - "xmult":        "+N.Nx" delta pill (Executioner's accumulator
+//                     increment per critical hit).
+//   - "xmult_factor": "x{factor}" pill (Supercell / Eruption / Zephyr
+//                     spell-level xMult reveal at cast resolution). Same
+//                     red-bg / white-text chrome as "xmult"; differs only
+//                     in the text format — no leading "+" and the factor
+//                     precedes "x".
+//   - "mimic":        "MIMIC!" in a deep-purple / white-text pill — fires
+//                     under the SIGIL BEING COPIED whenever a Mimic copy
+//                     procs, so the player can see "this proc was Mimic
+//                     copying me" at a glance. `amount` is unused.
+let sigilProcBubble: { sigilId: string; amount: number; kind: "gold" | "xmult" | "xmult_factor" | "mimic"; seq: number } | null = null;
 let sigilProcSeq = 0;
 
 // Blackjack execute animation — fullscreen-centered 13-frame spritesheet
@@ -642,7 +647,7 @@ export const arkynStoreInternal = {
      * (or in place of) the GoldCounter's own "+N" overlay. Fresh `seq`
      * remounts the bubble so back-to-back procs replay the animation.
      */
-    triggerSigilProcBubble(sigilId: string, amount: number, kind: "gold" | "xmult" | "mimic" = "gold") {
+    triggerSigilProcBubble(sigilId: string, amount: number, kind: "gold" | "xmult" | "xmult_factor" | "mimic" = "gold") {
         sigilProcBubble = { sigilId, amount, kind, seq: ++sigilProcSeq };
     },
     clearSigilProcBubble() {
@@ -806,6 +811,7 @@ export {
     useDissolveStartTime,
     useRaisedSlotIndices,
     useRuneDamageBubbles,
+    useRuneXMultBubbles,
     useEnemyDamageHit,
     useCastBaseCounter,
     useCastTotalDamage,

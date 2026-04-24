@@ -106,6 +106,21 @@ export interface CastTimelineContext {
          */
         isXMult?: boolean;
         /**
+         * Routes the xMult reveal to a sigil-side "x{factor}" bubble under
+         * the triggering sigil. Set on events from SIGIL_SPELL_X_MULT
+         * (Supercell/Eruption/Zephyr). Only meaningful when `isXMult` is
+         * also true.
+         */
+        isSpellXMult?: boolean;
+        /**
+         * Routes the xMult reveal to a floating "x{factor}" bubble over the
+         * contributing rune's play-area slot (consumed directly from
+         * `xMultBubblesForCast`). Set on events from
+         * SIGIL_CUMULATIVE_CAST_X_MULT (Big Bang). Only meaningful when
+         * `isXMult` is also true.
+         */
+        isPerRuneXMult?: boolean;
+        /**
          * Post-cast accumulator increment (Executioner-style). Doesn't tick
          * Base or Mult — the pre-cast accumulator value already fed this
          * cast's xMult. Fires a "+Nx" proc bubble below the sigil so the
@@ -201,6 +216,16 @@ export interface CastTimelineContext {
      * driven increment. Pops the "+Nx" proc bubble under the sigil slot.
      */
     onAccumulatorProc?: (sigilId: string, delta: number) => void;
+    /**
+     * Fired when a SPELL-LEVEL xMult sigil (Supercell/Eruption/Zephyr)
+     * reveals its factor at cast end. Pops the "x{factor}" proc bubble
+     * under the triggering sigil. Per-rune xMult (Big Bang) and
+     * accumulator xMult (Executioner) take different visual paths —
+     * per-rune renders into `xMultBubblesForCast` consumed by PlayArea,
+     * accumulator relies on the per-crit "+Nx" bubbles already fired
+     * during the cast.
+     */
+    onXMultReveal?: (sigilId: string, factor: number) => void;
     /**
      * Fired when a Blackjack-style execute proc event lands in the
      * timeline. Triggers the fullscreen spritesheet + SFX that signal
@@ -299,7 +324,20 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
     // first per-rune event needs to add its delta on top of that, not
     // start fresh from zero.
     let runningCumulative = ctx.spellBaseDamage;
-    let runningMult = ctx.baseMult ?? 0;
+    // Mult counter uses a TWO-POOL model so event ordering doesn't
+    // corrupt the displayed value:
+    //   displayedMult = (baseMult + additivePool) × xMultPool
+    // A straight `runningMult` that both adds and multiplies in place
+    // would diverge whenever an additive event fires after a
+    // multiplicative one (e.g. Big Bang's per-rune xMult in Phase 2
+    // followed by Synapse hand-mult in Phase 3) — `(base + δ) × X` is
+    // NOT equal to `(base × X) + δ`. Tracking the pools separately and
+    // recomputing on every event keeps the display math-correct for any
+    // interleaving the breakdown might produce.
+    const baseMult = ctx.baseMult ?? 0;
+    let additivePool = 0;
+    let xMultPool = 1;
+    const computeDisplayMult = () => (baseMult + additivePool) * xMultPool;
     for (let i = 0; i < ctx.contributingCount; i++) {
         const tickAt = bubblesStartS + i * BUBBLE_STAGGER_S;
         const item = ctx.runeBreakdown[i];
@@ -311,8 +349,8 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
         // finalDamage via bonusMult). sigilId drives dispatch generically
         // so no sigil-specific branches live in the timeline.
         if (item.isMultTick) {
-            runningMult += item.multDelta ?? 0;
-            const multAtEvent = runningMult;
+            additivePool += item.multDelta ?? 0;
+            const multAtEvent = computeDisplayMult();
             const sigilId = item.sigilId;
             tl.call(playCount, undefined, tickAt);
             if (ctx.onSigilShake && sigilId) {
@@ -327,16 +365,32 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
         // Spell-element xMult events (Supercell-style) MULTIPLY the running
         // mult (unlike synapse which adds). Fires after all synapse ticks
         // for a dramatic jump — e.g. mult goes from 9 to 27 for x3.
+        //
+        // Bubble routing is flag-driven (see event comments above):
+        //   - isSpellXMult    → sigil-side "x{factor}" bubble via
+        //                       onXMultReveal
+        //   - isPerRuneXMult  → NO timeline callback needed; PlayArea
+        //                       reads the pre-populated bubble from
+        //                       xMultBubblesForCast[slotIdx] on its own
+        //                       delayMs (matches the tickAt here, since
+        //                       both use the same eventIdx).
+        //   - (no flag)       → accumulator reveal (Executioner); no
+        //                       reveal bubble — the per-crit "+Nx"
+        //                       bubbles during cast are the feedback.
         if (item.isXMult) {
-            runningMult *= item.xMultFactor ?? 1;
-            const multAtEvent = runningMult;
+            xMultPool *= item.xMultFactor ?? 1;
+            const multAtEvent = computeDisplayMult();
             const sigilId = item.sigilId;
+            const factor = item.xMultFactor ?? 1;
             tl.call(playCount, undefined, tickAt);
             if (ctx.onSigilShake && sigilId) {
                 tl.call(() => ctx.onSigilShake!(sigilId), undefined, tickAt);
             }
             if (ctx.onMultTick) {
                 tl.call(() => ctx.onMultTick!(multAtEvent), undefined, tickAt);
+            }
+            if (item.isSpellXMult && ctx.onXMultReveal && sigilId) {
+                tl.call(() => ctx.onXMultReveal!(sigilId, factor), undefined, tickAt);
             }
             continue;
         }

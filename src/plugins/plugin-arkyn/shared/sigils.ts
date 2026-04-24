@@ -309,6 +309,14 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
             elements: ["death"] as const,
         },
     },
+    big_bang: {
+        id: "big_bang",
+        name: "Big Bang",
+        rarity: "rare",
+        description: "Each played rune multiplies damage: {x1} → {x1.5} → {x2} → {x2.5} → {x3}. {-2 Hand Size}.",
+        cost: 6,
+        sellPrice: 3,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

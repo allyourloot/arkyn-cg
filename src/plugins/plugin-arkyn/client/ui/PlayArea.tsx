@@ -8,6 +8,7 @@ import {
     useRaisedSlotIndices,
     useRuneDamageBubbles,
     useProcDamageBubbles,
+    useRuneXMultBubbles,
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,
     RAISE_LIFT_PX,
@@ -18,6 +19,7 @@ import {
 import { MAX_PLAY } from "../../shared";
 import DissolveCanvas from "./DissolveCanvas";
 import RuneDamageBubble from "./RuneDamageBubble";
+import RuneXMultBubble from "./RuneXMultBubble";
 import { getRuneImageUrl, getBaseRuneImageUrl } from "./runeAssets";
 import styles from "./PlayArea.module.css";
 
@@ -28,6 +30,7 @@ export default function PlayArea() {
     const raisedSlotIndices = useRaisedSlotIndices();
     const runeDamageBubbles = useRuneDamageBubbles();
     const procDamageBubbles = useProcDamageBubbles();
+    const runeXMultBubbles = useRuneXMultBubbles();
 
     // Hide the dissolve layer while flyers are still in transit. The
     // dissolving runes are pre-mounted at cast start so their WebGL
@@ -116,6 +119,7 @@ export default function PlayArea() {
                 const dissolving = dissolvingRunes[i];
                 const damageBubble = runeDamageBubbles[i] ?? null;
                 const procBubblesForSlot = procDamageBubbles[i] ?? [];
+                const xMultBubblesForSlot = runeXMultBubbles[i] ?? [];
 
                 return (
                     <div
@@ -178,6 +182,14 @@ export default function PlayArea() {
                                 seq={procBubble.seq}
                                 delayMs={procBubble.delayMs}
                                 kind={procBubble.kind}
+                            />
+                        ))}
+                        {xMultBubblesForSlot.map((xMultBubble) => (
+                            <RuneXMultBubble
+                                key={xMultBubble.seq}
+                                factor={xMultBubble.factor}
+                                seq={xMultBubble.seq}
+                                delayMs={xMultBubble.delayMs}
                             />
                         ))}
                     </div>
