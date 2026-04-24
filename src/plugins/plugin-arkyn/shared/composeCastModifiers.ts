@@ -1,5 +1,6 @@
 import {
     getAccumulatorXMult,
+    getCastRngMultBonus,
     getElementRuneBonus,
     getHandMultBonus,
     getIgnoredResistanceElements,
@@ -8,6 +9,7 @@ import {
     getSpellTierMultBonus,
     getSpellXMult,
     type AccumulatorXMultEntry,
+    type CastRngMultEntry,
     type ElementRuneBonusEntry,
     type HandMultEntry,
     type InventoryMultEntry,
@@ -43,6 +45,7 @@ export interface CastModifiersBreakdown {
     elementRuneBonus: ElementRuneBonusEntry[];
     inventoryMult: InventoryMultEntry[];
     spellTierMult: SpellTierMultEntry[];
+    castRngMult: CastRngMultEntry[];
 }
 
 export interface CastModifiersResult {
@@ -91,10 +94,21 @@ export interface ComposeCastModifiersArgs {
      * = no accumulator sigils owned.
      */
     sigilAccumulators?: Readonly<Record<string, number>>;
+    /**
+     * RNG inputs for Category 17 (Cast-RNG Mult — Boom Bomb). When all three
+     * are provided, the helper rolls a per-cast mult bonus per owned sigil
+     * keyed by `(runSeed, round, castNumber)`. Omit any to skip the category
+     * (returns 0 bonusMult contribution, empty entries) — callers without a
+     * cast-budget context (e.g. static previews) can leave these undefined.
+     * Server and client pass the same values so rolls agree byte-for-byte.
+     */
+    runSeed?: number;
+    round?: number;
+    castNumber?: number;
 }
 
 export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifiersResult {
-    const { sigils, spellElements, spellTier, hand, selectedIndices, contributingRunes, rawResistances, weaknesses, disabledResistance, sigilAccumulators } = args;
+    const { sigils, spellElements, spellTier, hand, selectedIndices, contributingRunes, rawResistances, weaknesses, disabledResistance, sigilAccumulators, runSeed, round, castNumber } = args;
 
     const handMult = getHandMultBonus(sigils, hand, selectedIndices);
     const playedMult = getPlayedMultBonus(sigils, contributingRunes);
@@ -102,6 +116,9 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
     const accumulatorXMult = getAccumulatorXMult(sigils, sigilAccumulators ?? {});
     const inventoryMult = getInventoryMultBonus(sigils);
     const spellTierMult = getSpellTierMultBonus(sigils, spellTier);
+    const castRngMult = (runSeed !== undefined && round !== undefined && castNumber !== undefined)
+        ? getCastRngMultBonus(sigils, runSeed, round, castNumber)
+        : { total: 0, entries: [] as CastRngMultEntry[] };
 
     // Per-rune crit flag, identical to the damage formula's derivation
     // (weakness match = critical). Computed here so crit-gated sigils
@@ -116,7 +133,7 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
         : [...rawResistances];
 
     return {
-        bonusMult: handMult.total + playedMult.total + elementRuneBonus.totalMult + inventoryMult.total + spellTierMult.total,
+        bonusMult: handMult.total + playedMult.total + elementRuneBonus.totalMult + inventoryMult.total + spellTierMult.total + castRngMult.total,
         xMult: xMult.total * accumulatorXMult.total,
         effectiveResistances,
         perRuneBaseBonus: elementRuneBonus.perRuneBase,
@@ -128,6 +145,7 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
             elementRuneBonus: elementRuneBonus.entries,
             inventoryMult: inventoryMult.entries,
             spellTierMult: spellTierMult.entries,
+            castRngMult: castRngMult.entries,
         },
     };
 }

@@ -277,6 +277,26 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         cost: 3,
         sellPrice: 1,
     },
+    boom_bomb: {
+        id: "boom_bomb",
+        name: "Boom Bomb",
+        rarity: "common",
+        description: "Each cast, roll a random {Mult bonus} from {0, 2, 4, 8, or 16}.",
+        cost: 3,
+        sellPrice: 1,
+    },
+    alkahest: {
+        id: "alkahest",
+        name: "Alkahest",
+        rarity: "uncommon",
+        description: "{Poison} and {Arcane} runes gain {+10 Base} and {+4 Mult}.",
+        cost: 4,
+        sellPrice: 2,
+        explainer: {
+            label: "Applies to:",
+            elements: ["poison", "arcane"] as const,
+        },
+    },
     blackjack: {
         id: "blackjack",
         name: "Blackjack",

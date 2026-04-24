@@ -63,6 +63,13 @@ export function calculateDamage(
         ? flattenMapSchema(sigilAccumulators)
         : {};
 
+    // Pre-cast castNumber (1-indexed) — castsRemaining is the PRE-cast
+    // snapshot so castNumber = CASTS_PER_ROUND - castsRemaining matches the
+    // proc seeding scheme. Needed by Category 17 (Boom Bomb) RNG.
+    const castNumberForRng = castsRemaining !== undefined
+        ? CASTS_PER_ROUND - castsRemaining
+        : undefined;
+
     // Compose all sigil-driven cast modifiers through the shared helper.
     // The client runs the exact same helper so bonusMult / xMult / stripped
     // resistances are guaranteed byte-identical across server and client.
@@ -79,6 +86,9 @@ export function calculateDamage(
         weaknesses,
         disabledResistance,
         sigilAccumulators: accumulatorsPlain,
+        runSeed,
+        round: currentRound,
+        castNumber: castNumberForRng,
     });
 
     const breakdown = sharedCalculateSpellDamage(

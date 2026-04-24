@@ -526,6 +526,9 @@ function assembleCastBreakdown(args: {
         weaknesses: arkynStoreInternal.getEnemyWeaknesses(),
         disabledResistance: arkynStoreInternal.getDisabledResistance(),
         sigilAccumulators: arkynStoreInternal.getSigilAccumulators(),
+        runSeed: arkynStoreInternal.getRunSeed(),
+        round: arkynStoreInternal.getCurrentRound(),
+        castNumber: CASTS_PER_ROUND - arkynStoreInternal.getCastsRemaining(),
     });
     const handMultEntries = modifiers.breakdowns.handMult;
     const playedMultEntries = modifiers.breakdowns.playedMult;
@@ -534,6 +537,7 @@ function assembleCastBreakdown(args: {
     const elementRuneBonusEntries = modifiers.breakdowns.elementRuneBonus;
     const inventoryMultEntries = modifiers.breakdowns.inventoryMult;
     const spellTierMultEntries = modifiers.breakdowns.spellTierMult;
+    const castRngMultEntries = modifiers.breakdowns.castRngMult;
 
     const breakdown = resolvedSpell
         ? calculateSpellDamage(
@@ -849,6 +853,26 @@ function assembleCastBreakdown(args: {
     }
     const hasAnyInventoryMult = inventoryMultEntries.length > 0;
 
+    // ----- Cast-RNG mult entries (Boom Bomb-style sigils) -----
+    // Per-cast deterministic RNG roll (server and client roll the same face).
+    // Same event shape as inventory-mult — one Mult-counter tick + sigil
+    // shake per owned sigil. Zero-value rolls are filtered inside the helper
+    // so the animation doesn't stall on a fizzle.
+    for (const entry of castRngMultEntries) {
+        runeBreakdown.push({
+            base: 0,
+            final: 0,
+            isResisted: false,
+            isCritical: false,
+            isProc: false,
+            isMultTick: true,
+            multDelta: entry.multDelta,
+            sigilId: entry.sigilId,
+        });
+        eventIdx++;
+    }
+    const hasAnyCastRngMult = castRngMultEntries.length > 0;
+
     // ----- Spell-tier mult entries (Tectonic-style sigils) -----
     // Flat additive mult gated by the resolved spell's tier. Same event
     // shape as inventory-mult — one Mult-counter tick + sigil shake per
@@ -906,7 +930,7 @@ function assembleCastBreakdown(args: {
     }
     const hasAnyXMult = xMultEntries.length > 0 || accumulatorXMultEntries.length > 0;
     const hasAnyElementRuneBonus = elementRuneBonusEntries.length > 0;
-    const hasAnyMultEvent = hasAnyHandMultProc || hasAnyPlayedMult || hasAnyXMult || hasAnyElementRuneBonus || hasAnyInventoryMult || hasAnySpellTierMult;
+    const hasAnyMultEvent = hasAnyHandMultProc || hasAnyPlayedMult || hasAnyXMult || hasAnyElementRuneBonus || hasAnyInventoryMult || hasAnySpellTierMult || hasAnyCastRngMult;
     const hasAnyAccumulatorInc = runeBreakdown.some(e => e.isAccumulatorInc);
 
     return {

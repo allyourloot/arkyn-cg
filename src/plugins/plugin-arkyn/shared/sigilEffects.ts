@@ -41,6 +41,8 @@ import { SIGIL_DEFINITIONS } from "./sigils";
 //       lifecycle sigil in slot 1+. Adding a new lifecycle sigil here MUST
 //       pick a slot > 0 (so its stream is 410000+round, 420000+round, …)
 //       or the first bag of a given round will correlate with its roll.
+//   [ 500000–599999] SIGIL_CAST_RNG_MULT         (this file)
+//       slot 0 = Boom Bomb
 //
 // New proc sigils: pick the next unused slot (append-only to preserve replay
 // determinism for saved runs). Validated at module load — any duplicate or
@@ -48,6 +50,7 @@ import { SIGIL_DEFINITIONS } from "./sigils";
 
 export const PROC_RNG_OFFSET_BASE = 300000;
 export const LIFECYCLE_RNG_OFFSET_BASE = 400000;
+export const CAST_RNG_MULT_RNG_OFFSET_BASE = 500000;
 export const SIGIL_RNG_OFFSET_SPACING = 10000;
 /** Width of a category's band — procs live in [300000, 400000). */
 const SIGIL_RNG_BAND_WIDTH = 100000;
@@ -65,6 +68,11 @@ export function procRngSlot(slot: number): number {
 /** Same as `procRngSlot` but for lifecycle hooks. Slot 0 = Thief. */
 export function lifecycleRngSlot(slot: number): number {
     return LIFECYCLE_RNG_OFFSET_BASE + slot * SIGIL_RNG_OFFSET_SPACING;
+}
+
+/** Same as `procRngSlot` but for cast-rng-mult sigils. Slot 0 = Boom Bomb. */
+export function castRngMultRngSlot(slot: number): number {
+    return CAST_RNG_MULT_RNG_OFFSET_BASE + slot * SIGIL_RNG_OFFSET_SPACING;
 }
 
 // ============================================================================
@@ -114,6 +122,7 @@ export const MIMIC_INCOMPATIBLE: ReadonlySet<string> = new Set([
     "executioner",
     "binoculars",
     "banish",
+    "boom_bomb",
     "mimic",
 ]);
 
@@ -810,7 +819,7 @@ export function getPlayedMultBonus(
  */
 export interface ElementRuneBonusEffect {
     /** Optional element filter. Omit to trigger on any matching rune. */
-    element?: ElementType;
+    elements?: readonly ElementType[];
     /** If true, the bonus only fires when the rune hit a weakness (crit). */
     requireCritical?: boolean;
     /** Flat base damage added per matching rune (post resist/weak mod). */
@@ -820,8 +829,9 @@ export interface ElementRuneBonusEffect {
 }
 
 export const SIGIL_ELEMENT_RUNE_BONUS: Record<string, ElementRuneBonusEffect> = {
-    lex_divina: { element: "holy", requireCritical: true, baseBonus: 8, multBonus: 2 },
-    engine: { element: "steel", baseBonus: 4, multBonus: 2 },
+    lex_divina: { elements: ["holy"], requireCritical: true, baseBonus: 8, multBonus: 2 },
+    engine: { elements: ["steel"], baseBonus: 4, multBonus: 2 },
+    alkahest: { elements: ["poison", "arcane"], baseBonus: 10, multBonus: 4 },
 };
 
 /**
@@ -862,9 +872,10 @@ export function getElementRuneBonus(
     for (const sigilId of expandMimicSigils(sigils)) {
         const effect = SIGIL_ELEMENT_RUNE_BONUS[sigilId];
         if (!effect) continue;
+        const elementFilter = effect.elements as readonly string[] | undefined;
         for (let i = 0; i < contributingRuneElements.length; i++) {
             if (effect.requireCritical && !isCritical[i]) continue;
-            if (effect.element !== undefined && contributingRuneElements[i] !== effect.element) continue;
+            if (elementFilter !== undefined && !elementFilter.includes(contributingRuneElements[i])) continue;
             perRuneBase[i] += effect.baseBonus;
             totalMult += effect.multBonus;
             entries.push({
@@ -1073,6 +1084,79 @@ export function getInventoryMultBonus(
         if (delta === 0) continue;
         total += delta;
         entries.push({ sigilId, multDelta: delta });
+    }
+    return { total, entries };
+}
+
+// ============================================================================
+// Category 17 — Cast-RNG Mult (Boom Bomb pattern)
+// ============================================================================
+
+/**
+ * Once-per-cast additive mult bonus rolled from a fixed set of possible
+ * values. Unlike Category 13 (Inventory Mult) which is deterministic from
+ * the sigil inventory, this category rolls a deterministic-but-random pick
+ * from `values` using an RNG seeded by `(runSeed, round, castNumber)`, so
+ * server and client always agree on the rolled face.
+ *
+ * Feeds the additive `bonusMult` channel like Category 13 / Arcana /
+ * hand-mult: `finalMult = (tierMult + bonusMult) × xMult`. One
+ * `isMultTick` event per owned sigil per cast (no per-rune correlation).
+ * Roll a 0 and the entry is filtered so the animation doesn't stall on a
+ * no-op tick — the sigil itself still exists but "fizzles" that cast.
+ */
+export interface CastRngMultEffect {
+    /**
+     * Pool of possible mult deltas. One is picked uniformly at random per
+     * cast. A 0 entry is valid — it means "fizzle" (see `getCastRngMultBonus`
+     * — zero rolls are filtered from the breakdown entries).
+     */
+    values: readonly number[];
+    /**
+     * Unique RNG namespace offset. Each cast-rng-mult sigil must have its
+     * own slot so deterministic rolls don't collide with other sigils'
+     * streams. Validated at module load below — duplicates throw.
+     */
+    rngOffset: number;
+}
+
+export const SIGIL_CAST_RNG_MULT: Record<string, CastRngMultEffect> = {
+    boom_bomb: { values: [0, 2, 4, 8, 16], rngOffset: castRngMultRngSlot(0) },
+};
+
+export interface CastRngMultEntry {
+    sigilId: string;
+    multDelta: number;
+}
+
+/**
+ * Roll the per-cast mult bonus for every cast-rng-mult sigil the player owns.
+ * The seed is `runSeed ⊕ rngOffset + round * 10 + castNumber` — identical to
+ * the proc seed scheme — so server and client produce the same face given
+ * the same cast inputs. Zero-value rolls are dropped so the animation layer
+ * doesn't emit a no-op tick.
+ */
+export function getCastRngMultBonus(
+    sigils: readonly string[],
+    runSeed: number,
+    round: number,
+    castNumber: number,
+): { total: number; entries: CastRngMultEntry[] } {
+    let total = 0;
+    const entries: CastRngMultEntry[] = [];
+    // All entries in SIGIL_CAST_RNG_MULT should also be in MIMIC_INCOMPATIBLE
+    // (see the note above MIMIC_INCOMPATIBLE: RNG-sharing copies roll identical
+    // faces). expandMimicSigils is used for consistency with the other helpers
+    // and to keep the contract uniform if a future cast-rng-mult sigil were
+    // ever made mimic-compatible via a copyIndex jitter.
+    for (const sigilId of expandMimicSigils(sigils)) {
+        const effect = SIGIL_CAST_RNG_MULT[sigilId];
+        if (!effect) continue;
+        const rng = createRoundRng(runSeed, effect.rngOffset + round * 10 + castNumber);
+        const value = effect.values[Math.floor(rng() * effect.values.length)];
+        if (!value) continue;
+        total += value;
+        entries.push({ sigilId, multDelta: value });
     }
     return { total, entries };
 }
@@ -1298,35 +1382,44 @@ export const SIGIL_CAST_HOOKS: Record<string, CastHookDefinition> = {
 // Module-Load Validation
 // ============================================================================
 
-// Each proc sigil must have a unique `rngOffset` within the proc band so
-// server and client stay deterministic. Catch duplicates, out-of-band
-// offsets, and slots that don't line up with SIGIL_RNG_OFFSET_SPACING at
-// startup — never as a silent runtime desync.
-(() => {
+// Each RNG sigil must have a unique `rngOffset` within its category's band so
+// server and client stay deterministic. Catch duplicates, out-of-band offsets,
+// and slots that don't line up with SIGIL_RNG_OFFSET_SPACING at startup —
+// never as a silent runtime desync.
+function validateRngBand<T extends { rngOffset: number }>(
+    registryName: string,
+    slotHelper: string,
+    base: number,
+    entries: Record<string, T>,
+): void {
     const seen = new Map<number, string>();
-    for (const [sigilId, proc] of Object.entries(SIGIL_PROCS)) {
-        const offset = proc.rngOffset;
-        if (offset < PROC_RNG_OFFSET_BASE || offset >= PROC_RNG_OFFSET_BASE + SIGIL_RNG_BAND_WIDTH) {
+    for (const [sigilId, def] of Object.entries(entries)) {
+        const offset = def.rngOffset;
+        if (offset < base || offset >= base + SIGIL_RNG_BAND_WIDTH) {
             throw new Error(
-                `SIGIL_PROCS: "${sigilId}" rngOffset ${offset} is outside the proc band ` +
-                `[${PROC_RNG_OFFSET_BASE}, ${PROC_RNG_OFFSET_BASE + SIGIL_RNG_BAND_WIDTH}). ` +
-                `Use procRngSlot(n) to derive the offset.`,
+                `${registryName}: "${sigilId}" rngOffset ${offset} is outside the band ` +
+                `[${base}, ${base + SIGIL_RNG_BAND_WIDTH}). Use ${slotHelper}(n).`,
             );
         }
-        if ((offset - PROC_RNG_OFFSET_BASE) % SIGIL_RNG_OFFSET_SPACING !== 0) {
+        if ((offset - base) % SIGIL_RNG_OFFSET_SPACING !== 0) {
             throw new Error(
-                `SIGIL_PROCS: "${sigilId}" rngOffset ${offset} is not a multiple of ` +
+                `${registryName}: "${sigilId}" rngOffset ${offset} is not a multiple of ` +
                 `SIGIL_RNG_OFFSET_SPACING (${SIGIL_RNG_OFFSET_SPACING}) above base. ` +
-                `Use procRngSlot(n).`,
+                `Use ${slotHelper}(n).`,
             );
         }
         const existing = seen.get(offset);
         if (existing !== undefined) {
             throw new Error(
-                `SIGIL_PROCS: rngOffset ${offset} is used by both "${existing}" and "${sigilId}". ` +
-                `Each proc sigil must use a unique procRngSlot(n).`,
+                `${registryName}: rngOffset ${offset} is used by both "${existing}" and "${sigilId}". ` +
+                `Each sigil must use a unique ${slotHelper}(n).`,
             );
         }
         seen.set(offset, sigilId);
     }
+}
+
+(() => {
+    validateRngBand("SIGIL_PROCS", "procRngSlot", PROC_RNG_OFFSET_BASE, SIGIL_PROCS);
+    validateRngBand("SIGIL_CAST_RNG_MULT", "castRngMultRngSlot", CAST_RNG_MULT_RNG_OFFSET_BASE, SIGIL_CAST_RNG_MULT);
 })();
