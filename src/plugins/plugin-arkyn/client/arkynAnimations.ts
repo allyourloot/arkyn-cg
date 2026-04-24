@@ -997,7 +997,7 @@ export function castSpell() {
             level: r.level,
         })),
     };
-    const pendingMirrorProcs: { duplicate: RuneClientData; sigilId: string }[] = [];
+    const pendingMirrorProcs: { duplicate: RuneClientData; sigilId: string; isMimicCopy: boolean }[] = [];
     // `expandMimicSigilsDetailed` mirrors the server's handleCast dispatcher —
     // when a Mimic sits next to a Mimic-compatible cast hook, the hook fires
     // twice (once for the original sigil, once for the Mimic copy). The
@@ -1020,6 +1020,7 @@ export function castSpell() {
                     level: source.level,
                 },
                 sigilId: entry.sigilId,
+                isMimicCopy: entry.isMimicCopy,
             });
         }
     }
@@ -1182,7 +1183,14 @@ export function castSpell() {
             //   5. Clear materializingRune after the duration so the
             //      slot falls back to the normal RuneCard render.
             if (pendingMirrorProcs.length > 0) {
-                for (const proc of pendingMirrorProcs) {
+                // Stagger procs so a Mimic-doubled Magic Mirror reads as
+                // two distinct "pop" beats instead of one chord. The first
+                // proc fires synchronously to keep the snappy "duplicate
+                // appears on cast-land" feel; subsequent procs (only Mimic
+                // copies today) are deferred by `i * stagger` so the SFX
+                // and visual entrance space out into a clean pop-pop.
+                const MIRROR_PROC_STAGGER_MS = 160;
+                const fireMirrorProc = (proc: { duplicate: RuneClientData; sigilId: string; isMimicCopy: boolean }) => {
                     const startTime = performance.now();
                     setMaterializingRune({
                         id: proc.duplicate.id,
@@ -1199,8 +1207,25 @@ export function castSpell() {
                     sigilShakeSeq++;
                     activeSigilShake = { sigilId: proc.sigilId, seq: sigilShakeSeq };
                     playAddConsumable();
+                    // When this proc is a Mimic copy of the sigil, surface
+                    // a "MIMIC!" bubble below the COPIED sigil's slot so
+                    // the player can read which proc the Mimic produced.
+                    // Anchored to `proc.sigilId` (not "mimic") because the
+                    // bubble lives under the sigil being copied, matching
+                    // the sigil that just shook.
+                    if (proc.isMimicCopy) {
+                        arkynStoreInternal.triggerSigilProcBubble(proc.sigilId, 0, "mimic");
+                    }
                     setTimeout(() => setMaterializingRune(null), DISSOLVE_DURATION_MS);
-                }
+                    notify();
+                };
+                pendingMirrorProcs.forEach((proc, i) => {
+                    if (i === 0) {
+                        fireMirrorProc(proc);
+                    } else {
+                        setTimeout(() => fireMirrorProc(proc), i * MIRROR_PROC_STAGGER_MS);
+                    }
+                });
             }
             notify();
         },

@@ -201,7 +201,11 @@ let materializingRune: { id: string; startTime: number; duration: number } | nul
 //   - "gold":  "+N [gold icon]" (Fortune / Banish grants).
 //   - "xmult": "+N.Nx" in a red-bg / white-text pill (Executioner's
 //              accumulator increment per critical hit).
-let sigilProcBubble: { sigilId: string; amount: number; kind: "gold" | "xmult"; seq: number } | null = null;
+//   - "mimic": "MIMIC!" in a deep-purple / white-text pill — fires under
+//              the SIGIL BEING COPIED whenever a Mimic copy procs, so the
+//              player can see "this proc was Mimic copying me" at a glance.
+//              `amount` is unused for this kind.
+let sigilProcBubble: { sigilId: string; amount: number; kind: "gold" | "xmult" | "mimic"; seq: number } | null = null;
 let sigilProcSeq = 0;
 
 // Blackjack execute animation — fullscreen-centered 13-frame spritesheet
@@ -638,7 +642,7 @@ export const arkynStoreInternal = {
      * (or in place of) the GoldCounter's own "+N" overlay. Fresh `seq`
      * remounts the bubble so back-to-back procs replay the animation.
      */
-    triggerSigilProcBubble(sigilId: string, amount: number, kind: "gold" | "xmult" = "gold") {
+    triggerSigilProcBubble(sigilId: string, amount: number, kind: "gold" | "xmult" | "mimic" = "gold") {
         sigilProcBubble = { sigilId, amount, kind, seq: ++sigilProcSeq };
     },
     clearSigilProcBubble() {

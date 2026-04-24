@@ -142,6 +142,24 @@
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
 }
 
+/* MIMIC variant — fires under the sigil being COPIED when Mimic
+   produces a proc on its right neighbor. Deep-purple pill keeps it
+   visually distinct from the warm-gold (gold) and red (xMult) variants,
+   tying it to Mimic's identity color. */
+.procBubbleMimic {
+    padding: 1px 6px 2px;
+    background: #4c1d95;
+    color: #ffffff;
+    border-radius: 3px;
+    font-size: clamp(var(--font-size-2xs), 1.4vw, var(--font-size-sm));
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.4),
+        2px 2px 0 rgba(0, 0, 0, 0.55);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+}
+
 /* ================================================================
    Tooltip — hover trigger via the shared Tooltip component's
    global .arkyn-tooltip class.
@@ -175,6 +193,24 @@
     font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
     color: #c8c0b0;
     line-height: 1.3;
+    /* Force the span to behave as a block so text-align actually has slack
+       to work with — without `display: block + width: 100%` the inline
+       span would shrink to its text content (in a tooltip with
+       white-space: nowrap, content == width == no centering room). */
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
+/* The bare description span inside the Mimic "Copying ..." section. Same
+   treatment as `.tooltipDesc` — display: block + width: 100% so the
+   text-align: center the section sets actually has horizontal slack to
+   center within. Without this the inline span sized to content and the
+   section's centering had nothing to act on. */
+.tooltipMimicDesc {
+    display: block;
+    width: 100%;
+    text-align: center;
 }
 
 /* Live accumulator row (Executioner "Current: x1.0 Mult" / inventory-mult
@@ -207,7 +243,13 @@
 
 /* Mimic "Copying: ..." dynamic row — shows the live neighbor-sigil the
    Mimic is currently copying (or a hint when it's a no-op). Kept compact
-   so the tooltip doesn't grow tall. */
+   so the tooltip doesn't grow tall.
+
+   Flex column with `align-items: center` rather than text-align: center
+   because the parent tooltip uses `white-space: nowrap`. With nowrap the
+   description span sizes to its (single-line) content, so text-align has
+   no slack to work with — but as a flex item it shrinks to its content
+   width and align-items centers it as its own block. */
 .tooltipMimicSection {
     margin-top: 6px;
     padding-top: 6px;
@@ -215,6 +257,10 @@
     font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
     color: #c8c0b0;
     line-height: 1.3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 }
 
 .tooltipMimicLabel {

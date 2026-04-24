@@ -259,7 +259,7 @@ export default function SigilBar() {
                                                         <span className={styles.tooltipMimicName}>
                                                             {mimicNeighborDef.name}
                                                         </span>
-                                                        <span>{renderDescription(mimicNeighborDef.description)}</span>
+                                                        <span className={styles.tooltipMimicDesc}>{renderDescription(mimicNeighborDef.description)}</span>
                                                     </>
                                                 ) : mimicNeighborDef && mimicNeighborIsIncompatible ? (
                                                     <span className={styles.tooltipMimicHint}>
@@ -335,6 +335,14 @@ export default function SigilBar() {
                                     amount={sigilProcBubble.amount}
                                     seq={sigilProcBubble.seq}
                                 />
+                            )}
+                            {/* "MIMIC!" pill — fires under the sigil being
+                                copied whenever a Mimic-copy proc lands, so
+                                the player can see "this proc was Mimic
+                                copying me" without having to mentally
+                                cross-reference the SigilBar. */}
+                            {sigilProcBubble && sigilProcBubble.sigilId === sigilId && sigilProcBubble.kind === "mimic" && (
+                                <SigilMimicProcBubble seq={sigilProcBubble.seq} />
                             )}
                         </div>
                     );
@@ -439,6 +447,40 @@ function SigilGoldProcBubble({ amount, seq }: { amount: number; seq: number }) {
  * text to distinguish it from the warm-gold gold-proc bubble. Same GSAP
  * pop / drift / fade timing so the two bubble kinds read as siblings.
  */
+/**
+ * Floating "MIMIC!" pill — fires under the sigil being copied whenever
+ * Mimic produces a proc on its right neighbor. Deep-purple background,
+ * white text — distinct from the warm gold-proc bubble and red xMult
+ * pill, so the three Mimic-related signals (sigil shake on the copied
+ * sigil, Mimic-copy proc effect, and this label) read as a coherent set.
+ * Same GSAP pop / drift / fade timing as the gold + xmult bubbles so
+ * the variants feel like siblings.
+ */
+function SigilMimicProcBubble({ seq }: { seq: number }) {
+    const ref = useRef<HTMLSpanElement>(null);
+
+    useGSAP(() => {
+        const el = ref.current;
+        if (!el) return;
+        // Same crooked-tilt sticker treatment as the xMult pill — keeps
+        // the bubble feeling like a stamped-on label rather than a
+        // generic floating number.
+        const rotation = (Math.random() < 0.5 ? -1 : 1) * (3 + Math.random() * 4);
+        gsap.set(el, { y: -6, scale: 0.55, opacity: 0, rotation });
+        const tl = gsap.timeline();
+        tl.to(el, { y: 8, scale: 1.2, opacity: 1, duration: 0.14, ease: "back.out(2.5)" });
+        tl.to(el, { y: 12, scale: 1, duration: 0.08, ease: "power2.out" });
+        tl.to({}, { duration: 0.35 });
+        tl.to(el, { y: 32, opacity: 0, duration: 0.35, ease: "power1.in" });
+    }, { dependencies: [seq], scope: ref });
+
+    return (
+        <span key={seq} ref={ref} className={`${styles.procBubble} ${styles.procBubbleMimic}`}>
+            MIMIC!
+        </span>
+    );
+}
+
 function SigilXMultProcBubble({ amount, seq }: { amount: number; seq: number }) {
     const ref = useRef<HTMLSpanElement>(null);
 
