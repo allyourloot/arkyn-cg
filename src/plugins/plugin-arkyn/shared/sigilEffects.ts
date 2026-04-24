@@ -198,6 +198,32 @@ export function getMimicCopyTarget(
     return neighborId;
 }
 
+/**
+ * Iterate effective owned sigils (Mimic-expanded) and invoke `fn` for each
+ * one that has an entry in `registry`. Centralizes the iteration shell every
+ * category helper repeats — "expand for Mimic, look up the registry entry,
+ * skip sigils the category doesn't cover" — so a new registry-backed helper
+ * is ~3 lines of category-specific body instead of a hand-rolled loop.
+ *
+ * Callers that need Mimic copy-metadata (sourceIndex / copyIndex — today the
+ * lifecycle, discard, and cast-hook dispatchers) use `expandMimicSigilsDetailed`
+ * directly and stay hand-rolled. Callers that iterate the RAW sigils list
+ * (e.g. `applyAccumulatorIncrements`, where accumulator storage is keyed by
+ * sigil id and Mimic expansion would double-update the same slot) also stay
+ * hand-rolled.
+ */
+export function forEachOwnedSigil<T>(
+    sigils: readonly string[],
+    registry: Readonly<Record<string, T>>,
+    fn: (entry: T, sigilId: string) => void,
+): void {
+    for (const sigilId of expandMimicSigils(sigils)) {
+        const entry = registry[sigilId];
+        if (entry === undefined) continue;
+        fn(entry, sigilId);
+    }
+}
+
 // ============================================================================
 // Category 1 — Stat Modifiers (Caster pattern)
 // ============================================================================
@@ -228,13 +254,11 @@ export const SIGIL_STAT_MODIFIERS: Record<string, Partial<PlayerStatDeltas>> = {
  */
 export function getPlayerStatDeltas(sigils: readonly string[]): PlayerStatDeltas {
     const out: PlayerStatDeltas = { castsPerRound: 0, discardsPerRound: 0, handSize: 0 };
-    for (const sigilId of expandMimicSigils(sigils)) {
-        const delta = SIGIL_STAT_MODIFIERS[sigilId];
-        if (!delta) continue;
+    forEachOwnedSigil(sigils, SIGIL_STAT_MODIFIERS, (delta) => {
         if (delta.castsPerRound) out.castsPerRound += delta.castsPerRound;
         if (delta.discardsPerRound) out.discardsPerRound += delta.discardsPerRound;
         if (delta.handSize) out.handSize += delta.handSize;
-    }
+    });
     return out;
 }
 
@@ -440,9 +464,7 @@ export function getHandMultBonus(
 
     let total = 0;
     const perSigil: HandMultEntry[] = [];
-    for (const sigilId of expandMimicSigils(sigils)) {
-        const effect = SIGIL_HAND_MULT[sigilId];
-        if (!effect) continue;
+    forEachOwnedSigil(sigils, SIGIL_HAND_MULT, (effect, sigilId) => {
         for (let i = 0; i < hand.length; i++) {
             if (excluded.has(i)) continue;
             const rune = hand[i];
@@ -450,7 +472,7 @@ export function getHandMultBonus(
             total += effect.multPerRune;
             perSigil.push({ sigilId, handIndex: i, multDelta: effect.multPerRune });
         }
-    }
+    });
     return { total, perSigil };
 }
 
@@ -627,14 +649,12 @@ export function getSpellXMult(
 ): { total: number; entries: SpellXMultEntry[] } {
     let total = 1;
     const entries: SpellXMultEntry[] = [];
-    for (const sigilId of expandMimicSigils(sigils)) {
-        const effect = SIGIL_SPELL_X_MULT[sigilId];
-        if (!effect) continue;
+    forEachOwnedSigil(sigils, SIGIL_SPELL_X_MULT, (effect, sigilId) => {
         if (spellElements.some(e => (effect.elements as readonly string[]).includes(e))) {
             total *= effect.xMult;
             entries.push({ sigilId, xMult: effect.xMult });
         }
-    }
+    });
     return { total, entries };
 }
 
@@ -677,11 +697,9 @@ export function getIgnoredResistanceElements(
     dynamicIgnored?: string | readonly string[],
 ): Set<string> {
     const out = new Set<string>();
-    for (const sigilId of expandMimicSigils(sigils)) {
-        const elements = SIGIL_RESIST_IGNORE[sigilId];
-        if (!elements) continue;
+    forEachOwnedSigil(sigils, SIGIL_RESIST_IGNORE, (elements) => {
         for (const e of elements) out.add(e);
-    }
+    });
     if (typeof dynamicIgnored === "string") {
         if (dynamicIgnored) out.add(dynamicIgnored);
     } else if (dynamicIgnored) {
@@ -727,12 +745,10 @@ export function getEndOfRoundSigilGold(
 ): { total: number; entries: EndOfRoundGoldEntry[] } {
     let total = 0;
     const entries: EndOfRoundGoldEntry[] = [];
-    for (const sigilId of expandMimicSigils(sigils)) {
-        const effect = SIGIL_END_OF_ROUND_GOLD[sigilId];
-        if (!effect) continue;
+    forEachOwnedSigil(sigils, SIGIL_END_OF_ROUND_GOLD, (effect, sigilId) => {
         total += effect.amount;
         entries.push({ sigilId, amount: effect.amount });
-    }
+    });
     return { total, entries };
 }
 
@@ -788,16 +804,14 @@ export function getPlayedMultBonus(
 ): { total: number; perSigil: PlayedMultEntry[] } {
     let total = 0;
     const perSigil: PlayedMultEntry[] = [];
-    for (const sigilId of expandMimicSigils(sigils)) {
-        const effect = SIGIL_PLAYED_MULT[sigilId];
-        if (!effect) continue;
+    forEachOwnedSigil(sigils, SIGIL_PLAYED_MULT, (effect, sigilId) => {
         const triggers = effect.elements as readonly string[];
         for (let i = 0; i < contributingRunes.length; i++) {
             if (!triggers.includes(contributingRunes[i].element)) continue;
             total += effect.multPerRune;
             perSigil.push({ sigilId, contributingRuneIdx: i, multDelta: effect.multPerRune });
         }
-    }
+    });
     return { total, perSigil };
 }
 
@@ -869,9 +883,7 @@ export function getElementRuneBonus(
     const perRuneBase = new Array(contributingRuneElements.length).fill(0);
     let totalMult = 0;
     const entries: ElementRuneBonusEntry[] = [];
-    for (const sigilId of expandMimicSigils(sigils)) {
-        const effect = SIGIL_ELEMENT_RUNE_BONUS[sigilId];
-        if (!effect) continue;
+    forEachOwnedSigil(sigils, SIGIL_ELEMENT_RUNE_BONUS, (effect, sigilId) => {
         const elementFilter = effect.elements as readonly string[] | undefined;
         for (let i = 0; i < contributingRuneElements.length; i++) {
             if (effect.requireCritical && !isCritical[i]) continue;
@@ -885,7 +897,7 @@ export function getElementRuneBonus(
                 multDelta: effect.multBonus,
             });
         }
-    }
+    });
     return { totalMult, perRuneBase, entries };
 }
 
@@ -948,14 +960,12 @@ export function getAccumulatorXMult(
     // Future accumulator sigils that ARE Mimic-compatible would re-read
     // the same `accumulators[sigilId]` value twice — acceptable and
     // matches the "copy the effect" intent.
-    for (const sigilId of expandMimicSigils(sigils)) {
-        const def = SIGIL_ACCUMULATOR_XMULT[sigilId];
-        if (!def) continue;
+    forEachOwnedSigil(sigils, SIGIL_ACCUMULATOR_XMULT, (def, sigilId) => {
         const value = accumulators[sigilId] ?? def.initialValue;
-        if (value === 1) continue;
+        if (value === 1) return;
         total *= value;
         entries.push({ sigilId, xMult: value });
-    }
+    });
     return { total, entries };
 }
 
@@ -1006,9 +1016,9 @@ export const SIGIL_SCROLL_LEVEL_BONUS: Record<string, number> = {
  */
 export function getScrollLevelsPerUse(sigils: readonly string[]): number {
     let bonus = 0;
-    for (const sigilId of expandMimicSigils(sigils)) {
-        bonus += SIGIL_SCROLL_LEVEL_BONUS[sigilId] ?? 0;
-    }
+    forEachOwnedSigil(sigils, SIGIL_SCROLL_LEVEL_BONUS, (extra) => {
+        bonus += extra;
+    });
     return 1 + bonus;
 }
 
@@ -1077,14 +1087,12 @@ export function getInventoryMultBonus(
     // Elixir's sum-of-sellPrices isn't inflated by Mimic copies — a Mimic
     // that copies Elixir adds one additional Elixir evaluation, NOT a
     // doubled sellPrice sum inside a single evaluation.
-    for (const sigilId of expandMimicSigils(sigils)) {
-        const def = SIGIL_INVENTORY_MULT[sigilId];
-        if (!def) continue;
+    forEachOwnedSigil(sigils, SIGIL_INVENTORY_MULT, (def, sigilId) => {
         const delta = def.compute(sigils);
-        if (delta === 0) continue;
+        if (delta === 0) return;
         total += delta;
         entries.push({ sigilId, multDelta: delta });
-    }
+    });
     return { total, entries };
 }
 
@@ -1146,18 +1154,17 @@ export function getCastRngMultBonus(
     const entries: CastRngMultEntry[] = [];
     // All entries in SIGIL_CAST_RNG_MULT should also be in MIMIC_INCOMPATIBLE
     // (see the note above MIMIC_INCOMPATIBLE: RNG-sharing copies roll identical
-    // faces). expandMimicSigils is used for consistency with the other helpers
-    // and to keep the contract uniform if a future cast-rng-mult sigil were
-    // ever made mimic-compatible via a copyIndex jitter.
-    for (const sigilId of expandMimicSigils(sigils)) {
-        const effect = SIGIL_CAST_RNG_MULT[sigilId];
-        if (!effect) continue;
+    // faces). forEachOwnedSigil still Mimic-expands for contract uniformity
+    // with the other helpers, so a future cast-rng-mult sigil made mimic-
+    // compatible via a copyIndex jitter would wire in without changing this
+    // helper.
+    forEachOwnedSigil(sigils, SIGIL_CAST_RNG_MULT, (effect, sigilId) => {
         const rng = createRoundRng(runSeed, effect.rngOffset + round * 10 + castNumber);
         const value = effect.values[Math.floor(rng() * effect.values.length)];
-        if (!value) continue;
+        if (!value) return;
         total += value;
         entries.push({ sigilId, multDelta: value });
-    }
+    });
     return { total, entries };
 }
 
@@ -1206,13 +1213,11 @@ export function getSpellTierMultBonus(
     let total = 0;
     const entries: SpellTierMultEntry[] = [];
     if (spellTier <= 0) return { total, entries };
-    for (const sigilId of expandMimicSigils(sigils)) {
-        const effect = SIGIL_SPELL_TIER_MULT[sigilId];
-        if (!effect) continue;
-        if (effect.tier !== spellTier) continue;
+    forEachOwnedSigil(sigils, SIGIL_SPELL_TIER_MULT, (effect, sigilId) => {
+        if (effect.tier !== spellTier) return;
         total += effect.mult;
         entries.push({ sigilId, multDelta: effect.mult });
-    }
+    });
     return { total, entries };
 }
 
