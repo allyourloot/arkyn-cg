@@ -36,6 +36,14 @@ const FADE_OUT_MS = 280;
 // one frame hold. Keeps the first frame from feeling like a hard paste.
 const SCALE_IN_DURATION_MS = 120;
 
+// Total wall-clock duration from `triggerBlackjackAnimation()` until the
+// fade-out tween completes and `clearBlackjackAnimation()` fires. Exported
+// so the cast orchestrator can defer the floating-damage hit + HP drop
+// until after the spritesheet finishes — keeps the kill reveal landing
+// AFTER the cinematic instead of clipping under it.
+export const BLACKJACK_ANIMATION_TOTAL_MS =
+    FRAME_DURATION_MS * 13 + FADE_OUT_MS;
+
 /**
  * Fullscreen-centered spritesheet overlay that plays when Blackjack's
  * execute proc fires. Cycles through 13 frames (1.png..13.png) via rAF

@@ -1,7 +1,7 @@
 import { SIGIL_DEFINITIONS, SIGIL_IDS } from "../shared";
 import { sendDebugGrantSigil } from "./arkynNetwork";
 import { arkynStoreInternal } from "./arkynStore";
-import { playBlackjack } from "./sfx";
+import { playBell, playBlackjack } from "./sfx";
 import { notify } from "./arkynStoreCore";
 
 /**
@@ -43,6 +43,7 @@ function grantSigil(sigilId: string): void {
  */
 function triggerBlackjack(): void {
     arkynStoreInternal.triggerBlackjackAnimation();
+    playBell();
     playBlackjack();
     notify();
     console.info("[arkyn.triggerBlackjack] Fired Blackjack animation + SFX.");

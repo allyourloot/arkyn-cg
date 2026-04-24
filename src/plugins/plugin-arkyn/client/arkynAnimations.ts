@@ -64,7 +64,8 @@ import {
     BANISH_GOLD_COMMIT_DELAY_MS,
     BANISH_CLEANUP_EXTRA_MS,
 } from "./animations/timingConstants";
-import { playBlackjack, playGold, playAddConsumable } from "./sfx";
+import { playBell, playBlackjack, playGold, playAddConsumable } from "./sfx";
+import { BLACKJACK_ANIMATION_TOTAL_MS } from "./ui/BlackjackAnimation";
 
 // Fly / discard / draw durations live inside `animations/castTimeline.ts`
 // (in seconds, ready for GSAP). Component-level fly tweens reference them
@@ -111,6 +112,14 @@ export interface EnemyDamageHit {
     amount: number;
     spellElement: string;
     isCritical: boolean;
+    /**
+     * True if Blackjack's execute proc fired this cast. The EnemyHealthBar
+     * swaps the critical-burst background for the execute-burst variant
+     * (same shape, different colors) so the kill reads as an execution
+     * rather than a normal big crit. The numeric `amount` stays equal to
+     * the actual damage dealt — the execute flair is purely visual.
+     */
+    isExecute: boolean;
     seq: number;
 }
 
@@ -153,7 +162,7 @@ let dissolveStartTime = 0;
 let raisedSlotIndices: number[] = [];
 let runeDamageBubbles: (RuneDamageBubble | null)[] = [];
 let bubbleSeqCounter = 0;
-let enemyDamageHit: EnemyDamageHit = { amount: 0, spellElement: "", isCritical: false, seq: 0 };
+let enemyDamageHit: EnemyDamageHit = { amount: 0, spellElement: "", isCritical: false, isExecute: false, seq: 0 };
 let enemyDamageSeqCounter = 0;
 
 let flyingRunes: FlyingRune[] = [];
@@ -1065,6 +1074,12 @@ export function castSpell() {
     // and the total reveal.
     const extendedEventCount = runeBreakdown.length;
 
+    // When Blackjack's execute proc fires, we capture the trigger
+    // timestamp here so onImpact (below) can defer the floating damage
+    // hit until after the spritesheet's fade-out completes. Stays 0 if
+    // no execute fires this cast — onImpact treats 0 as "not deferred".
+    let executeTriggerTime = 0;
+
     buildCastTimeline({
         flyingCount: flying.length,
         contributingCount: extendedEventCount,
@@ -1214,9 +1229,17 @@ export function castSpell() {
         } : undefined,
         // Blackjack execute: fire the fullscreen spritesheet + SFX. Only
         // wired when an execute actually rolled this cast so the overlay
-        // never mounts gratuitously.
+        // never mounts gratuitously. The trigger timestamp is captured
+        // here so onImpact can defer the floating damage hit + HP drop
+        // until after the spritesheet's fade-out completes.
         onExecuteProc: hasAnyExecute ? () => {
+            executeTriggerTime = performance.now();
             arkynStoreInternal.triggerBlackjackAnimation();
+            // Bell hits first as the "alert" — the player's eye snaps to
+            // the spritesheet — then the blackjack stinger lands a beat
+            // later as the cinematic plays out. Both fire on the same
+            // frame; the audio files themselves carry the temporal offset.
+            playBell();
             playBlackjack();
             notify();
         } : undefined,
@@ -1233,20 +1256,49 @@ export function castSpell() {
             notify();
         } : undefined,
         onImpact: () => {
-            enemyDamageHit = {
-                amount: totalDamage,
-                spellElement,
-                isCritical: hasCritical,
-                seq: ++enemyDamageSeqCounter,
+            // Body of the impact: spawn the floating damage bubble, update
+            // the round accumulator, release the HP bar lock. Wrapped in a
+            // closure so we can either fire it immediately (normal cast)
+            // or defer it until after the Blackjack spritesheet finishes
+            // (execute case — see the timing branch below).
+            const fireImpact = () => {
+                // Execute procs (Blackjack) deal damage equal to the
+                // enemy's remaining HP — already baked into `totalDamage`
+                // up-front via Math.max(totalDamage, enemyHp). No special
+                // override needed: the floating bubble shows the same
+                // value as the Total chip (no discrepancy) and the run-
+                // stats "highest single cast" tracker doesn't get
+                // inflated by a flair number. The execution flair lives
+                // in the spritesheet + bell stinger SFX instead.
+                enemyDamageHit = {
+                    amount: totalDamage,
+                    spellElement,
+                    isCritical: hasCritical,
+                    isExecute: hasAnyExecute,
+                    seq: ++enemyDamageSeqCounter,
+                };
+                roundTotalDamage = previousRoundTotal + totalDamage;
+                arkynStoreInternal.unlockHpDisplayAndSyncToServer();
+                notify();
             };
-            // Set the round accumulator to the final cumulative value.
-            // Uses the snapshot + this cast's damage (same value the tween
-            // landed on) so there's no double-counting window.
-            roundTotalDamage = previousRoundTotal + totalDamage;
-            // Release the HP bar lock and snap the displayed value to
-            // whatever the server currently says.
-            arkynStoreInternal.unlockHpDisplayAndSyncToServer();
-            notify();
+
+            // When Blackjack triggered, the spritesheet is still playing
+            // (or fading) — wait for it to finish so the kill reveal lands
+            // AFTER the cinematic instead of clipping under it. The delay
+            // is computed dynamically: spritesheet total minus elapsed time
+            // since `onExecuteProc` fired. Clamps to 0 if the spritesheet
+            // has already completed by the time the timeline reaches its
+            // natural impact moment (rare but possible if many bubble
+            // events stretched the timeline past the spritesheet).
+            if (hasAnyExecute && executeTriggerTime > 0) {
+                const elapsed = performance.now() - executeTriggerTime;
+                const remaining = BLACKJACK_ANIMATION_TOTAL_MS - elapsed;
+                if (remaining > 0) {
+                    setTimeout(fireImpact, remaining);
+                    return;
+                }
+            }
+            fireImpact();
         },
         onComplete: () => {
             dissolvingRunes = [];

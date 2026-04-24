@@ -21,6 +21,7 @@ import { getRuneImageUrl } from "./runeAssets";
 import Tooltip from "./Tooltip";
 import { playCritical } from "../sfx";
 import criticalUrl from "/assets/ui/critical.png?url";
+import executeUrl from "/assets/ui/execute.png?url";
 import styles from "./EnemyHealthBar.module.css";
 
 // `--panel-bg` (frame.png) drives the bar chrome; `--section-bg`
@@ -35,6 +36,13 @@ interface ActiveHit {
     amount: number;
     spellElement: string;
     isCritical: boolean;
+    /**
+     * True when Blackjack's execute proc landed this cast — swaps the
+     * critical-burst background for the execute variant (red on green
+     * instead of yellow). Same shape, distinct read, no impact on the
+     * displayed damage number.
+     */
+    isExecute: boolean;
     seq: number;
 }
 
@@ -104,15 +112,17 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
             amount: enemyDamageHit.amount,
             spellElement: enemyDamageHit.spellElement,
             isCritical: enemyDamageHit.isCritical,
+            isExecute: enemyDamageHit.isExecute,
             seq: enemyDamageHit.seq,
         });
         // Play the critical sfx in sync with the floating damage number
         // on critical hits — matches the per-rune bubble behavior in the
-        // play area so the final impact feels just as punchy.
-        if (enemyDamageHit.isCritical) {
+        // play area so the final impact feels just as punchy. Skipped on
+        // executes (the bell + blackjack stinger already filled that slot).
+        if (enemyDamageHit.isCritical && !enemyDamageHit.isExecute) {
             playCritical();
         }
-    }, [enemyDamageHit.seq, enemyDamageHit.amount, enemyDamageHit.spellElement, enemyDamageHit.isCritical]);
+    }, [enemyDamageHit.seq, enemyDamageHit.amount, enemyDamageHit.spellElement, enemyDamageHit.isCritical, enemyDamageHit.isExecute]);
 
     // GSAP-driven shake + floating damage tween. Fires whenever activeHit
     // gets a new seq. The bar wrapper does the side-to-side shake; the
@@ -253,9 +263,9 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
                                 className={styles.damageFloat}
                                 style={damageFloatStyle}
                             >
-                                {activeHit.isCritical && (
+                                {(activeHit.isExecute || activeHit.isCritical) && (
                                     <img
-                                        src={criticalUrl}
+                                        src={activeHit.isExecute ? executeUrl : criticalUrl}
                                         alt=""
                                         className={styles.criticalBg}
                                     />
