@@ -79,8 +79,6 @@ export function useHandDragReorder({
     // The pending drag info before threshold is crossed. Not exposed to
     // React state until the drag threshold is actually reached.
     const pendingInfoRef = useRef<DragInfo | null>(null);
-    // Stride captured at pointer-down for the pending drag.
-    const pendingStrideRef = useRef(56);
 
     const indexAtClientX = (clientX: number): number => {
         const centers = slotCentersRef.current;

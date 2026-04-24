@@ -2,9 +2,7 @@ import { gsap } from "gsap";
 import {
     SETTLE_DELAY_MS,
     RAISE_DURATION_MS,
-    BUBBLE_DURATION_MS,
     BUBBLE_STAGGER_MS,
-    BUBBLE_TAIL_BUFFER_MS,
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,
 } from "./timingConstants";
@@ -55,9 +53,7 @@ function totalStaggeredDuration(count: number, perFlyerS: number, staggerS: numb
 // here so the timeline math reads in the same units gsap expects.
 const SETTLE_DELAY_S = SETTLE_DELAY_MS / 1000;
 const RAISE_DURATION_S = RAISE_DURATION_MS / 1000;
-const BUBBLE_DURATION_S = BUBBLE_DURATION_MS / 1000;
 const BUBBLE_STAGGER_S = BUBBLE_STAGGER_MS / 1000;
-const BUBBLE_TAIL_BUFFER_S = BUBBLE_TAIL_BUFFER_MS / 1000;
 const DISSOLVE_DURATION_S = DISSOLVE_DURATION_MS / 1000;
 const DISSOLVE_STAGGER_S = DISSOLVE_STAGGER_MS / 1000;
 
@@ -235,15 +231,7 @@ export function buildCastTimeline(ctx: CastTimelineContext): gsap.core.Timeline 
     // Bubbles begin after the fly window, the settle hold, and the raise.
     const bubblesStartS = flyTotalS + SETTLE_DELAY_S + RAISE_DURATION_S;
 
-    // Total time the slots stay raised (including the bubble cascade).
-    // Identical math to the legacy raiseHoldMs formula in arkynAnimations.ts,
-    // expressed in seconds.
     const lastBubbleDelayS = Math.max(0, ctx.contributingCount - 1) * BUBBLE_STAGGER_S;
-    const raiseHoldS = RAISE_DURATION_S + (
-        ctx.contributingCount > 0
-            ? lastBubbleDelayS + BUBBLE_DURATION_S + BUBBLE_TAIL_BUFFER_S
-            : BUBBLE_DURATION_S + BUBBLE_TAIL_BUFFER_S
-    );
 
     // Total reveal starts shortly after the last bubble pops in — the
     // player reads the number in ~300ms so we don't need to wait for the

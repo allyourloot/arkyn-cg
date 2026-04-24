@@ -49,7 +49,6 @@ export {
     RUNE_SHAKE_FRAME_S,
 } from "./animations/timingConstants";
 import {
-    BUBBLE_STAGGER_MS,
     DISSOLVE_DURATION_MS,
     BANISH_SIGIL_REACT_DELAY_MS,
     BANISH_GOLD_COMMIT_DELAY_MS,

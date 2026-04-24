@@ -8,7 +8,6 @@ import {
     createQuadBuffer,
     bindQuadAttributes,
     configureTexture,
-    cleanupGL,
 } from "./utils/glProgram";
 import { hexToRgbTriple } from "./utils/color";
 import { ELEMENT_COLORS } from "./styles";

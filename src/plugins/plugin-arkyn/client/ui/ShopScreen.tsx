@@ -18,7 +18,6 @@ import { playButton, playBuy } from "../sfx";
 import { ELEMENT_COLORS, RARITY_COLORS, createPanelStyleVars } from "./styles";
 import { getScrollImageUrl } from "./scrollAssets";
 import { getRuneBagImageUrl } from "./bagAssets";
-import BouncyText from "./BouncyText";
 import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
 import RuneBagPicker from "./RuneBagPicker";

@@ -126,6 +126,7 @@ export {
     expandMimicSigils,
     expandMimicSigilsDetailed,
     getMimicCopyTarget,
+    forEachOwnedSigil,
 } from "./sigilEffects";
 export type {
     PlayerStatDeltas,
@@ -134,10 +135,14 @@ export type {
     ProcEvent,
     HandMultEffect,
     HandMultEntry,
+    PlayedMultEffect,
+    PlayedMultEntry,
     SpellXMultEffect,
     SpellXMultEntry,
     ElementRuneBonusEffect,
     ElementRuneBonusEntry,
+    EndOfRoundGoldEffect,
+    EndOfRoundGoldEntry,
     SigilLifecycleHooks,
     RoundStartEffect,
     RoundStartContext,

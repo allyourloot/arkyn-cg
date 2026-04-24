@@ -28,8 +28,8 @@ export async function fetchPlayerState(apiKey: string, gameId: string, userId: s
             return null;
         }
 
-        const json = await response.json();
-        const value = json?.value as Record<string, unknown> | undefined;
+        const json = (await response.json()) as { value?: Record<string, unknown> } | null | undefined;
+        const value = json?.value;
         if (!value || typeof value !== "object") return null;
 
         const { __version, ...state } = value;

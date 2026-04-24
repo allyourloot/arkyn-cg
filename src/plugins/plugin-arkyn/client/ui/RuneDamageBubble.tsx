@@ -43,7 +43,7 @@ const RESISTED_COLOR = "#f87171";
 const CRITICAL_COLOR = "#fbbf24";
 const GOLD_COLOR = "#ffcd3c";
 
-export default function RuneDamageBubble({ amount, baseAmount, spellElement, isCritical, isResisted, seq, delayMs, kind }: Props) {
+export default function RuneDamageBubble({ baseAmount, spellElement, isCritical, isResisted, seq, delayMs, kind }: Props) {
     const bubbleRef = useRef<HTMLSpanElement>(null);
     const textRef = useRef<HTMLSpanElement>(null);
     const criticalRef = useRef<HTMLImageElement>(null);
