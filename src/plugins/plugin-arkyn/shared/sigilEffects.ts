@@ -889,6 +889,19 @@ export const SIGIL_ELEMENT_RUNE_BONUS: Record<string, ElementRuneBonusEffect> = 
     lex_divina: { elements: ["holy"], requireCritical: true, baseBonus: 8, multBonus: 2 },
     engine: { elements: ["steel"], baseBonus: 4, multBonus: 2 },
     alkahest: { elements: ["poison", "arcane"], baseBonus: 10, multBonus: 4 },
+    golem: { elements: ["earth"], baseBonus: 0, multBonus: 4 },
+    gale: { elements: ["air"], baseBonus: 0, multBonus: 4 },
+    shade: { elements: ["shadow"], baseBonus: 0, multBonus: 4 },
+    stormfist: { elements: ["lightning"], baseBonus: 0, multBonus: 4 },
+    cadaver: { elements: ["death"], baseBonus: 0, multBonus: 4 },
+    metallurgy: { elements: ["steel"], baseBonus: 0, multBonus: 4 },
+    mystique: { elements: ["arcane"], baseBonus: 0, multBonus: 4 },
+    psychic: { elements: ["psy"], baseBonus: 0, multBonus: 4 },
+    icicle: { elements: ["ice"], baseBonus: 0, multBonus: 4 },
+    cyanide: { elements: ["poison"], baseBonus: 0, multBonus: 4 },
+    angelic: { elements: ["holy"], baseBonus: 0, multBonus: 4 },
+    fireball: { elements: ["fire"], baseBonus: 0, multBonus: 4 },
+    tidal_wave: { elements: ["water"], baseBonus: 0, multBonus: 4 },
 };
 
 /**
