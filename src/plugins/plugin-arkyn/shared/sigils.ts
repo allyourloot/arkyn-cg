@@ -325,6 +325,14 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         cost: 4,
         sellPrice: 2,
     },
+    keychain: {
+        id: "keychain",
+        name: "Keychain",
+        rarity: "common",
+        description: "Retrigger the {first played rune} that {critical hits} {2 additional times}.",
+        cost: 3,
+        sellPrice: 1,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

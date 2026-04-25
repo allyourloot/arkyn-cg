@@ -310,6 +310,22 @@ export interface ProcDefinition {
      * same cast.
      */
     requireFinalCast?: boolean;
+    /**
+     * If true, at most one rune in the cast procs — the first one in
+     * contributing-rune order that passes the filters and rolls through.
+     * Keychain pattern: "retrigger the FIRST played rune that critical hits."
+     * Pair with `chance: 1` for a deterministic single-target proc.
+     */
+    firstMatchOnly?: boolean;
+    /**
+     * Number of proc events yielded per successful roll. Default `1` — one
+     * roll, one yield. Keychain sets `retriggerCount: 2` so a single match
+     * yields two `double_damage` events (the rune hits 3 total times: the
+     * original + 2 retriggers). Gold / execute effects behave the same way
+     * — N yields = N grants / N execute signals — but today only
+     * double_damage uses `retriggerCount > 1`.
+     */
+    retriggerCount?: number;
     /** Proc chance, 0-1. */
     chance: number;
     /**
@@ -361,6 +377,19 @@ export const SIGIL_PROCS: Record<string, ProcDefinition> = {
         chance: 1 / 21,
         rngOffset: procRngSlot(4),
         effect: { type: "execute" },
+    },
+    keychain: {
+        // Deterministic "first critical rune retriggers twice" proc. Like
+        // Chainlink, chance: 1 means every eligible rune rolls through — the
+        // `firstMatchOnly` flag then cuts the loop so only the first
+        // critical rune (in cast order) procs. `retriggerCount: 2` yields
+        // two double_damage events on that rune, so it lands 3 total hits.
+        requireCritical: true,
+        firstMatchOnly: true,
+        retriggerCount: 2,
+        chance: 1,
+        rngOffset: procRngSlot(5),
+        effect: { type: "double_damage" },
     },
 };
 
@@ -414,12 +443,19 @@ export function* iterateProcs(
         if (!proc) continue;
         if (proc.requireFinalCast && !isFinalCast) continue;
         const rng = createRoundRng(runSeed, proc.rngOffset + round * 10 + castNumber);
+        const yieldsPerHit = proc.retriggerCount ?? 1;
         for (let i = 0; i < contributingRuneElements.length; i++) {
             const element = contributingRuneElements[i];
             if (proc.element !== undefined && element !== proc.element) continue;
             if (proc.requireCritical && !isCritical?.[i]) continue;
             if (rng() < proc.chance) {
-                yield { sigilId, runeIdx: i, effect: proc.effect };
+                for (let n = 0; n < yieldsPerHit; n++) {
+                    yield { sigilId, runeIdx: i, effect: proc.effect };
+                }
+                // Keychain pattern: stop after the first matching rune so
+                // only the earliest-in-cast-order rune procs. Without this
+                // flag the loop continues and every matching rune rolls.
+                if (proc.firstMatchOnly) break;
             }
         }
     }
