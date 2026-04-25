@@ -9,25 +9,32 @@ import styles from "./MultBubble.module.css";
  * rune cards when the Synapse sigil procs. Completely decoupled from
  * HandDisplay's component tree to avoid triggering WebGL context churn
  * on the rune card canvases.
+ *
+ * Per-slot ARRAY input: when Mimic copies Synapse, two bubbles pop on
+ * the same Psy rune (one per Synapse invocation). Each entry carries
+ * its own staggered `delayMs` so they sequence cleanly.
  */
 export default function MultBubbleOverlay() {
     const handMultBubbles = useHandMultBubbles();
-    const [positions, setPositions] = useState<{ index: number; x: number; y: number; bubble: HandMultBubble }[]>([]);
+    const [positions, setPositions] = useState<{ slot: number; entryIdx: number; x: number; y: number; bubble: HandMultBubble }[]>([]);
 
     useEffect(() => {
         const entries: typeof positions = [];
         for (let i = 0; i < handMultBubbles.length; i++) {
-            const bubble = handMultBubbles[i];
-            if (!bubble) continue;
+            const slotBubbles = handMultBubbles[i];
+            if (!slotBubbles || slotBubbles.length === 0) continue;
             const el = document.querySelector(`[data-rune-index="${i}"]`);
             if (!el) continue;
             const rect = el.getBoundingClientRect();
-            entries.push({
-                index: i,
-                x: rect.left + rect.width / 2,
-                y: rect.top,
-                bubble,
-            });
+            for (let j = 0; j < slotBubbles.length; j++) {
+                entries.push({
+                    slot: i,
+                    entryIdx: j,
+                    x: rect.left + rect.width / 2,
+                    y: rect.top,
+                    bubble: slotBubbles[j],
+                });
+            }
         }
         setPositions(entries);
     }, [handMultBubbles]);
@@ -36,9 +43,9 @@ export default function MultBubbleOverlay() {
 
     return (
         <div className={styles.overlay}>
-            {positions.map(({ index, x, y, bubble }) => (
+            {positions.map(({ slot, entryIdx, x, y, bubble }) => (
                 <MultBubbleItem
-                    key={`${index}-${bubble.seq}`}
+                    key={`${slot}-${entryIdx}-${bubble.seq}`}
                     x={x}
                     y={y}
                     amount={bubble.amount}

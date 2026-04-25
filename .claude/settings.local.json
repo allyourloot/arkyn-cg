@@ -6,7 +6,8 @@
       "Bash(npx tsc:*)",
       "Bash(pnpm add:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(pnpm tsc *)"
     ]
   }
 }

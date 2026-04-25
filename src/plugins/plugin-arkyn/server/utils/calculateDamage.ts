@@ -70,6 +70,24 @@ export function calculateDamage(
         ? CASTS_PER_ROUND - castsRemaining
         : undefined;
 
+    // Cast hooks (Magic Mirror) use 1-indexed castNumber — `castsUsedThisRound`
+    // post-increment in handleCast — so this snapshot adds +1 to the
+    // 0-indexed RNG castNumber. Used by `predictCastHookDuplicates` inside
+    // composeCastModifiers so MM duplicates count as held for held-mult /
+    // held-xMult sigils on the cast that creates them.
+    const castContextForHooks = castNumberForRng !== undefined
+        ? {
+            castNumber: castNumberForRng + 1,
+            runeCount: selectedRunes.length,
+            runes: selectedRunes.map(r => ({
+                id: r.id,
+                element: r.element,
+                rarity: r.rarity,
+                level: r.level,
+            })),
+        }
+        : undefined;
+
     // Compose all sigil-driven cast modifiers through the shared helper.
     // The client runs the exact same helper so bonusMult / xMult / stripped
     // resistances are guaranteed byte-identical across server and client.
@@ -89,6 +107,7 @@ export function calculateDamage(
         runSeed,
         round: currentRound,
         castNumber: castNumberForRng,
+        castContext: castContextForHooks,
     });
 
     const breakdown = sharedCalculateSpellDamage(

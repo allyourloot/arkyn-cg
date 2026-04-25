@@ -489,6 +489,18 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
             elements: ["water"] as const,
         },
     },
+    clairvoyant: {
+        id: "clairvoyant",
+        name: "Clairvoyant",
+        rarity: "rare",
+        description: "Each held {Psy} rune grants {x1.5 Mult}.",
+        cost: 6,
+        sellPrice: 3,
+        explainer: {
+            label: "Applies to:",
+            elements: ["psy"] as const,
+        },
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

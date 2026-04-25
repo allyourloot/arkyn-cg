@@ -225,14 +225,16 @@ let sigilShakeSeq = 0;
 // Active sigil shake event — SigilBar reads this to animate the matching icon.
 let activeSigilShake: { sigilId: string; seq: number } | null = null;
 
-// Synapse sigil — mult bubbles shown on held Psy runes in the hand during cast.
-// Indexed by HAND INDEX (not slot). Non-Psy or played runes are null.
+// Synapse sigil — mult bubbles shown on held Psy runes in the hand during
+// cast. Per-slot ARRAY indexed by HAND INDEX so Mimic-stacked Synapse
+// copies stagger on the same rune (one bubble per Synapse invocation per
+// matching held rune).
 export interface HandMultBubble {
     amount: number;     // e.g. 2 for "+2 Mult"
     seq: number;
     delayMs: number;
 }
-let handMultBubbles: (HandMultBubble | null)[] = [];
+let handMultBubbles: HandMultBubble[][] = [];
 
 // Big Bang — floating "x{factor}" bubbles shown over contributing runes in
 // the PLAY AREA as the cumulative xMult events resolve. Per-slot ARRAY
@@ -244,6 +246,12 @@ export interface RuneXMultBubble {
     delayMs: number;
 }
 let runeXMultBubbles: RuneXMultBubble[][] = [];
+
+// Clairvoyant — floating "x{factor}" bubbles shown over HELD runes in the
+// hand when a held-element xMult sigil procs. Per-slot ARRAY indexed by
+// HAND INDEX so Mimic-stacked copies stagger on the same rune (one bubble
+// per Clairvoyant invocation per matching held rune).
+let heldXMultBubbles: RuneXMultBubble[][] = [];
 
 // ----- Hooks -----
 export function useDissolvingRunes() {
@@ -318,6 +326,9 @@ export function useHandMultBubbles() {
 export function useRuneXMultBubbles() {
     return useSyncExternalStore(subscribe, () => runeXMultBubbles);
 }
+export function useHeldXMultBubbles() {
+    return useSyncExternalStore(subscribe, () => heldXMultBubbles);
+}
 
 // ----- Helpers -----
 
@@ -361,6 +372,7 @@ export function clearLastCastState(): void {
     procDamageBubbles = [];
     handMultBubbles = [];
     runeXMultBubbles = [];
+    heldXMultBubbles = [];
     activeSigilShake = null;
     arkynStoreInternal.setLastCastRunes([]);
     notify();
@@ -536,6 +548,7 @@ export function castSpell() {
         procBubblesForCast,
         xMultBubblesForCast,
         handMultBubblesForCast,
+        heldXMultBubblesForCast,
         resolvedSpell,
         contributingIndices,
         totalDamage,
@@ -734,6 +747,7 @@ export function castSpell() {
             procDamageBubbles = procBubblesForCast;
             runeXMultBubbles = xMultBubblesForCast;
             handMultBubbles = handMultBubblesForCast;
+            heldXMultBubbles = heldXMultBubblesForCast;
             notify();
         },
         baseMult: resolvedSpell ? (SPELL_TIER_MULT[resolvedSpell.tier] ?? 0) : 0,
@@ -841,6 +855,7 @@ export function castSpell() {
             procDamageBubbles = [];
             runeXMultBubbles = [];
             handMultBubbles = [];
+            heldXMultBubbles = [];
             activeSigilShake = null;
             isCastAnimating = false;
             // Release the gold-counter lock and snap the displayed value

@@ -507,15 +507,29 @@ export function getHandMultBonus(
 
     let total = 0;
     const perSigil: HandMultEntry[] = [];
-    forEachOwnedSigil(sigils, SIGIL_HAND_MULT, (effect, sigilId) => {
+    // Iterate originals BEFORE Mimic copies so each held rune's bubble
+    // sequence reads as "sigil triggers, then Mimic echoes it" — clearer
+    // cause/effect than the raw expansion order (which puts Mimic copies
+    // at the Mimic's slot, BEFORE the original sigil). Combined with the
+    // stable handIndex sort below, this produces a per-rune burst:
+    // rune1: orig + mimic, rune2: orig + mimic, ...
+    const expanded = expandMimicSigilsDetailed(sigils);
+    const ordered = [
+        ...expanded.filter(e => !e.isMimicCopy),
+        ...expanded.filter(e => e.isMimicCopy),
+    ];
+    for (const exp of ordered) {
+        const effect = SIGIL_HAND_MULT[exp.sigilId];
+        if (!effect) continue;
         for (let i = 0; i < hand.length; i++) {
             if (excluded.has(i)) continue;
             const rune = hand[i];
             if (!rune || rune.element !== effect.element) continue;
             total += effect.multPerRune;
-            perSigil.push({ sigilId, handIndex: i, multDelta: effect.multPerRune });
+            perSigil.push({ sigilId: exp.sigilId, handIndex: i, multDelta: effect.multPerRune });
         }
-    });
+    }
+    perSigil.sort((a, b) => a.handIndex - b.handIndex);
     return { total, perSigil };
 }
 
@@ -698,6 +712,85 @@ export function getSpellXMult(
             entries.push({ sigilId, xMult: effect.xMult });
         }
     });
+    return { total, entries };
+}
+
+// ============================================================================
+// Category 6.5 — Held-Element xMult (Clairvoyant pattern)
+// ============================================================================
+
+/**
+ * Multiplicative mult bonus driven by runes HELD in the player's hand
+ * (excluding the runes selected for the current cast). Mirrors
+ * `SIGIL_HAND_MULT` (Synapse) structurally — element-gated, per-rune — but
+ * applies multiplicatively to the xMult channel instead of additively to
+ * bonusMult. Each matching held rune multiplies xMult by `xMultPerRune`.
+ *
+ * Visually, held-in-hand effects fire AFTER all played-hand damage events
+ * (procs, played-mult, element-rune-bonus, per-rune cumulative xMult) so
+ * the cast reads as: played damage settles → held bonuses tick → xMult
+ * reveals → total counts up.
+ */
+export interface HeldXMultEffect {
+    /** Element in the hand that triggers the xMult bonus. */
+    element: ElementType;
+    /** Multiplicative factor per matching held rune. */
+    xMultPerRune: number;
+}
+
+export const SIGIL_HELD_X_MULT: Record<string, HeldXMultEffect> = {
+    clairvoyant: { element: "psy", xMultPerRune: 1.5 },
+};
+
+/**
+ * Per-sigil per-rune xMult entry. The client uses these to fire one xMult
+ * reveal event per matching held rune in the held phase of the cast timeline.
+ */
+export interface HeldXMultEntry {
+    sigilId: string;
+    handIndex: number;
+    xMultFactor: number;
+}
+
+/**
+ * Compute the total multiplicative xMult factor from held-element xMult
+ * sigils + per-entry breakdown for animation. Excluded indices (typically
+ * the selected/played runes) don't count as "held." Returns `total = 1`
+ * (identity) when no held xMult applies.
+ */
+export function getHeldXMult(
+    sigils: readonly string[],
+    hand: readonly RuneLike[],
+    excludedIndices: ReadonlySet<number> | readonly number[],
+): { total: number; entries: HeldXMultEntry[] } {
+    const excluded = excludedIndices instanceof Set
+        ? excludedIndices
+        : new Set(excludedIndices);
+
+    let total = 1;
+    const entries: HeldXMultEntry[] = [];
+    // Iterate originals BEFORE Mimic copies so each held rune's bubble
+    // sequence reads as "sigil triggers, then Mimic echoes it" — clearer
+    // cause/effect than the raw expansion order. Combined with the stable
+    // handIndex sort below, this produces a per-rune burst:
+    // rune1: orig + mimic, rune2: orig + mimic, ...
+    const expanded = expandMimicSigilsDetailed(sigils);
+    const ordered = [
+        ...expanded.filter(e => !e.isMimicCopy),
+        ...expanded.filter(e => e.isMimicCopy),
+    ];
+    for (const exp of ordered) {
+        const effect = SIGIL_HELD_X_MULT[exp.sigilId];
+        if (!effect) continue;
+        for (let i = 0; i < hand.length; i++) {
+            if (excluded.has(i)) continue;
+            const rune = hand[i];
+            if (!rune || rune.element !== effect.element) continue;
+            total *= effect.xMultPerRune;
+            entries.push({ sigilId: exp.sigilId, handIndex: i, xMultFactor: effect.xMultPerRune });
+        }
+    }
+    entries.sort((a, b) => a.handIndex - b.handIndex);
     return { total, entries };
 }
 
@@ -1382,10 +1475,16 @@ export const SIGIL_DISCARD_HOOKS: Record<string, DiscardHookDefinition> = {
  * the "duplicate a rune to build your Fire deck" loop Magic Mirror is
  * designed around.
  *
- * Hand-mult sigils (Synapse) do NOT count the duplicate for the
- * CURRENT cast — the hook fires after `calculateDamage`, so the
- * duplicate isn't in hand during that call. It will count for future
- * casts where the duplicate is held.
+ * Held-mult sigils (Synapse, Clairvoyant) DO count the predicted
+ * duplicate for the CURRENT cast — `composeCastModifiers` calls
+ * `predictCastHookDuplicates` and feeds the predicted runes into the
+ * held-mult/held-xMult helpers as virtual held entries. This makes
+ * MM+Mimic+Clairvoyant feel "live": casting a solo Psy with MM+Mimic
+ * predicts 2 Psy duplicates → Clairvoyant multiplies xMult by 1.5 × 1.5
+ * = 2.25 for those duplicates on the cast that creates them. The
+ * predicted dups land at virtual indices `hand.length + i`, matching
+ * where `appendHandRune` lands them at fly-complete during the cast
+ * animation, so the held-mult bubble overlay positions correctly.
  *
  * Hooks are pure predicates over the cast context — server and client
  * run them with the same inputs and produce the same effects, so the
@@ -1438,6 +1537,48 @@ export const SIGIL_CAST_HOOKS: Record<string, CastHookDefinition> = {
         },
     },
 };
+
+/**
+ * Predict the runes that SIGIL_CAST_HOOKS would push into the hand for a
+ * given cast — used by `composeCastModifiers` to feed those runes into
+ * held-mult/held-xMult calculations BEFORE the cast hooks actually fire.
+ *
+ * The hooks themselves run server-side AFTER damage calc, so without this
+ * prediction Synapse/Clairvoyant would miss the duplicate on the cast
+ * that creates it. With prediction, Magic Mirror + Clairvoyant feels
+ * "live": casting a solo Psy with MM+Mimic produces 2 predicted Psy
+ * duplicates, and Clairvoyant multiplies the cast's xMult by 1.5 × 1.5
+ * for those duplicates.
+ *
+ * Returns runes in the SAME ORDER cast hooks fire (Mimic-expanded), so
+ * appending them to `hand` produces effective indices that match where
+ * `appendHandRune` lands the duplicates client-side during the cast
+ * animation. Server and client must call this with identical inputs to
+ * stay byte-for-byte consistent.
+ */
+export function predictCastHookDuplicates(
+    sigils: readonly string[],
+    castContext: CastContext,
+): { element: string; rarity: string; level: number }[] {
+    const predicted: { element: string; rarity: string; level: number }[] = [];
+    for (const entry of expandMimicSigilsDetailed(sigils)) {
+        const hook = SIGIL_CAST_HOOKS[entry.sigilId];
+        if (!hook?.onCast) continue;
+        const effects = hook.onCast(castContext);
+        if (!effects) continue;
+        for (const effect of effects) {
+            if (effect.type !== "duplicateRune") continue;
+            const source = castContext.runes[effect.runeIndex];
+            if (!source) continue;
+            predicted.push({
+                element: source.element,
+                rarity: source.rarity,
+                level: source.level,
+            });
+        }
+    }
+    return predicted;
+}
 
 // ============================================================================
 // Category 18 — Cumulative Cast xMult (Big Bang pattern)

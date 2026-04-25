@@ -4,16 +4,20 @@ import {
     getCumulativeCastXMult,
     getElementRuneBonus,
     getHandMultBonus,
+    getHeldXMult,
     getIgnoredResistanceElements,
     getInventoryMultBonus,
     getPlayedMultBonus,
     getSpellTierMultBonus,
     getSpellXMult,
+    predictCastHookDuplicates,
     type AccumulatorXMultEntry,
+    type CastContext,
     type CastRngMultEntry,
     type CumulativeCastXMultEntry,
     type ElementRuneBonusEntry,
     type HandMultEntry,
+    type HeldXMultEntry,
     type InventoryMultEntry,
     type PlayedMultEntry,
     type SpellTierMultEntry,
@@ -41,6 +45,7 @@ import {
  */
 export interface CastModifiersBreakdown {
     handMult: HandMultEntry[];
+    heldXMult: HeldXMultEntry[];
     playedMult: PlayedMultEntry[];
     xMult: SpellXMultEntry[];
     accumulatorXMult: AccumulatorXMultEntry[];
@@ -108,12 +113,41 @@ export interface ComposeCastModifiersArgs {
     runSeed?: number;
     round?: number;
     castNumber?: number;
+    /**
+     * Cast hook context — when provided, `predictCastHookDuplicates` runs
+     * and the resulting predicted runes are appended to the effective
+     * hand passed to held-mult/held-xMult helpers (Synapse, Clairvoyant).
+     * This lets Magic Mirror duplicates count as "held" on the cast that
+     * creates them — without this, duplicates only count starting from
+     * the next cast (which feels broken to the player when MM+Mimic
+     * spawns visible Psy duplicates that don't boost Clairvoyant).
+     *
+     * Predicted-dup virtual indices land at `hand.length + i`, which
+     * matches where `appendHandRune` lands them client-side during the
+     * cast animation — so held-mult bubbles position correctly without
+     * any index remap. Omit to skip prediction (e.g. static previews).
+     */
+    castContext?: CastContext;
 }
 
 export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifiersResult {
-    const { sigils, spellElements, spellTier, hand, selectedIndices, contributingRunes, rawResistances, weaknesses, disabledResistance, sigilAccumulators, runSeed, round, castNumber } = args;
+    const { sigils, spellElements, spellTier, hand, selectedIndices, contributingRunes, rawResistances, weaknesses, disabledResistance, sigilAccumulators, runSeed, round, castNumber, castContext } = args;
 
-    const handMult = getHandMultBonus(sigils, hand, selectedIndices);
+    // Predict cast-hook duplicates (Magic Mirror) and append them to the
+    // effective hand passed into held-mult helpers. Selected indices are
+    // unchanged — they index into the original hand, never into the
+    // appended dup region (indices >= hand.length), so the dups are not
+    // excluded from "held" counting. See ComposeCastModifiersArgs.castContext
+    // for the rationale.
+    const predictedDuplicates = castContext
+        ? predictCastHookDuplicates(sigils, castContext)
+        : [];
+    const effectiveHand = predictedDuplicates.length > 0
+        ? [...hand, ...predictedDuplicates]
+        : hand;
+
+    const handMult = getHandMultBonus(sigils, effectiveHand, selectedIndices);
+    const heldXMult = getHeldXMult(sigils, effectiveHand, selectedIndices);
     const playedMult = getPlayedMultBonus(sigils, contributingRunes);
     const xMult = getSpellXMult(sigils, spellElements);
     const accumulatorXMult = getAccumulatorXMult(sigils, sigilAccumulators ?? {});
@@ -138,11 +172,12 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
 
     return {
         bonusMult: handMult.total + playedMult.total + elementRuneBonus.totalMult + inventoryMult.total + spellTierMult.total + castRngMult.total,
-        xMult: xMult.total * accumulatorXMult.total * cumulativeCastXMult.total,
+        xMult: xMult.total * heldXMult.total * accumulatorXMult.total * cumulativeCastXMult.total,
         effectiveResistances,
         perRuneBaseBonus: elementRuneBonus.perRuneBase,
         breakdowns: {
             handMult: handMult.perSigil,
+            heldXMult: heldXMult.entries,
             playedMult: playedMult.perSigil,
             xMult: xMult.entries,
             accumulatorXMult: accumulatorXMult.entries,

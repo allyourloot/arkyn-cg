@@ -57,9 +57,12 @@ export interface CastBreakdownEvent {
     /**
      * xMult reveal came from SIGIL_SPELL_X_MULT (Supercell / Eruption /
      * Zephyr) — a single spell-level bonus. Timeline fires the sigil-side
-     * "x{factor}" proc bubble for these. Accumulator xMult reveals
-     * (Executioner) carry NEITHER flag and produce no reveal bubble —
-     * Executioner already gets per-crit "+0.1x" bubbles during the cast.
+     * "x{factor}" proc bubble for these. Held-element xMult (Clairvoyant)
+     * does NOT set this flag — its reveal is a per-held-rune bubble
+     * mounted via `heldXMultBubblesForCast`, not a sigil-side bubble.
+     * Accumulator xMult reveals (Executioner) carry NEITHER flag and
+     * produce no reveal bubble — Executioner already gets per-crit
+     * "+0.1x" bubbles during the cast.
      */
     isSpellXMult?: boolean;
     goldDelta?: number;
@@ -90,7 +93,25 @@ export interface CastBreakdownAssembly {
      * → x2 → x2.5 → x3 for a T5 cast).
      */
     xMultBubblesForCast: RuneXMultBubble[][];
-    handMultBubblesForCast: (HandMultBubble | null)[];
+    /**
+     * Per-hand-index ARRAY of "+N Mult" bubbles mounted over held rune
+     * cards when hand-mult sigils (Synapse) proc. Indexed by HAND INDEX;
+     * empty arrays mean no hand-mult sigil triggered on that slot.
+     * Multi-entry arrays appear when Mimic stacks an extra Synapse copy
+     * onto the same Psy rune — both pops stagger on that slot via their
+     * own `delayMs`, mirroring the proc-bubble pattern.
+     */
+    handMultBubblesForCast: HandMultBubble[][];
+    /**
+     * Per-hand-index ARRAY of "x{factor}" bubbles mounted over the held
+     * rune card when held-element xMult sigils (Clairvoyant) proc. Indexed
+     * by HAND INDEX; empty arrays mean no held-xMult sigil triggered on
+     * that slot. Multi-entry arrays appear when Mimic stacks an extra
+     * Clairvoyant copy onto the same Psy rune — both pops stagger on
+     * that slot via their own `delayMs`, mirroring the proc-bubble
+     * pattern.
+     */
+    heldXMultBubblesForCast: RuneXMultBubble[][];
     resolvedSpell: ReturnType<typeof resolveSpell>;
     contributingIndices: number[];
     totalDamage: number;
@@ -474,19 +495,31 @@ function buildHandMultEvents(args: {
     startEventIdx: number;
 }): {
     events: CastBreakdownEvent[];
-    handMultBubblesForCast: (HandMultBubble | null)[];
+    handMultBubblesForCast: HandMultBubble[][];
     nextEventIdx: number;
 } {
     const { handLength, handMultEntries, startEventIdx } = args;
     const events: CastBreakdownEvent[] = [];
-    const handMultBubblesForCast: (HandMultBubble | null)[] = new Array(handLength).fill(null);
+    // Per-slot ARRAY so Mimic-stacked Synapse copies render two staggered
+    // bubbles on the same Psy rune instead of overwriting into a single
+    // bubble. Same shape as `procBubblesForCast` / `xMultBubblesForCast`,
+    // mounted by MultBubbleOverlay. Size up to the highest entry's hand
+    // index so predicted Magic Mirror duplicates (which land at indices
+    // >= handLength) get a slot — they're appended to the DOM via
+    // `appendHandRune` at fly-complete, so `[data-rune-index="N"]` exists
+    // by the time the overlay positions the bubble.
+    const maxIndex = handMultEntries.reduce(
+        (max, e) => Math.max(max, e.handIndex),
+        handLength - 1,
+    );
+    const handMultBubblesForCast: HandMultBubble[][] = Array.from({ length: maxIndex + 1 }, () => []);
     let eventIdx = startEventIdx;
     for (const entry of handMultEntries) {
-        handMultBubblesForCast[entry.handIndex] = {
+        handMultBubblesForCast[entry.handIndex].push({
             amount: entry.multDelta,
             seq: nextBubbleSeq(),
             delayMs: eventIdx * BUBBLE_STAGGER_MS,
-        };
+        });
         events.push({
             base: 0,
             final: 0,
@@ -500,6 +533,72 @@ function buildHandMultEvents(args: {
         eventIdx++;
     }
     return { events, handMultBubblesForCast, nextEventIdx: eventIdx };
+}
+
+// ----- Sub-function: held-element xMult events (Clairvoyant) -----
+
+/**
+ * Emit one xMult event per held rune that matches a held-xMult sigil's
+ * element (Clairvoyant pattern), plus a per-rune "x{factor}" bubble
+ * mounted OVER the held rune card (parallel to Synapse's hand-mult
+ * bubbles, but multiplicative).
+ *
+ * Fires AFTER the played-hand damage sequence and AFTER hand-mult ticks,
+ * so the cast reads as: played damage settles → held-additive ticks
+ * (Synapse) → held-xMult bubbles pop over held Psy runes (Clairvoyant)
+ * → flat-additive ticks → spell-element xMult reveal (Supercell/Eruption)
+ * → total counts up.
+ *
+ * Events carry `isXMult: true` so the timeline multiplies the xMult
+ * pool + ticks the Mult counter + shakes the Clairvoyant sigil. They do
+ * NOT carry `isSpellXMult: true` — the sigil-side reveal bubble is
+ * skipped because the per-held-rune bubble is the reveal channel.
+ */
+function buildHeldXMultEvents(args: {
+    handLength: number;
+    heldXMultEntries: readonly { sigilId: string; handIndex: number; xMultFactor: number }[];
+    startEventIdx: number;
+}): {
+    events: CastBreakdownEvent[];
+    heldXMultBubblesForCast: RuneXMultBubble[][];
+    nextEventIdx: number;
+} {
+    const { handLength, heldXMultEntries, startEventIdx } = args;
+    const events: CastBreakdownEvent[] = [];
+    // Per-slot ARRAY so Mimic-stacked Clairvoyant copies render two
+    // staggered bubbles on the same Psy rune instead of overwriting into
+    // a single bubble. Same shape as `procBubblesForCast` /
+    // `xMultBubblesForCast`, mounted by HeldXMultBubbleOverlay. Size up
+    // to the highest entry's hand index so predicted Magic Mirror
+    // duplicates (which land at indices >= handLength) get a slot —
+    // they're appended to the DOM via `appendHandRune` at fly-complete,
+    // so `[data-rune-index="N"]` exists by the time the overlay positions
+    // the bubble.
+    const maxIndex = heldXMultEntries.reduce(
+        (max, e) => Math.max(max, e.handIndex),
+        handLength - 1,
+    );
+    const heldXMultBubblesForCast: RuneXMultBubble[][] = Array.from({ length: maxIndex + 1 }, () => []);
+    let eventIdx = startEventIdx;
+    for (const entry of heldXMultEntries) {
+        heldXMultBubblesForCast[entry.handIndex].push({
+            factor: entry.xMultFactor,
+            seq: nextBubbleSeq(),
+            delayMs: eventIdx * BUBBLE_STAGGER_MS,
+        });
+        events.push({
+            base: 0,
+            final: 0,
+            isResisted: false,
+            isCritical: false,
+            isProc: false,
+            isXMult: true,
+            xMultFactor: entry.xMultFactor,
+            sigilId: entry.sigilId,
+        });
+        eventIdx++;
+    }
+    return { events, heldXMultBubblesForCast, nextEventIdx: eventIdx };
 }
 
 // ----- Sub-function: flat additive mult events -----
@@ -654,6 +753,22 @@ export function assembleCastBreakdown(args: {
     // resistances match byte-for-byte. The `breakdowns` field carries the
     // per-sigil entries the animation layer uses to build hand bubbles,
     // played-rune mult ticks, and xMult reveal events.
+    // Build the cast hook context so composeCastModifiers can predict
+    // Magic Mirror duplicates and feed them into held-mult helpers
+    // (Synapse, Clairvoyant). Without this, MM duplicates that visibly
+    // appear at fly-complete wouldn't boost the cast that creates them.
+    // Mirrors the server's CastContext build in calculateDamage exactly.
+    const castContextForHooks = {
+        castNumber: arkynStoreInternal.getCastsUsedThisRound() + 1,
+        runeCount: castRunes.length,
+        runes: castRunes.map(r => ({
+            id: r.id,
+            element: r.element,
+            rarity: r.rarity,
+            level: r.level,
+        })),
+    };
+
     const modifiers = composeCastModifiers({
         sigils: ownedSigils,
         spellElements: resolvedSpell
@@ -670,6 +785,7 @@ export function assembleCastBreakdown(args: {
         runSeed: arkynStoreInternal.getRunSeed(),
         round: arkynStoreInternal.getCurrentRound(),
         castNumber: CASTS_PER_ROUND - arkynStoreInternal.getCastsRemaining(),
+        castContext: castContextForHooks,
     });
 
     const breakdown = resolvedSpell
@@ -728,12 +844,25 @@ export function assembleCastBreakdown(args: {
         startEventIdx: runeSection.nextEventIdx,
     });
 
+    // ----- Phase 3.5: held-element xMult (Clairvoyant) -----
+    // Held-in-hand xMult fires immediately after the held-additive (Synapse)
+    // bubbles so all held effects cluster together AFTER the played-hand
+    // damage sequence and BEFORE the spell-element xMult reveal in Phase 5.
+    // Per-held-rune "x{factor}" bubbles are returned alongside the events
+    // so HeldXMultBubbleOverlay can mount them over the matching held rune
+    // cards via `[data-rune-index]`.
+    const heldXMultSection = buildHeldXMultEvents({
+        handLength: hand.length,
+        heldXMultEntries: modifiers.breakdowns.heldXMult,
+        startEventIdx: handMultSection.nextEventIdx,
+    });
+
     // ----- Phase 4: flat additive mult ticks (inventory + cast-rng + spell-tier) -----
     const flatMultSection = buildFlatMultEvents({
         inventoryMultEntries: modifiers.breakdowns.inventoryMult,
         castRngMultEntries: modifiers.breakdowns.castRngMult,
         spellTierMultEntries: modifiers.breakdowns.spellTierMult,
-        startEventIdx: handMultSection.nextEventIdx,
+        startEventIdx: heldXMultSection.nextEventIdx,
     });
 
     // ----- Phase 5: xMult reveal (static + accumulator) -----
@@ -748,12 +877,14 @@ export function assembleCastBreakdown(args: {
     const runeBreakdown: CastBreakdownEvent[] = [
         ...runeSection.events,
         ...handMultSection.events,
+        ...heldXMultSection.events,
         ...flatMultSection.events,
         ...xMultSection.events,
     ];
 
     const hasAnyMultEvent =
         modifiers.breakdowns.handMult.length > 0 ||
+        modifiers.breakdowns.heldXMult.length > 0 ||
         modifiers.breakdowns.playedMult.length > 0 ||
         modifiers.breakdowns.xMult.length > 0 ||
         modifiers.breakdowns.accumulatorXMult.length > 0 ||
@@ -769,6 +900,7 @@ export function assembleCastBreakdown(args: {
         procBubblesForCast: runeSection.procBubblesForCast,
         xMultBubblesForCast: runeSection.xMultBubblesForCast,
         handMultBubblesForCast: handMultSection.handMultBubblesForCast,
+        heldXMultBubblesForCast: heldXMultSection.heldXMultBubblesForCast,
         resolvedSpell,
         contributingIndices,
         totalDamage: procResult.totalDamage,

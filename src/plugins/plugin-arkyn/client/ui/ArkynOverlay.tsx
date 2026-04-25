@@ -33,6 +33,7 @@ import MainMenu from "./MainMenu";
 import SigilBar from "./SigilBar";
 import ItemScene from "./ItemScene";
 import MultBubbleOverlay from "./MultBubble";
+import HeldXMultBubbleOverlay from "./HeldXMultBubble";
 import InfoButton from "./InfoButton";
 import BackgroundMusic from "./BackgroundMusic";
 import BackgroundShader from "./BackgroundShader";
@@ -686,6 +687,7 @@ export default function ArkynOverlay() {
             <BanishAnimation />
             <DrawAnimation />
             <MultBubbleOverlay />
+            <HeldXMultBubbleOverlay />
             <BlackjackAnimation />
             <BackgroundMusic />
             {showRoundEnd && <RoundEndOverlay />}
