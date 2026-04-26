@@ -102,6 +102,40 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     // dead time before the picker reveals. Snap mode instead.
     const prevPackAnimating = useRef(packAnimating);
 
+    // Latches the picker that's currently up so it stays rendered
+    // through its wrapper-exit transition. Without this, the moment the
+    // server clears `pendingAuguryRunes` (after AuguryPicker's apply
+    // animation calls sendApplyTarot), the JSX cascade below would fall
+    // through to `<RuneBagPicker runes={[]} />` while `renderedMode` is
+    // still "picker" — its action panel ("Choose one rune to add to
+    // your pouch") would briefly pop in before the wrapper exit fades
+    // the picker away. Latching the type means the original picker
+    // keeps rendering (with its now-empty arrays — its bottom UI stays
+    // locked invisible from its own exit timeline) until renderedMode
+    // flips to "shop" and unmounts it cleanly.
+    type PickerType = "augury" | "codex" | "rune-bag";
+    const [activePickerType, setActivePickerType] = useState<PickerType | null>(() => {
+        if (pendingAuguryRunes.length > 0) return "augury";
+        if (pendingCodexScrolls.length > 0) return "codex";
+        if (pendingBagRunes.length > 0) return "rune-bag";
+        return null;
+    });
+    useEffect(() => {
+        // Only LATCH when a pending array becomes non-empty. The
+        // empty-everywhere case is the exit transition — leave the
+        // type alone so the picker keeps rendering until renderedMode
+        // unmounts it.
+        if (pendingAuguryRunes.length > 0) setActivePickerType("augury");
+        else if (pendingCodexScrolls.length > 0) setActivePickerType("codex");
+        else if (pendingBagRunes.length > 0) setActivePickerType("rune-bag");
+    }, [pendingAuguryRunes.length, pendingCodexScrolls.length, pendingBagRunes.length]);
+    useEffect(() => {
+        // Once the wrapper exit completes and renderedMode flips back
+        // to "shop", the picker has fully unmounted — clear the latch
+        // so the next pack purchase starts from a clean slate.
+        if (renderedMode === "shop") setActivePickerType(null);
+    }, [renderedMode]);
+
     useLayoutEffect(() => {
         const targetMode: "shop" | "picker" = showPicker ? "picker" : "shop";
         const wasPackAnimating = prevPackAnimating.current;
@@ -418,10 +452,10 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         </div>
         )}
 
-        {renderedMode === "picker" && (
-            pendingAuguryRunes.length > 0
+        {renderedMode === "picker" && activePickerType !== null && (
+            activePickerType === "augury"
                 ? <AuguryPicker ref={pickerContentRef} runes={pendingAuguryRunes} tarotIds={pendingAuguryTarots} />
-            : pendingCodexScrolls.length > 0
+            : activePickerType === "codex"
                 ? <CodexPicker ref={pickerContentRef} scrolls={pendingCodexScrolls} />
                 : <RuneBagPicker ref={pickerContentRef} runes={pendingBagRunes} />
         )}

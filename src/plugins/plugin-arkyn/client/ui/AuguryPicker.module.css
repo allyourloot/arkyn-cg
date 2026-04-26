@@ -310,6 +310,19 @@
     text-align: center;
 }
 
+/* Lock applied to the bottom-UI containers (tarot row, element row,
+   action panel) at the tail of the apply exit-slide. GSAP has already
+   tweened them to opacity:0 + translateY(90px), but the schema-sync
+   re-render that follows can perturb the inline styles enough that the
+   action panel briefly pops back into view before the picker wrapper
+   exits. visibility:hidden is independent of opacity and survives a
+   re-render, and pointer-events:none guarantees the disabled buttons
+   don't receive a stray click during the wrapper exit. */
+.exited {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
 /* ── Action panel (Apply + Skip). Anchored at the wrapper's bottom. ── */
 .actionPanel {
     box-sizing: border-box;

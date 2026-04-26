@@ -133,15 +133,16 @@ Apply enabled when: rune count ∈ `[effectiveMin, effectiveMax]` AND element ch
 Each picked slot gets one of three animation kinds:
 - `"flip"` — 3D rotateY 0→180°, back face shows the predicted mutated rune. Used for `convertElement`, `upgradeRarity`, `consecrate`.
 - `"fade"` — DissolveCanvas tear (shared shader with the cast pipeline). Used for `banish`, `banishForGold`, `fuse` (both source runes), `wheelReroll`.
-- `"pulse"` — scale 1→1.3→1 with the original rune staying visible. Used for `duplicate` (originals don't change; copies appear elsewhere).
+- `"pulse"` — scale 1→1.3→1 with the original rune staying visible. Used for `duplicate` (originals don't change; copies materialize in spawn slots to the right of the row — see Spawned-Rune Prediction below).
 
 `applyStartTime` (`performance.now()`) is captured at click and threaded into every DissolveCanvas so all dissolves share a synchronized clock.
 
-### Spawned-Rune Prediction (Lovers / World)
+### Spawned-Rune Prediction (Lovers / World / Magician)
 
 `computeSpawnedRunes()` mirrors the server's apply-time RNG byte-for-byte to predict the rune the picker should materialize:
 - **Lovers**: max(rarity) + 1, chosen element. Deterministic from the picker state — no RNG needed.
 - **World**: requires `+1` bump RNG (`AUGURY_PACK_RNG_OFFSET + packIndex * 7919 + 1`); draws element + rarity exactly the way the server will. The preview is reverse-materialized via DissolveCanvas (shader runs backwards: `t: 1 → 0`) so the player sees the new rune *appear* before the exit animation.
+- **Magician**: clones each picked rune (same element / rarity / level), one spawn slot per pick. No RNG — the spawns are a 1:1 mirror of the server's `add.push({ ...r })` loop. The originals still pulse in their slots so the player can see what was duplicated; the new copies materialize alongside before the exit fly to the pouch.
 
 If the client's RNG diverges from the server's, the picker shows a different rune than the player ends up with — keep these two RNG paths in lockstep when touching either side.
 

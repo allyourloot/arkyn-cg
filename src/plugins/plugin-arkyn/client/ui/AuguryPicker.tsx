@@ -121,6 +121,26 @@ function computeSpawnedRunes(
             level: 1,
         }];
     }
+    if (effect.type === "duplicate") {
+        // Magician — picked runes pulse in place while a clone of
+        // each one materializes in a spawn slot to the right of the
+        // row (same reverse-dissolve treatment Lovers/World use).
+        // Mirrors the server's `add.push({ ...r })` per picked rune
+        // in handleApplyTarot, so the visual count + rune identities
+        // match what acquiredRunes will receive.
+        const out: RuneClientData[] = [];
+        for (let i = 0; i < pickedIndices.length; i++) {
+            const r = runes[pickedIndices[i]];
+            if (!r) continue;
+            out.push({
+                id: `augury-spawn-magician-${i}`,
+                element: r.element,
+                rarity: r.rarity,
+                level: r.level,
+            });
+        }
+        return out;
+    }
     return [];
 }
 
@@ -271,6 +291,19 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
     // (which counts selections) stays stable while the panel slides
     // off-screen.
     const [loweredForExit, setLoweredForExit] = useState(false);
+    // Flipped on at the tail of the bottom-UI slide so the tarot row /
+    // element row / action panel get a CSS-class lock (visibility +
+    // pointer-events) on top of GSAP's inline opacity:0. Without this,
+    // when the schema-sync clears `pendingAuguryTarots` after the apply
+    // exit, AuguryPicker re-renders with `tarotIds=[]` (the tarot row
+    // empties out) which triggers a layout reflow on the parent flex
+    // wrapper. The reflow recomputes the action panel's natural width,
+    // and because GSAP serialized the centering `translateX(-50%)`
+    // baseline into a pixel value at slide-start, the panel briefly
+    // pops back into view before the ShopScreen wrapper exit fades
+    // it away with the picker. The visibility lock kicks in 1 frame
+    // after the slide finishes so the slide visual itself is intact.
+    const [bottomUIExited, setBottomUIExited] = useState(false);
     // Shared timestamp captured at Apply-click time; every fade-anim
     // slot's DissolveCanvas reads this so the dissolves all start in
     // lockstep instead of each picking its own performance.now() at
@@ -506,6 +539,13 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                 ease: "power2.in",
             }, 0);
         }
+
+        // Once the slide is done, lock the bottom UI invisible via CSS
+        // class. See the `bottomUIExited` state comment for the full
+        // reflow story — the short version is: the schema sync that
+        // follows sendMessage() re-renders the picker with empty arrays,
+        // and we need a non-inline lock to survive that paint.
+        exitTl.call(() => setBottomUIExited(true), undefined, EXIT_SLIDE_S);
 
         // Safety floor — guarantees onComplete fires even when no flyers
         // and no slide targets exist (shouldn't happen, but defensive).
@@ -801,7 +841,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             )}
 
             {activeTarot?.requiresElement && (
-                <div ref={elementRowRef} className={styles.elementRow}>
+                <div ref={elementRowRef} className={`${styles.elementRow} ${bottomUIExited ? styles.exited : ""}`}>
                     {ELEMENT_TYPES.map(el => {
                         const isSelected = selectedElement === el;
                         const color = ELEMENT_COLORS[el] ?? "#b0b0b0";
@@ -826,7 +866,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                 </div>
             )}
 
-            <div ref={tarotRowRef} className={styles.tarotRow}>
+            <div ref={tarotRowRef} className={`${styles.tarotRow} ${bottomUIExited ? styles.exited : ""}`}>
                 {tarotIds.map((tarotId, i) => {
                     const def = TAROT_DEFINITIONS[tarotId];
                     if (!def) return null;
@@ -867,7 +907,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                 })}
             </div>
 
-            <div ref={actionPanelRef} className={styles.actionPanel} style={{ ...panelStyleVars, ...buttonVars }}>
+            <div ref={actionPanelRef} className={`${styles.actionPanel} ${bottomUIExited ? styles.exited : ""}`} style={{ ...panelStyleVars, ...buttonVars }}>
                 <div className={styles.promptStrip}>
                     <span className={styles.prompt}>{prompt}</span>
                 </div>
