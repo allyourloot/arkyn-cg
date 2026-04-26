@@ -49,6 +49,7 @@ import { getScrollImageUrl } from "./scrollAssets";
 import { getSigilImageUrl } from "./sigilAssets";
 import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
 import DissolveCanvas from "./DissolveCanvas";
+import BurstCanvas from "./BurstCanvas";
 import { playCount, playDissolve } from "../sfx";
 import "./shared-animations.css";
 import styles from "./ArkynOverlay.module.css";
@@ -386,15 +387,23 @@ export default function ArkynOverlay() {
             const cx = window.innerWidth / 2;
             const cy = window.innerHeight / 2;
             playDissolve();
+            // Burst canvas is expanded beyond the pack rect so fragments
+            // have room to fly outward into surrounding empty space.
+            // Must match BurstShader's PACK_SCALE constant — the shader
+            // assumes the pack texture occupies the central 1/PACK_SCALE
+            // of the canvas in both dimensions.
+            const burstScale = 1.8;
+            const burstW = dissolveW * burstScale;
+            const burstH = dissolveH * burstScale;
             setPackDissolveData({
                 imageUrl,
                 element: dissolveElement,
                 startTime: performance.now(),
-                x: cx - dissolveW / 2,
-                y: cy - dissolveH / 2,
-                width: dissolveW,
-                height: dissolveH,
-                bufSize: Math.max(dissolveW, dissolveH),
+                x: cx - burstW / 2,
+                y: cy - burstH / 2,
+                width: burstW,
+                height: burstH,
+                bufSize: Math.max(burstW, burstH),
             });
             el.style.visibility = "hidden";
         });
@@ -841,7 +850,7 @@ export default function ArkynOverlay() {
                     browser fits the canvas's intrinsic 1:1 buffer aspect
                     inside the rect and the dissolve appears square. */}
                 {packDissolveData && (
-                    <DissolveCanvas
+                    <BurstCanvas
                         element={packDissolveData.element}
                         imageUrl={packDissolveData.imageUrl}
                         startTime={packDissolveData.startTime}
@@ -853,7 +862,6 @@ export default function ArkynOverlay() {
                             top: packDissolveData.y,
                             width: packDissolveData.width,
                             height: packDissolveData.height,
-                            objectFit: "fill",
                         }}
                     />
                 )}
