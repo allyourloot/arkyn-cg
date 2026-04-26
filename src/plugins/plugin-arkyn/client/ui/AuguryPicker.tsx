@@ -17,7 +17,7 @@ import {
     type TarotDefinition,
     type ElementType,
 } from "../../shared";
-import { playButton, playBuy, playSelectRune, playDeselectRune } from "../sfx";
+import { playButton, playBuy, playSelectRune, playDeselectRune, playDropRuneReverse } from "../sfx";
 import RuneImage from "./RuneImage";
 import Tooltip from "./Tooltip";
 import DissolveCanvas from "./DissolveCanvas";
@@ -219,6 +219,10 @@ const ANIM_FLIP_S = 0.6;
 const ANIM_PULSE_UP_S = 0.2;
 const ANIM_PULSE_DOWN_S = 0.25;
 const ANIM_HOLD_S = 0.35;
+// Settle window after the lift/glow is dropped — long enough for the
+// rune slot's 120ms CSS transform transition to finish so GSAP reads
+// the lowered bounding rects when the fly to the pouch begins.
+const ANIM_LOWER_SETTLE_S = 0.18;
 // Fade slots use the shared DissolveCanvas (same shader the cast
 // pipeline uses to tear played runes apart). Keep its full duration in
 // sync with the rest of the apply timeline.
@@ -259,6 +263,14 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
     // sends and the picker is about to unmount via schema sync.
     const [slotAnims, setSlotAnims] = useState<Map<number, SlotAnim>>(() => new Map());
     const [isApplying, setIsApplying] = useState(false);
+    // Flipped on after the apply animation finishes so the still-raised
+    // selected slots drop their `runeSlotSelected` class — that triggers
+    // the slot's CSS transform transition, easing the lift + glow back
+    // into the row before the fly to the pouch begins. Kept separate
+    // from `selectedRuneIndices` so the action panel's prompt text
+    // (which counts selections) stays stable while the panel slides
+    // off-screen.
+    const [loweredForExit, setLoweredForExit] = useState(false);
     // Shared timestamp captured at Apply-click time; every fade-anim
     // slot's DissolveCanvas reads this so the dissolves all start in
     // lockstep instead of each picking its own performance.now() at
@@ -417,6 +429,15 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
 
         const exitTl = gsap.timeline({ onComplete: sendMessage });
 
+        // Reverse counterpart of DrawAnimation's rising scale (-300
+        // cents stepping +100 per drawn rune): start the cascade up
+        // top and step DOWN so the fly back to the pouch reads as the
+        // draw arpeggio rewinding. Combined with the time-reversed
+        // SFX buffer (playDropRuneReverse), each rune's tap also plays
+        // backwards, doubling down on the "draw, but in reverse" feel.
+        const flySfxBaseCents = 100;
+        const flySfxStepCents = -100;
+
         // Fly each surviving picker rune to the pouch. Skip dissolved
         // (fade) slots — they're already gone visually. Stagger so the
         // runes leave the row in a soft cascade.
@@ -432,6 +453,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             // Disable the slot's CSS transition so it doesn't fight the
             // GSAP per-frame transform writes during the fly.
             slot.style.transition = "none";
+            const cents = flySfxBaseCents + flyOrder * flySfxStepCents;
             exitTl.to(slot, {
                 x: dx,
                 y: dy,
@@ -439,6 +461,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                 opacity: 0,
                 duration: EXIT_FLY_S,
                 ease: "power2.in",
+                onStart: () => playDropRuneReverse(cents),
             }, flyOrder * EXIT_FLY_STAGGER_S);
             flyOrder++;
         }
@@ -453,6 +476,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             const dx = pouchCenter.x - (slotRect.left + slotRect.width / 2);
             const dy = pouchCenter.y - (slotRect.top + slotRect.height / 2);
             slot.style.transition = "none";
+            const cents = flySfxBaseCents + flyOrder * flySfxStepCents;
             exitTl.to(slot, {
                 x: dx,
                 y: dy,
@@ -460,6 +484,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                 opacity: 0,
                 duration: EXIT_FLY_S,
                 ease: "power2.in",
+                onStart: () => playDropRuneReverse(cents),
             }, flyOrder * EXIT_FLY_STAGGER_S);
             flyOrder++;
         }
@@ -585,6 +610,18 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             // Brief hold so the player can read the final state before
             // the picker slides out.
             tl.to({}, { duration: ANIM_HOLD_S });
+            // Drop the still-raised converted slots back to their
+            // resting position. Removing the `runeSlotSelected` class
+            // via state triggers the rune slot's 120ms CSS transform
+            // transition so the lift + glow eases out before the fly
+            // to the pouch begins. Without this, the class's
+            // `translateY(-14px) !important` overrides GSAP's `y`
+            // tween and the converted runes only fade in place while
+            // their neighbors fly home. The settle tween below absorbs
+            // the CSS transition so `runExitTimeline` reads the
+            // lowered bounding rects.
+            tl.call(() => setLoweredForExit(true));
+            tl.to({}, { duration: ANIM_LOWER_SETTLE_S });
         });
     };
 
@@ -641,7 +678,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                                     key={`${rune.id}-${i}`}
                                     ref={el => { slotRefs.current[i] = el; }}
                                     type="button"
-                                    className={`${styles.runeSlot} ${isSelected ? styles.runeSlotSelected : ""} ${dimmed ? styles.runeSlotDimmed : ""}`}
+                                    className={`${styles.runeSlot} ${isSelected && !loweredForExit ? styles.runeSlotSelected : ""} ${dimmed ? styles.runeSlotDimmed : ""}`}
                                     style={{ zIndex: isSelected ? 100 : i } as CSSProperties}
                                     onClick={() => handleRuneClick(i)}
                                     disabled={isApplying}

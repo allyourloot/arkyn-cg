@@ -18,7 +18,7 @@ import {
 } from "../arkynStore";
 import { MAX_SIGILS, REROLL_COST, PACK_DEFINITIONS, type PackType } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
-import { playButton, playBuy } from "../sfx";
+import { playButton, playBuy, playOpenPack } from "../sfx";
 import { RARITY_COLORS, createPanelStyleVars } from "./styles";
 import { getPackImageUrl } from "./packAssets";
 import ItemScene from "./ItemScene";
@@ -194,7 +194,16 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             dissolveElement: def.dissolveElement,
         });
         sendBuyItem(shopIndex);
-        playBuy();
+        // Tarot/scroll packs swap the generic buy chime for the
+        // open-pack SFX — the sound is the player's first cue that
+        // a picker is about to mount, so the more thematic "rip" reads
+        // as the pack itself opening rather than a regular purchase.
+        // Rune Bag keeps playBuy since it isn't a sealed pack visually.
+        if (packId === "auguryPack" || packId === "codexPack") {
+            playOpenPack();
+        } else {
+            playBuy();
+        }
         setSelectedShopIndex(null);
     };
 

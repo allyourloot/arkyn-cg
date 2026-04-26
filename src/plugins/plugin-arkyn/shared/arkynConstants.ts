@@ -95,7 +95,7 @@ export const CODEX_PACK_CHOICES = 4;        // scrolls shown in the picker
 // The rune count matches HAND_SIZE so the picker row reads visually
 // like the player's hand. Same "no other pack picker is open" gate as
 // Rune Bag and Codex Pack.
-export const AUGURY_PACK_COST = 5;
+export const AUGURY_PACK_COST = 4;
 export const AUGURY_PACK_RUNE_CHOICES = 8;  // matches HAND_SIZE
 export const AUGURY_PACK_TAROT_CHOICES = 5;
 export const TAROT_BANISH_GOLD = 3;          // Tower per-rune payout

@@ -4,7 +4,7 @@ Architectural overview of the Tarot subsystem — a shop-purchased "Augury Pack"
 
 ## Game Flow
 
-1. Player buys an **Augury Pack** in the shop (`AUGURY_PACK_COST = 5` gold).
+1. Player buys an **Augury Pack** in the shop (`AUGURY_PACK_COST = 4` gold).
 2. Server rolls 5 distinct tarot IDs + 8 runes sampled without replacement from the player's live pouch (matches `HAND_SIZE` so the row reads visually like a hand). Both rolls are deterministic from `(runSeed, round, auguryPurchaseCount)`.
 3. Pending state is pushed onto `player.pendingAuguryRunes` + `player.pendingAuguryTarots`. Client mounts `AuguryPicker.tsx` over the shop.
 4. Player selects up to 3 runes (universal cap = highest `maxTargets` across all tarots), picks one tarot, optionally picks an element (for `requiresElement` tarots), and clicks Apply.

@@ -20,6 +20,7 @@ import typewriterUrl from "/assets/audio/sfx/typewriter.mp3?url";
 import addConsumableUrl from "/assets/audio/sfx/add-consumable.mp3?url";
 import blackjackUrl from "/assets/audio/sfx/blackjack.mp3?url";
 import bellUrl from "/assets/audio/sfx/bell.mp3?url";
+import openPackUrl from "/assets/audio/sfx/open-pack.mp3?url";
 import { getAudioContext } from "./audioContext";
 import { haptic, HAPTIC_LIGHT, HAPTIC_MEDIUM } from "./haptics";
 
@@ -93,6 +94,38 @@ function makeDetuneSfx(url: string, volume: number) {
     };
 }
 
+// Time-reversed variant of makeDetuneSfx — flips each channel's PCM
+// data once at decode time so subsequent plays read out the SFX
+// backwards. Web Audio doesn't allow negative `playbackRate` on
+// AudioBufferSourceNode in Chromium, so we materialize the reversal
+// into the buffer instead. Pairs with the rune fly-back-to-pouch
+// animation in the Augury picker, which wants the draw SFX rewound.
+function makeReverseDetuneSfx(url: string, volume: number) {
+    let buffer: AudioBuffer | null = null;
+    fetch(url)
+        .then(res => res.arrayBuffer())
+        .then(arr => getAudioContext().decodeAudioData(arr))
+        .then(decoded => {
+            for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
+                decoded.getChannelData(ch).reverse();
+            }
+            buffer = decoded;
+        })
+        .catch(() => { /* silent */ });
+
+    return (detuneCents = 0) => {
+        if (!buffer) return;
+        const ctx = getAudioContext();
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.detune.value = detuneCents;
+        const gain = ctx.createGain();
+        gain.gain.value = volume;
+        source.connect(gain).connect(ctx.destination);
+        source.start();
+    };
+}
+
 // Tap-triggered SFX also emit a haptic buzz via navigator.vibrate so
 // mobile taps feel tactile (Android only — iOS WebKit no-ops; see
 // haptics.ts). Animation-driven SFX (damage/count/gold/critical/etc.)
@@ -114,6 +147,12 @@ export function playDeselectRune(): void {
 export const playPickupRune = () => { haptic(HAPTIC_LIGHT); playRuneSfx(1.3); };
 const playDropRuneSfx = makeDetuneSfx(dropRuneUrl, VOL_RUNE);
 export const playDropRune = (cents = 0) => { haptic(HAPTIC_LIGHT); playDropRuneSfx(cents); };
+// Reverse-buffer companion of playDropRune. Used when runes return to
+// the pouch (e.g. Augury exit animation) so the draw SFX plays in
+// rewind, giving the inverse motion an audible counterpart to the
+// staggered draw scale.
+const playDropRuneReverseSfx = makeReverseDetuneSfx(dropRuneUrl, VOL_RUNE);
+export const playDropRuneReverse = (cents = 0) => { haptic(HAPTIC_LIGHT); playDropRuneReverseSfx(cents); };
 const playPlaceRuneSfx = makeSfx(placeRuneUrl, VOL_DEFAULT);
 export const playPlaceRune = (rate = 1) => { haptic(HAPTIC_LIGHT); playPlaceRuneSfx(rate); };
 // Animation-only (no haptic): count, damage, cast-rune during cast,
@@ -145,6 +184,8 @@ const playMenuCloseSfx = makeSfx(menuCloseUrl, VOL_MENU);
 export const playMenuClose = (rate = 1) => { haptic(HAPTIC_LIGHT); playMenuCloseSfx(rate); };
 const playBuySfx = makeSfx(buyUrl, VOL_DEFAULT);
 export const playBuy = (rate = 1) => { haptic(HAPTIC_MEDIUM); playBuySfx(rate); };
+const playOpenPackSfx = makeSfx(openPackUrl, VOL_DEFAULT);
+export const playOpenPack = (rate = 1) => { haptic(HAPTIC_MEDIUM); playOpenPackSfx(rate); };
 const playButtonSfx = makeSfx(buttonUrl, VOL_DEFAULT);
 export const playButton = (rate = 1) => { haptic(HAPTIC_MEDIUM); playButtonSfx(rate); };
 const playAddConsumableSfx = makeSfx(addConsumableUrl, VOL_DEFAULT);
