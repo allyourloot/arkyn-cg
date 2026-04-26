@@ -1,0 +1,234 @@
+/* Mirrors RuneBagPicker.module.css. Scroll cards are slightly larger
+   than rune cards so the script-style art reads at this distance, and
+   each card carries an element-colored label below the art. */
+.wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: clamp(480px, 60vw, 860px);
+    height: 72vh;
+    pointer-events: auto;
+}
+
+.grid {
+    display: flex;
+    flex-direction: row;
+    gap: clamp(20px, 3vw, 48px);
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.card {
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 120ms ease-out, filter 120ms ease-out;
+    image-rendering: pixelated;
+}
+
+.card:hover {
+    transform: translateY(-6px);
+    filter: brightness(1.08);
+}
+
+.cardSelected,
+.cardSelected:hover {
+    transform: translateY(-10px);
+    filter: brightness(1.15);
+}
+
+/* Idle float — same keyframes used by hand cards / RuneBagPicker. */
+.scrollWrap {
+    position: relative;
+    width: clamp(72px, 9vw, 128px);
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: codex-pick-float 3.6s ease-in-out infinite;
+    will-change: transform, filter;
+    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+}
+
+@keyframes codex-pick-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+/* ItemScene wrapper — renders the glossy hover/tilt shader at full
+   60fps via the `smoothIdle` prop so the WebGL highlight stays in
+   sync with the 60fps wrapper bob. */
+.scrollCanvas {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+}
+
+/* 9-slice frame.png panel anchored to wrapper's bottom edge. */
+.actionPanel {
+    box-sizing: border-box;
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 20px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 20px 20px 20px 20px;
+    padding: clamp(10px, 1.4vh, 18px) clamp(18px, 2.4vw, 32px) clamp(12px, 1.6vh, 20px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(10px, 1.4vh, 18px);
+    image-rendering: pixelated;
+}
+
+.promptStrip {
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: clamp(4px, 0.8vh, 8px) clamp(12px, 1.8vw, 22px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    image-rendering: pixelated;
+}
+
+.prompt {
+    font-size: clamp(var(--font-size-2xs), 1.3vw, var(--font-size-xs));
+    color: #e8d4b8;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+}
+
+.buttonRow {
+    display: flex;
+    gap: clamp(12px, 1.8vw, 24px);
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.selectButton,
+.skipButton {
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 9px;
+    background-color: transparent;
+    color: #fff;
+    font-family: inherit;
+    font-size: clamp(var(--font-size-2xs), 1.7vw, var(--font-size-sm));
+    font-weight: normal;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+    cursor: pointer;
+    image-rendering: pixelated;
+    line-height: 1;
+    padding: clamp(6px, 1vh, 11px) clamp(18px, 2.5vw, 30px);
+    transition: transform 80ms ease-out;
+    flex-shrink: 0;
+    pointer-events: auto;
+}
+
+.selectButton {
+    border-image: var(--btn-bg) 10 10 10 10 fill / 9px 9px 9px 9px;
+}
+
+.selectButton:hover:not(:disabled) {
+    border-image: var(--btn-bg-hover) 10 10 10 10 fill / 9px 9px 9px 9px;
+}
+
+.selectButton:disabled {
+    border-image: var(--btn-bg-disabled) 10 10 10 10 fill / 9px 9px 9px 9px;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.skipButton {
+    border-image: var(--skip-bg) 10 10 10 10 fill / 9px 9px 9px 9px;
+}
+
+.skipButton:hover {
+    border-image: var(--skip-bg-hover) 10 10 10 10 fill / 9px 9px 9px 9px;
+}
+
+.selectButton:active,
+.skipButton:active {
+    transform: translateY(2px);
+}
+
+@media (max-height: 500px) {
+    .wrapper {
+        height: 56vh;
+        padding-bottom: clamp(30px, 6vh, 50px);
+        margin-top: clamp(-40px, -7vh, -25px);
+        gap: clamp(8px, 2vh, 16px);
+    }
+    .grid {
+        gap: clamp(10px, 2vw, 24px);
+    }
+    .scrollWrap {
+        width: clamp(56px, 8vw, 88px);
+    }
+    .actionPanel {
+        border-width: 10px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
+        padding: 4px 10px 5px;
+        gap: 4px;
+    }
+    .promptStrip {
+        border-width: 6px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        padding: 2px 8px;
+    }
+    .prompt {
+        font-size: var(--font-size-3xs);
+        letter-spacing: 1px;
+    }
+    .buttonRow {
+        gap: clamp(8px, 1.4vw, 18px);
+    }
+    .selectButton,
+    .skipButton {
+        font-size: var(--font-size-2xs);
+        padding: 3px 14px;
+        border-width: 6px;
+    }
+    .selectButton {
+        border-image: var(--btn-bg) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+    .selectButton:hover:not(:disabled) {
+        border-image: var(--btn-bg-hover) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+    .selectButton:disabled {
+        border-image: var(--btn-bg-disabled) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+    .skipButton {
+        border-image: var(--skip-bg) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+    .skipButton:hover {
+        border-image: var(--skip-bg-hover) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+}

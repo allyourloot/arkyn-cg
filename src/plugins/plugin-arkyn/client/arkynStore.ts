@@ -165,9 +165,15 @@ let ahoyDiscardElement = "";
 let acquiredRunes: RuneClientData[] = [];
 
 // In-flight Rune Bag picker state. Non-empty -> the player has just
-// bought a bag; ShopScreen hides its Sigils/Consumables panel and the
-// Next Round button, then shows the picker with these 4 runes.
+// bought a bag; ShopScreen hides its Items/Packs panel and the Next
+// Round button, then shows the picker with these 4 runes.
 let pendingBagRunes: RuneClientData[] = [];
+
+// In-flight Codex Pack picker state. Same role as pendingBagRunes but
+// for the Codex Pack picker — each entry is an element name (string).
+// Non-empty -> the player has just bought a Codex Pack; ShopScreen
+// shows the CodexPicker with these 4 scroll choices.
+let pendingCodexScrolls: string[] = [];
 
 // Runes permanently banished this run (Banish sigil). Mirrored from the
 // server so PouchCounter can shrink its denominator and future UI
@@ -362,6 +368,9 @@ export function setAcquiredRunes(r: RuneClientData[]) { acquiredRunes = r; notif
 export function setPendingBagRunes(r: RuneClientData[]) { pendingBagRunes = r; notify(); }
 export function setBanishedRunes(r: RuneClientData[]) { banishedRunes = r; notify(); }
 
+// Codex Pack setters
+export function setPendingCodexScrolls(s: string[]) { pendingCodexScrolls = s; notify(); }
+
 /**
  * Append a single rune to the per-run `acquiredRunes` list client-side.
  * Used by Magic Mirror's cast-hook prediction so PouchCounter /
@@ -455,6 +464,44 @@ export function onBagRunePick(fn: BagRunePickListener) {
 }
 export function emitBagRunePick(e: BagRunePickEvent) {
     bagRunePickListeners.forEach(fn => fn(e));
+}
+
+// Pack purchase event — fired from ShopScreen when the player buys any
+// pack-type shop item. ArkynOverlay listens and runs the fly-to-center
+// + dissolve animation before the picker mounts. `dissolveElement` is
+// the element name keyed into ELEMENT_COLORS for the shader edge glow.
+// `naturalAspect` (width / height) drives the fly + dissolve target box
+// so non-square pack art (Codex Pack is 89x160) doesn't distort.
+export type PackPurchaseEvent = {
+    packId: string;
+    imageUrl: string;
+    fromRect: DOMRect;
+    naturalAspect: number;
+    dissolveElement: string;
+};
+type PackPurchaseListener = (e: PackPurchaseEvent) => void;
+const packPurchaseListeners = new Set<PackPurchaseListener>();
+export function onPackPurchase(fn: PackPurchaseListener) {
+    packPurchaseListeners.add(fn);
+    return () => { packPurchaseListeners.delete(fn); };
+}
+export function emitPackPurchase(e: PackPurchaseEvent) {
+    packPurchaseListeners.forEach(fn => fn(e));
+}
+
+// Pack animation gate. Flipped on by ShopScreen's pack-buy click,
+// flipped off by ArkynOverlay's pack-fly+dissolve timeline cleanup.
+// ShopScreen ANDs this with the schema-synced `pendingX` arrays to
+// decide whether the picker should be mounted, so the picker doesn't
+// slide in mid-dissolve when the server's schema patch lands first.
+let packAnimating = false;
+export function setPackAnimating(v: boolean) {
+    if (packAnimating === v) return;
+    packAnimating = v;
+    notify();
+}
+export function usePackAnimating() {
+    return useSyncExternalStore(subscribe, () => packAnimating);
 }
 
 // Sigil slot rect registry — SigilBar writes, ArkynOverlay reads.
@@ -755,6 +802,10 @@ export function useAhoyDiscardElement() { return useSyncExternalStore(subscribe,
 export function useAcquiredRunes() { return useSyncExternalStore(subscribe, () => acquiredRunes); }
 export function usePendingBagRunes() { return useSyncExternalStore(subscribe, () => pendingBagRunes); }
 export function useBanishedRunes() { return useSyncExternalStore(subscribe, () => banishedRunes); }
+
+// Codex Pack hook — non-empty means the picker is open with these
+// 4 scroll element choices.
+export function usePendingCodexScrolls() { return useSyncExternalStore(subscribe, () => pendingCodexScrolls); }
 export function useDiscardsUsedThisRound() { return useSyncExternalStore(subscribe, () => discardsUsedThisRound); }
 export function useCastsUsedThisRound() { return useSyncExternalStore(subscribe, () => castsUsedThisRound); }
 export function useMaterializingRune() { return useSyncExternalStore(subscribe, () => materializingRune); }
@@ -780,7 +831,7 @@ export function useBestSingleCast() { return useSyncExternalStore(subscribe, () 
 // ============================================================
 
 export { subscribe } from "./arkynStoreCore";
-export { setConnection, joinGame, sendReady, sendCollectRoundGold, sendNewRun, sendBuyItem, sendSellSigil, sendReorderSigils, sendUseConsumable, sendBagChoice, sendRerollShop } from "./arkynNetwork";
+export { setConnection, joinGame, sendReady, sendCollectRoundGold, sendNewRun, sendBuyItem, sendSellSigil, sendReorderSigils, sendUseConsumable, sendBagChoice, sendCodexChoice, sendRerollShop } from "./arkynNetwork";
 export {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,

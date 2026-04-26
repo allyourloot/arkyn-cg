@@ -1,17 +1,20 @@
 import {
-    ELEMENT_TYPES,
     RUNE_BAG_RARITY_WEIGHTS,
-    SHOP_SCROLL_COUNT,
+    SHOP_PACK_COUNT,
     SHOP_SIGIL_COUNT,
     type RarityType,
 } from "./arkynConstants";
+import { PACK_TYPES, type PackType } from "./packs";
 import { createRoundRng } from "./seededRandom";
 import { SIGIL_DEFINITIONS, SIGIL_IDS } from "./sigils";
 
 // RNG namespace offsets — must differ from enemy selection (0), boss
 // debuff (50000), and voltage proc (300000) to avoid correlation.
-const SHOP_SCROLL_RNG_OFFSET = 100000;
 const SHOP_SIGIL_RNG_OFFSET = 200000;
+// Pack-slot rolls live in their own band, distinct from Rune Bag's roll
+// band (400000) so the pack-type pick can't correlate with the rune
+// rarities rolled inside the bag.
+const SHOP_PACK_RNG_OFFSET = 500000;
 // Stride between reroll iterations of the same (seed, round) shop. 1000
 // is larger than any realistic `round` count so adjacent rounds' sigil
 // rolls can't collide with an earlier round's Nth reroll.
@@ -23,20 +26,18 @@ const SHOP_SIGIL_REROLL_STRIDE = 1000;
 const SHOP_SIGIL_RARITY_WEIGHTS = RUNE_BAG_RARITY_WEIGHTS;
 
 /**
- * Deterministically generate the scroll elements offered in the shop for
- * a given round. Two runs with the same seed see the same scroll
- * offerings on the same round.
- *
- * Returns an array of distinct element names (length = SHOP_SCROLL_COUNT).
+ * Deterministically generate the pack types offered in the shop for a
+ * given round. Each of the SHOP_PACK_COUNT slots rolls independently and
+ * uniformly from PACK_TYPES — duplicates within one shop are allowed
+ * (e.g. 2 Rune Bags, or 1 Rune Bag + 1 Codex Pack). Two runs with the
+ * same seed see the same pack offerings on the same round.
  */
-export function generateShopScrolls(seed: number, round: number): string[] {
-    const rng = createRoundRng(seed, round + SHOP_SCROLL_RNG_OFFSET);
-    const pool = [...ELEMENT_TYPES];
-    const picks: string[] = [];
-    for (let i = 0; i < SHOP_SCROLL_COUNT; i++) {
-        const idx = Math.floor(rng() * pool.length);
-        picks.push(pool[idx]);
-        pool.splice(idx, 1); // no duplicates within same shop
+export function generateShopPacks(seed: number, round: number): PackType[] {
+    const rng = createRoundRng(seed, round + SHOP_PACK_RNG_OFFSET);
+    const picks: PackType[] = [];
+    for (let i = 0; i < SHOP_PACK_COUNT; i++) {
+        const idx = Math.floor(rng() * PACK_TYPES.length);
+        picks.push(PACK_TYPES[idx]);
     }
     return picks;
 }

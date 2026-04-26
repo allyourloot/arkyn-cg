@@ -47,17 +47,22 @@ export function isRarity(s: string): s is RarityType {
 // Scroll item configuration
 export const SCROLL_COST = 2;
 export const SCROLL_RUNE_BONUS = 2;   // +2 per-rune base damage per scroll
-export const SHOP_SCROLL_COUNT = 2;   // scroll slots shown per shop visit
 
 // Sigil item configuration
 export const MAX_SIGILS = 6;          // max sigils a player can hold
 export const SHOP_SIGIL_COUNT = 2;    // sigil slots shown per shop visit
 
 // Shop reroll configuration. Each reroll costs this much gold and
-// re-rolls ONLY the sigil slots (scrolls + rune bags stay put). The
-// player's `shopRerollCount` seeds the new roll so repeat rerolls are
+// re-rolls ONLY the sigil slots (pack slots stay put). The player's
+// `shopRerollCount` seeds the new roll so repeat rerolls are
 // deterministic per run seed + round + reroll index.
 export const REROLL_COST = 3;
+
+// Pack section — the renamed Consumables row that holds pack-type shop
+// items (Rune Bag, Codex Pack, …). Each shop visit rolls SHOP_PACK_COUNT
+// pack slots uniformly from PACK_TYPES (with replacement, so a shop can
+// show 2 of the same pack type).
+export const SHOP_PACK_COUNT = 2;
 
 // Consumable inventory
 export const MAX_CONSUMABLES = 2;     // max consumable items a player can hold
@@ -67,9 +72,15 @@ export const MAX_CONSUMABLES = 2;     // max consumable items a player can hold
 // (or skips) — the picked rune is permanently added to their pouch for
 // the rest of the run.
 export const RUNE_BAG_COST = 4;
-export const SHOP_RUNE_BAG_COUNT = 1;       // bag slots shown per shop visit
 export const RUNE_BAG_CHOICES = 4;          // runes shown in the picker
 export const MAX_RUNE_BAGS_PER_SHOP = 1;    // max bags purchasable per shop
+
+// Codex Pack item configuration. Buying a pack shows a picker of 4
+// distinct random scroll elements. The player picks one (or skips) —
+// the picked element gets +1 scroll level (or +N with Scroll God).
+export const CODEX_PACK_COST = 4;
+export const CODEX_PACK_CHOICES = 4;        // scrolls shown in the picker
+export const MAX_CODEX_PACKS_PER_SHOP = 1;  // max packs purchasable per shop
 // Per-slot rarity weights used by rollBagRunes. Tuned so bags feel
 // exciting without making rare/legendary commonplace: at 4 slots per
 // bag these weights produce ~11% of bags containing a legendary and
@@ -103,6 +114,10 @@ export const ARKYN_USE_CONSUMABLE = "arkyn:use_consumable";
 //   index = number  -> player selected that rune (adds to pouch permanently)
 //   index = null    -> player skipped (no rune added, no refund)
 export const ARKYN_PICK_BAG_RUNE = "arkyn:pick_bag_rune";
+// Codex-pack picker flow. Payload: { index: number | null }
+//   index = number  -> player selected that scroll (grants scroll level(s))
+//   index = null    -> player skipped (no scroll granted, no refund)
+export const ARKYN_PICK_CODEX_SCROLL = "arkyn:pick_codex_scroll";
 // Reroll the sigil section of the shop. No payload. Costs REROLL_COST
 // gold and regenerates the SHOP_SIGIL_COUNT sigil slots (scrolls + rune
 // bags are preserved in place).

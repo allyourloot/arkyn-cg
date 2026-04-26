@@ -1,10 +1,6 @@
 import { type ArkynState, ShopItemState } from "../../shared";
-import {
-    SCROLL_COST,
-    RUNE_BAG_COST,
-    SHOP_RUNE_BAG_COUNT,
-} from "../../shared/arkynConstants";
-import { generateShopScrolls, generateShopSigils } from "../../shared/shopGeneration";
+import { PACK_DEFINITIONS } from "../../shared/packs";
+import { generateShopPacks, generateShopSigils } from "../../shared/shopGeneration";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { Logger } from "@core/shared/utils";
 import { initPlayerForRound } from "../utils/initPlayerForRound";
@@ -75,23 +71,25 @@ export function handleReady(
         // hasn't incremented yet, so pass currentRound + 1 explicitly.
         spawnEnemy(player, player.currentRound + 1, player.runSeed);
 
-        // Generate seeded shop inventory for this visit. The scroll
-        // elements are deterministic given the run seed + round, so
-        // replaying the same seed yields the same shop offerings.
+        // Generate seeded shop inventory for this visit. Both the pack
+        // slots and the sigil slots are deterministic given the run seed
+        // + round, so replaying the same seed yields the same shop
+        // offerings.
         const nextRound = player.currentRound + 1;
-        const scrollElements = generateShopScrolls(player.runSeed, nextRound);
+        const packIds = generateShopPacks(player.runSeed, nextRound);
         const ownedSigils = Array.from(player.sigils);
         const sigilIds = generateShopSigils(player.runSeed, nextRound, ownedSigils);
         clearArraySchema(player.shopItems);
-        // Fresh shop visit -> reset per-visit bag purchase counter so the
-        // cap enforces MAX_RUNE_BAGS_PER_SHOP per shop (not per run).
+        // Fresh shop visit -> reset per-visit pack purchase counters so
+        // the caps enforce MAX_*_PER_SHOP per shop (not per run).
         player.bagPurchaseCount = 0;
+        player.codexPurchaseCount = 0;
         // Fresh shop visit -> reset reroll counter. The initial sigil roll
         // below uses rerollCount=0; the client's Reroll button increments
         // this and re-generates the sigil slots via handleRerollShop.
         player.shopRerollCount = 0;
 
-        // Sigil items first (top section in shop UI)
+        // Sigil items first ("Items" section in the shop UI).
         for (const sigilId of sigilIds) {
             const def = SIGIL_DEFINITIONS[sigilId];
             if (!def) continue;
@@ -103,30 +101,22 @@ export function handleReady(
             player.shopItems.push(item);
         }
 
-        // Scroll items (bottom section)
-        for (const element of scrollElements) {
+        // Pack items ("Packs" section). Each generated pack id keys
+        // directly into PACK_DEFINITIONS for cost + purchase handler.
+        for (const packId of packIds) {
+            const def = PACK_DEFINITIONS[packId];
+            if (!def) continue;
             const item = new ShopItemState();
-            item.itemType = "scroll";
-            item.element = element;
-            item.cost = SCROLL_COST;
-            item.purchased = false;
-            player.shopItems.push(item);
-        }
-
-        // Rune Bag items (share the Consumables section with scrolls on
-        // the client). Art is homogeneous so no seeded generator needed.
-        for (let i = 0; i < SHOP_RUNE_BAG_COUNT; i++) {
-            const item = new ShopItemState();
-            item.itemType = "runeBag";
+            item.itemType = def.itemType;
             item.element = "";
-            item.cost = RUNE_BAG_COST;
+            item.cost = def.cost;
             item.purchased = false;
             player.shopItems.push(item);
         }
 
         player.gamePhase = "shop";
         const bossTag = player.enemy.isBoss ? ` [BOSS - ${player.enemy.debuff}]` : "";
-        logger.info(`Player ${client.sessionId} entered shop. Sigils: [${sigilIds.join(", ")}], Scrolls: [${scrollElements.join(", ")}]. Next enemy: ${player.enemy.name} (HP: ${player.enemy.maxHp})${bossTag}`);
+        logger.info(`Player ${client.sessionId} entered shop. Sigils: [${sigilIds.join(", ")}], Packs: [${packIds.join(", ")}]. Next enemy: ${player.enemy.name} (HP: ${player.enemy.maxHp})${bossTag}`);
         return;
     }
 

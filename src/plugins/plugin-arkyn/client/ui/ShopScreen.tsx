@@ -6,21 +6,23 @@ import {
     sendRerollShop,
     useShopItems,
     useGold,
-    useScrollLevels,
     usePendingBagRunes,
+    usePendingCodexScrolls,
+    usePackAnimating,
     useSigils,
-    emitScrollPurchase,
+    setPackAnimating,
     emitSigilPurchase,
+    emitPackPurchase,
 } from "../arkynStore";
-import { MAX_SIGILS, REROLL_COST, getScrollLevelsPerUse } from "../../shared";
+import { MAX_SIGILS, REROLL_COST, PACK_DEFINITIONS, type PackType } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { playButton, playBuy } from "../sfx";
-import { ELEMENT_COLORS, RARITY_COLORS, createPanelStyleVars } from "./styles";
-import { getScrollImageUrl } from "./scrollAssets";
-import { getRuneBagImageUrl } from "./bagAssets";
+import { RARITY_COLORS, createPanelStyleVars } from "./styles";
+import { getPackImageUrl } from "./packAssets";
 import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
 import RuneBagPicker from "./RuneBagPicker";
+import CodexPicker from "./CodexPicker";
 import { renderDescription, SigilExplainer, SigilPenaltyLine, splitPenalty } from "./descriptionText";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import frameUrl from "/assets/ui/frame.png?url";
@@ -52,6 +54,11 @@ const cardStyleVars = {
     "--tooltip-desc-bg": `url(${innerFrameUrl})`,
 } as CSSProperties;
 
+// Pack itemTypes are recognized in the Packs section. Any future pack
+// added to PACK_DEFINITIONS automatically lands here without touching
+// this file.
+const PACK_ITEM_TYPES = new Set<string>(Object.keys(PACK_DEFINITIONS));
+
 type ShopScreenProps = {
     ref?: React.Ref<HTMLDivElement>;
 };
@@ -59,8 +66,9 @@ type ShopScreenProps = {
 export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     const shopItems = useShopItems();
     const gold = useGold();
-    const scrollLevels = useScrollLevels();
     const pendingBagRunes = usePendingBagRunes();
+    const pendingCodexScrolls = usePendingCodexScrolls();
+    const packAnimating = usePackAnimating();
     const sigils = useSigils();
     const sigilBarFull = sigils.length >= MAX_SIGILS;
 
@@ -71,13 +79,35 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
 
     // `renderedMode` lags the live picker state during exit animations so
     // React keeps the outgoing element mounted while GSAP slides it out.
-    // Same pattern used by ArkynOverlay's shop <-> playing swap.
-    const showPicker = pendingBagRunes.length > 0;
+    // Same pattern used by ArkynOverlay's shop <-> playing swap. The
+    // picker is gated on `packAnimating` so it doesn't slide in mid
+    // pack-fly+dissolve animation (the schema sync that populates
+    // `pendingX` may arrive before the animation finishes).
+    const hasPendingPicker = pendingBagRunes.length > 0 || pendingCodexScrolls.length > 0;
+    const showPicker = hasPendingPicker && !packAnimating;
     const [renderedMode, setRenderedMode] = useState<"shop" | "picker">(showPicker ? "picker" : "shop");
+    // Tracks the last seen value of packAnimating so we can detect the
+    // moment it flips from true → false. On that edge, the shop content
+    // was hidden under the pack-fly fade for the entire fly + dissolve,
+    // so animating it sliding out adds 0.22s of "empty shop reappears"
+    // dead time before the picker reveals. Snap mode instead.
+    const prevPackAnimating = useRef(packAnimating);
 
     useLayoutEffect(() => {
         const targetMode: "shop" | "picker" = showPicker ? "picker" : "shop";
+        const wasPackAnimating = prevPackAnimating.current;
+        prevPackAnimating.current = packAnimating;
+
         if (targetMode === renderedMode) return;
+
+        // Skip the exit animation when transitioning out of a pack-fly
+        // → the shop content was invisible for the whole fly + dissolve,
+        // so sliding it out adds dead time. Snap to the new mode and
+        // let the entrance useLayoutEffect play the picker slide-in.
+        if (wasPackAnimating && !packAnimating && targetMode === "picker") {
+            setRenderedMode(targetMode);
+            return;
+        }
 
         const outgoingRef = renderedMode === "shop" ? shopContentRef : pickerContentRef;
         const outgoing = outgoingRef.current;
@@ -94,7 +124,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             });
         }
         return () => { tl.kill(); };
-    }, [showPicker, renderedMode]);
+    }, [showPicker, renderedMode, packAnimating]);
 
     // Entrance animation — fires on the newly rendered content.
     useLayoutEffect(() => {
@@ -134,46 +164,48 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         sendReady();
     };
 
-    const handleBuy = (shopIndex: number, element: string, e: React.MouseEvent) => {
+    const handleBuyPack = (shopIndex: number, packId: PackType, e: React.MouseEvent) => {
         e.stopPropagation();
-        const currentLevel = scrollLevels.get(element) ?? 0;
-        const levelsGained = getScrollLevelsPerUse(sigils);
-        sendBuyItem(shopIndex);
-        playBuy();
-        // Find the scroll image in the card to get its bounding rect
+        const def = PACK_DEFINITIONS[packId];
+        if (!def) return;
         const card = (e.currentTarget as HTMLElement).closest(`.${styles.itemCard}`);
-        const img = card?.querySelector(`.${styles.itemImage}`) as HTMLElement | null;
-        const fromRect = img?.getBoundingClientRect() ?? new DOMRect(
+        const canvas = card?.querySelector(`.${styles.sigilCanvas}`) as HTMLElement | null;
+        const fromRect = canvas?.getBoundingClientRect() ?? new DOMRect(
             window.innerWidth / 2, window.innerHeight / 2, 0, 0,
         );
-        emitScrollPurchase({
-            element,
-            oldLevel: currentLevel + 1,
-            newLevel: currentLevel + 1 + levelsGained,
+        // Flip the gate BEFORE sending the buy so the schema-synced
+        // `pendingX` array doesn't trigger an early picker mount.
+        // ArkynOverlay's pack-fly timeline flips it back off on cleanup.
+        setPackAnimating(true);
+        emitPackPurchase({
+            packId,
+            imageUrl: getPackImageUrl(packId, 128),
             fromRect,
+            naturalAspect: def.aspectRatio,
+            dissolveElement: def.dissolveElement,
         });
+        sendBuyItem(shopIndex);
+        playBuy();
         setSelectedShopIndex(null);
     };
 
-    // Split items by type for section rendering. Scrolls and Rune Bags
-    // share the Consumables section — the card layout branches on itemType
-    // inside the map below.
+    // Split items by section. Sigils → "Items" row. Pack types →
+    // "Packs" row. Future Items-section additions (e.g. standalone
+    // scrolls) will join the sigilItems filter.
     const sigilItems = shopItems
         .map((item, idx) => ({ ...item, shopIndex: idx }))
         .filter(item => item.itemType === "sigil" && !item.purchased);
-    const consumableItems = shopItems
+    const packItems = shopItems
         .map((item, idx) => ({ ...item, shopIndex: idx }))
-        .filter(item => (item.itemType === "scroll" || item.itemType === "runeBag") && !item.purchased);
-
-    const runeBagImageUrl = getRuneBagImageUrl(128);
+        .filter(item => PACK_ITEM_TYPES.has(item.itemType) && !item.purchased);
 
     return (
         <div ref={ref} className={styles.wrapper}>
         {renderedMode === "shop" && (
         <div ref={shopContentRef} className={styles.shopContent}>
         <div ref={panelRef} className={styles.panel} style={panelStyleVars}>
-            {/* Sigils section */}
-            <span className={styles.sectionLabel}>Sigils</span>
+            {/* Items section (sigils today; future scrolls slot in here too). */}
+            <span className={styles.sectionLabel}>Items</span>
             <div className={styles.sigilRow}>
                 <button
                     type="button"
@@ -289,74 +321,18 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             </div>
             </div>
 
-            {/* Consumables section (scrolls + rune bags) */}
-            <span className={styles.sectionLabel}>Consumables</span>
+            {/* Packs section — Rune Bags, Codex Packs, future packs. */}
+            <span className={styles.sectionLabel}>Packs</span>
             <div className={`${styles.section} ${styles.consumablesSection}`}>
                 <div className={styles.itemGrid}>
-                    {consumableItems.map((item, i) => {
+                    {packItems.map((item, i) => {
+                        const packId = item.itemType as PackType;
+                        const def = PACK_DEFINITIONS[packId];
+                        if (!def) return null;
                         const canAfford = gold >= item.cost;
                         const isSelected = selectedShopIndex === item.shopIndex;
-                        const tooltipPlacement = i < consumableItems.length / 2 ? "left" : "right";
-                        const itemSceneIndex = sigilItems.length + i;
-
-                        if (item.itemType === "runeBag") {
-                            return (
-                                <div
-                                    key={item.shopIndex}
-                                    className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""} ${isSelected ? styles.itemCardSelected : ""}`}
-                                    style={{ ...cardStyleVars } as CSSProperties}
-                                    onClick={() => setSelectedShopIndex(prev => prev === item.shopIndex ? null : item.shopIndex)}
-                                >
-                                    <div className={styles.priceChip}>
-                                        <img src={goldIconUrl} alt="Gold" className={styles.priceIcon} />
-                                        <span className={styles.priceValue}>{item.cost}</span>
-                                    </div>
-
-                                    <div className={styles.cardImageWrap}>
-                                        <ItemScene
-                                            itemId="rune_bag"
-                                            index={itemSceneIndex}
-                                            imageUrl={runeBagImageUrl}
-                                            useFrame={false}
-                                            className={styles.sigilCanvas}
-                                        />
-                                        {isSelected && (
-                                            <button
-                                                type="button"
-                                                className={styles.buyButton}
-                                                style={buttonStyleVars}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (!canAfford) return;
-                                                    sendBuyItem(item.shopIndex);
-                                                    playBuy();
-                                                    setSelectedShopIndex(null);
-                                                }}
-                                                disabled={!canAfford}
-                                            >
-                                                Buy
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    <Tooltip placement={tooltipPlacement} arrow variant="framed">
-                                        <span className={styles.tooltipName}>
-                                            Rune Bag
-                                        </span>
-                                        <div className={styles.tooltipDescWrap}>
-                                            <span className={styles.tooltipDesc}>
-                                                Opens 4 random runes. Pick one to add permanently to your pouch.
-                                            </span>
-                                        </div>
-                                    </Tooltip>
-                                </div>
-                            );
-                        }
-
-                        // Scroll card (existing layout).
-                        const elementColor = ELEMENT_COLORS[item.element] ?? "#aaa";
-                        const scrollUrl = getScrollImageUrl(item.element);
-                        const elementName = item.element.charAt(0).toUpperCase() + item.element.slice(1);
+                        const tooltipPlacement = i < packItems.length / 2 ? "left" : "right";
+                        const packImageUrl = getPackImageUrl(packId, 128);
 
                         return (
                             <div
@@ -365,27 +341,29 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                 style={{ ...cardStyleVars } as CSSProperties}
                                 onClick={() => setSelectedShopIndex(prev => prev === item.shopIndex ? null : item.shopIndex)}
                             >
-                                {/* Gold price at top of card */}
                                 <div className={styles.priceChip}>
                                     <img src={goldIconUrl} alt="Gold" className={styles.priceIcon} />
                                     <span className={styles.priceValue}>{item.cost}</span>
                                 </div>
 
-                                {/* Scroll image — centered in remaining space */}
                                 <div className={styles.cardImageWrap}>
                                     <ItemScene
-                                        itemId={item.element}
-                                        index={itemSceneIndex}
-                                        imageUrl={scrollUrl}
+                                        itemId={packId}
+                                        index={sigilItems.length + i}
+                                        imageUrl={packImageUrl}
+                                        useFrame={false}
+                                        aspectRatio={def.aspectRatio}
                                         className={styles.sigilCanvas}
                                     />
-                                    {/* Click-to-reveal buy button */}
                                     {isSelected && (
                                         <button
                                             type="button"
                                             className={styles.buyButton}
                                             style={buttonStyleVars}
-                                            onClick={(e) => handleBuy(item.shopIndex, item.element, e)}
+                                            onClick={(e) => {
+                                                if (!canAfford) return;
+                                                handleBuyPack(item.shopIndex, packId, e);
+                                            }}
                                             disabled={!canAfford}
                                         >
                                             Buy
@@ -393,14 +371,13 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                     )}
                                 </div>
 
-                                {/* Tooltip — visible on hover */}
                                 <Tooltip placement={tooltipPlacement} arrow variant="framed">
-                                    <span className={styles.tooltipName} style={{ color: elementColor }}>
-                                        {elementName} Scroll
+                                    <span className={styles.tooltipName}>
+                                        {def.name}
                                     </span>
                                     <div className={styles.tooltipDescWrap}>
                                         <span className={styles.tooltipDesc}>
-                                            +2 base damage to all {elementName} runes.
+                                            {def.description}
                                         </span>
                                     </div>
                                 </Tooltip>
@@ -423,7 +400,9 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         )}
 
         {renderedMode === "picker" && (
-            <RuneBagPicker ref={pickerContentRef} runes={pendingBagRunes} />
+            pendingCodexScrolls.length > 0
+                ? <CodexPicker ref={pickerContentRef} scrolls={pendingCodexScrolls} />
+                : <RuneBagPicker ref={pickerContentRef} runes={pendingBagRunes} />
         )}
         </div>
     );

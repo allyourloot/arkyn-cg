@@ -1,4 +1,4 @@
-import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_REORDER_SIGILS, ARKYN_USE_CONSUMABLE, ARKYN_PICK_BAG_RUNE, ARKYN_REROLL_SHOP, ARKYN_DEBUG_GRANT_SIGIL } from "../shared";
+import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_REORDER_SIGILS, ARKYN_USE_CONSUMABLE, ARKYN_PICK_BAG_RUNE, ARKYN_PICK_CODEX_SCROLL, ARKYN_REROLL_SHOP, ARKYN_DEBUG_GRANT_SIGIL } from "../shared";
 
 /**
  * Network layer for Arkyn. Owns the connection sender and exposes
@@ -68,6 +68,11 @@ export function sendUseConsumable(index: number): void {
 // `index = null` means Skip. `index = number` means Select that rune.
 export function sendBagChoice(index: number | null): void {
     sendArkynMessage(ARKYN_PICK_BAG_RUNE, { index });
+}
+
+// `index = null` means Skip. `index = number` means Select that scroll.
+export function sendCodexChoice(index: number | null): void {
+    sendArkynMessage(ARKYN_PICK_CODEX_SCROLL, { index });
 }
 
 /**

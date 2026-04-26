@@ -211,6 +211,23 @@ export interface ItemSceneRegistration {
      * should pass false. Defaults to true at the call site.
      */
     useFrame?: boolean;
+    /**
+     * Image aspect ratio (width / height). The shared mesh is scaled
+     * non-uniformly per render so non-square art (e.g. Codex Pack at
+     * 89/160 ≈ 0.556) draws at correct proportions inside the square
+     * card canvas — no texture stretching, glossy highlight + tilt
+     * effect intact. Defaults to 1 (square — no scale change).
+     */
+    aspectRatio?: number;
+    /**
+     * When true, this item bypasses the 15fps idle throttle and renders
+     * every frame. Use for cards inside a CSS-animated wrapper (e.g. the
+     * picker's bob keyframes) where the throttle visibly stutters the
+     * glossy highlight + tilt drift against the 60fps wrapper transform.
+     * Costs more GPU per item — leave default (throttled) for static
+     * shop layouts.
+     */
+    smoothIdle?: boolean;
 }
 
 interface RegisteredItem {
@@ -221,6 +238,8 @@ interface RegisteredItem {
     texture: THREE.Texture;
     imageUrl: string;
     useFrame: boolean;
+    aspectRatio: number;
+    smoothIdle: boolean;
     index: number;
     phase: number;
     tiltTargetRef: { current: TiltTarget };
@@ -428,12 +447,17 @@ function stopLoop(): void {
 //    - its smoothed tilt isn't yet at its target (hover lerp in-flight), OR
 //    - an idle-drift tick is due (15fps ambient animation)
 // Static-at-rest items return false → skip everything.
+//
+// `smoothIdle` items bypass the 15fps throttle entirely — used for cards
+// inside CSS-animated wrappers where the throttle stutters visibly
+// against the smooth wrapper transform.
 function needsRender(item: RegisteredItem, now: number): boolean {
     if (!item.isVisible) return false;
     const tgt = item.tiltTargetRef.current;
     const cur = item.tiltCurrent;
     if (Math.abs(tgt.x - cur.x) > TILT_EPSILON) return true;
     if (Math.abs(tgt.y - cur.y) > TILT_EPSILON) return true;
+    if (item.smoothIdle) return true;
     if (now - item.lastIdleRenderTime >= IDLE_TICK_INTERVAL_MS) return true;
     return false;
 }
@@ -525,6 +549,14 @@ function renderFrame(now: number): void {
         const cardRotX = idleTiltX - cur.y * MAX_TILT_RAD;
         const cardRotY = idleTiltY - cur.x * MAX_TILT_RAD;
 
+        // Per-item mesh scale — non-square aspect packs (Codex Pack at
+        // 89/160) get a narrower plane so the texture maps without
+        // stretching. Square items (aspect = 1) keep the full 1×1 plane.
+        // Both shadow and card pass need this set so silhouettes match.
+        const ar = item.aspectRatio;
+        const scaleX = ar >= 1 ? 1 : ar;
+        const scaleY = ar >= 1 ? 1 / ar : 1;
+
         // ── Shadow pass (A3) — cached after first successful render.
         //    Shadow pixels depend only on texture + mesh rotation (0,0,0),
         //    so they're identical frame-to-frame. We only run the render
@@ -536,6 +568,7 @@ function renderFrame(now: number): void {
             mesh.material = shadowMaterial;
             shadowMaterial.uniforms.uTexture.value = item.texture;
             mesh.rotation.set(0, 0, 0);
+            mesh.scale.set(scaleX, scaleY, 1);
             renderer.render(scene, camera);
             item.shadowCtx2d.clearRect(0, 0, bufW, bufH);
             item.shadowCtx2d.drawImage(renderer.domElement, 0, 0, bufW, bufH, 0, 0, bufW, bufH);
@@ -551,6 +584,7 @@ function renderFrame(now: number): void {
         mesh.material = material;
         mesh.rotation.x = cardRotX;
         mesh.rotation.y = cardRotY;
+        mesh.scale.set(scaleX, scaleY, 1);
 
         // Tilt-reactive shadow translate — written to the shadow canvas's
         // style (GPU-composited, no layout/paint). rotation.y>0 tips the
@@ -622,6 +656,8 @@ export function registerItemScene(cfg: ItemSceneRegistration): () => void {
         texture,
         imageUrl: cfg.imageUrl,
         useFrame: cfg.useFrame ?? true,
+        aspectRatio: cfg.aspectRatio ?? 1,
+        smoothIdle: cfg.smoothIdle ?? false,
         index: cfg.index,
         phase: cfg.index * PHASE_STAGGER,
         tiltTargetRef: cfg.tiltTargetRef,

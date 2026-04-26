@@ -8,11 +8,13 @@ import {
     onScrollPurchase,
     onSigilPurchase,
     onBagRunePick,
+    onPackPurchase,
     getSigilSlotRect,
     setScrollUpgradeDisplay,
     setPendingSigilId,
+    setPackAnimating,
 } from "../arkynStore";
-import type { ScrollPurchaseEvent, SigilPurchaseEvent, BagRunePickEvent, RuneClientData } from "../arkynStore";
+import type { ScrollPurchaseEvent, SigilPurchaseEvent, BagRunePickEvent, PackPurchaseEvent, RuneClientData } from "../arkynStore";
 import { ENEMY_DAMAGE_HIT_MS } from "../arkynAnimations";
 import EnemyHealthBar from "./EnemyHealthBar";
 import SpellPreview from "./SpellPreview";
@@ -115,6 +117,29 @@ export default function ArkynOverlay() {
         fromRect: DOMRect;
     } | null>(null);
     const flyingRuneRef = useRef<HTMLDivElement>(null);
+
+    // Flying pack overlay — for the pack-buy fly-to-center + dissolve
+    // animation that runs BEFORE the picker mounts. ShopScreen flips
+    // `packAnimating` on at click time and we flip it off on cleanup,
+    // gating the picker mount until the dissolve is done.
+    const [flyingPack, setFlyingPack] = useState<{
+        packId: string;
+        imageUrl: string;
+        fromRect: DOMRect;
+        naturalAspect: number;
+        dissolveElement: string;
+    } | null>(null);
+    const flyingPackRef = useRef<HTMLImageElement>(null);
+    const [packDissolveData, setPackDissolveData] = useState<{
+        imageUrl: string;
+        element: string;
+        startTime: number;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        bufSize: number;
+    } | null>(null);
 
     // Dissolve phase — replaces the img with a WebGL dissolve canvas.
     const [dissolveData, setDissolveData] = useState<{
@@ -245,6 +270,130 @@ export default function ArkynOverlay() {
         };
     }, { dependencies: [flyingSigil] });
 
+    // Listen for pack purchases and run the fly-to-center + dissolve
+    // animation. ShopScreen has already flipped packAnimating on; we
+    // flip it off in the timeline cleanup so the picker can slide in
+    // exactly when the dissolve finishes.
+    useEffect(() => {
+        return onPackPurchase((e: PackPurchaseEvent) => {
+            if (!e.imageUrl) {
+                // No art for this pack — release the gate immediately so
+                // the picker still mounts on the schema-sync.
+                setPackAnimating(false);
+                return;
+            }
+            setFlyingPack(e);
+        });
+    }, []);
+
+    // GSAP timeline for the flying-pack animation. Mirrors the scroll
+    // fly's intro phase but skips the shake/upgrade phases — packs just
+    // fly in, briefly hold, dissolve, and release the picker gate.
+    useGSAP(() => {
+        const el = flyingPackRef.current;
+        if (!el || !flyingPack) return;
+
+        const { fromRect, imageUrl, dissolveElement, naturalAspect } = flyingPack;
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        // Fit-within-viewport box sized off the shorter viewport axis,
+        // then derive width/height from the pack's natural aspect so
+        // non-square art (Codex Pack 89x160) renders un-distorted.
+        const maxSide = Math.min(window.innerWidth, window.innerHeight) * 0.22;
+        const targetW = naturalAspect >= 1 ? maxSide : maxSide * naturalAspect;
+        const targetH = naturalAspect >= 1 ? maxSide / naturalAspect : maxSide;
+
+        const startScale = fromRect.width / targetW;
+        const fromCenterX = fromRect.left + fromRect.width / 2;
+        const fromCenterY = fromRect.top + fromRect.height / 2;
+
+        gsap.set(el, {
+            width: targetW,
+            height: targetH,
+            x: fromCenterX - targetW / 2,
+            y: fromCenterY - targetH / 2,
+            scale: startScale,
+            autoAlpha: 1,
+        });
+
+        const tl = gsap.timeline();
+
+        // Fade the shop panel out concurrent with the fly-to-center so
+        // the dissolve plays in visual isolation.
+        const shopEl = shopScreenRef.current;
+        if (shopEl) {
+            tl.to(shopEl, {
+                opacity: 0,
+                y: 30,
+                duration: 0.25,
+                ease: "power2.in",
+            }, 0);
+        }
+
+        // Phase 1: fly to center, scale up.
+        tl.to(el, {
+            x: centerX - targetW / 2,
+            y: centerY - targetH / 2,
+            scale: 1,
+            duration: 0.4,
+            ease: "power2.out",
+        }, 0);
+
+        // Brief hold so the player registers the pack at center before
+        // the dissolve takes over.
+        tl.to(el, { duration: 0.15 });
+
+        // Phase 2: swap img for the WebGL dissolve canvas. The dissolve
+        // shader renders into a square buffer (largest dimension) and
+        // we let CSS scale it back to the pack's true rect — the
+        // texture-stretch and CSS-squeeze cancel out so the image
+        // displays at its natural aspect. The dissolve noise pattern
+        // gets the same compensation, which is acceptable for the
+        // brief 550ms reveal.
+        tl.call(() => {
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight / 2;
+            playDissolve();
+            setPackDissolveData({
+                imageUrl,
+                element: dissolveElement,
+                startTime: performance.now(),
+                x: cx - targetW / 2,
+                y: cy - targetH / 2,
+                width: targetW,
+                height: targetH,
+                bufSize: Math.max(targetW, targetH),
+            });
+            el.style.visibility = "hidden";
+        });
+
+        // Wait for the dissolve to finish, then snap the shop screen
+        // back to its default opacity AND release the picker gate. The
+        // shop stays hidden through the entire fly + dissolve so the
+        // player never sees a "shop reappears between dissolve and
+        // picker" flash; ShopScreen recognizes the pack-fly→picker
+        // transition (via its prevPackAnimating ref) and skips the
+        // standard slide-out exit, going straight to the picker
+        // entrance.
+        tl.to(el, {
+            duration: DISSOLVE_DURATION_MS / 1000 + 0.1,
+            onComplete: () => {
+                if (shopEl) gsap.set(shopEl, { opacity: 1, y: 0 });
+                setFlyingPack(null);
+                setPackAnimating(false);
+                requestAnimationFrame(() => setPackDissolveData(null));
+            },
+        });
+
+        return () => {
+            tl.kill();
+            // Safety: if the timeline is interrupted, don't leave the
+            // picker permanently gated or the shop permanently faded.
+            setPackAnimating(false);
+            if (shopEl) gsap.set(shopEl, { opacity: 1, y: 0 });
+        };
+    }, { dependencies: [flyingPack] });
+
     // Listen for Rune Bag picks and fly the chosen rune to the pouch.
     useEffect(() => {
         return onBagRunePick((e: BagRunePickEvent) => {
@@ -316,6 +465,9 @@ export default function ArkynOverlay() {
             setFlyingScroll(null);
             setFlyingSigil(null);
             setFlyingRune(null);
+            setFlyingPack(null);
+            setPackDissolveData(null);
+            setPackAnimating(false);
             setDissolveData(null);
             setShowUpgradeLabel(false);
             setScrollUpgradeDisplay(null);
@@ -634,6 +786,39 @@ export default function ArkynOverlay() {
                         <img src={getBaseRuneImageUrl(flyingRune.rune.rarity)} alt="" />
                         <img src={getRuneImageUrl(flyingRune.rune.element)} alt="" />
                     </div>
+                )}
+
+                {/* Flying pack animation overlay — fly-to-center prelude
+                    that runs before the picker mounts. The img is hidden
+                    once the dissolve canvas takes over. */}
+                {flyingPack && (
+                    <img
+                        ref={flyingPackRef}
+                        src={flyingPack.imageUrl}
+                        alt=""
+                        className={styles.flyingScroll}
+                    />
+                )}
+
+                {/* Pack dissolve canvas — single-texture variant. The
+                    underlying canvas buffer is square (`size`) but CSS
+                    width/height reshape the visible canvas to the pack's
+                    natural aspect, undoing the square texture stretch. */}
+                {packDissolveData && (
+                    <DissolveCanvas
+                        element={packDissolveData.element}
+                        imageUrl={packDissolveData.imageUrl}
+                        startTime={packDissolveData.startTime}
+                        duration={DISSOLVE_DURATION_MS}
+                        size={packDissolveData.bufSize}
+                        className={styles.flyingScroll}
+                        style={{
+                            left: packDissolveData.x,
+                            top: packDissolveData.y,
+                            width: packDissolveData.width,
+                            height: packDissolveData.height,
+                        }}
+                    />
                 )}
 
                 {/* "UPGRADE!" label above the centered scroll */}

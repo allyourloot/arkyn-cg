@@ -22,6 +22,14 @@ interface ItemSceneProps {
      *  sigils (no imageUrl passed) and false when an external imageUrl is
      *  supplied — scrolls and other custom art shouldn't be framed. */
     useFrame?: boolean;
+    /** Image aspect ratio (width / height). Non-square art (e.g. Codex
+     *  Pack 89×160 → 0.556) renders without distortion inside the square
+     *  card canvas via per-item mesh scale. Defaults to 1. */
+    aspectRatio?: number;
+    /** Render every frame instead of throttling to 15fps when idle. Set
+     *  for cards inside CSS-animated wrappers where the throttle stutters
+     *  visibly against the smooth wrapper transform (e.g. picker bob). */
+    smoothIdle?: boolean;
 }
 
 /**
@@ -30,7 +38,7 @@ interface ItemSceneProps {
  * shared Three.js renderer in `sharedItemRenderer.ts`; this component
  * owns the display canvas + shadow div and their pointer handlers.
  */
-export default function ItemScene({ itemId, index, className, imageUrl: imageUrlProp, useFrame }: ItemSceneProps) {
+export default function ItemScene({ itemId, index, className, imageUrl: imageUrlProp, useFrame, aspectRatio, smoothIdle }: ItemSceneProps) {
     const wrapperRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const shadowRef = useRef<HTMLCanvasElement>(null);
@@ -48,9 +56,11 @@ export default function ItemScene({ itemId, index, className, imageUrl: imageUrl
             index,
             tiltTargetRef,
             useFrame: resolvedUseFrame,
+            aspectRatio,
+            smoothIdle,
         });
         return unregister;
-    }, [itemId, index, imageUrlProp, useFrame]);
+    }, [itemId, index, imageUrlProp, useFrame, aspectRatio, smoothIdle]);
 
     // Pointer handlers live on the wrapper (cell-sized) rather than the
     // canvas (which extends 15% beyond the cell for tilt headroom). That

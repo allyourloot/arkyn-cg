@@ -17,9 +17,9 @@ export {
     RARITY_TYPES,
     SCROLL_COST,
     SCROLL_RUNE_BONUS,
-    SHOP_SCROLL_COUNT,
     MAX_SIGILS,
     SHOP_SIGIL_COUNT,
+    SHOP_PACK_COUNT,
     REROLL_COST,
     ARKYN_JOIN,
     ARKYN_CAST,
@@ -32,14 +32,17 @@ export {
     ARKYN_REORDER_SIGILS,
     ARKYN_USE_CONSUMABLE,
     ARKYN_PICK_BAG_RUNE,
+    ARKYN_PICK_CODEX_SCROLL,
     ARKYN_REROLL_SHOP,
     ARKYN_DEBUG_GRANT_SIGIL,
     MAX_CONSUMABLES,
     RUNE_BAG_COST,
-    SHOP_RUNE_BAG_COUNT,
     RUNE_BAG_CHOICES,
     MAX_RUNE_BAGS_PER_SHOP,
     RUNE_BAG_RARITY_WEIGHTS,
+    CODEX_PACK_COST,
+    CODEX_PACK_CHOICES,
+    MAX_CODEX_PACKS_PER_SHOP,
     ARCANE_CLUSTER_ELEMENTS,
 } from "./arkynConstants";
 
@@ -82,7 +85,10 @@ export type { EnemyTemplate } from "./enemyBank";
 
 export { seededRandom, createRoundRng, generateRunSeed } from "./seededRandom";
 
-export { generateShopScrolls, generateShopSigils } from "./shopGeneration";
+export { generateShopPacks, generateShopSigils } from "./shopGeneration";
+
+export { PACK_TYPES, PACK_DEFINITIONS } from "./packs";
+export type { PackType, PackDefinition } from "./packs";
 
 export { SIGIL_DEFINITIONS, SIGIL_IDS } from "./sigils";
 export type { SigilDefinition } from "./sigils";

@@ -123,6 +123,18 @@ export class ArkynPlayerState extends Schema {
     // to enforce MAX_RUNE_BAGS_PER_SHOP.
     @type("number") bagPurchaseCount = 0;
 
+    // In-flight Codex Pack picker state. Non-empty = the player has
+    // bought a pack this shop visit and is currently viewing the 4
+    // scroll choices (each entry is an element name). Cleared on Select
+    // or Skip; mutually exclusive with `pendingBagRunes` (the picker UI
+    // can only show one at a time).
+    @type(["string"]) pendingCodexScrolls = new ArraySchema<string>();
+
+    // How many Codex Packs the player has bought during the current
+    // shop visit. Reset to 0 on shop entry. Used to uniquely seed each
+    // pack's RNG and to enforce MAX_CODEX_PACKS_PER_SHOP.
+    @type("number") codexPurchaseCount = 0;
+
     // How many times the player has rerolled the sigil slots during the
     // current shop visit. Reset to 0 on shop entry. Feeds the shop-sigil
     // RNG so repeat rerolls are deterministic per run seed + round + index.
