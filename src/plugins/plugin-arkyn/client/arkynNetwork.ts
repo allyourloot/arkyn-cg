@@ -1,4 +1,4 @@
-import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_REORDER_SIGILS, ARKYN_USE_CONSUMABLE, ARKYN_PICK_BAG_RUNE, ARKYN_PICK_CODEX_SCROLL, ARKYN_REROLL_SHOP, ARKYN_DEBUG_GRANT_SIGIL } from "../shared";
+import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_REORDER_SIGILS, ARKYN_USE_CONSUMABLE, ARKYN_PICK_BAG_RUNE, ARKYN_PICK_CODEX_SCROLL, ARKYN_APPLY_TAROT, ARKYN_REROLL_SHOP, ARKYN_DEBUG_GRANT_SIGIL } from "../shared";
 
 /**
  * Network layer for Arkyn. Owns the connection sender and exposes
@@ -73,6 +73,29 @@ export function sendBagChoice(index: number | null): void {
 // `index = null` means Skip. `index = number` means Select that scroll.
 export function sendCodexChoice(index: number | null): void {
     sendArkynMessage(ARKYN_PICK_CODEX_SCROLL, { index });
+}
+
+/**
+ * Apply a tarot from the Augury Pack picker. `tarotId = null` means
+ * Skip (no effect, no refund). Otherwise the server validates the
+ * tarot id is in `pendingAuguryTarots`, the indices are in bounds,
+ * the count matches the tarot's min/max, and the optional element
+ * pick is valid.
+ */
+export function sendApplyTarot(args: {
+    tarotId: string | null;
+    runeIndices?: number[];
+    element?: string | null;
+}): void {
+    if (args.tarotId === null) {
+        sendArkynMessage(ARKYN_APPLY_TAROT, { tarotId: null });
+        return;
+    }
+    sendArkynMessage(ARKYN_APPLY_TAROT, {
+        tarotId: args.tarotId,
+        runeIndices: args.runeIndices ?? [],
+        element: args.element ?? undefined,
+    });
 }
 
 /**

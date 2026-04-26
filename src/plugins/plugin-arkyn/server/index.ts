@@ -15,6 +15,7 @@ import {
     ARKYN_USE_CONSUMABLE,
     ARKYN_PICK_BAG_RUNE,
     ARKYN_PICK_CODEX_SCROLL,
+    ARKYN_APPLY_TAROT,
     ARKYN_REROLL_SHOP,
     ARKYN_DEBUG_GRANT_SIGIL,
     ArkynState,
@@ -32,6 +33,7 @@ import { handleReorderSigils } from "./systems/handleReorderSigils";
 import { handleUseConsumable } from "./systems/handleUseConsumable";
 import { handleBagChoice } from "./systems/handleBagChoice";
 import { handleCodexChoice } from "./systems/handleCodexChoice";
+import { handleApplyTarot } from "./systems/handleApplyTarot";
 import { handleRerollShop } from "./systems/handleRerollShop";
 import { handleDebugGrantSigil } from "./systems/handleDebugGrantSigil";
 import { handleLeave } from "./systems/handleLeave";
@@ -96,6 +98,10 @@ export function PluginArkynServer(): ServerPlugin {
 
             runtime.onMessage(ARKYN_PICK_CODEX_SCROLL, (client: ServerClientRef, payload: unknown) => {
                 handleCodexChoice(state, client, payload);
+            });
+
+            runtime.onMessage(ARKYN_APPLY_TAROT, (client: ServerClientRef, payload: unknown) => {
+                handleApplyTarot(state, client, payload);
             });
 
             runtime.onMessage(ARKYN_REROLL_SHOP, (client: ServerClientRef) => {

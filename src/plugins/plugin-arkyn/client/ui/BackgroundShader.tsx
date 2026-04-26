@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useGamePhase, useEnemyIsBoss, usePendingBagRunes } from "../arkynStore";
+import { useGamePhase, useEnemyIsBoss, usePendingBagRunes, usePendingAuguryRunes, usePendingAuguryTarots } from "../arkynStore";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./BackgroundShader.frag";
 import { createProgram, createQuadBuffer, bindQuadAttributes } from "./utils/glProgram";
 import { HAS_HOVER } from "./utils/hasHover";
@@ -28,6 +28,8 @@ export default function BackgroundShader() {
     const gamePhase = useGamePhase();
     const isBoss = useEnemyIsBoss();
     const pendingBagRunes = usePendingBagRunes();
+    const pendingAuguryRunes = usePendingAuguryRunes();
+    const pendingAuguryTarots = usePendingAuguryTarots();
     // Live-tweened mode values written into uniforms each frame by the
     // render loop. `current` is the displayed value, `target` is where
     // we're easing toward. Refs (not state) so updating them doesn't
@@ -35,6 +37,7 @@ export default function BackgroundShader() {
     const shopModeRef = useRef({ current: 0, target: 0 });
     const bossModeRef = useRef({ current: 0, target: 0 });
     const pickerModeRef = useRef({ current: 0, target: 0 });
+    const auguryModeRef = useRef({ current: 0, target: 0 });
 
     // Flip the targets whenever the game phase / boss state changes.
     useEffect(() => {
@@ -53,6 +56,15 @@ export default function BackgroundShader() {
     useEffect(() => {
         pickerModeRef.current.target = pendingBagRunes.length > 0 ? 1 : 0;
     }, [pendingBagRunes.length]);
+
+    // Augury palette — distinct gold/amber wash that fires whenever the
+    // Augury picker is open (either the runes or the tarots populated).
+    // Distinct from the bag picker's arcane-violet so the two pack types
+    // read as different "moods" — the Augury Pack is treasure-chest gold.
+    useEffect(() => {
+        const open = pendingAuguryRunes.length > 0 || pendingAuguryTarots.length > 0;
+        auguryModeRef.current.target = open ? 1 : 0;
+    }, [pendingAuguryRunes.length, pendingAuguryTarots.length]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -100,6 +112,7 @@ export default function BackgroundShader() {
         const uShopMode = gl.getUniformLocation(program, "uShopMode");
         const uBossMode = gl.getUniformLocation(program, "uBossMode");
         const uPickerMode = gl.getUniformLocation(program, "uPickerMode");
+        const uAuguryMode = gl.getUniformLocation(program, "uAuguryMode");
 
         // Render at 1/PIXEL_SIZE of the viewport size; CSS upscales the
         // canvas with nearest-neighbor for the chunky pixel-art look.
@@ -171,6 +184,15 @@ export default function BackgroundShader() {
                     pm.current = Math.max(pm.target, pm.current - step);
                 }
             }
+            const am = auguryModeRef.current;
+            if (am.current !== am.target) {
+                const step = dtS / SHOP_MODE_TWEEN_S;
+                if (am.current < am.target) {
+                    am.current = Math.min(am.target, am.current + step);
+                } else {
+                    am.current = Math.max(am.target, am.current - step);
+                }
+            }
             lastDrawAt = now;
             resize();
             const t = (now - start) / 1000;
@@ -179,6 +201,7 @@ export default function BackgroundShader() {
             gl.uniform1f(uShopMode, sm.current);
             gl.uniform1f(uBossMode, bm.current);
             gl.uniform1f(uPickerMode, pm.current);
+            gl.uniform1f(uAuguryMode, am.current);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             rafId = requestAnimationFrame(render);
         };

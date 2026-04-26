@@ -44,6 +44,11 @@ export function isRarity(s: string): s is RarityType {
     return (RARITY_TYPES as readonly string[]).includes(s);
 }
 
+/** Type-guard — narrows an arbitrary string to a canonical ElementType. */
+export function isElement(s: string): s is ElementType {
+    return (ELEMENT_TYPES as readonly string[]).includes(s);
+}
+
 // Scroll item configuration
 export const SCROLL_COST = 2;
 export const SCROLL_RUNE_BONUS = 2;   // +2 per-rune base damage per scroll
@@ -82,6 +87,20 @@ export const RUNE_BAG_CHOICES = 4;          // runes shown in the picker
 // per-shop cap (same rule as Rune Bag).
 export const CODEX_PACK_COST = 4;
 export const CODEX_PACK_CHOICES = 4;        // scrolls shown in the picker
+
+// Augury Pack item configuration. Buying a pack samples N runes from the
+// player's current pouch and offers M tarot cards. The player picks 1
+// tarot and applies its effect to selected runes (or 0 runes for
+// pouch-wide tarots like Judgement / World). Other tarots are discarded.
+// The rune count matches HAND_SIZE so the picker row reads visually
+// like the player's hand. Same "no other pack picker is open" gate as
+// Rune Bag and Codex Pack.
+export const AUGURY_PACK_COST = 5;
+export const AUGURY_PACK_RUNE_CHOICES = 8;  // matches HAND_SIZE
+export const AUGURY_PACK_TAROT_CHOICES = 5;
+export const TAROT_BANISH_GOLD = 3;          // Tower per-rune payout
+export const WORLD_LEGENDARY_CHANCE = 0.20;  // The World — split between Rare (1 - this) and Legendary
+
 // Per-slot rarity weights used by rollBagRunes. Tuned so bags feel
 // exciting without making rare/legendary commonplace: at 4 slots per
 // bag these weights produce ~11% of bags containing a legendary and
@@ -119,6 +138,13 @@ export const ARKYN_PICK_BAG_RUNE = "arkyn:pick_bag_rune";
 //   index = number  -> player selected that scroll (grants scroll level(s))
 //   index = null    -> player skipped (no scroll granted, no refund)
 export const ARKYN_PICK_CODEX_SCROLL = "arkyn:pick_codex_scroll";
+// Augury-pack apply flow. Payload:
+//   { tarotId: string, runeIndices: number[], element?: string }
+//     -> apply that tarot to the selected picker runes (and optional
+//        chosen element for tarots whose effect needs it).
+//   { tarotId: null }
+//     -> player skipped the pack (no effect, no refund).
+export const ARKYN_APPLY_TAROT = "arkyn:apply_tarot";
 // Reroll the sigil section of the shop. No payload. Costs REROLL_COST
 // gold and regenerates the SHOP_SIGIL_COUNT sigil slots (scrolls + rune
 // bags are preserved in place).

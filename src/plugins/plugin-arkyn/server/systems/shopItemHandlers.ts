@@ -6,7 +6,9 @@ import {
 import { MAX_SIGILS } from "../../shared/arkynConstants";
 import { rollBagRunes } from "../utils/rollBagRunes";
 import { rollCodexScrolls } from "../utils/rollCodexScrolls";
+import { rollAuguryPack } from "../utils/rollAuguryPack";
 import { createRuneInstance } from "../utils/drawRunes";
+import { getPouch } from "../resources/playerPouch";
 
 export interface ShopPurchaseCtx {
     state: ArkynState;
@@ -46,7 +48,12 @@ function handleSigilPurchase({ player, item, sessionId }: ShopPurchaseCtx): Shop
 // rejecting a second pack while another is open keeps server state in
 // sync with the only picker the client can render.
 function anyPackPickerOpen(player: ArkynPlayerState): boolean {
-    return player.pendingBagRunes.length > 0 || player.pendingCodexScrolls.length > 0;
+    return (
+        player.pendingBagRunes.length > 0 ||
+        player.pendingCodexScrolls.length > 0 ||
+        player.pendingAuguryRunes.length > 0 ||
+        player.pendingAuguryTarots.length > 0
+    );
 }
 
 function handleRuneBagPurchase({ player, sessionId }: ShopPurchaseCtx): ShopPurchaseResult {
@@ -98,8 +105,44 @@ function handleCodexPackPurchase({ player, sessionId }: ShopPurchaseCtx): ShopPu
     };
 }
 
+function handleAuguryPackPurchase({ player, sessionId }: ShopPurchaseCtx): ShopPurchaseResult {
+    if (anyPackPickerOpen(player)) {
+        return { ok: false, reason: "a pack picker is already open" };
+    }
+
+    // Pull the live pouch as the sample source so the picker shows
+    // ONLY runes the player currently owns. Edge case: a brand-new run
+    // with an empty pouch (right after creating the first one in the
+    // round) would never reach the shop, so livePouch is guaranteed
+    // non-null at this call site — but guard anyway.
+    const livePouch = getPouch(sessionId) ?? [];
+
+    const { runes, tarotIds } = rollAuguryPack(
+        player.runSeed,
+        player.currentRound + 1,
+        player.auguryPurchaseCount,
+        livePouch,
+    );
+
+    for (const r of runes) {
+        player.pendingAuguryRunes.push(createRuneInstance(r));
+    }
+    for (const t of tarotIds) {
+        player.pendingAuguryTarots.push(t);
+    }
+    player.auguryPurchaseCount++;
+
+    return {
+        ok: true,
+        logMessage:
+            `Player ${sessionId} bought an Augury Pack. Tarots: [${tarotIds.join(", ")}]. ` +
+            `Runes: ${runes.length}.`,
+    };
+}
+
 export const SHOP_ITEM_HANDLERS: Record<string, ShopItemHandler> = {
     sigil: handleSigilPurchase,
     runeBag: handleRuneBagPurchase,
     codexPack: handleCodexPackPurchase,
+    auguryPack: handleAuguryPackPurchase,
 };

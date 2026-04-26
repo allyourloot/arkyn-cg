@@ -1,0 +1,410 @@
+/* Wrapper fills the same vertical band as the shop panel. The
+   children (rune row, optional element row, tarot row) stack vertically
+   and the action panel is absolutely anchored to the wrapper bottom —
+   matching the RuneBag / Codex picker pattern. */
+.wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: clamp(560px, 78vw, 1100px);
+    height: 78vh;
+    pointer-events: auto;
+    gap: clamp(8px, 1.4vh, 22px);
+}
+
+/* ── Rune row (8 cards, single horizontal row, slightly overlapping
+   like the player's hand). Uses negative margin-left on each non-first
+   slot to compress the row width. Hover lifts; selected lifts more. ── */
+.runeRow {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    width: 100%;
+}
+
+.runeRail {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    padding: clamp(8px, 1.2vh, 14px) clamp(12px, 1.6vw, 20px);
+}
+
+/* Outer button — owns hover / selected lift via transform. The float
+   bob lives on the inner .runeFloat so the two transforms don't fight
+   (matches HandDisplay's .card / .floatWrap split). */
+.runeSlot {
+    box-sizing: border-box;
+    position: relative;
+    flex-shrink: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 120ms ease-out, filter 120ms ease-out;
+    image-rendering: pixelated;
+    width: clamp(64px, 7.4vw, 110px);
+    height: clamp(64px, 7.4vw, 110px);
+    will-change: transform, filter;
+}
+
+/* Slight overlap — every slot after the first pulls left so 8 fit in
+   the rail without sprawling. Mirrors HandDisplay's overlap pattern. */
+.runeSlot:not(:first-child) {
+    margin-left: clamp(-22px, -1.6vw, -8px);
+}
+
+.runeSlot:hover:not(:disabled) {
+    transform: translateY(-6px);
+    filter: brightness(1.08);
+    z-index: 90 !important;
+}
+
+.runeSlotSelected,
+.runeSlotSelected:hover {
+    transform: translateY(-14px) !important;
+    filter: brightness(1.18) drop-shadow(0 0 10px rgba(255, 215, 100, 0.7)) !important;
+}
+
+.runeSlotDimmed {
+    opacity: 0.45;
+    filter: grayscale(0.5);
+    cursor: not-allowed;
+}
+
+.runeSlot:disabled {
+    cursor: default;
+}
+
+/* Idle bob — separate from the outer button's lift transform so
+   selecting a rune doesn't get cancelled by the running animation. */
+.runeFloat {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    animation: augury-rune-float 3.6s ease-in-out infinite;
+    will-change: transform;
+}
+
+.runeArt {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+}
+
+.runeLayer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+@keyframes augury-rune-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+/* ── Element picker row (only shown when active tarot.requiresElement). ── */
+.elementRow {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(4px, 0.8vw, 10px);
+    padding: clamp(4px, 0.8vh, 8px) clamp(8px, 1.2vw, 14px);
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 6px;
+    image-rendering: pixelated;
+}
+
+.elementChip {
+    box-sizing: border-box;
+    width: clamp(32px, 3.6vw, 48px);
+    height: clamp(32px, 3.6vw, 48px);
+    padding: 0;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 100ms ease-out, background 100ms ease-out;
+    image-rendering: pixelated;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.elementChip:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.elementChipSelected,
+.elementChipSelected:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.elementChipImg {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+/* ── Tarot row (5 cards near the bottom). Cards are laid out in a
+   simple flex row with a small gap. Selected card lifts + brightens. ── */
+.tarotRow {
+    display: flex;
+    flex-direction: row;
+    gap: clamp(8px, 1.4vw, 22px);
+    justify-content: center;
+    align-items: flex-end;
+    width: 100%;
+}
+
+.tarotCard {
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(2px, 0.4vh, 4px);
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 120ms ease-out, filter 120ms ease-out;
+    image-rendering: pixelated;
+}
+
+.tarotCard:hover {
+    transform: translateY(-6px);
+    filter: brightness(1.08);
+}
+
+.tarotCardSelected,
+.tarotCardSelected:hover {
+    transform: translateY(-12px);
+    filter: brightness(1.18) drop-shadow(0 0 10px rgba(255, 215, 100, 0.55));
+}
+
+.tarotImg {
+    width: clamp(72px, 8.6vw, 132px);
+    height: auto;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.4));
+}
+
+/* Hover any tarot card -> reveal its <Tooltip> child. Same global
+   .arkyn-tooltip class the Sigil tooltip in ShopScreen latches onto. */
+.tarotCard:hover :global(.arkyn-tooltip) {
+    opacity: 1;
+}
+
+/* Tooltip styling — mirrors ShopScreen's sigil tooltip so the framed
+   look is consistent across the shop. */
+.tooltipNumber {
+    font-size: clamp(var(--font-size-3xs), 0.85vw, var(--font-size-2xs));
+    color: #d4c8b0;
+    letter-spacing: 2px;
+    line-height: 1;
+    opacity: 0.85;
+}
+
+.tooltipName {
+    font-size: clamp(var(--font-size-xs), 1.6vw, var(--font-size-sm));
+    font-weight: normal;
+    letter-spacing: 1px;
+    color: #e8e0d4;
+    text-align: center;
+}
+
+.tooltipDescWrap {
+    box-sizing: border-box;
+    background: rgba(20, 14, 8, 0.55);
+    border-radius: 4px;
+    padding: 4px 10px;
+    max-width: clamp(180px, 22vw, 280px);
+}
+
+.tooltipDesc {
+    display: block;
+    font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
+    color: #c8c0b0;
+    line-height: 1.35;
+    white-space: normal;
+    text-align: center;
+}
+
+/* ── Action panel (Apply + Skip). Anchored at the wrapper's bottom. ── */
+.actionPanel {
+    box-sizing: border-box;
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 20px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 20px 20px 20px 20px;
+    padding: clamp(10px, 1.4vh, 18px) clamp(18px, 2.4vw, 32px) clamp(12px, 1.6vh, 20px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(10px, 1.4vh, 18px);
+    image-rendering: pixelated;
+}
+
+.promptStrip {
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: clamp(4px, 0.8vh, 8px) clamp(12px, 1.8vw, 22px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    image-rendering: pixelated;
+    min-width: clamp(220px, 32vw, 480px);
+}
+
+.prompt {
+    font-size: clamp(var(--font-size-2xs), 1.3vw, var(--font-size-xs));
+    color: #e8d4b8;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    text-align: center;
+}
+
+.buttonRow {
+    display: flex;
+    gap: clamp(12px, 1.8vw, 24px);
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.selectButton,
+.skipButton {
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 9px;
+    background-color: transparent;
+    color: #fff;
+    font-family: inherit;
+    font-size: clamp(var(--font-size-2xs), 1.7vw, var(--font-size-sm));
+    font-weight: normal;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+    cursor: pointer;
+    image-rendering: pixelated;
+    line-height: 1;
+    padding: clamp(6px, 1vh, 11px) clamp(18px, 2.5vw, 30px);
+    transition: transform 80ms ease-out;
+    flex-shrink: 0;
+    pointer-events: auto;
+}
+
+.selectButton {
+    border-image: var(--btn-bg) 10 10 10 10 fill / 9px 9px 9px 9px;
+}
+
+.selectButton:hover:not(:disabled) {
+    border-image: var(--btn-bg-hover) 10 10 10 10 fill / 9px 9px 9px 9px;
+}
+
+.selectButton:disabled {
+    border-image: var(--btn-bg-disabled) 10 10 10 10 fill / 9px 9px 9px 9px;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.skipButton {
+    border-image: var(--skip-bg) 10 10 10 10 fill / 9px 9px 9px 9px;
+}
+
+.skipButton:hover {
+    border-image: var(--skip-bg-hover) 10 10 10 10 fill / 9px 9px 9px 9px;
+}
+
+.selectButton:active,
+.skipButton:active {
+    transform: translateY(2px);
+}
+
+/* Compact landscape — pull everything tighter. */
+@media (max-height: 600px) {
+    .wrapper {
+        height: 64vh;
+        gap: clamp(4px, 0.8vh, 12px);
+        padding-bottom: clamp(20px, 4vh, 40px);
+    }
+    .runeSlot {
+        width: clamp(48px, 6vw, 80px);
+        height: clamp(48px, 6vw, 80px);
+    }
+    .runeSlot:not(:first-child) {
+        margin-left: clamp(-16px, -1.4vw, -6px);
+    }
+    .tarotImg {
+        width: clamp(54px, 6.6vw, 96px);
+    }
+    .actionPanel {
+        border-width: 10px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
+        padding: 4px 10px 5px;
+        gap: 4px;
+    }
+    .promptStrip {
+        border-width: 6px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        padding: 2px 8px;
+        min-width: clamp(160px, 26vw, 320px);
+    }
+    .prompt {
+        font-size: var(--font-size-3xs);
+        letter-spacing: 1px;
+    }
+    .buttonRow {
+        gap: clamp(8px, 1.4vw, 18px);
+    }
+    .selectButton,
+    .skipButton {
+        font-size: var(--font-size-2xs);
+        padding: 3px 14px;
+        border-width: 6px;
+    }
+    .selectButton {
+        border-image: var(--btn-bg) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+    .selectButton:hover:not(:disabled) {
+        border-image: var(--btn-bg-hover) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+    .selectButton:disabled {
+        border-image: var(--btn-bg-disabled) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+    .skipButton {
+        border-image: var(--skip-bg) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+    .skipButton:hover {
+        border-image: var(--skip-bg-hover) 10 10 10 10 fill / 6px 6px 6px 6px;
+    }
+}

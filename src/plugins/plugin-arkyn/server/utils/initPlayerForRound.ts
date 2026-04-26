@@ -116,11 +116,15 @@ export function initPlayerForRound(
     }
 
     // Belt-and-suspenders: a player should never cross a round boundary
-    // with an open Rune Bag picker (handleReady leaves shop -> playing
-    // only after player confirmation, and the client disables Next Round
-    // while a picker is open). But if it ever happened, drop the
-    // in-flight runes so the picker doesn't linger into the next round.
+    // with an open Rune Bag / Codex / Augury picker (handleReady leaves
+    // shop -> playing only after player confirmation, and the client
+    // disables Next Round while a picker is open). But if it ever
+    // happened, drop the in-flight state so the picker doesn't linger
+    // into the next round.
     clearArraySchema(player.pendingBagRunes);
+    clearArraySchema(player.pendingCodexScrolls);
+    clearArraySchema(player.pendingAuguryRunes);
+    clearArraySchema(player.pendingAuguryTarots);
 
     const acquired = Array.from(player.acquiredRunes).map(r => ({
         id: r.id,

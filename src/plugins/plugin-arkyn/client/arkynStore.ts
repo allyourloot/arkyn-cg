@@ -175,6 +175,14 @@ let pendingBagRunes: RuneClientData[] = [];
 // shows the CodexPicker with these 4 scroll choices.
 let pendingCodexScrolls: string[] = [];
 
+// In-flight Augury Pack picker state. Both arrays non-empty -> the
+// player has just bought an Augury Pack; ShopScreen shows the
+// AuguryPicker with these 8 picker runes + 5 tarot offerings.
+// `pendingAuguryRunes` are full RuneInstance snapshots; the tarots
+// list holds string ids keyed into TAROT_DEFINITIONS.
+let pendingAuguryRunes: RuneClientData[] = [];
+let pendingAuguryTarots: string[] = [];
+
 // Runes permanently banished this run (Banish sigil). Mirrored from the
 // server so PouchCounter can shrink its denominator and future UI
 // (e.g. a "Banished Runes" row in PouchModal) can enumerate them.
@@ -370,6 +378,10 @@ export function setBanishedRunes(r: RuneClientData[]) { banishedRunes = r; notif
 
 // Codex Pack setters
 export function setPendingCodexScrolls(s: string[]) { pendingCodexScrolls = s; notify(); }
+
+// Augury Pack setters
+export function setPendingAuguryRunes(r: RuneClientData[]) { pendingAuguryRunes = r; notify(); }
+export function setPendingAuguryTarots(t: string[]) { pendingAuguryTarots = t; notify(); }
 
 /**
  * Append a single rune to the per-run `acquiredRunes` list client-side.
@@ -806,6 +818,11 @@ export function useBanishedRunes() { return useSyncExternalStore(subscribe, () =
 // Codex Pack hook — non-empty means the picker is open with these
 // 4 scroll element choices.
 export function usePendingCodexScrolls() { return useSyncExternalStore(subscribe, () => pendingCodexScrolls); }
+
+// Augury Pack hooks — both non-empty means the picker is open with
+// these 8 picker runes + 5 tarot offerings.
+export function usePendingAuguryRunes() { return useSyncExternalStore(subscribe, () => pendingAuguryRunes); }
+export function usePendingAuguryTarots() { return useSyncExternalStore(subscribe, () => pendingAuguryTarots); }
 export function useDiscardsUsedThisRound() { return useSyncExternalStore(subscribe, () => discardsUsedThisRound); }
 export function useCastsUsedThisRound() { return useSyncExternalStore(subscribe, () => castsUsedThisRound); }
 export function useMaterializingRune() { return useSyncExternalStore(subscribe, () => materializingRune); }
@@ -831,7 +848,7 @@ export function useBestSingleCast() { return useSyncExternalStore(subscribe, () 
 // ============================================================
 
 export { subscribe } from "./arkynStoreCore";
-export { setConnection, joinGame, sendReady, sendCollectRoundGold, sendNewRun, sendBuyItem, sendSellSigil, sendReorderSigils, sendUseConsumable, sendBagChoice, sendCodexChoice, sendRerollShop } from "./arkynNetwork";
+export { setConnection, joinGame, sendReady, sendCollectRoundGold, sendNewRun, sendBuyItem, sendSellSigil, sendReorderSigils, sendUseConsumable, sendBagChoice, sendCodexChoice, sendApplyTarot, sendRerollShop } from "./arkynNetwork";
 export {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,

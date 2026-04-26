@@ -1,10 +1,10 @@
-import { CODEX_PACK_COST, RUNE_BAG_COST, type ElementType } from "./arkynConstants";
+import { AUGURY_PACK_COST, CODEX_PACK_COST, RUNE_BAG_COST, type ElementType } from "./arkynConstants";
 
 // Pack types live in the shop's "Packs" section. Each pack is a
 // deferred-pick container: the player buys it, sees a picker of N
 // random items, and picks one. Adding a future pack means a new entry
 // here + a new picker handler — no other code touches the dispatcher.
-export const PACK_TYPES = ["runeBag", "codexPack"] as const;
+export const PACK_TYPES = ["runeBag", "codexPack", "auguryPack"] as const;
 export type PackType = (typeof PACK_TYPES)[number];
 
 export interface PackDefinition {
@@ -59,5 +59,14 @@ export const PACK_DEFINITIONS: Record<PackType, PackDefinition> = {
         dissolveElement: "arcane",
         aspectRatio: 89 / 160, // ≈ 0.556 — taller than wide
         displayScale: 1.3,     // fill the 130% canvas overflow so the tall card reads at parity with Rune Bag
+    },
+    auguryPack: {
+        itemType: "auguryPack",
+        name: "Augury Pack",
+        cost: AUGURY_PACK_COST,
+        description: "Reveals 5 tarot cards over 8 of your runes. Use 1 to mutate your deck.",
+        dissolveElement: "shadow", // mystical / occult tone
+        aspectRatio: 89 / 160,     // matches augury_pack.png art (same as Codex)
+        displayScale: 1.3,
     },
 };

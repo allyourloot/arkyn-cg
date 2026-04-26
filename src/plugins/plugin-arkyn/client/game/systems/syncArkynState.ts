@@ -46,6 +46,8 @@ import {
     setAcquiredRunes,
     setPendingBagRunes,
     setPendingCodexScrolls,
+    setPendingAuguryRunes,
+    setPendingAuguryTarots,
     setBanishedRunes,
     setDiscardsUsedThisRound,
     setCastsUsedThisRound,
@@ -195,6 +197,8 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevAcquired: RuneClientData[] = [];
     let prevPending: RuneClientData[] = [];
     let prevPendingCodex: string[] = [];
+    let prevPendingAuguryRunes: RuneClientData[] = [];
+    let prevPendingAuguryTarots: string[] = [];
     let prevBanished: RuneClientData[] = [];
     let prevDiscardsUsedThisRound = -1;
     let prevCastsUsedThisRound = -1;
@@ -501,6 +505,14 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (!stringArraysEqual(player.pendingCodexScrolls, prevPendingCodex)) {
             prevPendingCodex = Array.from(player.pendingCodexScrolls);
             setPendingCodexScrolls(prevPendingCodex);
+        }
+        if (!runeArraysEqualById(player.pendingAuguryRunes, prevPendingAuguryRunes)) {
+            prevPendingAuguryRunes = snapshotRunes(player.pendingAuguryRunes);
+            setPendingAuguryRunes(prevPendingAuguryRunes);
+        }
+        if (!stringArraysEqual(player.pendingAuguryTarots, prevPendingAuguryTarots)) {
+            prevPendingAuguryTarots = Array.from(player.pendingAuguryTarots);
+            setPendingAuguryTarots(prevPendingAuguryTarots);
         }
         if (!runeArraysEqualById(player.banishedRunes, prevBanished)) {
             prevBanished = snapshotRunes(player.banishedRunes);

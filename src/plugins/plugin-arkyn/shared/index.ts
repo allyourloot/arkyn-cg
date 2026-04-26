@@ -33,6 +33,7 @@ export {
     ARKYN_USE_CONSUMABLE,
     ARKYN_PICK_BAG_RUNE,
     ARKYN_PICK_CODEX_SCROLL,
+    ARKYN_APPLY_TAROT,
     ARKYN_REROLL_SHOP,
     ARKYN_DEBUG_GRANT_SIGIL,
     MAX_CONSUMABLES,
@@ -41,6 +42,11 @@ export {
     RUNE_BAG_RARITY_WEIGHTS,
     CODEX_PACK_COST,
     CODEX_PACK_CHOICES,
+    AUGURY_PACK_COST,
+    AUGURY_PACK_RUNE_CHOICES,
+    AUGURY_PACK_TAROT_CHOICES,
+    TAROT_BANISH_GOLD,
+    WORLD_LEGENDARY_CHANCE,
     ARCANE_CLUSTER_ELEMENTS,
 } from "./arkynConstants";
 
@@ -49,7 +55,7 @@ export type {
     RarityType,
 } from "./arkynConstants";
 
-export { isRarity } from "./arkynConstants";
+export { isRarity, isElement } from "./arkynConstants";
 
 export {
     SPELL_TABLE,
@@ -191,3 +197,6 @@ export type {
 
 export { CONSUMABLE_DEFINITIONS, getConsumableDefinition } from "./consumables";
 export type { ConsumableDefinition, ConsumableEffect } from "./consumables";
+
+export { TAROT_DEFINITIONS, TAROT_IDS, getTarotDefinition } from "./tarots";
+export type { TarotDefinition, TarotEffect } from "./tarots";

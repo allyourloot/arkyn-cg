@@ -84,6 +84,7 @@ export function handleReady(
         // the caps enforce MAX_*_PER_SHOP per shop (not per run).
         player.bagPurchaseCount = 0;
         player.codexPurchaseCount = 0;
+        player.auguryPurchaseCount = 0;
         // Fresh shop visit -> reset reroll counter. The initial sigil roll
         // below uses rerollCount=0; the client's Reroll button increments
         // this and re-generates the sigil slots via handleRerollShop.

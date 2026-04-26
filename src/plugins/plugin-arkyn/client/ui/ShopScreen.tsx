@@ -8,6 +8,8 @@ import {
     useGold,
     usePendingBagRunes,
     usePendingCodexScrolls,
+    usePendingAuguryRunes,
+    usePendingAuguryTarots,
     usePackAnimating,
     useSigils,
     setPackAnimating,
@@ -23,6 +25,7 @@ import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
 import RuneBagPicker from "./RuneBagPicker";
 import CodexPicker from "./CodexPicker";
+import AuguryPicker from "./AuguryPicker";
 import { renderDescription, SigilExplainer, SigilPenaltyLine, splitPenalty } from "./descriptionText";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import frameUrl from "/assets/ui/frame.png?url";
@@ -68,6 +71,8 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     const gold = useGold();
     const pendingBagRunes = usePendingBagRunes();
     const pendingCodexScrolls = usePendingCodexScrolls();
+    const pendingAuguryRunes = usePendingAuguryRunes();
+    const pendingAuguryTarots = usePendingAuguryTarots();
     const packAnimating = usePackAnimating();
     const sigils = useSigils();
     const sigilBarFull = sigils.length >= MAX_SIGILS;
@@ -83,7 +88,11 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     // picker is gated on `packAnimating` so it doesn't slide in mid
     // pack-fly+dissolve animation (the schema sync that populates
     // `pendingX` may arrive before the animation finishes).
-    const hasPendingPicker = pendingBagRunes.length > 0 || pendingCodexScrolls.length > 0;
+    const hasPendingPicker =
+        pendingBagRunes.length > 0 ||
+        pendingCodexScrolls.length > 0 ||
+        pendingAuguryRunes.length > 0 ||
+        pendingAuguryTarots.length > 0;
     const showPicker = hasPendingPicker && !packAnimating;
     const [renderedMode, setRenderedMode] = useState<"shop" | "picker">(showPicker ? "picker" : "shop");
     // Tracks the last seen value of packAnimating so we can detect the
@@ -401,7 +410,9 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         )}
 
         {renderedMode === "picker" && (
-            pendingCodexScrolls.length > 0
+            pendingAuguryRunes.length > 0
+                ? <AuguryPicker ref={pickerContentRef} runes={pendingAuguryRunes} tarotIds={pendingAuguryTarots} />
+            : pendingCodexScrolls.length > 0
                 ? <CodexPicker ref={pickerContentRef} scrolls={pendingCodexScrolls} />
                 : <RuneBagPicker ref={pickerContentRef} runes={pendingBagRunes} />
         )}

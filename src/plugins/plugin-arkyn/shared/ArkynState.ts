@@ -135,6 +135,21 @@ export class ArkynPlayerState extends Schema {
     // pack's RNG so back-to-back purchases roll different scrolls.
     @type("number") codexPurchaseCount = 0;
 
+    // In-flight Augury Pack picker state — runes sampled from the live
+    // pouch + tarot ids offered. Both non-empty = the player has bought
+    // an Augury Pack this shop visit and is currently viewing the
+    // picker; the client hides the shop's middle column and shows the
+    // AuguryPicker. Cleared on Apply or Skip; mutually exclusive with
+    // the other `pendingX` arrays via the shared `anyPackPickerOpen`
+    // gate (see shopItemHandlers.ts).
+    @type([RuneInstance]) pendingAuguryRunes = new ArraySchema<RuneInstance>();
+    @type(["string"]) pendingAuguryTarots = new ArraySchema<string>();
+
+    // How many Augury Packs the player has bought during the current
+    // shop visit. Reset to 0 on shop entry. Used to uniquely seed each
+    // pack's RNG so back-to-back purchases roll different runes/tarots.
+    @type("number") auguryPurchaseCount = 0;
+
     // How many times the player has rerolled the sigil slots during the
     // current shop visit. Reset to 0 on shop entry. Feeds the shop-sigil
     // RNG so repeat rerolls are deterministic per run seed + round + index.

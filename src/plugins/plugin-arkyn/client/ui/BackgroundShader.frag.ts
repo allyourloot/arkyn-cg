@@ -24,6 +24,11 @@ uniform float uBossMode;
 // the player is on the rune bag selection screen. Overlays on top of
 // the shop palette so picker → back-to-shop eases smoothly.
 uniform float uPickerMode;
+// 0.0 = no Augury picker open.
+// 1.0 = Augury Pack picker open — warm treasure-chest gold palette.
+// Mixed in AFTER both shop and rune-bag picker so the Augury wash
+// fully overrides whichever palette was previously displayed.
+uniform float uAuguryMode;
 
 // --- Hash & noise ---
 
@@ -144,6 +149,17 @@ void main() {
     vec3 goldrune      = vec3(0.95, 0.70, 0.25);
     vec3 voidPurple    = vec3(0.12, 0.04, 0.20);
 
+    // Augury palette — treasure-chest gold. Deep bronze/brown base with
+    // bright gold midtones and warm amber highlights. The orb glow slots
+    // (amber / violet / teal) all pull toward gold tones so the floating
+    // motes read as drifting embers of light around the picker.
+    vec3 deepBronze    = vec3(0.08, 0.05, 0.02);
+    vec3 midBronze     = vec3(0.32, 0.20, 0.06);
+    vec3 brightGold    = vec3(1.00, 0.82, 0.35);
+    vec3 amberRich     = vec3(0.95, 0.62, 0.18);
+    vec3 copperShine   = vec3(0.85, 0.55, 0.20);
+    vec3 darkBrass     = vec3(0.20, 0.12, 0.04);
+
     deepPurple = mix(deepPurple, deepNavy,  uShopMode);
     midPurple  = mix(midPurple,  midTeal,   uShopMode);
     amber      = mix(amber,      seafoam,   uShopMode);
@@ -160,6 +176,16 @@ void main() {
     violet     = mix(violet,     arcaneMagenta, uPickerMode);
     teal       = mix(teal,       goldrune,      uPickerMode);
     ember      = mix(ember,      voidPurple,    uPickerMode);
+
+    // Augury mix applied AFTER picker so the Augury wash fully overrides
+    // whichever palette (shop or bag-picker) was last in place. Boss is
+    // mixed AFTER this so combat danger always wins over loot reveal.
+    deepPurple = mix(deepPurple, deepBronze,   uAuguryMode);
+    midPurple  = mix(midPurple,  midBronze,    uAuguryMode);
+    amber      = mix(amber,      brightGold,   uAuguryMode);
+    violet     = mix(violet,     amberRich,    uAuguryMode);
+    teal       = mix(teal,       copperShine,  uAuguryMode);
+    ember      = mix(ember,      darkBrass,    uAuguryMode);
 
     deepPurple = mix(deepPurple, deepCrimson,  uBossMode);
     midPurple  = mix(midPurple,  midCrimson,   uBossMode);
