@@ -173,6 +173,14 @@ const ANIM_HOLD_S = 0.35;
 // pipeline uses to tear played runes apart). Keep its full duration in
 // sync with the rest of the apply timeline.
 const ANIM_DISSOLVE_S = DISSOLVE_DURATION_MS / 1000;
+// Exit choreography — runs after the apply animation, before the
+// message is sent. Each non-dissolved rune flies to the pouch counter
+// while the bottom UI slides down. Fly is staggered so the runes leave
+// the row in a soft cascade rather than all at once.
+const EXIT_FLY_S = 0.55;
+const EXIT_FLY_STAGGER_S = 0.04;
+const EXIT_SLIDE_S = 0.3;
+const EXIT_SLIDE_DROP_PX = 90;
 
 /**
  * Mid-shop modal that appears after the player buys an Augury Pack.
@@ -224,6 +232,14 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
     // overwritten — same `.card` / `.floatWrap` split HandDisplay uses.
     const slotRefs = useRef<(HTMLButtonElement | null)[]>([]);
     const flipperRefs = useRef<(HTMLDivElement | null)[]>([]);
+    // Refs to the spawned-rune slot wrappers and the exit-target panels.
+    // The exit choreography (fly to pouch + bottom-UI slide-down) needs
+    // a handle to each so it can compute screen-space deltas and tween
+    // them into oblivion before the apply message sends.
+    const spawnRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const tarotRowRef = useRef<HTMLDivElement>(null);
+    const elementRowRef = useRef<HTMLDivElement>(null);
+    const actionPanelRef = useRef<HTMLDivElement>(null);
 
     const activeTarot: TarotDefinition | null = useMemo(() => {
         if (selectedTarotIndex === null) return null;
@@ -329,6 +345,98 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
         playSelectRune();
     };
 
+    /**
+     * Choreograph the exit. Each non-dissolved picker rune (including
+     * spawned ones) flies to the PouchCounter while the bottom UI
+     * (tarot row + element row + action panel) slides off the bottom
+     * edge. When the timeline completes, fire `sendMessage()` so the
+     * server clears the pending state and the picker unmounts via
+     * schema sync — by which point everything has already animated
+     * away, so the unmount is invisible.
+     */
+    const runExitTimeline = (
+        anims: Map<number, SlotAnim>,
+        spawned: RuneClientData[],
+        sendMessage: () => void,
+    ) => {
+        const pouchEl = document.querySelector("[data-pouch-counter]") as HTMLElement | null;
+        const pouchRect = pouchEl?.getBoundingClientRect();
+        const pouchCenter = pouchRect
+            ? { x: pouchRect.left + pouchRect.width / 2, y: pouchRect.top + pouchRect.height / 2 }
+            : { x: window.innerWidth - 60, y: window.innerHeight - 60 };
+
+        const exitTl = gsap.timeline({ onComplete: sendMessage });
+
+        // Fly each surviving picker rune to the pouch. Skip dissolved
+        // (fade) slots — they're already gone visually. Stagger so the
+        // runes leave the row in a soft cascade.
+        let flyOrder = 0;
+        for (let i = 0; i < runes.length; i++) {
+            const anim = anims.get(i);
+            if (anim?.kind === "fade") continue;
+            const slot = slotRefs.current[i];
+            if (!slot) continue;
+            const slotRect = slot.getBoundingClientRect();
+            const dx = pouchCenter.x - (slotRect.left + slotRect.width / 2);
+            const dy = pouchCenter.y - (slotRect.top + slotRect.height / 2);
+            // Disable the slot's CSS transition so it doesn't fight the
+            // GSAP per-frame transform writes during the fly.
+            slot.style.transition = "none";
+            exitTl.to(slot, {
+                x: dx,
+                y: dy,
+                scale: 0.18,
+                opacity: 0,
+                duration: EXIT_FLY_S,
+                ease: "power2.in",
+            }, flyOrder * EXIT_FLY_STAGGER_S);
+            flyOrder++;
+        }
+
+        // Fly spawned runes (World, Lovers) — they materialized in the
+        // row during the apply animation and then return to the pouch
+        // alongside their kin.
+        for (let i = 0; i < spawned.length; i++) {
+            const slot = spawnRefs.current[i];
+            if (!slot) continue;
+            const slotRect = slot.getBoundingClientRect();
+            const dx = pouchCenter.x - (slotRect.left + slotRect.width / 2);
+            const dy = pouchCenter.y - (slotRect.top + slotRect.height / 2);
+            slot.style.transition = "none";
+            exitTl.to(slot, {
+                x: dx,
+                y: dy,
+                scale: 0.18,
+                opacity: 0,
+                duration: EXIT_FLY_S,
+                ease: "power2.in",
+            }, flyOrder * EXIT_FLY_STAGGER_S);
+            flyOrder++;
+        }
+
+        // Bottom-UI slide-down. Tarots, element row, and action panel
+        // all leave together so the lower half of the picker exits as
+        // a single coordinated motion in parallel with the rune fly.
+        const slideTargets: Array<HTMLElement | null> = [
+            tarotRowRef.current,
+            elementRowRef.current,
+            actionPanelRef.current,
+        ];
+        for (const target of slideTargets) {
+            if (!target) continue;
+            exitTl.to(target, {
+                y: EXIT_SLIDE_DROP_PX,
+                opacity: 0,
+                duration: EXIT_SLIDE_S,
+                ease: "power2.in",
+            }, 0);
+        }
+
+        // Safety floor — guarantees onComplete fires even when no flyers
+        // and no slide targets exist (shouldn't happen, but defensive).
+        exitTl.to({}, { duration: 0.05 });
+    };
+
     const handleApply = () => {
         if (!activeTarot || !isApplyEnabled || isApplying) return;
 
@@ -344,38 +452,36 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             auguryPurchaseCount,
         );
 
-        // No per-slot anims AND no spawned runes (Judgement) — skip
-        // the animation entirely and send immediately. The picker
-        // closes on the next schema sync.
-        if (anims.size === 0 && spawned.length === 0) {
-            sendApplyTarot({
-                tarotId: activeTarot.id,
-                runeIndices: sortedIndices,
-                element: selectedElement ?? undefined,
-            });
-            playBuy();
-            return;
-        }
-
         setSlotAnims(anims);
         setSpawnedRunes(spawned);
         setIsApplying(true);
         setApplyStartTime(performance.now());
         playBuy();
 
+        const sendMessageOnce = () => {
+            sendApplyTarot({
+                tarotId: activeTarot.id,
+                runeIndices: sortedIndices,
+                element: selectedElement ?? undefined,
+            });
+        };
+
+        // No per-slot anims AND no spawned runes (Judgement) — skip
+        // the apply animation but still play the exit slide so the
+        // picker doesn't snap-cut back to the shop.
+        if (anims.size === 0 && spawned.length === 0) {
+            requestAnimationFrame(() => {
+                runExitTimeline(anims, spawned, sendMessageOnce);
+            });
+            return;
+        }
+
         // Wait one frame so the back-face DOM nodes (mounted only when
         // slotAnims has the slot) are present before GSAP grabs refs.
         requestAnimationFrame(() => {
             const tl = gsap.timeline({
                 onComplete: () => {
-                    sendApplyTarot({
-                        tarotId: activeTarot.id,
-                        runeIndices: sortedIndices,
-                        element: selectedElement ?? undefined,
-                    });
-                    // Picker unmount is driven by the server's clear of
-                    // pendingAuguryRunes/Tarots — no need to flip
-                    // isApplying back here.
+                    runExitTimeline(anims, spawned, sendMessageOnce);
                 },
             });
             for (const [idx, anim] of anims) {
@@ -566,6 +672,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                         {spawnedRunes.map((rune, i) => (
                             <div
                                 key={`spawn-${i}`}
+                                ref={el => { spawnRefs.current[i] = el; }}
                                 className={`${styles.runeSlot} ${styles.spawnSlot}`}
                                 style={{ zIndex: 80 + i } as CSSProperties}
                             >
@@ -599,7 +706,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             )}
 
             {activeTarot?.requiresElement && (
-                <div className={styles.elementRow}>
+                <div ref={elementRowRef} className={styles.elementRow}>
                     {ELEMENT_TYPES.map(el => {
                         const isSelected = selectedElement === el;
                         const color = ELEMENT_COLORS[el] ?? "#b0b0b0";
@@ -624,7 +731,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                 </div>
             )}
 
-            <div className={styles.tarotRow}>
+            <div ref={tarotRowRef} className={styles.tarotRow}>
                 {tarotIds.map((tarotId, i) => {
                     const def = TAROT_DEFINITIONS[tarotId];
                     if (!def) return null;
@@ -665,7 +772,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                 })}
             </div>
 
-            <div className={styles.actionPanel} style={{ ...panelStyleVars, ...buttonVars }}>
+            <div ref={actionPanelRef} className={styles.actionPanel} style={{ ...panelStyleVars, ...buttonVars }}>
                 <div className={styles.promptStrip}>
                     <span className={styles.prompt}>{prompt}</span>
                 </div>
