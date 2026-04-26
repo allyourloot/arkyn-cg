@@ -299,6 +299,16 @@
     pointer-events: auto;
 }
 
+/* Pack canvases get a larger box than sigils — pack art reads as a
+   playing card silhouette so it benefits from more pixels, and the
+   packs row only holds 2 items vs sigils' 4 so there's room for them
+   to grow. Applied alongside `.sigilCanvas` (the !important here wins
+   the cascade against the sigil rule above). */
+.packCanvas {
+    width: clamp(112px, 17vw, 196px) !important;
+    height: clamp(112px, 17vw, 196px) !important;
+}
+
 /* ================================================================
    Buy button — appears on click (mirrors SigilBar's Sell flow),
    anchored to the right of the card.
@@ -341,6 +351,34 @@
     opacity: 0.4;
     cursor: not-allowed;
     pointer-events: none;
+}
+
+/* ----- Pack-specific chip + button anchoring -----
+   Pack art is portrait (89/160 aspect, displayScale 1.3) so the
+   visible art is ~72.3% of the canvas-wrapper width AND extends
+   ~15% above/below the wrapper bounds. The default chip + buy-button
+   positions anchor to the wrapper, leaving awkward gaps next to
+   the visible art edges. These overrides re-anchor them to the
+   visible art bounds:
+     - .packCardImageWrap shrinks cardImageWrap to canvas-wrapper size
+       so the priceChip's positioning context matches the visible art.
+     - .packPriceChip moves the chip up to sit on the visible art's
+       top edge (~15% of wrapper height above wrapper top).
+     - .packBuyButton anchors at the visible art's right edge instead
+       of the wrapper's right edge.
+
+   These rules MUST come after `.priceChip` + `.buyButton` so they
+   win the cascade (same-specificity, last-wins). */
+.packCardImageWrap {
+    flex: 0 0 auto;
+}
+
+.packPriceChip {
+    top: -15%;
+}
+
+.packBuyButton {
+    left: 86.14%;
 }
 
 /* ================================================================
@@ -510,6 +548,11 @@
     .sigilCanvas {
         width: clamp(44px, 6vw, 72px) !important;
         height: clamp(44px, 6vw, 72px) !important;
+    }
+
+    .packCanvas {
+        width: clamp(62px, 8.4vw, 100px) !important;
+        height: clamp(62px, 8.4vw, 100px) !important;
     }
 
     /* Gold price chip sits on top edge of each item card — compact chrome

@@ -388,12 +388,19 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                 style={{ ...cardStyleVars } as CSSProperties}
                                 onClick={() => setSelectedShopIndex(prev => prev === item.shopIndex ? null : item.shopIndex)}
                             >
-                                <div className={styles.priceChip}>
-                                    <img src={goldIconUrl} alt="Gold" className={styles.priceIcon} />
-                                    <span className={styles.priceValue}>{item.cost}</span>
-                                </div>
+                                {/* For packs, the priceChip + buyButton are rendered INSIDE
+                                    cardImageWrap (instead of as siblings of it like sigils
+                                    do) so they can anchor to the visible portrait art's
+                                    bounds rather than the square canvas-wrapper bounds.
+                                    `.packCardImageWrap` shrinks cardImageWrap to the canvas
+                                    wrapper size so priceChip's `top: -15%` and buyButton's
+                                    `left: 86.14%` resolve against the visible-art geometry. */}
+                                <div className={`${styles.cardImageWrap} ${styles.packCardImageWrap}`}>
+                                    <div className={`${styles.priceChip} ${styles.packPriceChip}`}>
+                                        <img src={goldIconUrl} alt="Gold" className={styles.priceIcon} />
+                                        <span className={styles.priceValue}>{item.cost}</span>
+                                    </div>
 
-                                <div className={styles.cardImageWrap}>
                                     <ItemScene
                                         itemId={packId}
                                         index={sigilItems.length + i}
@@ -401,12 +408,12 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                         useFrame={false}
                                         aspectRatio={def.aspectRatio}
                                         displayScale={def.displayScale}
-                                        className={styles.sigilCanvas}
+                                        className={`${styles.sigilCanvas} ${styles.packCanvas}`}
                                     />
                                     {isSelected && (
                                         <button
                                             type="button"
-                                            className={styles.buyButton}
+                                            className={`${styles.buyButton} ${styles.packBuyButton}`}
                                             style={buttonStyleVars}
                                             onClick={(e) => {
                                                 if (!canAfford) return;
