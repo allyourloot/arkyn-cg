@@ -81,13 +81,47 @@
 }
 
 /* Idle bob — separate from the outer button's lift transform so
-   selecting a rune doesn't get cancelled by the running animation. */
+   selecting a rune doesn't get cancelled by the running animation.
+   The perspective lives on this layer so the inner .flipper's rotateY
+   reads as a proper 3D card flip during apply animations. */
 .runeFloat {
     position: relative;
     width: 100%;
     height: 100%;
     animation: augury-rune-float 3.6s ease-in-out infinite;
     will-change: transform;
+    perspective: 800px;
+}
+
+/* 3D card-flip wrapper. GSAP drives rotateY 0→180 on Apply for
+   convert/upgrade/consecrate effects so the back face rotates into
+   view to reveal the predicted post-apply rune. Same wrapper carries
+   the fade (banish) and pulse (duplicate) tweens so the outer .runeSlot
+   button's CSS-driven lift transform isn't clobbered. */
+.flipper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+/* Front + back faces share the same box; backface-visibility hides the
+   one currently facing away. The back face is pre-rotated 180° so it
+   reads correctly (not mirrored) when the parent .flipper hits 180°. */
+.faceFront,
+.faceBack {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.faceBack {
+    transform: rotateY(180deg);
 }
 
 .runeArt {
@@ -106,6 +140,31 @@
     width: 100%;
     height: 100%;
     image-rendering: pixelated;
+}
+
+/* DissolveCanvas mounted into the faceFront when a fade-anim is
+   queued. Fills the slot the same way RuneImage does so the dissolve
+   reads as the rune tearing apart in place. */
+.dissolveLayer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Spawn slot — appended to the right of the picker rune row when a
+   tarot adds a rune (The World, The Lovers). Non-interactive (it's a
+   <div>, not a <button>) and slightly elevated z so it paints above
+   neighboring fading slots if they overlap. The reverse-dissolve
+   materialize gives a soft drop-shadow halo, so we drop the float bob
+   on this slot to keep the materialize crisp. */
+.spawnSlot {
+    cursor: default;
+    pointer-events: none;
+}
+.spawnSlot .runeFloat {
+    animation: none;
 }
 
 @keyframes augury-rune-float {

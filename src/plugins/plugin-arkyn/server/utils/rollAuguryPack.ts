@@ -1,19 +1,12 @@
 import {
     AUGURY_PACK_RUNE_CHOICES,
     AUGURY_PACK_TAROT_CHOICES,
+    AUGURY_PACK_RNG_OFFSET,
     TAROT_IDS,
     createRoundRng,
 } from "../../shared";
 import { nextRuneId } from "./nextRuneId";
 import type { RuneInstanceData } from "./createPouch";
-
-// RNG namespace. Must differ from enemy selection (0), boss debuff (50000),
-// shop scrolls (100000), shop sigils (200000), voltage proc (300000),
-// Rune Bag rolls (400000), pack-slot generation (500000), and Codex
-// (600000). Apply-time effect RNG (Wheel of Fortune, World) shares this
-// base namespace but adds a `+1` offset so picker-rolls and apply-rolls
-// don't collide for the same (round, packIndex).
-export const AUGURY_PACK_RNG_OFFSET = 700000;
 
 export interface AuguryPackRollResult {
     /** Snapshot of N runes sampled from the live pouch (without replacement). */

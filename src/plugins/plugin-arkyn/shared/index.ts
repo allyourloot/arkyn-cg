@@ -198,5 +198,5 @@ export type {
 export { CONSUMABLE_DEFINITIONS, getConsumableDefinition } from "./consumables";
 export type { ConsumableDefinition, ConsumableEffect } from "./consumables";
 
-export { TAROT_DEFINITIONS, TAROT_IDS, getTarotDefinition } from "./tarots";
+export { TAROT_DEFINITIONS, TAROT_IDS, AUGURY_PACK_RNG_OFFSET, getTarotDefinition } from "./tarots";
 export type { TarotDefinition, TarotEffect } from "./tarots";

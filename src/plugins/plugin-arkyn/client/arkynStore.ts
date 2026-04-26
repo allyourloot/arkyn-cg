@@ -183,6 +183,12 @@ let pendingCodexScrolls: string[] = [];
 let pendingAuguryRunes: RuneClientData[] = [];
 let pendingAuguryTarots: string[] = [];
 
+// Mirror of `player.auguryPurchaseCount`. The picker uses this to
+// reproduce the server's apply-time RNG seed when previewing the
+// added rune for The World (and the per-rune reroll for Wheel of
+// Fortune) so the visual matches the server's actual mutation.
+let auguryPurchaseCount = 0;
+
 // Runes permanently banished this run (Banish sigil). Mirrored from the
 // server so PouchCounter can shrink its denominator and future UI
 // (e.g. a "Banished Runes" row in PouchModal) can enumerate them.
@@ -382,6 +388,7 @@ export function setPendingCodexScrolls(s: string[]) { pendingCodexScrolls = s; n
 // Augury Pack setters
 export function setPendingAuguryRunes(r: RuneClientData[]) { pendingAuguryRunes = r; notify(); }
 export function setPendingAuguryTarots(t: string[]) { pendingAuguryTarots = t; notify(); }
+export function setAuguryPurchaseCount(n: number) { auguryPurchaseCount = n; notify(); }
 
 /**
  * Append a single rune to the per-run `acquiredRunes` list client-side.
@@ -823,6 +830,7 @@ export function usePendingCodexScrolls() { return useSyncExternalStore(subscribe
 // these 8 picker runes + 5 tarot offerings.
 export function usePendingAuguryRunes() { return useSyncExternalStore(subscribe, () => pendingAuguryRunes); }
 export function usePendingAuguryTarots() { return useSyncExternalStore(subscribe, () => pendingAuguryTarots); }
+export function useAuguryPurchaseCount() { return useSyncExternalStore(subscribe, () => auguryPurchaseCount); }
 export function useDiscardsUsedThisRound() { return useSyncExternalStore(subscribe, () => discardsUsedThisRound); }
 export function useCastsUsedThisRound() { return useSyncExternalStore(subscribe, () => castsUsedThisRound); }
 export function useMaterializingRune() { return useSyncExternalStore(subscribe, () => materializingRune); }

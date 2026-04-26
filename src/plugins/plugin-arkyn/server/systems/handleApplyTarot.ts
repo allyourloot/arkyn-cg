@@ -1,6 +1,7 @@
 import {
     type ArkynState,
     type RuneInstance,
+    AUGURY_PACK_RNG_OFFSET,
     ELEMENT_TYPES,
     RARITY_TYPES,
     isElement,
@@ -16,7 +17,6 @@ import { createRuneInstance, syncPlayerPouch } from "../utils/drawRunes";
 import { getPouch } from "../resources/playerPouch";
 import { nextRuneId } from "../utils/nextRuneId";
 import type { RuneInstanceData } from "../utils/createPouch";
-import { AUGURY_PACK_RNG_OFFSET } from "../utils/rollAuguryPack";
 
 const logger = new Logger("ArkynApplyTarot");
 

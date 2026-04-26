@@ -1,5 +1,16 @@
 import type { ElementType } from "./arkynConstants";
 
+// RNG namespace shared by server-side roll/apply (rollAuguryPack.ts,
+// handleApplyTarot.ts) AND client-side prediction (AuguryPicker.tsx
+// previews The World's added rune + Wheel of Fortune's per-rune reroll).
+// Both sides MUST use the same offset + the same `+1` apply-time bump
+// so the client's preview rune matches the server's actual mutation.
+//
+// Must differ from enemy selection (0), boss debuff (50000), shop
+// scrolls (100000), shop sigils (200000), voltage proc (300000), Rune
+// Bag rolls (400000), pack-slot generation (500000), Codex (600000).
+export const AUGURY_PACK_RNG_OFFSET = 700000;
+
 // Tarot Cards — deck-mutation items granted by the Augury Pack. Each
 // pack offers 5 random tarots over 8 sampled runes from the player's
 // pouch. The player applies one tarot to selected runes (or to a
