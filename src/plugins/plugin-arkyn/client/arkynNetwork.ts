@@ -1,4 +1,4 @@
-import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_REORDER_SIGILS, ARKYN_USE_CONSUMABLE, ARKYN_PICK_BAG_RUNE, ARKYN_PICK_CODEX_SCROLL, ARKYN_APPLY_TAROT, ARKYN_REROLL_SHOP, ARKYN_DEBUG_GRANT_SIGIL } from "../shared";
+import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_REORDER_SIGILS, ARKYN_USE_CONSUMABLE, ARKYN_PICK_PACK_RUNE, ARKYN_PICK_CODEX_SCROLL, ARKYN_APPLY_TAROT, ARKYN_REROLL_SHOP, ARKYN_DEBUG_GRANT_SIGIL } from "../shared";
 
 /**
  * Network layer for Arkyn. Owns the connection sender and exposes
@@ -66,8 +66,8 @@ export function sendUseConsumable(index: number): void {
 }
 
 // `index = null` means Skip. `index = number` means Select that rune.
-export function sendBagChoice(index: number | null): void {
-    sendArkynMessage(ARKYN_PICK_BAG_RUNE, { index });
+export function sendPackChoice(index: number | null): void {
+    sendArkynMessage(ARKYN_PICK_PACK_RUNE, { index });
 }
 
 // `index = null` means Skip. `index = number` means Select that scroll.
@@ -100,7 +100,7 @@ export function sendApplyTarot(args: {
 
 /**
  * Reroll the shop's sigil slots. Deducts REROLL_COST gold server-side
- * and regenerates the sigil offerings. Scrolls + rune bags stay put.
+ * and regenerates the sigil offerings. Scrolls + rune packs stay put.
  */
 export function sendRerollShop(): void {
     sendArkynMessage(ARKYN_REROLL_SHOP, {});

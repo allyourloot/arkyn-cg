@@ -1,17 +1,20 @@
-import { AUGURY_PACK_COST, CODEX_PACK_COST, RUNE_BAG_COST, type ElementType } from "./arkynConstants";
+import { AUGURY_PACK_COST, CODEX_PACK_COST, RUNE_PACK_COST, type ElementType } from "./arkynConstants";
 
 // Pack types live in the shop's "Packs" section. Each pack is a
 // deferred-pick container: the player buys it, sees a picker of N
 // random items, and picks one. Adding a future pack means a new entry
 // here + a new picker handler — no other code touches the dispatcher.
-export const PACK_TYPES = ["runeBag", "codexPack", "auguryPack"] as const;
+export const PACK_TYPES = ["runePack", "codexPack", "auguryPack"] as const;
 export type PackType = (typeof PACK_TYPES)[number];
 
 export interface PackDefinition {
     /**
      * The `ShopItemState.itemType` value used both for the shop dispatcher
      * lookup (`SHOP_ITEM_HANDLERS[itemType]`) and the React rendering
-     * branch in `ShopScreen`. Equal to the registry key.
+     * branch in `ShopScreen`. Equal to the registry key. The asset
+     * lookup in `getPackImageUrl` snake_cases this to find the matching
+     * file in `assets/items/consumables/packs/` (e.g. `runePack` →
+     * `rune_pack.png`).
      */
     itemType: PackType;
     name: string;
@@ -43,13 +46,14 @@ export interface PackDefinition {
 }
 
 export const PACK_DEFINITIONS: Record<PackType, PackDefinition> = {
-    runeBag: {
-        itemType: "runeBag",
-        name: "Rune Bag",
-        cost: RUNE_BAG_COST,
+    runePack: {
+        itemType: "runePack",
+        name: "Rune Pack",
+        cost: RUNE_PACK_COST,
         description: "Opens 4 random runes. Pick one to add permanently to your pouch.",
         dissolveElement: "earth",
-        aspectRatio: 1, // 128x128 square
+        aspectRatio: 89 / 160,       // matches rune_pack.png (89x160 — same as codex / augury)
+        displayScale: 1.3,           // parity with the other tall pack arts
     },
     codexPack: {
         itemType: "codexPack",
@@ -58,7 +62,7 @@ export const PACK_DEFINITIONS: Record<PackType, PackDefinition> = {
         description: "Opens 4 random scrolls. Pick one to upgrade that element.",
         dissolveElement: "arcane",
         aspectRatio: 89 / 160, // ≈ 0.556 — taller than wide
-        displayScale: 1.3,     // fill the 130% canvas overflow so the tall card reads at parity with Rune Bag
+        displayScale: 1.3,     // fill the 130% canvas overflow so the tall card reads at parity with the other packs
     },
     auguryPack: {
         itemType: "auguryPack",

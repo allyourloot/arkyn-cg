@@ -108,25 +108,25 @@ export class ArkynPlayerState extends Schema {
     @type([ShopItemState]) shopItems = new ArraySchema<ShopItemState>();
 
     // Runes the player has permanently added to their pouch this run via
-    // Rune Bag picks. `createPouch` appends these to the base 52 each
+    // Rune Pack picks. `createPouch` appends these to the base 52 each
     // round so they persist across round resets. Empty on fresh runs.
     @type([RuneInstance]) acquiredRunes = new ArraySchema<RuneInstance>();
 
-    // In-flight Rune Bag picker state. Non-empty = the player has bought
-    // a bag this shop visit and is currently viewing the 4 choices; the
+    // In-flight Rune Pack picker state. Non-empty = the player has bought
+    // a pack this shop visit and is currently viewing the 4 choices; the
     // client hides the shop's middle column and shows the picker. Cleared
     // on Select or Skip. Does not persist across disconnects.
-    @type([RuneInstance]) pendingBagRunes = new ArraySchema<RuneInstance>();
+    @type([RuneInstance]) pendingPackRunes = new ArraySchema<RuneInstance>();
 
-    // How many bags the player has bought during the current shop visit.
-    // Reset to 0 on shop entry. Used to uniquely seed each bag's RNG so
-    // back-to-back purchases in the same shop roll different runes.
-    @type("number") bagPurchaseCount = 0;
+    // How many Rune Packs the player has bought during the current shop
+    // visit. Reset to 0 on shop entry. Used to uniquely seed each pack's
+    // RNG so back-to-back purchases in the same shop roll different runes.
+    @type("number") packPurchaseCount = 0;
 
     // In-flight Codex Pack picker state. Non-empty = the player has
     // bought a pack this shop visit and is currently viewing the 4
     // scroll choices (each entry is an element name). Cleared on Select
-    // or Skip; mutually exclusive with `pendingBagRunes` (the picker UI
+    // or Skip; mutually exclusive with `pendingPackRunes` (the picker UI
     // can only show one at a time).
     @type(["string"]) pendingCodexScrolls = new ArraySchema<string>();
 

@@ -1,5 +1,5 @@
 import {
-    RUNE_BAG_RARITY_WEIGHTS,
+    RUNE_PACK_RARITY_WEIGHTS,
     SHOP_PACK_COUNT,
     SHOP_SIGIL_COUNT,
     type RarityType,
@@ -11,25 +11,25 @@ import { SIGIL_DEFINITIONS, SIGIL_IDS } from "./sigils";
 // RNG namespace offsets — must differ from enemy selection (0), boss
 // debuff (50000), and voltage proc (300000) to avoid correlation.
 const SHOP_SIGIL_RNG_OFFSET = 200000;
-// Pack-slot rolls live in their own band, distinct from Rune Bag's roll
+// Pack-slot rolls live in their own band, distinct from Rune Pack's roll
 // band (400000) so the pack-type pick can't correlate with the rune
-// rarities rolled inside the bag.
+// rarities rolled inside the pack.
 const SHOP_PACK_RNG_OFFSET = 500000;
 // Stride between reroll iterations of the same (seed, round) shop. 1000
 // is larger than any realistic `round` count so adjacent rounds' sigil
 // rolls can't collide with an earlier round's Nth reroll.
 const SHOP_SIGIL_REROLL_STRIDE = 1000;
 
-// Shop sigils roll against the same rarity table as Rune Bags so there's
+// Shop sigils roll against the same rarity table as Rune Packs so there's
 // one source of truth for how rare "rare" feels in the game. Per-shop-slot
 // probability: Common 60%, Uncommon 25%, Rare 12%, Legendary 3%.
-const SHOP_SIGIL_RARITY_WEIGHTS = RUNE_BAG_RARITY_WEIGHTS;
+const SHOP_SIGIL_RARITY_WEIGHTS = RUNE_PACK_RARITY_WEIGHTS;
 
 /**
  * Deterministically generate the pack types offered in the shop for a
  * given round. Each of the SHOP_PACK_COUNT slots rolls independently and
  * uniformly from PACK_TYPES — duplicates within one shop are allowed
- * (e.g. 2 Rune Bags, or 1 Rune Bag + 1 Codex Pack). Two runs with the
+ * (e.g. 2 Rune Packs, or 1 Rune Pack + 1 Codex Pack). Two runs with the
  * same seed see the same pack offerings on the same round.
  */
 export function generateShopPacks(seed: number, round: number): PackType[] {

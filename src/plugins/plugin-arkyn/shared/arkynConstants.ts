@@ -64,7 +64,7 @@ export const SHOP_SIGIL_COUNT = 2;    // sigil slots shown per shop visit
 export const REROLL_COST = 3;
 
 // Pack section — the renamed Consumables row that holds pack-type shop
-// items (Rune Bag, Codex Pack, …). Each shop visit rolls SHOP_PACK_COUNT
+// items (Rune Pack, Codex Pack, …). Each shop visit rolls SHOP_PACK_COUNT
 // pack slots uniformly from PACK_TYPES (with replacement, so a shop can
 // show 2 of the same pack type).
 export const SHOP_PACK_COUNT = 2;
@@ -72,19 +72,19 @@ export const SHOP_PACK_COUNT = 2;
 // Consumable inventory
 export const MAX_CONSUMABLES = 2;     // max consumable items a player can hold
 
-// Rune Bag item configuration. Buying a bag shows a picker of 4 random
-// runes (random element + weighted-random rarity). The player picks one
-// (or skips) — the picked rune is permanently added to their pouch for
-// the rest of the run. There is no per-shop cap: if a shop rolls 2
-// Rune Bags, the player may buy both. The only purchase gate is the
-// shared "no other pack picker is currently open" rule below.
-export const RUNE_BAG_COST = 4;
-export const RUNE_BAG_CHOICES = 4;          // runes shown in the picker
+// Rune Pack item configuration. Buying a pack shows a picker of 4
+// random runes (random element + weighted-random rarity). The player
+// picks one (or skips) — the picked rune is permanently added to their
+// pouch for the rest of the run. There is no per-shop cap: if a shop
+// rolls 2 Rune Packs, the player may buy both. The only purchase gate
+// is the shared "no other pack picker is currently open" rule below.
+export const RUNE_PACK_COST = 4;
+export const RUNE_PACK_CHOICES = 4;         // runes shown in the picker
 
 // Codex Pack item configuration. Buying a pack shows a picker of 4
 // distinct random scroll elements. The player picks one (or skips) —
 // the picked element gets +1 scroll level (or +N with Scroll God). No
-// per-shop cap (same rule as Rune Bag).
+// per-shop cap (same rule as Rune Pack).
 export const CODEX_PACK_COST = 4;
 export const CODEX_PACK_CHOICES = 4;        // scrolls shown in the picker
 
@@ -94,18 +94,18 @@ export const CODEX_PACK_CHOICES = 4;        // scrolls shown in the picker
 // pouch-wide tarots like Judgement / World). Other tarots are discarded.
 // The rune count matches HAND_SIZE so the picker row reads visually
 // like the player's hand. Same "no other pack picker is open" gate as
-// Rune Bag and Codex Pack.
+// Rune Pack and Codex Pack.
 export const AUGURY_PACK_COST = 4;
 export const AUGURY_PACK_RUNE_CHOICES = 8;  // matches HAND_SIZE
 export const AUGURY_PACK_TAROT_CHOICES = 5;
 export const TAROT_BANISH_GOLD = 3;          // Tower per-rune payout
 export const WORLD_LEGENDARY_CHANCE = 0.20;  // The World — split between Rare (1 - this) and Legendary
 
-// Per-slot rarity weights used by rollBagRunes. Tuned so bags feel
+// Per-slot rarity weights used by rollPackRunes. Tuned so packs feel
 // exciting without making rare/legendary commonplace: at 4 slots per
-// bag these weights produce ~11% of bags containing a legendary and
+// pack these weights produce ~11% of packs containing a legendary and
 // ~52% containing at least one rare-or-better.
-export const RUNE_BAG_RARITY_WEIGHTS: Record<RarityType, number> = {
+export const RUNE_PACK_RARITY_WEIGHTS: Record<RarityType, number> = {
     common: 60,
     uncommon: 25,
     rare: 12,
@@ -130,10 +130,10 @@ export const ARKYN_SELL_SIGIL = "arkyn:sell_sigil";
 // effect of the sigil immediately to its right — see sigilEffects.ts).
 export const ARKYN_REORDER_SIGILS = "arkyn:reorder_sigils";
 export const ARKYN_USE_CONSUMABLE = "arkyn:use_consumable";
-// Rune-bag picker flow. Payload: { index: number | null }
+// Rune-pack picker flow. Payload: { index: number | null }
 //   index = number  -> player selected that rune (adds to pouch permanently)
 //   index = null    -> player skipped (no rune added, no refund)
-export const ARKYN_PICK_BAG_RUNE = "arkyn:pick_bag_rune";
+export const ARKYN_PICK_PACK_RUNE = "arkyn:pick_pack_rune";
 // Codex-pack picker flow. Payload: { index: number | null }
 //   index = number  -> player selected that scroll (grants scroll level(s))
 //   index = null    -> player skipped (no scroll granted, no refund)

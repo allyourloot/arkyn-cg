@@ -40,7 +40,7 @@ export const ELEMENT_BG_COLORS: Record<string, string> = {
 
 export const TIER_LABELS = ["", "I", "II", "III", "IV", "V"];
 
-// Rarity chip colors — shared by sigil tooltips and the Rune Bag picker.
+// Rarity chip colors — shared by sigil tooltips and the Rune Pack picker.
 // Matches the `RARITY_TYPES` union (common / uncommon / rare / legendary).
 export const RARITY_COLORS: Record<string, string> = {
     common: "#b0b0b0",

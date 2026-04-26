@@ -33,14 +33,14 @@ import { SIGIL_DEFINITIONS } from "./sigils";
 //   [ 300000–399999] SIGIL_PROCS                 (this file)
 //   [ 400000–499999] SIGIL_LIFECYCLE_HOOKS       (this file)
 //       slot 0 = Thief, slot 1 = Binoculars
-//   [ 400000 + round + bagIndex*7919] Rune Bag  (rollBagRunes)  ⚠ shares the
+//   [ 400000 + round + packIndex*7919] Rune Pack (rollPackRunes) ⚠ shares the
 //       lifecycle base; the two streams don't interact today because Thief's
-//       read is  `400000 + round`  (slot 0 only) while RuneBag's read is
-//       `400000 + round + bagIndex*7919`  — the bagIndex jitter steps clear
-//       of the lifecycle band as long as bagIndex >= 1 for any OTHER
+//       read is  `400000 + round`  (slot 0 only) while Rune Pack's read is
+//       `400000 + round + packIndex*7919`  — the packIndex jitter steps clear
+//       of the lifecycle band as long as packIndex >= 1 for any OTHER
 //       lifecycle sigil in slot 1+. Adding a new lifecycle sigil here MUST
 //       pick a slot > 0 (so its stream is 410000+round, 420000+round, …)
-//       or the first bag of a given round will correlate with its roll.
+//       or the first pack of a given round will correlate with its roll.
 //   [ 500000–599999] SIGIL_CAST_RNG_MULT         (this file)
 //       slot 0 = Boom Bomb
 //
@@ -605,7 +605,7 @@ export const SIGIL_LIFECYCLE_HOOKS: Record<string, SigilLifecycleHooks> = {
     binoculars: {
         onRoundStart(round, runSeed, ctx) {
             // No-op if the enemy has no resistances to disable. Slot 1 (not 0)
-            // avoids the latent rune-bag RNG collision documented at the top
+            // avoids the latent rune-pack RNG collision documented at the top
             // of this file. Binoculars is Mimic-incompatible so `copyIndex`
             // is always 0 — kept in the seed for consistency.
             if (ctx.enemyResistances.length === 0) return [];
@@ -1470,7 +1470,7 @@ export const SIGIL_DISCARD_HOOKS: Record<string, DiscardHookDefinition> = {
  * `handSize` and the pouch is preserved.
  *
  * The duplicate is ALSO pushed to `acquiredRunes` as a permanent deck
- * addition (same path Rune Bag picks take), so next round's
+ * addition (same path Rune Pack picks take), so next round's
  * `createPouch` rebuilds the pool with the duplicate in it — enabling
  * the "duplicate a rune to build your Fire deck" loop Magic Mirror is
  * designed around.

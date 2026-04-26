@@ -70,7 +70,7 @@ rollAuguryPack(runSeed, round, auguryPurchaseCount, livePouch)
 100000  shop scrolls
 200000  shop sigils
 300000  voltage proc        (sigil proc band [300000, 400000))
-400000  Rune Bag rolls      (lifecycle band — see CLAUDE.md latent collision note)
+400000  Rune Pack rolls      (lifecycle band — see CLAUDE.md latent collision note)
 500000  pack-slot generation
 600000  Codex
 700000  Augury Pack ← this system
@@ -172,9 +172,9 @@ CSS transitions are disabled on slots during the GSAP timeline so the JS-driven 
 | `pendingAuguryTarots` | `ArraySchema<string>` | open pack only | 5 tarot ids the picker renders |
 | `auguryPurchaseCount` | `number` | per shop visit (reset on shop entry) | Picker RNG salt; mutual-exclusivity index |
 | `banishedRunes` | `ArraySchema<RuneInstance>` | run lifetime | Permanent removals; subtracted from Pouch Modal totals |
-| `acquiredRunes` | `ArraySchema<RuneInstance>` | run lifetime | Permanent additions; sourced by tarot Add and Rune Bag |
+| `acquiredRunes` | `ArraySchema<RuneInstance>` | run lifetime | Permanent additions; sourced by tarot Add and Rune Pack |
 
-`pendingAuguryRunes` and `pendingAuguryTarots` are mutually exclusive with `pendingBagRunes` and `pendingCodexScrolls` — the shop handler dispatcher refuses a purchase if any other pack picker is open.
+`pendingAuguryRunes` and `pendingAuguryTarots` are mutually exclusive with `pendingPackRunes` and `pendingCodexScrolls` — the shop handler dispatcher refuses a purchase if any other pack picker is open.
 
 ## Shop Integration (`server/systems/shopItemHandlers.ts`)
 
@@ -186,7 +186,7 @@ auguryPack: ({ player, sessionId }) => {
     const livePouch = getPouch(sessionId) ?? [];
     const { runes, tarotIds } = rollAuguryPack(
         player.runSeed,
-        player.currentRound + 1,            // shop seeds with next round (matches Rune Bag / Codex convention)
+        player.currentRound + 1,            // shop seeds with next round (matches Rune Pack / Codex convention)
         player.auguryPurchaseCount,
         livePouch,
     );
@@ -197,7 +197,7 @@ auguryPack: ({ player, sessionId }) => {
 }
 ```
 
-The mutual-exclusivity gate (`anyPackPickerOpen`) is the same one Rune Bag and Codex Pack use — only one picker can be open at a time. Counters reset to 0 on shop entry.
+The mutual-exclusivity gate (`anyPackPickerOpen`) is the same one Rune Pack and Codex Pack use — only one picker can be open at a time. Counters reset to 0 on shop entry.
 
 ## Constants (`shared/arkynConstants.ts`)
 

@@ -124,7 +124,7 @@ finalDamage = baseTotal × finalMult
 
 - `SPELL_TIER_BASE_DAMAGE = [0, 4, 8, 12, 16, 20]` — flat per-tier base.
 - `SPELL_TIER_MULT = [0, 1, 2, 3, 4, 5]` — flat per-tier multiplier.
-- `RUNE_BASE_DAMAGE = { common: 8, uncommon: 12, rare: 18, legendary: 30 }` — per-rune contribution by rarity. Higher-rarity runes drop from Rune Bags (see Rune Bag System below).
+- `RUNE_BASE_DAMAGE = { common: 8, uncommon: 12, rare: 18, legendary: 30 }` — per-rune contribution by rarity. Higher-rarity runes drop from Rune Packs (see Rune Pack System below).
 - Per-rune `resistMod`: ×2.0 if enemy is weak to that rune's element, ×0.5 if resistant, ×1.0 neutral. Resistance-ignore sigils (Impale) filter matching elements out of the resistances list at the call site, so those runes fall through to neutral.
 - `scrollBonus` = `SCROLL_RUNE_BONUS (2) × scrollLevels[element]`, applied per-rune BEFORE the resist/weak multiplier so it compounds with both.
 - `calculateSpellDamage(spell, runes, rarities, resistances, weaknesses, scrollLevels?, bonusMult?, xMult?)` returns the full `SpellDamageBreakdown` (spellBase, runeBaseContributions, baseTotal, mult, finalDamage, per-rune crit/resist flags). `bonusMult` is the sum of all additive-mult sigil bonuses (Synapse hand-mult + Arcana played-mult); `xMult` multiplies the total mult (Supercell/Eruption spell-element xMult).
@@ -170,7 +170,7 @@ Sigils are shop-purchased items that modify a run. **18 sigils are implemented t
 
 **Proc RNG determinism**: Each proc entry carries a unique `rngOffset` derived from the slot helpers `procRngSlot(n)` / `lifecycleRngSlot(n)` (not raw magic numbers). Slots are append-only — Voltage = `procRngSlot(0)` = 300000, Fortune = `procRngSlot(1)` = 310000, Hourglass = `procRngSlot(2)` = 320000, Chainlink = `procRngSlot(3)` = 330000, Blackjack = `procRngSlot(4)` = 340000, Keychain = `procRngSlot(5)` = 350000; Thief = `lifecycleRngSlot(0)` = 400000, Binoculars = `lifecycleRngSlot(1)` = 410000. Procs live in band `[300000, 400000)`, lifecycle hooks in band `[400000, 500000)`, spaced by `SIGIL_RNG_OFFSET_SPACING = 10000`. Server and client both use `createRoundRng(runSeed, rngOffset + round * 10 + castNumber)` so they agree byte-for-byte on which runes proc. Module-load validation throws on duplicate offsets, out-of-band offsets, or offsets that don't align to the spacing grid — don't hand-pick numbers; use the slot helpers.
 
-**⚠ Latent namespace collision**: `rollBagRunes` uses base `400000 + round + bagIndex * 7919`, which shares the lifecycle band. Today it doesn't interact because Thief is slot 0 and only fires one rng() call at `400000 + round` — the bag jitter steps clear. **Any new lifecycle sigil MUST use slot ≥ 1** — Binoculars = `lifecycleRngSlot(1)` already claims slot 1, so the next added lifecycle sigil uses slot 2 (`lifecycleRngSlot(2)` = 420000). The namespace map is documented at the top of `sigilEffects.ts`.
+**⚠ Latent namespace collision**: `rollPackRunes` uses base `400000 + round + packIndex * 7919`, which shares the lifecycle band. Today it doesn't interact because Thief is slot 0 and only fires one rng() call at `400000 + round` — the pack jitter steps clear. **Any new lifecycle sigil MUST use slot ≥ 1** — Binoculars = `lifecycleRngSlot(1)` already claims slot 1, so the next added lifecycle sigil uses slot 2 (`lifecycleRngSlot(2)` = 420000). The namespace map is documented at the top of `sigilEffects.ts`.
 
 **Where the registries plug in:**
 - `server/utils/initPlayerForRound.ts` applies `getPlayerStatDeltas(sigils)` and iterates `SIGIL_LIFECYCLE_HOOKS`. Each hook returns `RoundStartEffect[]` — a discriminated union the caller dispatches over (`grantConsumable` / `grantGold` / `grantStat` / `disableResistance`). Hooks receive a third arg `ctx: RoundStartContext = { enemyResistances, enemyWeaknesses }` derived from the already-spawned next-round enemy (the round_end → shop transition pre-spawns it; shop → playing just reads `state.enemy.*`). `disableResistance` sets `player.disabledResistance` (a `@type("string")` field on `ArkynPlayerState`), which is cleared at the top of every `initPlayerForRound` so stale picks can't leak across matchups. One hook can return multiple effects; new effect kinds add as switch arms without touching the hook definitions.
@@ -196,7 +196,7 @@ Sigils are shop-purchased items that modify a run. **18 sigils are implemented t
 2. Drop PNG assets in `assets/sigils/<id>-32x32.png`, `<id>-64x64.png`, `<id>-128x128.png` (auto-discovered by Vite glob). **The filename stem must exactly match the id** — the asset loader does a raw string lookup on `${sigilId}-${size}x${size}`, so a mismatch (even a space-for-underscore slip) shows up as a silently blank icon in the shop + sigil bar.
 3. Add **one** entry to whichever category registry fits (1-9 above). If the mechanic is genuinely one-off, define a lifecycle hook in `SIGIL_LIFECYCLE_HOOKS` or propose a new category.
 4. For proc sigils: assign `rngOffset: procRngSlot(N)` where N is the next unused slot (append — don't reuse or reorder existing slots, or you break replay determinism). Module-load validation will throw on collision, out-of-band, or misaligned offsets.
-5. For lifecycle sigils: assign `rngOffset: lifecycleRngSlot(N)` where **N ≥ 1** (slot 0 is Thief and shares its numeric base with the Rune Bag jitter — see the latent collision warning above).
+5. For lifecycle sigils: assign `rngOffset: lifecycleRngSlot(N)` where **N ≥ 1** (slot 0 is Thief and shares its numeric base with the Rune Pack jitter — see the latent collision warning above).
 
 No other code changes needed for the 12 currently-implemented sigils — each is a pure data entry. Grep audit: `grep -rn 'includes("voltage"\|"synapse"\|"arcana"\|"supercell"\|"plunder")' src/plugins/plugin-arkyn` returns zero results outside the registries.
 
@@ -273,7 +273,7 @@ Browsers limit concurrent WebGL contexts (Chrome: ~16, practical ceiling ~8–12
 
 Shop purchases dispatch through a data-driven handler registry parallel to the sigil effect registries — `handleBuyItem` validates the request (gold, shop index, item not-already-purchased) then looks up the item's handler in `SHOP_ITEM_HANDLERS`. Each handler runs its own type-specific preconditions and state mutations; the dispatcher charges gold and flips `item.purchased = true` **only after** the handler returns `{ ok: true }`. There is no refund path — gold is never deducted on failure.
 
-**Shop sigil generation** (`shared/shopGeneration.ts::generateShopSigils`) is **rarity-weighted** — each shop slot rolls against `RUNE_BAG_RARITY_WEIGHTS` (Common 60%, Uncommon 25%, Rare 12%, Legendary 3%) so Legendary sigils feel earned when they appear instead of hitting the board on round 1-3. The same weights drive Rune Bag rarity rolls so there's one source of truth for how rare "rare" feels across the game. Picks within a single shop visit are sampling-without-replacement (weights recomputed per slot so removing a Legendary from slot 1 doesn't inflate slot 2's Legendary odds). Owned sigils are filtered out of the pool before weighting.
+**Shop sigil generation** (`shared/shopGeneration.ts::generateShopSigils`) is **rarity-weighted** — each shop slot rolls against `RUNE_PACK_RARITY_WEIGHTS` (Common 60%, Uncommon 25%, Rare 12%, Legendary 3%) so Legendary sigils feel earned when they appear instead of hitting the board on round 1-3. The same weights drive Rune Pack rarity rolls so there's one source of truth for how rare "rare" feels across the game. Picks within a single shop visit are sampling-without-replacement (weights recomputed per slot so removing a Legendary from slot 1 doesn't inflate slot 2's Legendary odds). Owned sigils are filtered out of the pool before weighting.
 
 **Registry** (`server/systems/shopItemHandlers.ts`):
 ```ts
@@ -282,9 +282,9 @@ type ShopItemHandler = (ctx: ShopPurchaseCtx) =>
     | { ok: false; reason: string };
 
 const SHOP_ITEM_HANDLERS: Record<string, ShopItemHandler> = {
-    scroll:  handleScrollPurchase,
-    sigil:   handleSigilPurchase,
-    runeBag: handleRuneBagPurchase,
+    scroll:   handleScrollPurchase,
+    sigil:    handleSigilPurchase,
+    runePack: handleRunePackPurchase,
 };
 ```
 
@@ -294,35 +294,33 @@ const SHOP_ITEM_HANDLERS: Record<string, ShopItemHandler> = {
 3. Register in `SHOP_ITEM_HANDLERS` keyed by the item type string.
 4. No changes to `handleBuyItem.ts` — the dispatcher is generic.
 
-### Rune Bag System (`server/systems/handleBuyItem.ts`, `handleBagChoice.ts`, `client/ui/RuneBagPicker.tsx`)
+### Rune Pack System (`server/systems/handleBuyItem.ts`, `handlePackChoice.ts`, `client/ui/RunePackPicker.tsx`)
 
 Shop item that rolls a picker of 4 random runes; player picks one (or skips) and the chosen rune is added permanently to their pouch.
 
 **Flow**:
-1. Player buys a bag in the shop (`RUNE_BAG_COST = 4` gold). `handleBuyItem` calls `rollBagRunes(runSeed, round, bagPurchaseCount)` to roll 4 deterministic-seeded runes and stores them on `player.pendingBagRunes`.
-2. Client sees `pendingBagRunes.length > 0` and mounts `RuneBagPicker.tsx` over the shop — shows 4 rune cards with Select / Skip buttons.
-3. Player clicks a rune → `ARKYN_PICK_BAG_RUNE { index }` → `handleBagChoice` appends to `player.acquiredRunes` (run-stat record) + pushes the rune into the live `player.pouch` (immediate sync so `PouchCounter` ticks +1 right away). Clears `pendingBagRunes`.
-4. Player clicks Skip → same message with `index: null` → just clears `pendingBagRunes`. No refund.
+1. Player buys a pack in the shop (`RUNE_PACK_COST = 4` gold). `handleBuyItem` calls `rollPackRunes(runSeed, round, packPurchaseCount)` to roll 4 deterministic-seeded runes and stores them on `player.pendingPackRunes`.
+2. Client sees `pendingPackRunes.length > 0` and mounts `RunePackPicker.tsx` over the shop — shows 4 rune cards with Select / Skip buttons.
+3. Player clicks a rune → `ARKYN_PICK_PACK_RUNE { index }` → `handlePackChoice` appends to `player.acquiredRunes` (run-stat record) + pushes the rune into the live `player.pouch` (immediate sync so `PouchCounter` ticks +1 right away). Clears `pendingPackRunes`.
+4. Player clicks Skip → same message with `index: null` → just clears `pendingPackRunes`. No refund.
 
 **Constants** (`shared/arkynConstants.ts`):
-- `RUNE_BAG_COST = 4`
-- `SHOP_RUNE_BAG_COUNT = 1` — 1 bag slot per shop visit
-- `RUNE_BAG_CHOICES = 4` — 4 runes per picker
-- `MAX_RUNE_BAGS_PER_SHOP = 1` — can't re-buy after picking
-- `RUNE_BAG_RARITY_WEIGHTS = { common: 60, uncommon: 25, rare: 12, legendary: 3 }` — cumulative-weighted roll per choice slot. Element is uniform random across all 13 `ELEMENT_TYPES`.
+- `RUNE_PACK_COST = 4`
+- `RUNE_PACK_CHOICES = 4` — 4 runes per picker
+- `RUNE_PACK_RARITY_WEIGHTS = { common: 60, uncommon: 25, rare: 12, legendary: 3 }` — cumulative-weighted roll per choice slot. Element is uniform random across all 13 `ELEMENT_TYPES`.
 
-**Determinism**: `rollBagRunes` seeds from `(runSeed, round, bagPurchaseCount)` so a re-mount (page refresh, re-join) produces the same 4 choices. This matters because `pendingBagRunes` is stored on the server schema and survives reconnect.
+**Determinism**: `rollPackRunes` seeds from `(runSeed, round, packPurchaseCount)` so a re-mount (page refresh, re-join) produces the same 4 choices. This matters because `pendingPackRunes` is stored on the server schema and survives reconnect.
 
 ### Rune Rarity System
 
 Runes have four rarities: `common`, `uncommon`, `rare`, `legendary` (see `RARITY_TYPES` in `arkynConstants.ts`). Rarity is the only vector that currently differentiates runes of the same element — higher-rarity runes contribute more base damage per cast:
 
 - `RUNE_BASE_DAMAGE = { common: 8, uncommon: 12, rare: 18, legendary: 30 }` (in `spellTable.ts`). Used per-rune inside `calculateSpellDamage` alongside scroll bonuses and resist/weak modifiers.
-- Starting pouch (`createPouch.ts`) is all common rarity. Higher rarities enter the run **only via Rune Bags** — see the weighted roll above.
+- Starting pouch (`createPouch.ts`) is all common rarity. Higher rarities enter the run **only via Rune Packs** — see the weighted roll above.
 - Rarity is visually stacked in `RuneImage.tsx`: a base frame PNG (`/assets/runes/128x128/base/<rarity>-128x128.png`) is rendered underneath the element glyph PNG (`/assets/runes/128x128/<element>-128x128.png`). Both are CSS-sized identically so rarity reads as the card's frame treatment.
-- The Rune Bag picker (`RuneBagPicker.tsx`) shows the full composed art so players can see the rarity frame before choosing.
+- The Rune Pack picker (`RunePackPicker.tsx`) shows the full composed art so players can see the rarity frame before choosing.
 
-**Rune construction — single factory**: Every `RuneInstance` is built through `createRuneInstance(data)` in `server/utils/drawRunes.ts`. The factory validates `data.rarity` via `isRarity()` (exported from `arkynConstants.ts`) and throws on an invalid value, so the `as RarityType` casts elsewhere in the damage pipeline are safe-by-construction. Three call sites (draw, rune bag purchase, bag pick commit) all route through this one factory — adding a new field to `RuneInstance` is a single-file change.
+**Rune construction — single factory**: Every `RuneInstance` is built through `createRuneInstance(data)` in `server/utils/drawRunes.ts`. The factory validates `data.rarity` via `isRarity()` (exported from `arkynConstants.ts`) and throws on an invalid value, so the `as RarityType` casts elsewhere in the damage pipeline are safe-by-construction. Three call sites (draw, rune pack purchase, pack pick commit) all route through this one factory — adding a new field to `RuneInstance` is a single-file change.
 
 **Future expansion**: `RUNE_BASE_DAMAGE` is a simple dict so per-rarity tuning is a one-line change. Other rarity-gated mechanics (unique rune art, rare-only scroll interactions, etc.) can key off the same `rarity` field on `RuneInstance`.
 
@@ -386,9 +384,9 @@ const CONSUMABLE_DEFINITIONS: Record<string, ConsumableDefinition>;  // auto-pop
 | `MAX_CONSUMABLES` | 2 | Max consumable items (e.g. Thief-granted scrolls) |
 | `CASTS_PER_ROUND` | 3 | Cast budget (Caster sigil adds +1) |
 | `DISCARDS_PER_ROUND` | 3 | Discard budget |
-| `RUNE_BAG_COST` | 4 | Gold cost per bag in the shop |
-| `RUNE_BAG_CHOICES` | 4 | Runes shown in the picker per bag |
-| `RUNE_BAG_RARITY_WEIGHTS` | common 60, uncommon 25, rare 12, legendary 3 | Cumulative weights for each bag choice slot |
+| `RUNE_PACK_COST` | 4 | Gold cost per pack in the shop |
+| `RUNE_PACK_CHOICES` | 4 | Runes shown in the picker per pack |
+| `RUNE_PACK_RARITY_WEIGHTS` | common 60, uncommon 25, rare 12, legendary 3 | Cumulative weights for each pack choice slot |
 
 ### Element Colors (`client/ui/styles.ts`)
 
@@ -400,7 +398,7 @@ Each element has a display color used for spell names, rune recipe borders, dama
 
 ### Shop Content Ideas (`client/ui/ShopScreen.tsx`, `server/systems/handleBuyItem.ts`)
 
-Between rounds the player enters the shop and can buy scrolls (per-element flat base damage), sigils (run-wide modifiers), and Rune Bags. Scrolls live in `player.scrollLevels` and are applied per-rune inside `calculateSpellDamage`; sigils dispatch through the registries (see **Sigil System**); rune bags roll deterministic picker choices (see **Rune Bag System**). All item types dispatch through the `SHOP_ITEM_HANDLERS` registry (see **Shop Item System**), so adding a new item type doesn't require touching `handleBuyItem.ts`.
+Between rounds the player enters the shop and can buy scrolls (per-element flat base damage), sigils (run-wide modifiers), and Rune Packs. Scrolls live in `player.scrollLevels` and are applied per-rune inside `calculateSpellDamage`; sigils dispatch through the registries (see **Sigil System**); rune packs roll deterministic picker choices (see **Rune Pack System**). All item types dispatch through the `SHOP_ITEM_HANDLERS` registry (see **Shop Item System**), so adding a new item type doesn't require touching `handleBuyItem.ts`.
 
 **Future sigil ideas** would typically slot into one of the 9 existing category registries (stat-mod / proc / hand-mult / lifecycle / synergy-unlock / spell-xMult / resist-ignore / end-of-round-gold / played-mult) as a single data entry. Only genuinely novel mechanics need a new category.
 

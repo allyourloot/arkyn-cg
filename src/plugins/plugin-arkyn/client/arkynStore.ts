@@ -158,18 +158,18 @@ let disabledResistance = "";
 // server. Empty string = no active ahoy element (Ahoy not owned).
 let ahoyDiscardElement = "";
 
-// Runes acquired this run from Rune Bag picks. These are rehydrated into
-// the pouch every round on the server side; the client mirrors the list
-// so PouchModal can show the extra slots (with real rarity art) and
-// PouchCounter can grow its denominator past 52.
+// Runes acquired this run from Rune Pack picks. These are rehydrated
+// into the pouch every round on the server side; the client mirrors
+// the list so PouchModal can show the extra slots (with real rarity
+// art) and PouchCounter can grow its denominator past 52.
 let acquiredRunes: RuneClientData[] = [];
 
-// In-flight Rune Bag picker state. Non-empty -> the player has just
-// bought a bag; ShopScreen hides its Items/Packs panel and the Next
+// In-flight Rune Pack picker state. Non-empty -> the player has just
+// bought a pack; ShopScreen hides its Items/Packs panel and the Next
 // Round button, then shows the picker with these 4 runes.
-let pendingBagRunes: RuneClientData[] = [];
+let pendingPackRunes: RuneClientData[] = [];
 
-// In-flight Codex Pack picker state. Same role as pendingBagRunes but
+// In-flight Codex Pack picker state. Same role as pendingPackRunes but
 // for the Codex Pack picker — each entry is an element name (string).
 // Non-empty -> the player has just bought a Codex Pack; ShopScreen
 // shows the CodexPicker with these 4 scroll choices.
@@ -377,9 +377,9 @@ export function setDisabledResistance(e: string) { disabledResistance = e; notif
 // Ahoy's per-round element setter — synced from player.ahoyDiscardElement.
 export function setAhoyDiscardElement(e: string) { ahoyDiscardElement = e; notify(); }
 
-// Rune Bag setters
+// Rune Pack setters
 export function setAcquiredRunes(r: RuneClientData[]) { acquiredRunes = r; notify(); }
-export function setPendingBagRunes(r: RuneClientData[]) { pendingBagRunes = r; notify(); }
+export function setPendingPackRunes(r: RuneClientData[]) { pendingPackRunes = r; notify(); }
 export function setBanishedRunes(r: RuneClientData[]) { banishedRunes = r; notify(); }
 
 // Codex Pack setters
@@ -467,22 +467,23 @@ export function emitSigilPurchase(e: SigilPurchaseEvent) {
     sigilPurchaseListeners.forEach(fn => fn(e));
 }
 
-// Bag-rune pick event — fired from RuneBagPicker's Select button. The
-// ArkynOverlay listens and flies the picked rune to the PouchCounter
-// icon in the bottom-right. Mirrors the sigil/scroll purchase event
-// pattern so the animation layer stays decoupled from the picker UI.
-export type BagRunePickEvent = {
+// Pack-rune pick event — fired from RunePackPicker's Select button.
+// The ArkynOverlay listens and flies the picked rune to the
+// PouchCounter icon in the bottom-right. Mirrors the sigil/scroll
+// purchase event pattern so the animation layer stays decoupled from
+// the picker UI.
+export type PackRunePickEvent = {
     rune: RuneClientData;
     fromRect: DOMRect;
 };
-type BagRunePickListener = (e: BagRunePickEvent) => void;
-const bagRunePickListeners = new Set<BagRunePickListener>();
-export function onBagRunePick(fn: BagRunePickListener) {
-    bagRunePickListeners.add(fn);
-    return () => { bagRunePickListeners.delete(fn); };
+type PackRunePickListener = (e: PackRunePickEvent) => void;
+const packRunePickListeners = new Set<PackRunePickListener>();
+export function onPackRunePick(fn: PackRunePickListener) {
+    packRunePickListeners.add(fn);
+    return () => { packRunePickListeners.delete(fn); };
 }
-export function emitBagRunePick(e: BagRunePickEvent) {
-    bagRunePickListeners.forEach(fn => fn(e));
+export function emitPackRunePick(e: PackRunePickEvent) {
+    packRunePickListeners.forEach(fn => fn(e));
 }
 
 // Pack purchase event — fired from ShopScreen when the player buys any
@@ -817,9 +818,9 @@ export function useDisabledResistance() { return useSyncExternalStore(subscribe,
 // round. Empty string when Ahoy isn't owned or hasn't rolled yet.
 export function useAhoyDiscardElement() { return useSyncExternalStore(subscribe, () => ahoyDiscardElement); }
 
-// Rune Bag hooks
+// Rune Pack hooks
 export function useAcquiredRunes() { return useSyncExternalStore(subscribe, () => acquiredRunes); }
-export function usePendingBagRunes() { return useSyncExternalStore(subscribe, () => pendingBagRunes); }
+export function usePendingPackRunes() { return useSyncExternalStore(subscribe, () => pendingPackRunes); }
 export function useBanishedRunes() { return useSyncExternalStore(subscribe, () => banishedRunes); }
 
 // Codex Pack hook — non-empty means the picker is open with these
@@ -856,7 +857,7 @@ export function useBestSingleCast() { return useSyncExternalStore(subscribe, () 
 // ============================================================
 
 export { subscribe } from "./arkynStoreCore";
-export { setConnection, joinGame, sendReady, sendCollectRoundGold, sendNewRun, sendBuyItem, sendSellSigil, sendReorderSigils, sendUseConsumable, sendBagChoice, sendCodexChoice, sendApplyTarot, sendRerollShop } from "./arkynNetwork";
+export { setConnection, joinGame, sendReady, sendCollectRoundGold, sendNewRun, sendBuyItem, sendSellSigil, sendReorderSigils, sendUseConsumable, sendPackChoice, sendCodexChoice, sendApplyTarot, sendRerollShop } from "./arkynNetwork";
 export {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,

@@ -166,7 +166,7 @@ export function handleApplyTarot(
     for (const add of mutations.add) {
         // Schema record uses the registry-minted id (nextRuneId), and
         // live-pouch entry mirrors it with a fresh id (matches
-        // handleBagChoice — `acquiredRunes` ids are distinct from
+        // handlePackChoice — `acquiredRunes` ids are distinct from
         // live-pouch ids, which become stale every round when
         // createPouch rebuilds with fresh ids).
         player.acquiredRunes.push(createRuneInstance(add));

@@ -7,14 +7,14 @@ import {
     useSigils,
     onScrollPurchase,
     onSigilPurchase,
-    onBagRunePick,
+    onPackRunePick,
     onPackPurchase,
     getSigilSlotRect,
     setScrollUpgradeDisplay,
     setPendingSigilId,
     setPackAnimating,
 } from "../arkynStore";
-import type { ScrollPurchaseEvent, SigilPurchaseEvent, BagRunePickEvent, PackPurchaseEvent, RuneClientData } from "../arkynStore";
+import type { ScrollPurchaseEvent, SigilPurchaseEvent, PackRunePickEvent, PackPurchaseEvent, RuneClientData } from "../arkynStore";
 import { ENEMY_DAMAGE_HIT_MS } from "../arkynAnimations";
 import EnemyHealthBar from "./EnemyHealthBar";
 import SpellPreview from "./SpellPreview";
@@ -108,7 +108,7 @@ export default function ArkynOverlay() {
     } | null>(null);
     const flyingSigilRef = useRef<HTMLDivElement>(null);
 
-    // Flying rune overlay — for the Rune Bag "picked rune flies to the
+    // Flying rune overlay — for the Rune Pack "picked rune flies to the
     // pouch counter" animation. Same pattern as flying sigil, but the
     // overlay wraps two <img>s (rarity base + element glyph) so the rune
     // keeps its RuneImage-stacked look in flight.
@@ -426,9 +426,9 @@ export default function ArkynOverlay() {
         };
     }, { dependencies: [flyingPack] });
 
-    // Listen for Rune Bag picks and fly the chosen rune to the pouch.
+    // Listen for Rune Pack picks and fly the chosen rune to the pouch.
     useEffect(() => {
-        return onBagRunePick((e: BagRunePickEvent) => {
+        return onPackRunePick((e: PackRunePickEvent) => {
             setFlyingRune({ rune: e.rune, fromRect: e.fromRect });
         });
     }, []);
@@ -808,7 +808,7 @@ export default function ArkynOverlay() {
                     </div>
                 )}
 
-                {/* Flying rune animation overlay — for Rune Bag picks */}
+                {/* Flying rune animation overlay — for Rune Pack picks */}
                 {flyingRune && (
                     <div
                         ref={flyingRuneRef}

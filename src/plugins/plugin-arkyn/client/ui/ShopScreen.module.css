@@ -10,7 +10,7 @@
 }
 
 /* Inner content wrapper around the shop panel + Next Round button. The
-   Rune Bag picker swaps into the same slot with its own wrapper; both
+   Rune Pack picker swaps into the same slot with its own wrapper; both
    are animated via GSAP when the swap happens. */
 .shopContent {
     display: flex;

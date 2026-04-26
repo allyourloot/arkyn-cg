@@ -51,7 +51,7 @@ export default function PouchModal({ onClose }: PouchModalProps) {
 
     // Bucket pouch + hand runes per element so we can render their real
     // rarity art (not just common). The deck grows past the base 52 via
-    // Rune Bag picks and Magic Mirror duplicates — each acquired rune
+    // Rune Pack picks and Magic Mirror duplicates — each acquired rune
     // adds one extra slot to its element's row (see useAcquiredRuneStats).
     const pouchByElement = new Map<string, RuneClientData[]>();
     for (const r of pouchContents) {

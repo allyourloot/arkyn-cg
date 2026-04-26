@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useGamePhase, useEnemyIsBoss, usePendingBagRunes, usePendingAuguryRunes, usePendingAuguryTarots } from "../arkynStore";
+import { useGamePhase, useEnemyIsBoss, usePendingPackRunes, usePendingAuguryRunes, usePendingAuguryTarots } from "../arkynStore";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./BackgroundShader.frag";
 import { createProgram, createQuadBuffer, bindQuadAttributes } from "./utils/glProgram";
 import { HAS_HOVER } from "./utils/hasHover";
@@ -27,7 +27,7 @@ export default function BackgroundShader() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const gamePhase = useGamePhase();
     const isBoss = useEnemyIsBoss();
-    const pendingBagRunes = usePendingBagRunes();
+    const pendingPackRunes = usePendingPackRunes();
     const pendingAuguryRunes = usePendingAuguryRunes();
     const pendingAuguryTarots = usePendingAuguryTarots();
     // Live-tweened mode values written into uniforms each frame by the
@@ -51,15 +51,15 @@ export default function BackgroundShader() {
         bossModeRef.current.target = bossActive ? 1 : 0;
     }, [isBoss, gamePhase]);
 
-    // Rune-picker palette fires whenever the player has pending bag runes
+    // Rune-picker palette fires whenever the player has pending pack runes
     // to choose from. Clears automatically once they pick or skip.
     useEffect(() => {
-        pickerModeRef.current.target = pendingBagRunes.length > 0 ? 1 : 0;
-    }, [pendingBagRunes.length]);
+        pickerModeRef.current.target = pendingPackRunes.length > 0 ? 1 : 0;
+    }, [pendingPackRunes.length]);
 
     // Augury palette — distinct gold/amber wash that fires whenever the
     // Augury picker is open (either the runes or the tarots populated).
-    // Distinct from the bag picker's arcane-violet so the two pack types
+    // Distinct from the rune-pack picker's arcane-violet so the two pack types
     // read as different "moods" — the Augury Pack is treasure-chest gold.
     useEffect(() => {
         const open = pendingAuguryRunes.length > 0 || pendingAuguryTarots.length > 0;

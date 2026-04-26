@@ -62,12 +62,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: rune-bag-float 3.6s ease-in-out infinite;
+    animation: rune-pack-float 3.6s ease-in-out infinite;
     will-change: transform, filter;
     filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
 }
 
-@keyframes rune-bag-float {
+@keyframes rune-pack-float {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-4px); }
 }

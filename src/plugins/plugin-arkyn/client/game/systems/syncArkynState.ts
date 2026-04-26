@@ -44,7 +44,7 @@ import {
     setDisabledResistance,
     setAhoyDiscardElement,
     setAcquiredRunes,
-    setPendingBagRunes,
+    setPendingPackRunes,
     setPendingCodexScrolls,
     setPendingAuguryRunes,
     setPendingAuguryTarots,
@@ -494,15 +494,15 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
             hasSyncedConsumables = true;
         }
 
-        // Sync Rune Bag state: permanent run-long additions and the
+        // Sync Rune Pack state: permanent run-long additions and the
         // in-flight 4-rune picker list.
         if (!runeArraysEqualById(player.acquiredRunes, prevAcquired)) {
             prevAcquired = snapshotRunes(player.acquiredRunes);
             setAcquiredRunes(prevAcquired);
         }
-        if (!runeArraysEqualById(player.pendingBagRunes, prevPending)) {
-            prevPending = snapshotRunes(player.pendingBagRunes);
-            setPendingBagRunes(prevPending);
+        if (!runeArraysEqualById(player.pendingPackRunes, prevPending)) {
+            prevPending = snapshotRunes(player.pendingPackRunes);
+            setPendingPackRunes(prevPending);
         }
         if (!stringArraysEqual(player.pendingCodexScrolls, prevPendingCodex)) {
             prevPendingCodex = Array.from(player.pendingCodexScrolls);

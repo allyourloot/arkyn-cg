@@ -26,7 +26,7 @@ uniform float uBossMode;
 uniform float uPickerMode;
 // 0.0 = no Augury picker open.
 // 1.0 = Augury Pack picker open — warm treasure-chest gold palette.
-// Mixed in AFTER both shop and rune-bag picker so the Augury wash
+// Mixed in AFTER both shop and rune-pack picker so the Augury wash
 // fully overrides whichever palette was previously displayed.
 uniform float uAuguryMode;
 

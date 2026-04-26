@@ -1,4 +1,4 @@
-/* Mirrors RuneBagPicker.module.css. Scroll cards are slightly larger
+/* Mirrors RunePackPicker.module.css. Scroll cards are slightly larger
    than rune cards so the script-style art reads at this distance, and
    each card carries an element-colored label below the art. */
 .wrapper {
@@ -49,7 +49,7 @@
     filter: brightness(1.15);
 }
 
-/* Idle float — same keyframes used by hand cards / RuneBagPicker. */
+/* Idle float — same keyframes used by hand cards / RunePackPicker. */
 .scrollWrap {
     position: relative;
     width: clamp(72px, 9vw, 128px);

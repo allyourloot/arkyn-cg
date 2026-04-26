@@ -13,7 +13,7 @@ import {
     ARKYN_SELL_SIGIL,
     ARKYN_REORDER_SIGILS,
     ARKYN_USE_CONSUMABLE,
-    ARKYN_PICK_BAG_RUNE,
+    ARKYN_PICK_PACK_RUNE,
     ARKYN_PICK_CODEX_SCROLL,
     ARKYN_APPLY_TAROT,
     ARKYN_REROLL_SHOP,
@@ -31,7 +31,7 @@ import { handleBuyItem } from "./systems/handleBuyItem";
 import { handleSellSigil } from "./systems/handleSellSigil";
 import { handleReorderSigils } from "./systems/handleReorderSigils";
 import { handleUseConsumable } from "./systems/handleUseConsumable";
-import { handleBagChoice } from "./systems/handleBagChoice";
+import { handlePackChoice } from "./systems/handlePackChoice";
 import { handleCodexChoice } from "./systems/handleCodexChoice";
 import { handleApplyTarot } from "./systems/handleApplyTarot";
 import { handleRerollShop } from "./systems/handleRerollShop";
@@ -92,8 +92,8 @@ export function PluginArkynServer(): ServerPlugin {
                 handleUseConsumable(state, client, payload);
             });
 
-            runtime.onMessage(ARKYN_PICK_BAG_RUNE, (client: ServerClientRef, payload: unknown) => {
-                handleBagChoice(state, client, payload);
+            runtime.onMessage(ARKYN_PICK_PACK_RUNE, (client: ServerClientRef, payload: unknown) => {
+                handlePackChoice(state, client, payload);
             });
 
             runtime.onMessage(ARKYN_PICK_CODEX_SCROLL, (client: ServerClientRef, payload: unknown) => {

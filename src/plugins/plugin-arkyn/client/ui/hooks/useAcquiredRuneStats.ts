@@ -7,7 +7,7 @@ export interface AcquiredRuneStats {
     banishedRunes: readonly RuneClientData[];
     /**
      * Per-element count of runes added ON TOP of the starting pouch —
-     * funnels both Rune Bag picks AND Magic Mirror duplicates together
+     * funnels both Rune Pack picks AND Magic Mirror duplicates together
      * (they're both permanent-across-rounds acquisitions).
      */
     bonusByElement: ReadonlyMap<string, number>;

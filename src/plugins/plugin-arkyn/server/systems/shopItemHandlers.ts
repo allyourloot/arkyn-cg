@@ -4,7 +4,7 @@ import {
     type ShopItemState,
 } from "../../shared";
 import { MAX_SIGILS } from "../../shared/arkynConstants";
-import { rollBagRunes } from "../utils/rollBagRunes";
+import { rollPackRunes } from "../utils/rollPackRunes";
 import { rollCodexScrolls } from "../utils/rollCodexScrolls";
 import { rollAuguryPack } from "../utils/rollAuguryPack";
 import { createRuneInstance } from "../utils/drawRunes";
@@ -49,36 +49,36 @@ function handleSigilPurchase({ player, item, sessionId }: ShopPurchaseCtx): Shop
 // sync with the only picker the client can render.
 function anyPackPickerOpen(player: ArkynPlayerState): boolean {
     return (
-        player.pendingBagRunes.length > 0 ||
+        player.pendingPackRunes.length > 0 ||
         player.pendingCodexScrolls.length > 0 ||
         player.pendingAuguryRunes.length > 0 ||
         player.pendingAuguryTarots.length > 0
     );
 }
 
-function handleRuneBagPurchase({ player, sessionId }: ShopPurchaseCtx): ShopPurchaseResult {
+function handleRunePackPurchase({ player, sessionId }: ShopPurchaseCtx): ShopPurchaseResult {
     if (anyPackPickerOpen(player)) {
         return { ok: false, reason: "a pack picker is already open" };
     }
 
     // `currentRound + 1` matches the shop's "next round" seeding
     // convention used by generateShopPacks / generateShopSigils.
-    // `bagPurchaseCount` keeps incrementing across multiple purchases
-    // in the same shop so the 2nd / 3rd bag rolls fresh runes.
-    const rolls = rollBagRunes(
+    // `packPurchaseCount` keeps incrementing across multiple purchases
+    // in the same shop so the 2nd / 3rd pack rolls fresh runes.
+    const rolls = rollPackRunes(
         player.runSeed,
         player.currentRound + 1,
-        player.bagPurchaseCount,
+        player.packPurchaseCount,
     );
     for (const r of rolls) {
-        player.pendingBagRunes.push(createRuneInstance(r));
+        player.pendingPackRunes.push(createRuneInstance(r));
     }
-    player.bagPurchaseCount++;
+    player.packPurchaseCount++;
 
     return {
         ok: true,
         logMessage:
-            `Player ${sessionId} bought a Rune Bag. Rolls: ` +
+            `Player ${sessionId} bought a Rune Pack. Rolls: ` +
             `[${rolls.map(r => `${r.rarity} ${r.element}`).join(", ")}].`,
     };
 }
@@ -142,7 +142,7 @@ function handleAuguryPackPurchase({ player, sessionId }: ShopPurchaseCtx): ShopP
 
 export const SHOP_ITEM_HANDLERS: Record<string, ShopItemHandler> = {
     sigil: handleSigilPurchase,
-    runeBag: handleRuneBagPurchase,
+    runePack: handleRunePackPurchase,
     codexPack: handleCodexPackPurchase,
     auguryPack: handleAuguryPackPurchase,
 };

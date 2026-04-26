@@ -1,5 +1,5 @@
 import { useRef, useState, type CSSProperties, type Ref } from "react";
-import { sendBagChoice, emitBagRunePick, type RuneClientData } from "../arkynStore";
+import { sendPackChoice, emitPackRunePick, type RuneClientData } from "../arkynStore";
 import { playButton, playBuy, playSelectRune } from "../sfx";
 import RuneImage from "./RuneImage";
 import { createPanelStyleVars } from "./styles";
@@ -8,7 +8,7 @@ import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
 import buttonGreenDisabledUrl from "/assets/ui/button-green-disabled.png?url";
 import buttonOrangeUrl from "/assets/ui/button-orange.png?url";
 import buttonOrangeHoverUrl from "/assets/ui/button-orange-hover.png?url";
-import styles from "./RuneBagPicker.module.css";
+import styles from "./RunePackPicker.module.css";
 
 // Wire `--panel-bg` (frame.png) + `--section-bg` (inner-frame.png) so the
 // action panel and inner prompt strip use the standard 9-slice chrome.
@@ -21,21 +21,21 @@ const buttonVars = {
     "--skip-bg-hover": `url(${buttonOrangeHoverUrl})`,
 } as CSSProperties;
 
-interface RuneBagPickerProps {
+interface RunePackPickerProps {
     runes: RuneClientData[];
     ref?: Ref<HTMLDivElement>;
 }
 
 /**
- * Mid-shop modal that appears after the player buys a Rune Bag.
+ * Mid-shop modal that appears after the player buys a Rune Pack.
  *
  * Shows 4 rune choices in a row. Clicking a rune highlights it; clicking
  * Select confirms the pick and permanently adds it to the player's pouch.
- * Skip discards the bag with no rune added (no refund). The server clears
- * `pendingBagRunes` on either path, which drives the picker → shop fade
+ * Skip discards the pack with no rune added (no refund). The server clears
+ * `pendingPackRunes` on either path, which drives the picker → shop fade
  * via the parent's schema-sync.
  */
-export default function RuneBagPicker({ runes, ref }: RuneBagPickerProps) {
+export default function RunePackPicker({ runes, ref }: RunePackPickerProps) {
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
     const cardRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -43,19 +43,19 @@ export default function RuneBagPicker({ runes, ref }: RuneBagPickerProps) {
         if (selectedIndex === null) return;
         const rune = runes[selectedIndex];
         const card = cardRefs.current[selectedIndex];
-        // Snapshot the card rect BEFORE firing sendBagChoice, since the
-        // server response clears `pendingBagRunes` and unmounts the picker
+        // Snapshot the card rect BEFORE firing sendPackChoice, since the
+        // server response clears `pendingPackRunes` and unmounts the picker
         // on the next tick. The flying-rune overlay in ArkynOverlay uses
         // this rect as its launch position.
         if (rune && card) {
-            emitBagRunePick({ rune, fromRect: card.getBoundingClientRect() });
+            emitPackRunePick({ rune, fromRect: card.getBoundingClientRect() });
         }
-        sendBagChoice(selectedIndex);
+        sendPackChoice(selectedIndex);
         playBuy();
     };
 
     const handleSkip = () => {
-        sendBagChoice(null);
+        sendPackChoice(null);
         playButton();
     };
 

@@ -6,7 +6,7 @@ import {
     sendRerollShop,
     useShopItems,
     useGold,
-    usePendingBagRunes,
+    usePendingPackRunes,
     usePendingCodexScrolls,
     usePendingAuguryRunes,
     usePendingAuguryTarots,
@@ -23,7 +23,7 @@ import { RARITY_COLORS, createPanelStyleVars } from "./styles";
 import { getPackImageUrl } from "./packAssets";
 import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
-import RuneBagPicker from "./RuneBagPicker";
+import RunePackPicker from "./RunePackPicker";
 import CodexPicker from "./CodexPicker";
 import AuguryPicker from "./AuguryPicker";
 import { renderDescription, SigilExplainer, SigilPenaltyLine, splitPenalty } from "./descriptionText";
@@ -69,7 +69,7 @@ type ShopScreenProps = {
 export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     const shopItems = useShopItems();
     const gold = useGold();
-    const pendingBagRunes = usePendingBagRunes();
+    const pendingPackRunes = usePendingPackRunes();
     const pendingCodexScrolls = usePendingCodexScrolls();
     const pendingAuguryRunes = usePendingAuguryRunes();
     const pendingAuguryTarots = usePendingAuguryTarots();
@@ -89,7 +89,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     // pack-fly+dissolve animation (the schema sync that populates
     // `pendingX` may arrive before the animation finishes).
     const hasPendingPicker =
-        pendingBagRunes.length > 0 ||
+        pendingPackRunes.length > 0 ||
         pendingCodexScrolls.length > 0 ||
         pendingAuguryRunes.length > 0 ||
         pendingAuguryTarots.length > 0;
@@ -106,18 +106,18 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     // through its wrapper-exit transition. Without this, the moment the
     // server clears `pendingAuguryRunes` (after AuguryPicker's apply
     // animation calls sendApplyTarot), the JSX cascade below would fall
-    // through to `<RuneBagPicker runes={[]} />` while `renderedMode` is
+    // through to `<RunePackPicker runes={[]} />` while `renderedMode` is
     // still "picker" — its action panel ("Choose one rune to add to
     // your pouch") would briefly pop in before the wrapper exit fades
     // the picker away. Latching the type means the original picker
     // keeps rendering (with its now-empty arrays — its bottom UI stays
     // locked invisible from its own exit timeline) until renderedMode
     // flips to "shop" and unmounts it cleanly.
-    type PickerType = "augury" | "codex" | "rune-bag";
+    type PickerType = "augury" | "codex" | "rune-pack";
     const [activePickerType, setActivePickerType] = useState<PickerType | null>(() => {
         if (pendingAuguryRunes.length > 0) return "augury";
         if (pendingCodexScrolls.length > 0) return "codex";
-        if (pendingBagRunes.length > 0) return "rune-bag";
+        if (pendingPackRunes.length > 0) return "rune-pack";
         return null;
     });
     useEffect(() => {
@@ -127,8 +127,8 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         // unmounts it.
         if (pendingAuguryRunes.length > 0) setActivePickerType("augury");
         else if (pendingCodexScrolls.length > 0) setActivePickerType("codex");
-        else if (pendingBagRunes.length > 0) setActivePickerType("rune-bag");
-    }, [pendingAuguryRunes.length, pendingCodexScrolls.length, pendingBagRunes.length]);
+        else if (pendingPackRunes.length > 0) setActivePickerType("rune-pack");
+    }, [pendingAuguryRunes.length, pendingCodexScrolls.length, pendingPackRunes.length]);
     useEffect(() => {
         // Once the wrapper exit completes and renderedMode flips back
         // to "shop", the picker has fully unmounted — clear the latch
@@ -228,16 +228,11 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             dissolveElement: def.dissolveElement,
         });
         sendBuyItem(shopIndex);
-        // Tarot/scroll packs swap the generic buy chime for the
-        // open-pack SFX — the sound is the player's first cue that
-        // a picker is about to mount, so the more thematic "rip" reads
-        // as the pack itself opening rather than a regular purchase.
-        // Rune Bag keeps playBuy since it isn't a sealed pack visually.
-        if (packId === "auguryPack" || packId === "codexPack") {
-            playOpenPack();
-        } else {
-            playBuy();
-        }
+        // All packs use the open-pack "rip" SFX — it's the player's
+        // first cue that a picker is about to mount, so the thematic
+        // sound reads as the pack itself opening rather than a generic
+        // purchase chime.
+        playOpenPack();
         setSelectedShopIndex(null);
     };
 
@@ -373,7 +368,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             </div>
             </div>
 
-            {/* Packs section — Rune Bags, Codex Packs, future packs. */}
+            {/* Packs section — Rune Packs, Codex Packs, Augury Packs, future packs. */}
             <span className={styles.sectionLabel}>Packs</span>
             <div className={`${styles.section} ${styles.consumablesSection}`}>
                 <div className={styles.itemGrid}>
@@ -457,7 +452,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                 ? <AuguryPicker ref={pickerContentRef} runes={pendingAuguryRunes} tarotIds={pendingAuguryTarots} />
             : activePickerType === "codex"
                 ? <CodexPicker ref={pickerContentRef} scrolls={pendingCodexScrolls} />
-                : <RuneBagPicker ref={pickerContentRef} runes={pendingBagRunes} />
+                : <RunePackPicker ref={pickerContentRef} runes={pendingPackRunes} />
         )}
         </div>
     );

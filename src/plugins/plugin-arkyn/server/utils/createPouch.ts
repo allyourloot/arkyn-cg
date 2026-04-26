@@ -14,7 +14,7 @@ export interface RuneInstanceData {
  * Build a fresh pouch for the start of a round.
  *
  * Base pool: 13 elements × 4 common runes = 52.
- * Plus any permanent additions the player has earned from Rune Bag picks
+ * Plus any permanent additions the player has earned from Rune Pack picks
  * this run — these carry their original element/rarity/level but get a
  * fresh id on every round build so the pouch/hand diff (keyed on id) in
  * the client sync can't collide with a stale round's runes.

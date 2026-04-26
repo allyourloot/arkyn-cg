@@ -1,7 +1,7 @@
 /* Wrapper fills the same vertical band as the shop panel. The
    children (rune row, optional element row, tarot row) stack vertically
    and the action panel is absolutely anchored to the wrapper bottom —
-   matching the RuneBag / Codex picker pattern. */
+   matching the RunePack / Codex picker pattern. */
 .wrapper {
     position: relative;
     display: flex;

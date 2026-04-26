@@ -82,7 +82,7 @@ export function handleReady(
         clearArraySchema(player.shopItems);
         // Fresh shop visit -> reset per-visit pack purchase counters so
         // the caps enforce MAX_*_PER_SHOP per shop (not per run).
-        player.bagPurchaseCount = 0;
+        player.packPurchaseCount = 0;
         player.codexPurchaseCount = 0;
         player.auguryPurchaseCount = 0;
         // Fresh shop visit -> reset reroll counter. The initial sigil roll
