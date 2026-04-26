@@ -353,6 +353,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                         imageUrl={packImageUrl}
                                         useFrame={false}
                                         aspectRatio={def.aspectRatio}
+                                        displayScale={def.displayScale}
                                         className={styles.sigilCanvas}
                                     />
                                     {isSelected && (

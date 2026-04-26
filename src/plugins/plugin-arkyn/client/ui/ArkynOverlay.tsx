@@ -330,7 +330,14 @@ export default function ArkynOverlay() {
             }, 0);
         }
 
-        // Phase 1: fly to center, scale up.
+        // Arrival overshoot — the pack pops slightly larger when it
+        // reaches the center, then shakes and dissolves at that size.
+        const arrivalScale = 1.2;
+        const dissolveW = targetW * arrivalScale;
+        const dissolveH = targetH * arrivalScale;
+
+        // Phase 1: fly to center, end at scale 1 so the punch-up has
+        // somewhere to overshoot to.
         tl.to(el, {
             x: centerX - targetW / 2,
             y: centerY - targetH / 2,
@@ -339,17 +346,42 @@ export default function ArkynOverlay() {
             ease: "power2.out",
         }, 0);
 
-        // Brief hold so the player registers the pack at center before
-        // the dissolve takes over.
-        tl.to(el, { duration: 0.15 });
+        // Phase 2: punch up to `arrivalScale` so the pack reads as
+        // "landed" — back.out gives a tiny rebound without feeling
+        // bouncy. CSS transform-origin defaults to center, so the
+        // scale-up grows the pack symmetrically around its centerpoint.
+        tl.to(el, {
+            scale: arrivalScale,
+            duration: 0.18,
+            ease: "back.out(1.6)",
+        });
 
-        // Phase 2: swap img for the WebGL dissolve canvas. The dissolve
+        // Phase 3: subtle shake — diminishing rotation (±3° → 0). Same
+        // diminishing-amplitude pattern the scroll upgrade uses, but
+        // halved so it reads as a "shiver" rather than a hammer hit.
+        // Last keyframe lands at rotation 0 so the dissolve swap
+        // doesn't snap from a tilted img to a level canvas.
+        tl.to(el, {
+            keyframes: [
+                { rotation: -3, duration: 0.05 },
+                { rotation: 3, duration: 0.05 },
+                { rotation: -2, duration: 0.05 },
+                { rotation: 2, duration: 0.05 },
+                { rotation: -1, duration: 0.05 },
+                { rotation: 1, duration: 0.05 },
+                { rotation: 0, duration: 0.05 },
+            ],
+        });
+
+        // Phase 4: swap img for the WebGL dissolve canvas. The dissolve
         // shader renders into a square buffer (largest dimension) and
         // we let CSS scale it back to the pack's true rect — the
         // texture-stretch and CSS-squeeze cancel out so the image
         // displays at its natural aspect. The dissolve noise pattern
         // gets the same compensation, which is acceptable for the
-        // brief 550ms reveal.
+        // brief 550ms reveal. We use the punched-up dimensions so the
+        // dissolve picks up where the shake left off, not at the
+        // pre-pop size.
         tl.call(() => {
             const cx = window.innerWidth / 2;
             const cy = window.innerHeight / 2;
@@ -358,11 +390,11 @@ export default function ArkynOverlay() {
                 imageUrl,
                 element: dissolveElement,
                 startTime: performance.now(),
-                x: cx - targetW / 2,
-                y: cy - targetH / 2,
-                width: targetW,
-                height: targetH,
-                bufSize: Math.max(targetW, targetH),
+                x: cx - dissolveW / 2,
+                y: cy - dissolveH / 2,
+                width: dissolveW,
+                height: dissolveH,
+                bufSize: Math.max(dissolveW, dissolveH),
             });
             el.style.visibility = "hidden";
         });
@@ -803,7 +835,11 @@ export default function ArkynOverlay() {
                 {/* Pack dissolve canvas — single-texture variant. The
                     underlying canvas buffer is square (`size`) but CSS
                     width/height reshape the visible canvas to the pack's
-                    natural aspect, undoing the square texture stretch. */}
+                    natural aspect, undoing the square texture stretch.
+                    `objectFit: fill` overrides the .flyingScroll
+                    `object-fit: contain` default — without it the
+                    browser fits the canvas's intrinsic 1:1 buffer aspect
+                    inside the rect and the dissolve appears square. */}
                 {packDissolveData && (
                     <DissolveCanvas
                         element={packDissolveData.element}
@@ -817,6 +853,7 @@ export default function ArkynOverlay() {
                             top: packDissolveData.y,
                             width: packDissolveData.width,
                             height: packDissolveData.height,
+                            objectFit: "fill",
                         }}
                     />
                 )}

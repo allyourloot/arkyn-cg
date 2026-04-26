@@ -3,11 +3,7 @@ import {
     type ArkynState,
     type ShopItemState,
 } from "../../shared";
-import {
-    MAX_CODEX_PACKS_PER_SHOP,
-    MAX_RUNE_BAGS_PER_SHOP,
-    MAX_SIGILS,
-} from "../../shared/arkynConstants";
+import { MAX_SIGILS } from "../../shared/arkynConstants";
 import { rollBagRunes } from "../utils/rollBagRunes";
 import { rollCodexScrolls } from "../utils/rollCodexScrolls";
 import { createRuneInstance } from "../utils/drawRunes";
@@ -57,15 +53,11 @@ function handleRuneBagPurchase({ player, sessionId }: ShopPurchaseCtx): ShopPurc
     if (anyPackPickerOpen(player)) {
         return { ok: false, reason: "a pack picker is already open" };
     }
-    if (player.bagPurchaseCount >= MAX_RUNE_BAGS_PER_SHOP) {
-        return {
-            ok: false,
-            reason: `per-shop Rune Bag cap reached (${MAX_RUNE_BAGS_PER_SHOP})`,
-        };
-    }
 
     // `currentRound + 1` matches the shop's "next round" seeding
     // convention used by generateShopPacks / generateShopSigils.
+    // `bagPurchaseCount` keeps incrementing across multiple purchases
+    // in the same shop so the 2nd / 3rd bag rolls fresh runes.
     const rolls = rollBagRunes(
         player.runSeed,
         player.currentRound + 1,
@@ -87,12 +79,6 @@ function handleRuneBagPurchase({ player, sessionId }: ShopPurchaseCtx): ShopPurc
 function handleCodexPackPurchase({ player, sessionId }: ShopPurchaseCtx): ShopPurchaseResult {
     if (anyPackPickerOpen(player)) {
         return { ok: false, reason: "a pack picker is already open" };
-    }
-    if (player.codexPurchaseCount >= MAX_CODEX_PACKS_PER_SHOP) {
-        return {
-            ok: false,
-            reason: `per-shop Codex Pack cap reached (${MAX_CODEX_PACKS_PER_SHOP})`,
-        };
     }
 
     const elements = rollCodexScrolls(

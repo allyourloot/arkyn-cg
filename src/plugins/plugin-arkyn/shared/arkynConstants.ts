@@ -70,17 +70,18 @@ export const MAX_CONSUMABLES = 2;     // max consumable items a player can hold
 // Rune Bag item configuration. Buying a bag shows a picker of 4 random
 // runes (random element + weighted-random rarity). The player picks one
 // (or skips) — the picked rune is permanently added to their pouch for
-// the rest of the run.
+// the rest of the run. There is no per-shop cap: if a shop rolls 2
+// Rune Bags, the player may buy both. The only purchase gate is the
+// shared "no other pack picker is currently open" rule below.
 export const RUNE_BAG_COST = 4;
 export const RUNE_BAG_CHOICES = 4;          // runes shown in the picker
-export const MAX_RUNE_BAGS_PER_SHOP = 1;    // max bags purchasable per shop
 
 // Codex Pack item configuration. Buying a pack shows a picker of 4
 // distinct random scroll elements. The player picks one (or skips) —
-// the picked element gets +1 scroll level (or +N with Scroll God).
+// the picked element gets +1 scroll level (or +N with Scroll God). No
+// per-shop cap (same rule as Rune Bag).
 export const CODEX_PACK_COST = 4;
 export const CODEX_PACK_CHOICES = 4;        // scrolls shown in the picker
-export const MAX_CODEX_PACKS_PER_SHOP = 1;  // max packs purchasable per shop
 // Per-slot rarity weights used by rollBagRunes. Tuned so bags feel
 // exciting without making rare/legendary commonplace: at 4 slots per
 // bag these weights produce ~11% of bags containing a legendary and

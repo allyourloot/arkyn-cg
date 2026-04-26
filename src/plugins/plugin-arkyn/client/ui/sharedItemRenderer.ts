@@ -228,6 +228,14 @@ export interface ItemSceneRegistration {
      * shop layouts.
      */
     smoothIdle?: boolean;
+    /**
+     * Uniform display-size multiplier applied AFTER the aspectRatio
+     * adjustment. Lets non-square art fill more of the canvas without
+     * touching the wrapper dimensions — the camera/canvas have 30%
+     * overflow headroom (inset: -15% on each side), so values up to 1.3
+     * render without clipping at the camera bounds. Defaults to 1.
+     */
+    displayScale?: number;
 }
 
 interface RegisteredItem {
@@ -240,6 +248,7 @@ interface RegisteredItem {
     useFrame: boolean;
     aspectRatio: number;
     smoothIdle: boolean;
+    displayScale: number;
     index: number;
     phase: number;
     tiltTargetRef: { current: TiltTarget };
@@ -552,10 +561,14 @@ function renderFrame(now: number): void {
         // Per-item mesh scale — non-square aspect packs (Codex Pack at
         // 89/160) get a narrower plane so the texture maps without
         // stretching. Square items (aspect = 1) keep the full 1×1 plane.
-        // Both shadow and card pass need this set so silhouettes match.
+        // `displayScale` then uniformly upsizes the result so non-square
+        // art can fill the canvas overflow (up to 1.3× before camera
+        // clipping). Both shadow and card pass need this set so
+        // silhouettes match.
         const ar = item.aspectRatio;
-        const scaleX = ar >= 1 ? 1 : ar;
-        const scaleY = ar >= 1 ? 1 / ar : 1;
+        const ds = item.displayScale;
+        const scaleX = (ar >= 1 ? 1 : ar) * ds;
+        const scaleY = (ar >= 1 ? 1 / ar : 1) * ds;
 
         // ── Shadow pass (A3) — cached after first successful render.
         //    Shadow pixels depend only on texture + mesh rotation (0,0,0),
@@ -658,6 +671,7 @@ export function registerItemScene(cfg: ItemSceneRegistration): () => void {
         useFrame: cfg.useFrame ?? true,
         aspectRatio: cfg.aspectRatio ?? 1,
         smoothIdle: cfg.smoothIdle ?? false,
+        displayScale: cfg.displayScale ?? 1,
         index: cfg.index,
         phase: cfg.index * PHASE_STAGGER,
         tiltTargetRef: cfg.tiltTargetRef,

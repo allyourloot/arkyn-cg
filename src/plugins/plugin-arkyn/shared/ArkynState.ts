@@ -119,8 +119,8 @@ export class ArkynPlayerState extends Schema {
     @type([RuneInstance]) pendingBagRunes = new ArraySchema<RuneInstance>();
 
     // How many bags the player has bought during the current shop visit.
-    // Reset to 0 on shop entry. Used to uniquely seed each bag's RNG and
-    // to enforce MAX_RUNE_BAGS_PER_SHOP.
+    // Reset to 0 on shop entry. Used to uniquely seed each bag's RNG so
+    // back-to-back purchases in the same shop roll different runes.
     @type("number") bagPurchaseCount = 0;
 
     // In-flight Codex Pack picker state. Non-empty = the player has
@@ -132,7 +132,7 @@ export class ArkynPlayerState extends Schema {
 
     // How many Codex Packs the player has bought during the current
     // shop visit. Reset to 0 on shop entry. Used to uniquely seed each
-    // pack's RNG and to enforce MAX_CODEX_PACKS_PER_SHOP.
+    // pack's RNG so back-to-back purchases roll different scrolls.
     @type("number") codexPurchaseCount = 0;
 
     // How many times the player has rerolled the sigil slots during the

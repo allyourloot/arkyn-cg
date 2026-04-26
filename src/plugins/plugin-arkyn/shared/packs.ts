@@ -31,6 +31,15 @@ export interface PackDefinition {
      * wide (e.g. Codex Pack at 89/160 ≈ 0.556). >1 = wider than tall.
      */
     aspectRatio: number;
+    /**
+     * Visual size multiplier for the shop card render. The card slot is
+     * fixed (140×140 max), but the ItemScene canvas extends 15% beyond
+     * on each side (inset: -15%), so values up to 1.3 fit within the
+     * canvas without clipping at the camera bounds. Use to bump up
+     * non-square art that otherwise reads as small inside the square
+     * slot. Defaults to 1.
+     */
+    displayScale?: number;
 }
 
 export const PACK_DEFINITIONS: Record<PackType, PackDefinition> = {
@@ -49,5 +58,6 @@ export const PACK_DEFINITIONS: Record<PackType, PackDefinition> = {
         description: "Opens 4 random scrolls. Pick one to upgrade that element.",
         dissolveElement: "arcane",
         aspectRatio: 89 / 160, // ≈ 0.556 — taller than wide
+        displayScale: 1.3,     // fill the 130% canvas overflow so the tall card reads at parity with Rune Bag
     },
 };

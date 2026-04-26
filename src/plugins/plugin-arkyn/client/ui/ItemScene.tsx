@@ -30,6 +30,9 @@ interface ItemSceneProps {
      *  for cards inside CSS-animated wrappers where the throttle stutters
      *  visibly against the smooth wrapper transform (e.g. picker bob). */
     smoothIdle?: boolean;
+    /** Uniform display-size multiplier applied after aspect adjustment
+     *  (1.0 default, up to ~1.3 before clipping at the canvas overflow). */
+    displayScale?: number;
 }
 
 /**
@@ -38,7 +41,7 @@ interface ItemSceneProps {
  * shared Three.js renderer in `sharedItemRenderer.ts`; this component
  * owns the display canvas + shadow div and their pointer handlers.
  */
-export default function ItemScene({ itemId, index, className, imageUrl: imageUrlProp, useFrame, aspectRatio, smoothIdle }: ItemSceneProps) {
+export default function ItemScene({ itemId, index, className, imageUrl: imageUrlProp, useFrame, aspectRatio, smoothIdle, displayScale }: ItemSceneProps) {
     const wrapperRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const shadowRef = useRef<HTMLCanvasElement>(null);
@@ -58,9 +61,10 @@ export default function ItemScene({ itemId, index, className, imageUrl: imageUrl
             useFrame: resolvedUseFrame,
             aspectRatio,
             smoothIdle,
+            displayScale,
         });
         return unregister;
-    }, [itemId, index, imageUrlProp, useFrame, aspectRatio, smoothIdle]);
+    }, [itemId, index, imageUrlProp, useFrame, aspectRatio, smoothIdle, displayScale]);
 
     // Pointer handlers live on the wrapper (cell-sized) rather than the
     // canvas (which extends 15% beyond the cell for tilt headroom). That
