@@ -124,15 +124,66 @@ function computeSpawnedRunes(
     return [];
 }
 
-/** Pure: derive per-picker-slot animation effects from the chosen tarot. */
+/**
+ * Pure: derive per-picker-slot animation effects from the chosen tarot.
+ *
+ * Most effects are computed per-pick in isolation. Wheel of Fortune is
+ * special: its result is RNG-driven on the server and consumes a
+ * deterministic sequence of rng() calls (split + optional element pick)
+ * across ALL picks, so it has its own dispatch arm that builds the RNG
+ * once and walks the picks in the same order the server does. The seed
+ * formula MUST mirror handleApplyTarot's apply-time RNG so each picker
+ * rune flips to reveal the same rune the server will commit.
+ */
 function computeSlotAnims(
     tarot: TarotDefinition,
     runes: RuneClientData[],
     pickedIndices: number[],
     chosenElement: string | null,
+    runSeed: number,
+    currentRound: number,
+    auguryPurchaseCount: number,
 ): Map<number, SlotAnim> {
     const out = new Map<number, SlotAnim>();
     const effect = tarot.effect;
+
+    // Wheel of Fortune — process all picks under a single RNG so the
+    // sequence matches the server's `for (r of picked)` loop in
+    // handleApplyTarot.computeMutations.
+    if (effect.type === "wheelReroll") {
+        const rng = createRoundRng(
+            runSeed,
+            currentRound + AUGURY_PACK_RNG_OFFSET + auguryPurchaseCount * 7919 + 1,
+        );
+        for (const idx of pickedIndices) {
+            const r = runes[idx];
+            if (!r) continue;
+            let newRune: RuneClientData;
+            if (rng() < 0.5) {
+                // Upgrade rarity branch — server bumps by 1 tier.
+                newRune = {
+                    id: `wheel-${idx}`,
+                    element: r.element,
+                    rarity: bumpRarity(r.rarity, 1),
+                    level: r.level,
+                };
+            } else {
+                // Random different-element branch — same rarity, new
+                // element from `ELEMENT_TYPES \ {original.element}`.
+                const others = ELEMENT_TYPES.filter(e => e !== r.element);
+                const newEl = others[Math.floor(rng() * others.length)];
+                newRune = {
+                    id: `wheel-${idx}`,
+                    element: newEl,
+                    rarity: r.rarity,
+                    level: r.level,
+                };
+            }
+            out.set(idx, { kind: "flip", newRune });
+        }
+        return out;
+    }
+
     for (const idx of pickedIndices) {
         const r = runes[idx];
         if (!r) continue;
@@ -154,7 +205,6 @@ function computeSlotAnims(
             case "fuse":
             case "banish":
             case "banishForGold":
-            case "wheelReroll":
                 out.set(idx, { kind: "fade" });
                 break;
             // upgradeAllOfElement / addRandomRune don't pick picker runes;
@@ -441,7 +491,15 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
         if (!activeTarot || !isApplyEnabled || isApplying) return;
 
         const sortedIndices = [...selectedRuneIndices].sort((a, b) => a - b);
-        const anims = computeSlotAnims(activeTarot, runes, sortedIndices, selectedElement);
+        const anims = computeSlotAnims(
+            activeTarot,
+            runes,
+            sortedIndices,
+            selectedElement,
+            runSeed,
+            currentRound,
+            auguryPurchaseCount,
+        );
         const spawned = computeSpawnedRunes(
             activeTarot,
             runes,

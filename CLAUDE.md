@@ -326,6 +326,12 @@ Runes have four rarities: `common`, `uncommon`, `rare`, `legendary` (see `RARITY
 
 **Future expansion**: `RUNE_BASE_DAMAGE` is a simple dict so per-rarity tuning is a one-line change. Other rarity-gated mechanics (unique rune art, rare-only scroll interactions, etc.) can key off the same `rarity` field on `RuneInstance`.
 
+### Augury Packs & Tarot Cards
+
+Shop-purchased pack that offers 5 random tarots over 8 sampled runes; the player applies one tarot to mutate their deck (convert elements, upgrade rarity, banish, fuse, duplicate, etc.). 22 tarots implemented, all routed through a single discriminated `TarotEffect` union and dispatched from `server/systems/handleApplyTarot.ts`. Banished runes are tracked on `player.banishedRunes` and subtracted from the Pouch Modal so tarot-converted runes don't leave phantom slots.
+
+Full architecture, effect catalogue, RNG namespace details, picker UX (selection model, spawned-rune prediction for Lovers/World, exit timeline), and an "adding a new tarot" checklist live in [AUGURY_TAROTS.md](AUGURY_TAROTS.md).
+
 ### Consumable System (`shared/consumables.ts`, `server/systems/handleUseConsumable.ts`, `client/ui/ConsumableBar.tsx`)
 
 Consumables are one-shot items the player carries in the Consumable Bar (up to `MAX_CONSUMABLES = 2`). Today every consumable is a per-element scroll consumable (one per element) that grants +1 scroll level when used; the system is data-driven so future kinds (potions, run-wide buffs) slot in as new effect arms with zero dispatcher changes.
