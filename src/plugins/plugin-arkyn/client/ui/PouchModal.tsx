@@ -25,7 +25,7 @@ type SlotState = "pouch" | "drawn" | "spent";
 export default function PouchModal({ onClose }: PouchModalProps) {
     const pouchContents = usePouchContents();
     const hand = useHand();
-    const { bonusByElement, totalAll } = useAcquiredRuneStats();
+    const { bonusByElement, banishedByElement, totalAll } = useAcquiredRuneStats();
 
     // Play the shared menu-open stinger once on mount.
     useEffect(() => {
@@ -124,7 +124,18 @@ export default function PouchModal({ onClose }: PouchModalProps) {
                         {ELEMENT_TYPES.flatMap(element => {
                             const pouchRunes = pouchByElement.get(element) ?? [];
                             const handRunes = handByElement.get(element) ?? [];
-                            const totalForElement = RUNES_PER_ELEMENT + (bonusByElement.get(element) ?? 0);
+                            // Total slots for this element = base 4 + acquired − banished.
+                            // Subtracting banished is critical: tarot conversions /
+                            // Banish sigil / Lovers fuse all push to banishedRunes,
+                            // and without this subtract the banished slots paint as
+                            // phantom "spent" runes in the grid (e.g. Emperor
+                            // converting 2 Lightning → 2 Earth would still show 4
+                            // Lightning slots with 2 dimmed even though they no
+                            // longer exist in the deck).
+                            const totalForElement =
+                                RUNES_PER_ELEMENT
+                                + (bonusByElement.get(element) ?? 0)
+                                - (banishedByElement.get(element) ?? 0);
                             const spent = Math.max(0, totalForElement - pouchRunes.length - handRunes.length);
 
                             // Render in three bands: pouch (lit, real rarity),

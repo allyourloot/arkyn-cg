@@ -187,7 +187,9 @@ export function handleApplyTarot(
     logger.info(
         `Player ${client.sessionId} applied tarot ${tarotId}: ` +
         `banished ${mutations.banishEntries.length}, added ${mutations.addEntries.length}, ` +
-        `gold +${mutations.goldDelta}.`,
+        `gold +${mutations.goldDelta}. Post-apply state: ` +
+        `acquiredRunes=${player.acquiredRunes.length}, banishedRunes=${player.banishedRunes.length}, ` +
+        `pouchSize=${player.pouchSize}, livePouch.length=${livePouch.length}.`,
     );
 }
 

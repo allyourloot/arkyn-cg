@@ -170,9 +170,18 @@
     width: 100%;
 }
 
+/* z-index needs to be above the rune row's max z-index (rune slots
+   reach z-index 100 when selected). Without this, the :hover/selected
+   `filter` below creates a NEW stacking context on .tarotCard, which
+   traps the child tooltip's z-index — even at z:1000 the tooltip would
+   then paint inside .tarotCard's local context and lose to the rune
+   slots that escape into the root context. Pinning .tarotCard at z:200
+   lifts the whole local context above the runes, so the tooltip
+   correctly stacks above them. */
 .tarotCard {
     box-sizing: border-box;
     position: relative;
+    z-index: 200;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -190,12 +199,16 @@
 .tarotCard:hover {
     transform: translateY(-6px);
     filter: brightness(1.08);
+    /* Hovered card lifts further above its siblings so its tooltip
+       always paints over neighbor cards too. */
+    z-index: 300;
 }
 
 .tarotCardSelected,
 .tarotCardSelected:hover {
     transform: translateY(-12px);
     filter: brightness(1.18) drop-shadow(0 0 10px rgba(255, 215, 100, 0.55));
+    z-index: 300;
 }
 
 .tarotImg {
