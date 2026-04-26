@@ -200,3 +200,26 @@ export type { ConsumableDefinition, ConsumableEffect } from "./consumables";
 
 export { TAROT_DEFINITIONS, TAROT_IDS, AUGURY_PACK_RNG_OFFSET, getTarotDefinition } from "./tarots";
 export type { TarotDefinition, TarotEffect } from "./tarots";
+
+export { rarityIndex, clampRarityIndex, bumpRarity } from "./rarityUtils";
+
+export { snapshotRune } from "./runeUtils";
+export type { RuneSpec } from "./runeUtils";
+
+export { getAuguryRollSeed, getAuguryApplySeed } from "./auguryRng";
+
+export { sampleWithoutReplacement } from "./sampling";
+
+export {
+    TAROT_EFFECT_HANDLERS,
+    applyTarotMutation,
+    previewTarotEffect,
+} from "./tarotEffects";
+export type {
+    PickedRune,
+    TarotEffectContext,
+    TarotEffectHandler,
+    TarotMutationSet,
+    TarotPreviewSet,
+    SlotPreviewKind,
+} from "./tarotEffects";

@@ -90,13 +90,22 @@ Validation order:
 5. `targetConstraint` satisfied (Strength: every picked rune is `common` or `uncommon`).
 
 Apply order is **banish-first, add-second**. Doing them in reverse would re-splice the freshly-added runes when banishing by index. Specifically:
-1. `computeMutations(effect, pickedRunes, chosenElement, livePouch, rng)` returns `{ banished, added, goldDelta }`.
-2. Push every `banished` to `player.banishedRunes`; splice from the live pouch.
-3. Push every `added` to `player.acquiredRunes` AND the live pouch with a fresh `RuneInstance` id.
-4. Apply `goldDelta` (only `banishForGold`).
-5. Sync `player.pouchSize`; clear `pendingAuguryRunes` + `pendingAuguryTarots`.
+1. Build a `TarotEffectContext` from the picked runes + chosen element + live pouch + apply-time RNG (seeded via `getAuguryApplySeed`) + `nextRuneId`.
+2. `applyTarotMutation(effect, ctx)` runs the registry's `mutate` for that effect type (see `shared/tarotEffects.ts`) and returns `{ banish, add, goldDelta }`.
+3. Push every `banish` entry to `player.banishedRunes`; splice from the live pouch via `removeFirstMatching`.
+4. Push every `add` entry to `player.acquiredRunes` AND the live pouch with a fresh id.
+5. Apply `goldDelta` (only `banishForGold`).
+6. Sync `player.pouchSize`; clear `pendingAuguryRunes` + `pendingAuguryTarots`.
 
 `upgradeAllOfElement` (Judgement) intentionally walks the **live pouch** — the picker snapshot would miss runes added by an earlier tarot in the same shop visit, or runes already in the pouch outside the 8-rune sample.
+
+## Tarot Effect Registry (`shared/tarotEffects.ts`)
+
+Each `TarotEffect` arm is paired with a `mutate` (server commit) and `preview` (client picker preview) function in `TAROT_EFFECT_HANDLERS`. The two share inputs (a `TarotEffectContext` carrying picked runes, chosen element, live pouch, RNG, id factory) and produce parallel outputs (`TarotMutationSet` for the server, `TarotPreviewSet` for the client). Two thin dispatchers — `applyTarotMutation` and `previewTarotEffect` — do the registry lookup and forward.
+
+CRITICAL invariant: for any effect that consumes RNG (Wheel of Fortune, The World), `mutate` and `preview` MUST consume `ctx.rng` in the same order with the same number of calls. Both functions live in the same file and share their per-rune helpers (`rollWheel`, `rollWorld`) so the RNG sequence is written once and reviewed together.
+
+The mapped type `{ [K in TarotEffect["type"]]: TarotEffectHandler<...> }` makes a missing handler a TypeScript error at compile time — adding an effect to the union without adding a registry entry won't compile.
 
 ## Banishing (`shared/ArkynState.ts`, `client/ui/PouchModal.tsx`)
 
@@ -211,11 +220,8 @@ Each tarot has `{fileBasename}_1x.png` + `{fileBasename}_2x.png` pulled in via V
 
 1. Add metadata to `TAROT_DEFINITIONS` in `shared/tarots.ts` (id, name, number, description, effect, min/maxTargets, optional `requiresElement` / `targetConstraint`, `fileBasename`).
 2. Drop PNG art in `assets/tarots/{fileBasename}_1x.png` + `{fileBasename}_2x.png`.
-3. If the effect shape doesn't fit the existing `TarotEffect` union, add a new arm AND:
-   - Add a `computeMutations` case in `handleApplyTarot.ts`.
-   - If the apply needs RNG, use `AUGURY_PACK_RNG_OFFSET + packIndex * 7919 + 1` to stay in the apply-time band.
-   - If the picker needs to preview a spawned rune, add a case to `computeSpawnedRunes()` in `AuguryPicker.tsx` mirroring the server RNG.
-4. If the effect needs a new per-slot animation kind, add the kind to `SlotAnim` in `AuguryPicker.tsx` and wire it into the apply timeline.
-5. If the effect needs a new `targetConstraint`, add the literal to the union and a check in `handleApplyTarot.ts` validation.
+3. If the effect shape doesn't fit the existing `TarotEffect` union, add a new arm in `shared/tarots.ts` AND a paired `{ mutate, preview }` entry in `TAROT_EFFECT_HANDLERS` (`shared/tarotEffects.ts`). The mapped-type lookup makes a missing handler a TS error, so the compiler enforces the pairing. If the effect uses RNG, ensure `mutate` and `preview` consume `ctx.rng` in identical order — both routes seed via `getAuguryApplySeed` so the picker preview matches the server commit.
+4. If the effect needs a new per-slot animation kind, add the kind to `SlotPreviewKind` in `shared/tarotEffects.ts` and wire it into `buildAuguryApplyTimeline` (`client/animations/auguryTimelines.ts`).
+5. If the effect needs a new `targetConstraint`, add the literal to the union in `shared/tarots.ts` and a check in `handleApplyTarot.ts` validation.
 
 For the 22 currently-implemented tarots, no new code branches are needed beyond the registry entry + asset.

@@ -1,4 +1,4 @@
-import type { ElementType } from "./arkynConstants";
+import { TAROT_BANISH_GOLD, WORLD_LEGENDARY_CHANCE, type ElementType } from "./arkynConstants";
 
 // RNG namespace shared by server-side roll/apply (rollAuguryPack.ts,
 // handleApplyTarot.ts) AND client-side prediction (AuguryPicker.tsx
@@ -221,7 +221,7 @@ export const TAROT_DEFINITIONS: Record<string, TarotDefinition> = {
         name: "The Tower",
         number: "XVI",
         description: "Banish up to 3 runes; gain +3 gold per banished rune.",
-        effect: { type: "banishForGold", goldPerRune: 3 },
+        effect: { type: "banishForGold", goldPerRune: TAROT_BANISH_GOLD },
         minTargets: 1, maxTargets: 3,
         fileBasename: "16_theTower",
     },
@@ -267,7 +267,7 @@ export const TAROT_DEFINITIONS: Record<string, TarotDefinition> = {
         name: "The World",
         number: "XXI",
         description: "Add 1 random Rare or Legendary rune to your pouch.",
-        effect: { type: "addRandomRune", legendaryChance: 0.20 },
+        effect: { type: "addRandomRune", legendaryChance: WORLD_LEGENDARY_CHANCE },
         minTargets: 0, maxTargets: 0,
         fileBasename: "21_theWorld",
     },

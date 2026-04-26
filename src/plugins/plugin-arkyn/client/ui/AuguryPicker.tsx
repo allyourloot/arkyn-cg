@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState, type CSSProperties, type Ref } from "react";
-import { gsap } from "gsap";
 import {
     DISSOLVE_DURATION_MS,
     sendApplyTarot,
@@ -9,15 +8,22 @@ import {
     type RuneClientData,
 } from "../arkynStore";
 import {
-    AUGURY_PACK_RNG_OFFSET,
     ELEMENT_TYPES,
-    RARITY_TYPES,
     TAROT_DEFINITIONS,
     createRoundRng,
+    getAuguryApplySeed,
+    previewTarotEffect,
     type TarotDefinition,
     type ElementType,
+    type PickedRune,
+    type SlotPreviewKind,
 } from "../../shared";
-import { playButton, playBuy, playSelectRune, playDeselectRune, playDropRuneReverse } from "../sfx";
+import {
+    buildAuguryApplyTimeline,
+    buildAuguryExitTimeline,
+    type AuguryAnimationRefs,
+} from "../animations/auguryTimelines";
+import { playButton, playBuy, playSelectRune, playDeselectRune } from "../sfx";
 import RuneImage from "./RuneImage";
 import Tooltip from "./Tooltip";
 import DissolveCanvas from "./DissolveCanvas";
@@ -47,45 +53,27 @@ interface AuguryPickerProps {
 }
 
 /**
- * Per-rune-slot animation kind played when Apply is clicked. Computed
- * client-side from the tarot's effect + the player's picks so the
- * picker can preview the mutation visually before the server processes
- * the message.
- *
- *  - "flip": 3D rotateY 0→180 reveal — the back face shows the predicted
- *    new rune (convertElement, upgradeRarity, consecrate).
- *  - "fade": opacity + scale-down — the rune is being removed (banish,
- *    banishForGold, fuse, wheelReroll where the destination is RNG).
- *  - "pulse": scale up briefly then back — the original rune stays in
- *    the deck, a copy is added (duplicate / Magician).
+ * Per-rune-slot animation kind played when Apply is clicked. Re-export
+ * of the shared registry's `SlotPreviewKind` (kept under the old
+ * `SlotAnim` name locally so the JSX + GSAP timeline below read
+ * naturally). The registry computes these from the chosen tarot's
+ * effect + player picks; see `previewTarotEffect`.
  */
-type SlotAnim =
-    | { kind: "flip"; newRune: RuneClientData }
-    | { kind: "fade" }
-    | { kind: "pulse" };
+type SlotAnim = SlotPreviewKind;
 
-const RARITY_ORDER = RARITY_TYPES;
-
-function bumpRarity(current: string, tiersUp: number): string {
-    const idx = (RARITY_ORDER as readonly string[]).indexOf(current);
-    const safe = idx < 0 ? 0 : idx;
-    const max = RARITY_ORDER.length - 1;
-    return RARITY_ORDER[Math.max(0, Math.min(max, safe + tiersUp))];
+let auguryPreviewIdSeq = 0;
+function makePreviewId(): string {
+    return `augury-preview-${++auguryPreviewIdSeq}`;
 }
 
 /**
- * Pure: derive any runes that should APPEAR in the rune row when Apply
- * is clicked. The World adds 1 random Rare/Legendary rune (mirroring
- * the server's apply-time RNG); The Lovers fuses 2 picks into 1 rune
- * of the chosen element with rarity = max(picks) + 1. Anything else
- * returns an empty list.
- *
- * The auguryPurchaseCount + currentRound + runSeed inputs MUST match
- * the values the server uses inside handleApplyTarot.computeMutations
- * (post-purchase increment) so the predicted rune is the rune the
- * server will actually push to acquiredRunes.
+ * Pure: derive the picker preview (per-slot animations + spawned runes)
+ * by delegating to the shared `previewTarotEffect` registry. The same
+ * registry's `mutate` runs on the server inside `handleApplyTarot`, so
+ * server commits and client previews stay byte-for-byte aligned (the
+ * RNG seed comes from `getAuguryApplySeed`, which both sides call).
  */
-function computeSpawnedRunes(
+function computePreview(
     tarot: TarotDefinition,
     runes: RuneClientData[],
     pickedIndices: number[],
@@ -93,168 +81,29 @@ function computeSpawnedRunes(
     runSeed: number,
     currentRound: number,
     auguryPurchaseCount: number,
-): RuneClientData[] {
-    const effect = tarot.effect;
-    if (effect.type === "addRandomRune") {
-        // Mirror the server seed exactly: same offset constant, same
-        // `+1` apply-time bump as handleApplyTarot uses for World.
-        const rng = createRoundRng(
-            runSeed,
-            currentRound + AUGURY_PACK_RNG_OFFSET + auguryPurchaseCount * 7919 + 1,
-        );
-        const element = ELEMENT_TYPES[Math.floor(rng() * ELEMENT_TYPES.length)];
-        const rarity = rng() < effect.legendaryChance ? "legendary" : "rare";
-        return [{ id: `augury-spawn-world`, element, rarity, level: 1 }];
-    }
-    if (effect.type === "fuse" && pickedIndices.length === 2 && chosenElement) {
-        const a = runes[pickedIndices[0]];
-        const b = runes[pickedIndices[1]];
-        if (!a || !b) return [];
-        const aIdx = (RARITY_ORDER as readonly string[]).indexOf(a.rarity);
-        const bIdx = (RARITY_ORDER as readonly string[]).indexOf(b.rarity);
-        const maxIdx = Math.max(aIdx < 0 ? 0 : aIdx, bIdx < 0 ? 0 : bIdx);
-        const newIdx = Math.min(RARITY_ORDER.length - 1, maxIdx + 1);
-        return [{
-            id: `augury-spawn-fuse`,
-            element: chosenElement,
-            rarity: RARITY_ORDER[newIdx],
-            level: 1,
-        }];
-    }
-    if (effect.type === "duplicate") {
-        // Magician — picked runes pulse in place while a clone of
-        // each one materializes in a spawn slot to the right of the
-        // row (same reverse-dissolve treatment Lovers/World use).
-        // Mirrors the server's `add.push({ ...r })` per picked rune
-        // in handleApplyTarot, so the visual count + rune identities
-        // match what acquiredRunes will receive.
-        const out: RuneClientData[] = [];
-        for (let i = 0; i < pickedIndices.length; i++) {
-            const r = runes[pickedIndices[i]];
-            if (!r) continue;
-            out.push({
-                id: `augury-spawn-magician-${i}`,
-                element: r.element,
-                rarity: r.rarity,
-                level: r.level,
-            });
-        }
-        return out;
-    }
-    return [];
-}
-
-/**
- * Pure: derive per-picker-slot animation effects from the chosen tarot.
- *
- * Most effects are computed per-pick in isolation. Wheel of Fortune is
- * special: its result is RNG-driven on the server and consumes a
- * deterministic sequence of rng() calls (split + optional element pick)
- * across ALL picks, so it has its own dispatch arm that builds the RNG
- * once and walks the picks in the same order the server does. The seed
- * formula MUST mirror handleApplyTarot's apply-time RNG so each picker
- * rune flips to reveal the same rune the server will commit.
- */
-function computeSlotAnims(
-    tarot: TarotDefinition,
-    runes: RuneClientData[],
-    pickedIndices: number[],
-    chosenElement: string | null,
-    runSeed: number,
-    currentRound: number,
-    auguryPurchaseCount: number,
-): Map<number, SlotAnim> {
-    const out = new Map<number, SlotAnim>();
-    const effect = tarot.effect;
-
-    // Wheel of Fortune — process all picks under a single RNG so the
-    // sequence matches the server's `for (r of picked)` loop in
-    // handleApplyTarot.computeMutations.
-    if (effect.type === "wheelReroll") {
-        const rng = createRoundRng(
-            runSeed,
-            currentRound + AUGURY_PACK_RNG_OFFSET + auguryPurchaseCount * 7919 + 1,
-        );
-        for (const idx of pickedIndices) {
-            const r = runes[idx];
-            if (!r) continue;
-            let newRune: RuneClientData;
-            if (rng() < 0.5) {
-                // Upgrade rarity branch — server bumps by 1 tier.
-                newRune = {
-                    id: `wheel-${idx}`,
-                    element: r.element,
-                    rarity: bumpRarity(r.rarity, 1),
-                    level: r.level,
-                };
-            } else {
-                // Random different-element branch — same rarity, new
-                // element from `ELEMENT_TYPES \ {original.element}`.
-                const others = ELEMENT_TYPES.filter(e => e !== r.element);
-                const newEl = others[Math.floor(rng() * others.length)];
-                newRune = {
-                    id: `wheel-${idx}`,
-                    element: newEl,
-                    rarity: r.rarity,
-                    level: r.level,
-                };
-            }
-            out.set(idx, { kind: "flip", newRune });
-        }
-        return out;
-    }
-
+) {
+    const rng = createRoundRng(runSeed, getAuguryApplySeed(currentRound, auguryPurchaseCount));
+    const picked: PickedRune[] = [];
     for (const idx of pickedIndices) {
         const r = runes[idx];
         if (!r) continue;
-        switch (effect.type) {
-            case "convertElement":
-                out.set(idx, { kind: "flip", newRune: { ...r, element: effect.element } });
-                break;
-            case "duplicate":
-                out.set(idx, { kind: "pulse" });
-                break;
-            case "upgradeRarity":
-                out.set(idx, { kind: "flip", newRune: { ...r, rarity: bumpRarity(r.rarity, effect.tiersUp) } });
-                break;
-            case "consecrate":
-                if (chosenElement) {
-                    out.set(idx, { kind: "flip", newRune: { ...r, element: chosenElement, rarity: bumpRarity(r.rarity, 1) } });
-                }
-                break;
-            case "fuse":
-            case "banish":
-            case "banishForGold":
-                out.set(idx, { kind: "fade" });
-                break;
-            // upgradeAllOfElement / addRandomRune don't pick picker runes;
-            // computeSlotAnims is never called for them (handleApply
-            // short-circuits when the predicted map is empty).
-        }
+        picked.push({ rune: r, pickerIndex: idx });
     }
-    return out;
+    return previewTarotEffect(tarot.effect, {
+        picked,
+        chosenElement: chosenElement ?? "",
+        livePouch: [],   // unused on the client preview path (Judgement has no spawn)
+        rng,
+        nextId: makePreviewId,
+    });
 }
 
-const ANIM_FLIP_S = 0.6;
-const ANIM_PULSE_UP_S = 0.2;
-const ANIM_PULSE_DOWN_S = 0.25;
-const ANIM_HOLD_S = 0.35;
-// Settle window after the lift/glow is dropped — long enough for the
-// rune slot's 120ms CSS transform transition to finish so GSAP reads
-// the lowered bounding rects when the fly to the pouch begins.
-const ANIM_LOWER_SETTLE_S = 0.18;
-// Fade slots use the shared DissolveCanvas (same shader the cast
-// pipeline uses to tear played runes apart). Keep its full duration in
-// sync with the rest of the apply timeline.
-const ANIM_DISSOLVE_S = DISSOLVE_DURATION_MS / 1000;
-// Exit choreography — runs after the apply animation, before the
-// message is sent. Each non-dissolved rune flies to the pouch counter
-// while the bottom UI slides down. Fly is staggered so the runes leave
-// the row in a soft cascade rather than all at once.
-const EXIT_FLY_S = 0.55;
-const EXIT_FLY_STAGGER_S = 0.04;
-const EXIT_SLIDE_S = 0.3;
-const EXIT_SLIDE_DROP_PX = 90;
+// Derived once at module load — the highest maxTargets across all
+// tarot definitions. Defines how many runes the player can pre-select
+// before choosing a tarot.
+const NO_TAROT_CAP_DEFAULT = Math.max(
+    ...Object.values(TAROT_DEFINITIONS).map(d => d.maxTargets),
+);
 
 /**
  * Mid-shop modal that appears after the player buys an Augury Pack.
@@ -317,7 +166,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
 
     // Run-scoped state needed to mirror the server's apply-time RNG so
     // The World's preview rune matches what the server will actually
-    // push to `acquiredRunes`. See `computeSpawnedRunes`.
+    // push to `acquiredRunes`. See `computePreview`.
     const runSeed = useRunSeed();
     const currentRound = useCurrentRound();
     const auguryPurchaseCount = useAuguryPurchaseCount();
@@ -364,9 +213,11 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
     }, [activeTarot, selectedRuneIndices, effectiveMin, effectiveMax, selectedElement, runes]);
 
     // Universal cap when no tarot is selected — the highest maxTargets
-    // across all tarots in the pool (Wheel of Fortune / Tower = 3). Lets
-    // the player pre-select runes before deciding which tarot to apply.
-    const NO_TAROT_CAP = 3;
+    // across all tarots in the pool (Wheel of Fortune / Tower = 3 today).
+    // Lets the player pre-select runes before deciding which tarot to
+    // apply. Derived from `TAROT_DEFINITIONS` so adding a higher-cap
+    // tarot raises the cap automatically.
+    const NO_TAROT_CAP = NO_TAROT_CAP_DEFAULT;
 
     const handleTarotClick = (i: number) => {
         if (selectedTarotIndex === i) {
@@ -441,131 +292,25 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
     };
 
     /**
-     * Choreograph the exit. Each non-dissolved picker rune (including
-     * spawned ones) flies to the PouchCounter while the bottom UI
-     * (tarot row + element row + action panel) slides off the bottom
-     * edge. When the timeline completes, fire `sendMessage()` so the
-     * server clears the pending state and the picker unmounts via
-     * schema sync — by which point everything has already animated
-     * away, so the unmount is invisible.
+     * Build the apply + exit timeline refs from the current ref arrays.
+     * Snapshotted at click time (inside handleApply) so the timeline
+     * factory operates on a stable ref set for the duration of the
+     * animation, even if the picker re-renders.
      */
-    const runExitTimeline = (
-        anims: Map<number, SlotAnim>,
-        spawned: RuneClientData[],
-        sendMessage: () => void,
-    ) => {
-        const pouchEl = document.querySelector("[data-pouch-counter]") as HTMLElement | null;
-        const pouchRect = pouchEl?.getBoundingClientRect();
-        const pouchCenter = pouchRect
-            ? { x: pouchRect.left + pouchRect.width / 2, y: pouchRect.top + pouchRect.height / 2 }
-            : { x: window.innerWidth - 60, y: window.innerHeight - 60 };
-
-        const exitTl = gsap.timeline({ onComplete: sendMessage });
-
-        // Reverse counterpart of DrawAnimation's rising scale (-300
-        // cents stepping +100 per drawn rune): start the cascade up
-        // top and step DOWN so the fly back to the pouch reads as the
-        // draw arpeggio rewinding. Combined with the time-reversed
-        // SFX buffer (playDropRuneReverse), each rune's tap also plays
-        // backwards, doubling down on the "draw, but in reverse" feel.
-        const flySfxBaseCents = 100;
-        const flySfxStepCents = -100;
-
-        // Fly each surviving picker rune to the pouch. Skip dissolved
-        // (fade) slots — they're already gone visually. Stagger so the
-        // runes leave the row in a soft cascade.
-        let flyOrder = 0;
-        for (let i = 0; i < runes.length; i++) {
-            const anim = anims.get(i);
-            if (anim?.kind === "fade") continue;
-            const slot = slotRefs.current[i];
-            if (!slot) continue;
-            const slotRect = slot.getBoundingClientRect();
-            const dx = pouchCenter.x - (slotRect.left + slotRect.width / 2);
-            const dy = pouchCenter.y - (slotRect.top + slotRect.height / 2);
-            // Disable the slot's CSS transition so it doesn't fight the
-            // GSAP per-frame transform writes during the fly.
-            slot.style.transition = "none";
-            const cents = flySfxBaseCents + flyOrder * flySfxStepCents;
-            exitTl.to(slot, {
-                x: dx,
-                y: dy,
-                scale: 0.18,
-                opacity: 0,
-                duration: EXIT_FLY_S,
-                ease: "power2.in",
-                onStart: () => playDropRuneReverse(cents),
-            }, flyOrder * EXIT_FLY_STAGGER_S);
-            flyOrder++;
-        }
-
-        // Fly spawned runes (World, Lovers) — they materialized in the
-        // row during the apply animation and then return to the pouch
-        // alongside their kin.
-        for (let i = 0; i < spawned.length; i++) {
-            const slot = spawnRefs.current[i];
-            if (!slot) continue;
-            const slotRect = slot.getBoundingClientRect();
-            const dx = pouchCenter.x - (slotRect.left + slotRect.width / 2);
-            const dy = pouchCenter.y - (slotRect.top + slotRect.height / 2);
-            slot.style.transition = "none";
-            const cents = flySfxBaseCents + flyOrder * flySfxStepCents;
-            exitTl.to(slot, {
-                x: dx,
-                y: dy,
-                scale: 0.18,
-                opacity: 0,
-                duration: EXIT_FLY_S,
-                ease: "power2.in",
-                onStart: () => playDropRuneReverse(cents),
-            }, flyOrder * EXIT_FLY_STAGGER_S);
-            flyOrder++;
-        }
-
-        // Bottom-UI slide-down. Tarots, element row, and action panel
-        // all leave together so the lower half of the picker exits as
-        // a single coordinated motion in parallel with the rune fly.
-        const slideTargets: Array<HTMLElement | null> = [
-            tarotRowRef.current,
-            elementRowRef.current,
-            actionPanelRef.current,
-        ];
-        for (const target of slideTargets) {
-            if (!target) continue;
-            exitTl.to(target, {
-                y: EXIT_SLIDE_DROP_PX,
-                opacity: 0,
-                duration: EXIT_SLIDE_S,
-                ease: "power2.in",
-            }, 0);
-        }
-
-        // Once the slide is done, lock the bottom UI invisible via CSS
-        // class. See the `bottomUIExited` state comment for the full
-        // reflow story — the short version is: the schema sync that
-        // follows sendMessage() re-renders the picker with empty arrays,
-        // and we need a non-inline lock to survive that paint.
-        exitTl.call(() => setBottomUIExited(true), undefined, EXIT_SLIDE_S);
-
-        // Safety floor — guarantees onComplete fires even when no flyers
-        // and no slide targets exist (shouldn't happen, but defensive).
-        exitTl.to({}, { duration: 0.05 });
-    };
+    const buildAnimationRefs = (): AuguryAnimationRefs => ({
+        slots: slotRefs.current,
+        flippers: flipperRefs.current,
+        spawns: spawnRefs.current,
+        tarotRow: tarotRowRef.current,
+        elementRow: elementRowRef.current,
+        actionPanel: actionPanelRef.current,
+    });
 
     const handleApply = () => {
         if (!activeTarot || !isApplyEnabled || isApplying) return;
 
         const sortedIndices = [...selectedRuneIndices].sort((a, b) => a - b);
-        const anims = computeSlotAnims(
-            activeTarot,
-            runes,
-            sortedIndices,
-            selectedElement,
-            runSeed,
-            currentRound,
-            auguryPurchaseCount,
-        );
-        const spawned = computeSpawnedRunes(
+        const { slotAnims: anims, spawnedRunes: spawned } = computePreview(
             activeTarot,
             runes,
             sortedIndices,
@@ -589,79 +334,33 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             });
         };
 
+        const runExit = () => {
+            buildAuguryExitTimeline(buildAnimationRefs(), {
+                anims,
+                spawned,
+                runeCount: runes.length,
+                onBottomUIExited: () => setBottomUIExited(true),
+                onComplete: sendMessageOnce,
+            });
+        };
+
         // No per-slot anims AND no spawned runes (Judgement) — skip
         // the apply animation but still play the exit slide so the
         // picker doesn't snap-cut back to the shop.
         if (anims.size === 0 && spawned.length === 0) {
-            requestAnimationFrame(() => {
-                runExitTimeline(anims, spawned, sendMessageOnce);
-            });
+            requestAnimationFrame(runExit);
             return;
         }
 
         // Wait one frame so the back-face DOM nodes (mounted only when
         // slotAnims has the slot) are present before GSAP grabs refs.
         requestAnimationFrame(() => {
-            const tl = gsap.timeline({
-                onComplete: () => {
-                    runExitTimeline(anims, spawned, sendMessageOnce);
-                },
+            buildAuguryApplyTimeline(buildAnimationRefs(), {
+                anims,
+                spawned,
+                onLowerForExit: () => setLoweredForExit(true),
+                onComplete: runExit,
             });
-            for (const [idx, anim] of anims) {
-                const slot = slotRefs.current[idx];
-                const flipper = flipperRefs.current[idx];
-                if (!flipper || !slot) continue;
-                switch (anim.kind) {
-                    case "flip":
-                        tl.to(flipper, {
-                            rotateY: 180,
-                            duration: ANIM_FLIP_S,
-                            ease: "back.out(1.4)",
-                        }, 0);
-                        break;
-                    case "fade":
-                        // Visual is owned by the inline DissolveCanvas
-                        // mounted in the faceFront below — GSAP just
-                        // holds the timeline open for the dissolve
-                        // duration so onComplete fires after the rune
-                        // has finished tearing apart.
-                        tl.to({}, { duration: ANIM_DISSOLVE_S }, 0);
-                        break;
-                    case "pulse":
-                        tl.to(flipper, {
-                            scale: 1.3,
-                            duration: ANIM_PULSE_UP_S,
-                            ease: "power2.out",
-                        }, 0);
-                        tl.to(flipper, {
-                            scale: 1.0,
-                            duration: ANIM_PULSE_DOWN_S,
-                            ease: "power2.in",
-                        }, ANIM_PULSE_UP_S);
-                        break;
-                }
-            }
-            // If any runes are spawning (World, Lovers), hold the
-            // timeline open for the reverse-dissolve duration so the
-            // materialize can play to completion.
-            if (spawned.length > 0) {
-                tl.to({}, { duration: ANIM_DISSOLVE_S }, 0);
-            }
-            // Brief hold so the player can read the final state before
-            // the picker slides out.
-            tl.to({}, { duration: ANIM_HOLD_S });
-            // Drop the still-raised converted slots back to their
-            // resting position. Removing the `runeSlotSelected` class
-            // via state triggers the rune slot's 120ms CSS transform
-            // transition so the lift + glow eases out before the fly
-            // to the pouch begins. Without this, the class's
-            // `translateY(-14px) !important` overrides GSAP's `y`
-            // tween and the converted runes only fade in place while
-            // their neighbors fly home. The settle tween below absorbs
-            // the CSS transition so `runExitTimeline` reads the
-            // lowered bounding rects.
-            tl.call(() => setLoweredForExit(true));
-            tl.to({}, { duration: ANIM_LOWER_SETTLE_S });
         });
     };
 

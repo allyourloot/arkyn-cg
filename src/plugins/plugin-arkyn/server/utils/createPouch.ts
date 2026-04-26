@@ -1,6 +1,7 @@
 import { ELEMENT_TYPES, RUNES_PER_ELEMENT } from "../../shared";
 import { shuffleArray } from "./shuffleArray";
 import { nextRuneId } from "./nextRuneId";
+import { removeFirstMatching } from "./livePouchBanish";
 
 export interface RuneInstanceData {
     id: string;
@@ -50,10 +51,7 @@ export function createPouch(
     }
 
     for (const b of banished) {
-        const idx = pouch.findIndex(r =>
-            r.element === b.element && r.rarity === b.rarity && r.level === b.level,
-        );
-        if (idx >= 0) pouch.splice(idx, 1);
+        removeFirstMatching(pouch, b);
     }
 
     return shuffleArray(pouch);

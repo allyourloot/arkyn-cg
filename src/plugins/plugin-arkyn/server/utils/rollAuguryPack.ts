@@ -1,9 +1,10 @@
 import {
     AUGURY_PACK_RUNE_CHOICES,
     AUGURY_PACK_TAROT_CHOICES,
-    AUGURY_PACK_RNG_OFFSET,
     TAROT_IDS,
     createRoundRng,
+    getAuguryRollSeed,
+    sampleWithoutReplacement,
 } from "../../shared";
 import { nextRuneId } from "./nextRuneId";
 import type { RuneInstanceData } from "./createPouch";
@@ -21,8 +22,9 @@ export interface AuguryPackRollResult {
  * produces the same picker — replays + reconnect-mid-pack reproduce.
  *
  * `packIndex` is the player's `auguryPurchaseCount` at the moment of
- * the buy (0 for the first pack of the shop visit). Multiplied by a
- * prime so a 2nd pack in the same shop yields a different picker.
+ * the buy (0 for the first pack of the shop visit). The seed builder
+ * (`getAuguryRollSeed`) multiplies it by a prime so a 2nd pack in the
+ * same shop yields a different picker.
  *
  * Sampling is WITHOUT replacement — duplicate runes from the pouch are
  * possible (the same Rune element / rarity can appear across slots),
@@ -37,40 +39,21 @@ export function rollAuguryPack(
     packIndex: number,
     livePouch: readonly RuneInstanceData[],
 ): AuguryPackRollResult {
-    const rng = createRoundRng(
-        runSeed,
-        round + AUGURY_PACK_RNG_OFFSET + packIndex * 7919,
-    );
+    const rng = createRoundRng(runSeed, getAuguryRollSeed(round, packIndex));
 
-    // Sample runes from livePouch by index, without replacement.
-    const runePool = [...livePouch];
-    const runeCount = Math.min(AUGURY_PACK_RUNE_CHOICES, runePool.length);
-    const runes: RuneInstanceData[] = [];
-    for (let i = 0; i < runeCount; i++) {
-        const idx = Math.floor(rng() * runePool.length);
-        const r = runePool[idx];
-        // Fresh id keeps the picker rune distinct from the live pouch
-        // entry (same as how Rune Bag picks get a fresh id when added).
-        // This matters because the picker's RuneInstance copies sit in
-        // a separate ArraySchema and Colyseus enforces single-parent.
-        runes.push({
-            id: nextRuneId(),
-            element: r.element,
-            rarity: r.rarity,
-            level: r.level,
-        });
-        runePool.splice(idx, 1);
-    }
+    // Sample runes from livePouch by index, without replacement. Each
+    // sample gets a fresh id so the picker rune is distinct from the
+    // live-pouch entry (Colyseus enforces single-parent on schema
+    // children, and the picker copies sit in a separate ArraySchema).
+    const sampledRunes = sampleWithoutReplacement(livePouch, AUGURY_PACK_RUNE_CHOICES, rng);
+    const runes: RuneInstanceData[] = sampledRunes.map(r => ({
+        id: nextRuneId(),
+        element: r.element,
+        rarity: r.rarity,
+        level: r.level,
+    }));
 
-    // Sample tarot ids without replacement.
-    const tarotPool = [...TAROT_IDS];
-    const tarotCount = Math.min(AUGURY_PACK_TAROT_CHOICES, tarotPool.length);
-    const tarotIds: string[] = [];
-    for (let i = 0; i < tarotCount; i++) {
-        const idx = Math.floor(rng() * tarotPool.length);
-        tarotIds.push(tarotPool[idx]);
-        tarotPool.splice(idx, 1);
-    }
+    const tarotIds = sampleWithoutReplacement(TAROT_IDS, AUGURY_PACK_TAROT_CHOICES, rng);
 
-    return { runes, tarotIds };
+    return { runes, tarotIds: [...tarotIds] };
 }

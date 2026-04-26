@@ -328,7 +328,7 @@ Runes have four rarities: `common`, `uncommon`, `rare`, `legendary` (see `RARITY
 
 ### Augury Packs & Tarot Cards
 
-Shop-purchased pack that offers 5 random tarots over 8 sampled runes; the player applies one tarot to mutate their deck (convert elements, upgrade rarity, banish, fuse, duplicate, etc.). 22 tarots implemented, all routed through a single discriminated `TarotEffect` union and dispatched from `server/systems/handleApplyTarot.ts`. Banished runes are tracked on `player.banishedRunes` and subtracted from the Pouch Modal so tarot-converted runes don't leave phantom slots.
+Shop-purchased pack that offers 5 random tarots over 8 sampled runes; the player applies one tarot to mutate their deck (convert elements, upgrade rarity, banish, fuse, duplicate, etc.). 22 tarots implemented, all routed through a single discriminated `TarotEffect` union. Per-effect behavior lives in the `TAROT_EFFECT_HANDLERS` registry in `shared/tarotEffects.ts` — each entry pairs the server-side `mutate` (called from `handleApplyTarot.ts`) with the client-side `preview` (called from `AuguryPicker.tsx`) so picker visuals and server commits stay byte-for-byte aligned. Banished runes are tracked on `player.banishedRunes` and subtracted from the Pouch Modal so tarot-converted runes don't leave phantom slots.
 
 Full architecture, effect catalogue, RNG namespace details, picker UX (selection model, spawned-rune prediction for Lovers/World, exit timeline), and an "adding a new tarot" checklist live in [AUGURY_TAROTS.md](AUGURY_TAROTS.md).
 
