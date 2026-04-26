@@ -226,14 +226,6 @@
 
 /* Tooltip styling — mirrors ShopScreen's sigil tooltip so the framed
    look is consistent across the shop. */
-.tooltipNumber {
-    font-size: clamp(var(--font-size-3xs), 0.85vw, var(--font-size-2xs));
-    color: #d4c8b0;
-    letter-spacing: 2px;
-    line-height: 1;
-    opacity: 0.85;
-}
-
 .tooltipName {
     font-size: clamp(var(--font-size-xs), 1.6vw, var(--font-size-sm));
     font-weight: normal;

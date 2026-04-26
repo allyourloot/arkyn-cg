@@ -86,28 +86,58 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
         return true;
     }, [activeTarot, selectedRuneIndices, effectiveMin, effectiveMax, selectedElement, runes]);
 
+    // Universal cap when no tarot is selected — the highest maxTargets
+    // across all tarots in the pool (Wheel of Fortune / Tower = 3). Lets
+    // the player pre-select runes before deciding which tarot to apply.
+    const NO_TAROT_CAP = 3;
+
     const handleTarotClick = (i: number) => {
         if (selectedTarotIndex === i) {
-            // Click the active tarot again to deselect — clears the rune
-            // / element selection and disables Apply, returning the
-            // picker to the "Choose a tarot card" prompt state.
+            // Click the active tarot again to deselect. Keep the rune
+            // selection (player may want to apply a different tarot to
+            // the same runes); clear only the element since each tarot
+            // has its own element-pick semantics.
             setSelectedTarotIndex(null);
-            setSelectedRuneIndices(new Set());
             setSelectedElement(null);
             playDeselectRune();
             return;
         }
         setSelectedTarotIndex(i);
-        setSelectedRuneIndices(new Set());
         setSelectedElement(null);
+
+        // If the new tarot is pouch-wide (Judgement, World), clear the
+        // rune selection — the rune row hides and any held selection
+        // would be silently ignored on Apply.
+        // Otherwise, trim selection to the new tarot's max so Apply
+        // gates predictably. Sets preserve insertion order in JS, so
+        // trimming by iteration drops the most-recent picks.
+        const newDef = TAROT_DEFINITIONS[tarotIds[i]] ?? null;
+        const newMax = newDef ? Math.min(newDef.maxTargets, runes.length) : 0;
+        if (newMax === 0) {
+            setSelectedRuneIndices(new Set());
+        } else {
+            setSelectedRuneIndices(prev => {
+                if (prev.size <= newMax) return prev;
+                const trimmed = new Set<number>();
+                let kept = 0;
+                for (const idx of prev) {
+                    if (kept++ >= newMax) break;
+                    trimmed.add(idx);
+                }
+                return trimmed;
+            });
+        }
+
         playSelectRune();
     };
 
     const handleRuneClick = (i: number) => {
-        if (!activeTarot) return;
-        // Tarots whose maxTargets === 0 (Judgement, World) ignore rune
-        // clicks — the rune row is hidden anyway, but guard for safety.
-        if (effectiveMax === 0) return;
+        // Cap defaults to the universal max when no tarot is active so
+        // the player can build up a rune selection before deciding which
+        // tarot to apply. Once a tarot is picked, the cap drops to its
+        // effective max (clamped against `runes.length`).
+        const cap = activeTarot ? effectiveMax : NO_TAROT_CAP;
+        if (cap === 0) return;
 
         setSelectedRuneIndices(prev => {
             const next = new Set(prev);
@@ -115,7 +145,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                 next.delete(i);
                 playDeselectRune();
             } else {
-                if (next.size >= effectiveMax) {
+                if (next.size >= cap) {
                     // At cap — ignore further additions instead of replacing
                     // a previous pick (player can deselect to free a slot).
                     return prev;
@@ -149,9 +179,14 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
     };
 
     // Prompt copy reflects current state so the player always knows what
-    // to do next.
+    // to do next. Handles the four cases: nothing chosen yet, runes only,
+    // tarot only, or both.
     const prompt = (() => {
-        if (!activeTarot) return "Choose a tarot card";
+        if (!activeTarot) {
+            const n = selectedRuneIndices.size;
+            if (n === 0) return "Choose a tarot card";
+            return `${n} ${n === 1 ? "rune" : "runes"} selected. Choose a tarot card.`;
+        }
         const count = selectedRuneIndices.size;
         if (effectiveMax === 0 && activeTarot.requiresElement) {
             return selectedElement ? `Element: ${selectedElement}` : "Pick an element";
@@ -183,7 +218,6 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                                     className={`${styles.runeSlot} ${isSelected ? styles.runeSlotSelected : ""} ${dimmed ? styles.runeSlotDimmed : ""}`}
                                     style={{ zIndex: isSelected ? 100 : i } as CSSProperties}
                                     onClick={() => handleRuneClick(i)}
-                                    disabled={!activeTarot}
                                     title={dimmed ? "This tarot only affects Common or Uncommon runes" : undefined}
                                 >
                                     {/* Float animation lives on this inner wrapper so it
@@ -266,7 +300,6 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                                 as the tooltip. Bump above those so the
                                 tooltip always paints over the rune row. */}
                             <Tooltip placement="top" arrow variant="framed" style={{ zIndex: 1000 }}>
-                                <span className={styles.tooltipNumber}>{def.number}</span>
                                 <span className={styles.tooltipName}>{def.name}</span>
                                 <div className={styles.tooltipDescWrap}>
                                     <span className={styles.tooltipDesc}>{def.description}</span>
