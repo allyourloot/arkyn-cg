@@ -1,22 +1,32 @@
 // Fragment shader for the pack-purchase "burst" effect.
 //
-// Visual concept: the pack texture occupies the central region of an
-// over-sized canvas (1 / PACK_SCALE in each dimension), giving fragments
-// room to fly outward into the surrounding empty space. The pack is
-// divided into IRREGULAR Voronoi-like cells via cellular noise — each
-// cell is a polygon around a feature point that's randomly jittered
-// inside its grid square, so fragments read as natural-shaped shards
-// rather than a uniform square mosaic. Each cell flies outward at a
-// jittered speed with slight tangential drift, and each cell has a
-// staggered "vanish time" between t=0.40 and t=0.95.
+// Approach: forward-projection per-shard. The pack texture is divided
+// into a CELL_SCALE × CELL_SCALE grid (currently 9×9 = 81 shards).
+// Each shard has its own deterministic velocity (radial outward +
+// tangential drift), rotation rate, and size variation, all seeded
+// from a hash of its grid coordinates.
 //
-// Tuning history:
-//   - Initial pass used a uniform square grid + bright flash + ring;
-//     read as a swirling square. Replaced with cell-based shatter.
-//   - Square grid was replaced with cellular noise (3×3 neighbor
-//     scan) so fragment shapes are irregular polygons.
-//   - PACK_SCALE bumped from 1.4 → 1.8 and cellSpeed range bumped to
-//     give fragments more room and reach to spread outward.
+// For every display pixel, we iterate ALL 81 shards. For each shard:
+//   1. Skip if the shard has already vanished (cheapest reject).
+//   2. AABB quick-reject if the display pixel is far from the shard's
+//      current center (no rotation work needed).
+//   3. For nearby shards: inverse-transform the display pixel into the
+//      shard's rotated local frame, test against the shard's bounds,
+//      and sample the texture at the corresponding origin position.
+//   4. Pick the fastest matching shard so overlapping shards resolve
+//      to a stable winner.
+//
+// Why iterate all 81 shards instead of a localized search:
+//   - The previous SEARCH_RADIUS estimate worked for tight canvases
+//     (PACK_SCALE ≤ 1.8) but missed shards once the canvas grew
+//     enough that estimate error exceeded the search radius.
+//   - 81 iterations with cheap early-rejects (vanish + AABB) is
+//     comfortable on modern GPUs and removes the search-radius
+//     trade-off entirely.
+//
+// Edge fade: alpha falls off in the outer 18% of the canvas so any
+// shards that DO reach the canvas edge dissolve smoothly into
+// transparency rather than terminating at a hard rectangular boundary.
 export const BURST_FRAGMENT_SHADER = /* glsl */ `
 precision highp float;
 
@@ -28,99 +38,117 @@ uniform vec3 uTint;      // pack element color
 
 // Canvas-to-pack scale. Pack occupies the central 1/PACK_SCALE of the
 // canvas in both dimensions. MUST match the BurstCanvas consumer's
-// burstScale in ArkynOverlay (currently 1.8). Increase to give
-// fragments more room to fly; decrease for a tighter contained burst.
-const float PACK_SCALE = 1.8;
+// burstScale in ArkynOverlay.
+const float PACK_SCALE = 2.5;
 
-// Cell granularity in pack UV space. Higher = smaller cells (more
-// numerous, finer fragments); lower = chunkier shards. With cellular
-// noise the visible cell sizes vary because feature points are jittered
-// inside each grid square, so this is more of an "average density".
-const float CELL_SCALE = 18.0;
+// Pack subdivisions. Higher = more shards / smaller pieces.
+const float CELL_SCALE = 9.0;
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
-// Cellular-noise lookup: which feature point is closest to packUv?
-// Returns the integer cell coords of the winning feature. Each grid
-// square contains exactly one feature point at a random position
-// inside the square; checking the 3×3 neighborhood guarantees we find
-// the closest feature regardless of which square we're sampling near
-// the edges of.
-vec2 nearestFeatureCell(vec2 packUv) {
-    vec2 baseCell = floor(packUv * CELL_SCALE);
-    vec2 fracUv = fract(packUv * CELL_SCALE);
-    vec2 nearestCell = baseCell;
-    float nearestDist = 999.0;
-    for (int dy = -1; dy <= 1; dy++) {
-        for (int dx = -1; dx <= 1; dx++) {
-            vec2 c = baseCell + vec2(float(dx), float(dy));
-            // Feature point — jittered position inside this cell.
-            vec2 fp = vec2(hash(c + vec2(1.7, 5.1)), hash(c + vec2(9.3, 11.7)));
-            vec2 toFp = vec2(float(dx), float(dy)) + fp - fracUv;
-            float dist = dot(toFp, toFp);
-            if (dist < nearestDist) {
-                nearestDist = dist;
-                nearestCell = c;
+void main() {
+    // Map canvas UV → pack texture UV.
+    vec2 packUv = (vUv - 0.5) * PACK_SCALE + 0.5;
+
+    // Best-match shard so far. We pick the fastest one when multiple
+    // shards overlap a pixel.
+    float bestSpeed = -1.0;
+    float bestHash = 0.0;
+    vec4 bestSample = vec4(0.0);
+
+    for (int cy = 0; cy < 9; cy++) {
+        for (int cx = 0; cx < 9; cx++) {
+            vec2 cellId = vec2(float(cx), float(cy));
+            float h = hash(cellId);
+
+            // Cheapest reject — shard has already vanished.
+            float vanishTime = 0.4 + h * 0.55;
+            if (uTime > vanishTime) continue;
+
+            float h2 = hash(cellId + vec2(7.3, 13.1));
+
+            // Per-shard size variation (0.7×–1.3×) — uniform-grid
+            // shards reading as visually irregular debris because the
+            // sizes vary cell-to-cell.
+            float sizeFactor = 0.7 + h2 * 0.6;
+            float halfSize = (0.55 / CELL_SCALE) * sizeFactor;
+
+            // Per-shard velocity: radial outward + tangential drift.
+            vec2 originUv = (cellId + 0.5) / CELL_SCALE;
+            vec2 cellD = originUv - 0.5;
+            float cellR = max(length(cellD), 0.001);
+            vec2 outDir = cellD / cellR;
+            vec2 tanDir = vec2(-outDir.y, outDir.x);
+            float speed = 0.55 + h * 0.7;
+            float drift = (h2 - 0.5) * 0.5;
+            vec2 vel = outDir * speed + tanDir * drift;
+
+            // AABB quick-reject — if pixel is way outside this shard's
+            // possible footprint (after rotation, AABB is √2× the
+            // shard's halfSize), skip rotation/texture work.
+            vec2 toShard = packUv - (originUv + vel * uTime);
+            float quickExtent = halfSize * 1.45;
+            if (abs(toShard.x) > quickExtent ||
+                abs(toShard.y) > quickExtent) continue;
+
+            // Per-shard rotation rate.
+            float rotRate = (h2 - 0.5) * 8.0;
+            float angle = rotRate * uTime;
+            float ca = cos(angle);
+            float sa = sin(angle);
+
+            // Inverse-transform pixel into shard's local frame.
+            vec2 localOffset = vec2(
+                ca * toShard.x + sa * toShard.y,
+                -sa * toShard.x + ca * toShard.y
+            );
+
+            // Tight bounds check in shard's local frame.
+            if (abs(localOffset.x) > halfSize ||
+                abs(localOffset.y) > halfSize) continue;
+
+            // Source UV in original pack texture.
+            vec2 srcUv = originUv + localOffset;
+            if (srcUv.x < 0.0 || srcUv.x > 1.0 ||
+                srcUv.y < 0.0 || srcUv.y > 1.0) continue;
+
+            vec4 s = texture2D(uTex, srcUv);
+            if (s.a < 0.02) continue;
+
+            if (speed > bestSpeed) {
+                bestSpeed = speed;
+                bestHash = h;
+                bestSample = s;
             }
         }
     }
-    return nearestCell;
-}
 
-void main() {
-    // Map canvas UV → pack texture UV. Inside [0,1] = on the pack;
-    // outside = surrounding empty space where fragments can fly into.
-    vec2 packUv = (vUv - 0.5) * PACK_SCALE + 0.5;
+    if (bestSpeed < 0.0) discard;
 
-    vec2 d = packUv - 0.5;
-    float r = length(d);
-
-    // Each pixel belongs to the Voronoi cell of the nearest feature
-    // point. The cell ID hash drives every per-fragment property below
-    // (speed, drift, vanish time) so a single contiguous fragment
-    // moves and vanishes as one piece.
-    vec2 cellId = nearestFeatureCell(packUv);
-    float cellRand = hash(cellId);
-    float cellRand2 = hash(cellId + vec2(7.3, 13.1));
-
-    // Per-cell outward speed + tangential drift. Wider speed range
-    // (0.55 → 1.25) so the fastest fragments fly nearly to the canvas
-    // edge while slower ones linger closer to the pack origin.
-    float cellSpeed = 0.55 + cellRand * 0.7;
-    float tangentDrift = (cellRand2 - 0.5) * 0.5;
-
-    vec2 outwardDir = r > 0.001 ? d / r : vec2(0.0);
-    vec2 tangentDir = vec2(-outwardDir.y, outwardDir.x);
-    vec2 vel = outwardDir * cellSpeed + tangentDir * tangentDrift;
-
-    // Inverse-lookup: pixel currently displayed at packUv shows what
-    // was at packUv - vel*t before the burst began.
-    vec2 sourceUv = packUv - vel * uTime;
-
-    if (sourceUv.x < 0.0 || sourceUv.x > 1.0 ||
-        sourceUv.y < 0.0 || sourceUv.y > 1.0) discard;
-
-    vec4 tex = texture2D(uTex, sourceUv);
-    if (tex.a < 0.02) discard;
-
-    // Per-cell vanish time — fragments disappear progressively across
-    // the burst window.
-    float vanishTime = 0.4 + cellRand * 0.55;
-    if (uTime > vanishTime) discard;
+    // Color treatment.
+    vec3 color = bestSample.rgb;
 
     // Subtle element-tint ignition early in the burst.
     float ignite = smoothstep(0.0, 0.08, uTime) * (1.0 - smoothstep(0.1, 0.35, uTime));
-    vec3 color = tex.rgb + uTint * ignite * 0.5;
+    color += uTint * ignite * 0.5;
 
-    // Heated-fragment glow — the further a fragment has traveled, the
-    // more it glows in element color.
-    float travel = cellSpeed * uTime;
+    // Heated leading-edge glow on shards that have traveled far.
+    float travel = bestSpeed * uTime;
     color += uTint * smoothstep(0.1, 0.5, travel) * 0.4;
 
-    // Alpha fades smoothly toward each cell's vanish time.
-    float alpha = tex.a * (1.0 - smoothstep(vanishTime - 0.2, vanishTime, uTime));
+    // Per-shard alpha fade toward its vanish time.
+    float vanishTime = 0.4 + bestHash * 0.55;
+    float alpha = bestSample.a * (1.0 - smoothstep(vanishTime - 0.2, vanishTime, uTime));
+
+    // Edge fade — fall off alpha in the outer rim of the canvas so
+    // shards approaching the rectangular boundary dissolve into the
+    // surroundings rather than truncating against a hard edge.
+    vec2 toEdge = min(vUv, 1.0 - vUv);
+    float edgeDist = min(toEdge.x, toEdge.y);
+    float edgeFade = smoothstep(0.0, 0.18, edgeDist);
+    alpha *= edgeFade;
 
     gl_FragColor = vec4(color, alpha);
 }

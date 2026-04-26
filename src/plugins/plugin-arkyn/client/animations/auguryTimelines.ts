@@ -32,6 +32,12 @@ const ANIM_PULSE_DOWN_S = 0.25;
 /** Brief read-the-final-state hold before the exit slide kicks in. */
 const ANIM_HOLD_S = 0.35;
 /**
+ * Stagger between consecutive per-rune apply SFX (select / dissolve)
+ * so multi-rune tarots fire as a quick rhythmic cascade rather than
+ * a single piled-up impact.
+ */
+const APPLY_SFX_STAGGER_S = 0.07;
+/**
  * Settle window after the lifted slot's `runeSlotSelected` class is
  * removed — long enough for the rune slot's 120ms CSS transform
  * transition to finish so GSAP reads the lowered bounding rects when
@@ -101,6 +107,14 @@ export interface BuildAuguryApplyTimelineOpts {
     onLowerForExit: () => void;
     /** Fired when the apply timeline finishes. The picker chains the exit timeline here. */
     onComplete: () => void;
+    /**
+     * Per-rune SFX fired one-by-one at the start of the apply phase
+     * with `APPLY_SFX_STAGGER_S` between each. Picker builds the list
+     * from `anims` + `spawned` so each modified / added rune triggers
+     * `playSelectRune` and each banished rune triggers `playDissolve`.
+     * Empty list → no per-rune SFX (no rune-level visual cue to sync to).
+     */
+    applySfxCues?: readonly (() => void)[];
 }
 
 /**
@@ -148,6 +162,15 @@ export function buildAuguryApplyTimeline(
                     ease: "power2.in",
                 }, ANIM_PULSE_UP_S);
                 break;
+        }
+    }
+
+    // Per-rune apply SFX, scheduled at the very start of the timeline
+    // with a short stagger so multi-rune tarots cascade audibly.
+    if (opts.applySfxCues) {
+        for (let i = 0; i < opts.applySfxCues.length; i++) {
+            const fn = opts.applySfxCues[i];
+            tl.call(fn, undefined, i * APPLY_SFX_STAGGER_S);
         }
     }
 

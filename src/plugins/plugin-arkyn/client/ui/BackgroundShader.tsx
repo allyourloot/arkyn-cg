@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useGamePhase, useEnemyIsBoss, usePendingPackRunes, usePendingAuguryRunes, usePendingAuguryTarots } from "../arkynStore";
+import { useGamePhase, useEnemyIsBoss, usePendingPackRunes, usePendingCodexScrolls, usePendingAuguryRunes, usePendingAuguryTarots } from "../arkynStore";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./BackgroundShader.frag";
 import { createProgram, createQuadBuffer, bindQuadAttributes } from "./utils/glProgram";
 import { HAS_HOVER } from "./utils/hasHover";
@@ -28,15 +28,19 @@ export default function BackgroundShader() {
     const gamePhase = useGamePhase();
     const isBoss = useEnemyIsBoss();
     const pendingPackRunes = usePendingPackRunes();
+    const pendingCodexScrolls = usePendingCodexScrolls();
     const pendingAuguryRunes = usePendingAuguryRunes();
     const pendingAuguryTarots = usePendingAuguryTarots();
     // Live-tweened mode values written into uniforms each frame by the
     // render loop. `current` is the displayed value, `target` is where
     // we're easing toward. Refs (not state) so updating them doesn't
-    // re-run the GL setup effect.
+    // re-run the GL setup effect. Each pack picker has its own ref so
+    // the palette tweens cleanly between pack types if a player skips
+    // straight from one picker into another.
     const shopModeRef = useRef({ current: 0, target: 0 });
     const bossModeRef = useRef({ current: 0, target: 0 });
-    const pickerModeRef = useRef({ current: 0, target: 0 });
+    const runePackModeRef = useRef({ current: 0, target: 0 });
+    const codexModeRef = useRef({ current: 0, target: 0 });
     const auguryModeRef = useRef({ current: 0, target: 0 });
 
     // Flip the targets whenever the game phase / boss state changes.
@@ -51,16 +55,21 @@ export default function BackgroundShader() {
         bossModeRef.current.target = bossActive ? 1 : 0;
     }, [isBoss, gamePhase]);
 
-    // Rune-picker palette fires whenever the player has pending pack runes
-    // to choose from. Clears automatically once they pick or skip.
+    // Per-pack palette modes — each fires when its picker is open.
+    // Mutually exclusive on the server, so at most one of the three
+    // targets is 1 at any moment. Each clears automatically when the
+    // player picks or skips.
+    //   Rune Pack   → dark/light greens
+    //   Codex Pack  → dark/light blues
+    //   Augury Pack → magenta/dark purples
     useEffect(() => {
-        pickerModeRef.current.target = pendingPackRunes.length > 0 ? 1 : 0;
+        runePackModeRef.current.target = pendingPackRunes.length > 0 ? 1 : 0;
     }, [pendingPackRunes.length]);
 
-    // Augury palette — distinct gold/amber wash that fires whenever the
-    // Augury picker is open (either the runes or the tarots populated).
-    // Distinct from the rune-pack picker's arcane-violet so the two pack types
-    // read as different "moods" — the Augury Pack is treasure-chest gold.
+    useEffect(() => {
+        codexModeRef.current.target = pendingCodexScrolls.length > 0 ? 1 : 0;
+    }, [pendingCodexScrolls.length]);
+
     useEffect(() => {
         const open = pendingAuguryRunes.length > 0 || pendingAuguryTarots.length > 0;
         auguryModeRef.current.target = open ? 1 : 0;
@@ -111,7 +120,8 @@ export default function BackgroundShader() {
         const uTime = gl.getUniformLocation(program, "uTime");
         const uShopMode = gl.getUniformLocation(program, "uShopMode");
         const uBossMode = gl.getUniformLocation(program, "uBossMode");
-        const uPickerMode = gl.getUniformLocation(program, "uPickerMode");
+        const uRunePackMode = gl.getUniformLocation(program, "uRunePackMode");
+        const uCodexMode = gl.getUniformLocation(program, "uCodexMode");
         const uAuguryMode = gl.getUniformLocation(program, "uAuguryMode");
 
         // Render at 1/PIXEL_SIZE of the viewport size; CSS upscales the
@@ -151,57 +161,33 @@ export default function BackgroundShader() {
                 rafId = requestAnimationFrame(render);
                 return;
             }
-            // Ease the shop-mode value toward its target at a rate that
+            // Ease each mode value toward its target at a rate that
             // covers the full 0→1 range in SHOP_MODE_TWEEN_S seconds.
             // Linear is fine here — the shader's palette mix absorbs any
             // would-be easing and the shift is brief.
             const dtS = Math.max(0, (now - lastFrameAt) / 1000);
             lastFrameAt = now;
-            const sm = shopModeRef.current;
-            if (sm.current !== sm.target) {
-                const step = dtS / SHOP_MODE_TWEEN_S;
-                if (sm.current < sm.target) {
-                    sm.current = Math.min(sm.target, sm.current + step);
-                } else {
-                    sm.current = Math.max(sm.target, sm.current - step);
-                }
-            }
-            const bm = bossModeRef.current;
-            if (bm.current !== bm.target) {
-                const step = dtS / SHOP_MODE_TWEEN_S;
-                if (bm.current < bm.target) {
-                    bm.current = Math.min(bm.target, bm.current + step);
-                } else {
-                    bm.current = Math.max(bm.target, bm.current - step);
-                }
-            }
-            const pm = pickerModeRef.current;
-            if (pm.current !== pm.target) {
-                const step = dtS / SHOP_MODE_TWEEN_S;
-                if (pm.current < pm.target) {
-                    pm.current = Math.min(pm.target, pm.current + step);
-                } else {
-                    pm.current = Math.max(pm.target, pm.current - step);
-                }
-            }
-            const am = auguryModeRef.current;
-            if (am.current !== am.target) {
-                const step = dtS / SHOP_MODE_TWEEN_S;
-                if (am.current < am.target) {
-                    am.current = Math.min(am.target, am.current + step);
-                } else {
-                    am.current = Math.max(am.target, am.current - step);
-                }
-            }
+            const tweenStep = dtS / SHOP_MODE_TWEEN_S;
+            const tweenMode = (m: { current: number; target: number }) => {
+                if (m.current === m.target) return;
+                if (m.current < m.target) m.current = Math.min(m.target, m.current + tweenStep);
+                else m.current = Math.max(m.target, m.current - tweenStep);
+            };
+            tweenMode(shopModeRef.current);
+            tweenMode(bossModeRef.current);
+            tweenMode(runePackModeRef.current);
+            tweenMode(codexModeRef.current);
+            tweenMode(auguryModeRef.current);
             lastDrawAt = now;
             resize();
             const t = (now - start) / 1000;
             gl.uniform2f(uResolution, canvas.width, canvas.height);
             gl.uniform1f(uTime, t);
-            gl.uniform1f(uShopMode, sm.current);
-            gl.uniform1f(uBossMode, bm.current);
-            gl.uniform1f(uPickerMode, pm.current);
-            gl.uniform1f(uAuguryMode, am.current);
+            gl.uniform1f(uShopMode, shopModeRef.current.current);
+            gl.uniform1f(uBossMode, bossModeRef.current.current);
+            gl.uniform1f(uRunePackMode, runePackModeRef.current.current);
+            gl.uniform1f(uCodexMode, codexModeRef.current.current);
+            gl.uniform1f(uAuguryMode, auguryModeRef.current.current);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             rafId = requestAnimationFrame(render);
         };

@@ -392,7 +392,7 @@ export default function ArkynOverlay() {
             // Must match BurstShader's PACK_SCALE constant — the shader
             // assumes the pack texture occupies the central 1/PACK_SCALE
             // of the canvas in both dimensions.
-            const burstScale = 1.8;
+            const burstScale = 2.5;
             const burstW = dissolveW * burstScale;
             const burstH = dissolveH * burstScale;
             setPackDissolveData({

@@ -23,7 +23,7 @@ import {
     buildAuguryExitTimeline,
     type AuguryAnimationRefs,
 } from "../animations/auguryTimelines";
-import { playButton, playBuy, playSelectRune, playDeselectRune } from "../sfx";
+import { playButton, playDissolve, playSelectRune, playDeselectRune } from "../sfx";
 import RuneImage from "./RuneImage";
 import Tooltip from "./Tooltip";
 import DissolveCanvas from "./DissolveCanvas";
@@ -324,7 +324,18 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
         setSpawnedRunes(spawned);
         setIsApplying(true);
         setApplyStartTime(performance.now());
-        playBuy();
+
+        // Per-rune apply SFX. Each fade slot (banish) → dissolve;
+        // each flip slot (modify) → select; each spawned rune (add)
+        // → select. Pulse slots (duplicate originals) don't play SFX
+        // themselves — the addition is represented by the spawn next
+        // to them, so the spawn's SFX covers the event.
+        const applySfxCues: (() => void)[] = [];
+        for (const [, anim] of anims) {
+            if (anim.kind === "fade") applySfxCues.push(playDissolve);
+            else if (anim.kind === "flip") applySfxCues.push(playSelectRune);
+        }
+        for (let i = 0; i < spawned.length; i++) applySfxCues.push(playSelectRune);
 
         const sendMessageOnce = () => {
             sendApplyTarot({
@@ -344,10 +355,13 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             });
         };
 
-        // No per-slot anims AND no spawned runes (Judgement) — skip
-        // the apply animation but still play the exit slide so the
-        // picker doesn't snap-cut back to the shop.
+        // No per-slot anims AND no spawned runes (Judgement, Tower with
+        // 0 picks etc.) — skip the apply animation but still play the
+        // exit slide so the picker doesn't snap-cut back to the shop.
+        // Fire a single confirmation SFX since there's no per-rune
+        // visual to sync to.
         if (anims.size === 0 && spawned.length === 0) {
+            playSelectRune();
             requestAnimationFrame(runExit);
             return;
         }
@@ -358,6 +372,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             buildAuguryApplyTimeline(buildAnimationRefs(), {
                 anims,
                 spawned,
+                applySfxCues,
                 onLowerForExit: () => setLoweredForExit(true),
                 onComplete: runExit,
             });

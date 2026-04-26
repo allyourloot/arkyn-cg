@@ -19,15 +19,17 @@ uniform float uShopMode;
 // 0.0 = normal enemy.  1.0 = boss round.
 // Tweened on the JS side for a smooth palette shift into danger.
 uniform float uBossMode;
-// 0.0 = shop palette displayed normally.
-// 1.0 = rune-picker palette (deep violet / arcane magenta / gold) while
-// the player is on the rune bag selection screen. Overlays on top of
-// the shop palette so picker → back-to-shop eases smoothly.
-uniform float uPickerMode;
-// 0.0 = no Augury picker open.
-// 1.0 = Augury Pack picker open — warm treasure-chest gold palette.
-// Mixed in AFTER both shop and rune-pack picker so the Augury wash
-// fully overrides whichever palette was previously displayed.
+// Per-pack-type palette tweens. Only one is non-zero at a time
+// (server enforces mutual exclusivity on the pickers), but each is
+// tweened independently so transitions ease cleanly.
+//   uRunePackMode → dark/light greens   (Rune Pack picker)
+//   uCodexMode    → dark/light blues    (Codex Pack picker)
+//   uAuguryMode   → magenta/dark purple (Augury Pack picker)
+// All three are mixed in AFTER uShopMode so the pack palette overrides
+// the shop's ocean-teal while a picker is open, and BEFORE uBossMode
+// so combat danger always wins on boss rounds.
+uniform float uRunePackMode;
+uniform float uCodexMode;
 uniform float uAuguryMode;
 
 // --- Hash & noise ---
@@ -138,27 +140,34 @@ void main() {
     vec3 darkRuby     = vec3(0.48, 0.12, 0.12);
     vec3 bloodEmber   = vec3(0.28, 0.07, 0.04);
 
-    // Rune-picker palette — deep arcane violet with magenta + gold
-    // accents. Chosen to read as "unboxing mystical loot" and to sit
-    // distinctly apart from the shop's ocean-teal so the phase change
-    // is unmistakable.
-    vec3 deepMystic    = vec3(0.06, 0.02, 0.14);
-    vec3 midVeil       = vec3(0.22, 0.08, 0.36);
-    vec3 moonlight     = vec3(0.75, 0.55, 0.95);
-    vec3 arcaneMagenta = vec3(0.78, 0.25, 0.85);
-    vec3 goldrune      = vec3(0.95, 0.70, 0.25);
-    vec3 voidPurple    = vec3(0.12, 0.04, 0.20);
+    // Rune Pack picker palette — dark/light greens. Forest base with
+    // bright lime + emerald midtones; reads as natural / mossy /
+    // herbal magic.
+    vec3 deepForest    = vec3(0.03, 0.10, 0.04);
+    vec3 midMoss       = vec3(0.08, 0.25, 0.12);
+    vec3 limeGlow      = vec3(0.65, 0.95, 0.55);
+    vec3 emeraldShine  = vec3(0.20, 0.75, 0.40);
+    vec3 jadeWarm      = vec3(0.45, 0.85, 0.55);
+    vec3 darkPine      = vec3(0.05, 0.15, 0.07);
 
-    // Augury palette — treasure-chest gold. Deep bronze/brown base with
-    // bright gold midtones and warm amber highlights. The orb glow slots
-    // (amber / violet / teal) all pull toward gold tones so the floating
-    // motes read as drifting embers of light around the picker.
-    vec3 deepBronze    = vec3(0.08, 0.05, 0.02);
-    vec3 midBronze     = vec3(0.32, 0.20, 0.06);
-    vec3 brightGold    = vec3(1.00, 0.82, 0.35);
-    vec3 amberRich     = vec3(0.95, 0.62, 0.18);
-    vec3 copperShine   = vec3(0.85, 0.55, 0.20);
-    vec3 darkBrass     = vec3(0.20, 0.12, 0.04);
+    // Codex Pack picker palette — dark/light blues. Deep ocean-night
+    // base with bright sky highlights; reads as "tome of stars / clear
+    // sky knowledge" to distinguish from the shop's teal-leaning sea.
+    vec3 deepOcean     = vec3(0.02, 0.05, 0.15);
+    vec3 midCobalt     = vec3(0.06, 0.15, 0.40);
+    vec3 skyGlow       = vec3(0.55, 0.78, 0.98);
+    vec3 electricBlue  = vec3(0.20, 0.50, 0.95);
+    vec3 aquaShine     = vec3(0.30, 0.70, 0.95);
+    vec3 nightAbyss    = vec3(0.04, 0.08, 0.20);
+
+    // Augury Pack picker palette — magentas / dark purples. Mystical
+    // arcane wash that reads as "tarot reveal / fate divination".
+    vec3 deepVoid      = vec3(0.06, 0.02, 0.10);
+    vec3 midShadow     = vec3(0.20, 0.05, 0.32);
+    vec3 magentaGlow   = vec3(0.92, 0.45, 0.95);
+    vec3 royalPurple   = vec3(0.55, 0.18, 0.85);
+    vec3 pinkShine     = vec3(0.95, 0.40, 0.85);
+    vec3 voidPurple    = vec3(0.10, 0.02, 0.18);
 
     deepPurple = mix(deepPurple, deepNavy,  uShopMode);
     midPurple  = mix(midPurple,  midTeal,   uShopMode);
@@ -167,25 +176,31 @@ void main() {
     teal       = mix(teal,       kelp,      uShopMode);
     ember      = mix(ember,      abyss,     uShopMode);
 
-    // Picker mix applied AFTER shop so the transition eases smoothly
-    // from shop palette → picker palette (the shop uniform stays at 1
-    // during the picker, so the picker mix overrides on top of shop).
-    deepPurple = mix(deepPurple, deepMystic,    uPickerMode);
-    midPurple  = mix(midPurple,  midVeil,       uPickerMode);
-    amber      = mix(amber,      moonlight,     uPickerMode);
-    violet     = mix(violet,     arcaneMagenta, uPickerMode);
-    teal       = mix(teal,       goldrune,      uPickerMode);
-    ember      = mix(ember,      voidPurple,    uPickerMode);
+    // Pack-picker mixes applied AFTER shop so each pack palette
+    // overrides the shop's ocean-teal while its picker is open. Order
+    // doesn't matter visually since only one of these is non-zero at
+    // a time (server-enforced picker exclusivity), but listing them
+    // bottom-up Rune → Codex → Augury keeps the file shape consistent.
+    deepPurple = mix(deepPurple, deepForest,    uRunePackMode);
+    midPurple  = mix(midPurple,  midMoss,       uRunePackMode);
+    amber      = mix(amber,      limeGlow,      uRunePackMode);
+    violet     = mix(violet,     emeraldShine,  uRunePackMode);
+    teal       = mix(teal,       jadeWarm,      uRunePackMode);
+    ember      = mix(ember,      darkPine,      uRunePackMode);
 
-    // Augury mix applied AFTER picker so the Augury wash fully overrides
-    // whichever palette (shop or bag-picker) was last in place. Boss is
-    // mixed AFTER this so combat danger always wins over loot reveal.
-    deepPurple = mix(deepPurple, deepBronze,   uAuguryMode);
-    midPurple  = mix(midPurple,  midBronze,    uAuguryMode);
-    amber      = mix(amber,      brightGold,   uAuguryMode);
-    violet     = mix(violet,     amberRich,    uAuguryMode);
-    teal       = mix(teal,       copperShine,  uAuguryMode);
-    ember      = mix(ember,      darkBrass,    uAuguryMode);
+    deepPurple = mix(deepPurple, deepOcean,     uCodexMode);
+    midPurple  = mix(midPurple,  midCobalt,     uCodexMode);
+    amber      = mix(amber,      skyGlow,       uCodexMode);
+    violet     = mix(violet,     electricBlue,  uCodexMode);
+    teal       = mix(teal,       aquaShine,     uCodexMode);
+    ember      = mix(ember,      nightAbyss,    uCodexMode);
+
+    deepPurple = mix(deepPurple, deepVoid,      uAuguryMode);
+    midPurple  = mix(midPurple,  midShadow,     uAuguryMode);
+    amber      = mix(amber,      magentaGlow,   uAuguryMode);
+    violet     = mix(violet,     royalPurple,   uAuguryMode);
+    teal       = mix(teal,       pinkShine,     uAuguryMode);
+    ember      = mix(ember,      voidPurple,    uAuguryMode);
 
     deepPurple = mix(deepPurple, deepCrimson,  uBossMode);
     midPurple  = mix(midPurple,  midCrimson,   uBossMode);
