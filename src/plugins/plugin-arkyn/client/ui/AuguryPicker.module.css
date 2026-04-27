@@ -270,11 +270,18 @@
     z-index: 300;
 }
 
-.tarotImg {
+/* ItemScene wrapper — renders tarot art through the shared WebGL
+   renderer (glossy tilt shader, dynamic per-tilt drop shadow). Wrapper
+   keeps the natural tarot card aspect (92/162 ≈ 0.568) so the texture
+   lands undistorted and the cards stay tarot-shaped instead of getting
+   centered inside a square slot like the shop pack cards. The shared
+   renderer's tilt-reactive shadow canvas replaces the static CSS
+   drop-shadow we used on the old <img>. */
+.tarotCanvas {
+    position: relative;
     width: clamp(60px, 7.2vw, 110px);
-    height: auto;
-    image-rendering: pixelated;
-    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.4));
+    aspect-ratio: 92 / 162;
+    pointer-events: auto;
 }
 
 /* Hover any tarot card -> reveal its <Tooltip> child. Same global
@@ -453,7 +460,7 @@
     .runeSlot:not(:first-child) {
         margin-left: clamp(-16px, -1.4vw, -6px);
     }
-    .tarotImg {
+    .tarotCanvas {
         width: clamp(46px, 5.6vw, 80px);
     }
     .actionPanel {

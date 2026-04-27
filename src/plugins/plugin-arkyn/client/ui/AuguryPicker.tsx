@@ -37,6 +37,7 @@ import {
     playDeselectTarot,
     playConvert,
 } from "../sfx";
+import ItemScene from "./ItemScene";
 import RuneImage from "./RuneImage";
 import Tooltip from "./Tooltip";
 import DissolveCanvas from "./DissolveCanvas";
@@ -681,11 +682,24 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                             className={`${styles.tarotCard} ${isSelected ? styles.tarotCardSelected : ""}`}
                             onClick={() => handleTarotClick(i)}
                         >
-                            <img
-                                src={url}
-                                alt={def.name}
-                                className={styles.tarotImg}
-                                draggable={false}
+                            {/* Tarot art rendered through the shared ItemScene
+                                renderer (same WebGL context that drives sigils
+                                + scrolls) so the cards get the glossy tilt
+                                shader for free. `useFrame={false}` skips the
+                                sigil-frame backdrop — tarot art is its own
+                                full card. The mesh stays 1×1 (aspectRatio: 1)
+                                and the wrapper's CSS aspect-ratio (92/162)
+                                drives the buffer aspect, which keeps the
+                                tarot proportions intact without the
+                                square-slot empty margins that pack cards get. */}
+                            <ItemScene
+                                itemId={tarotId}
+                                index={i}
+                                imageUrl={url}
+                                useFrame={false}
+                                aspectRatio={1}
+                                smoothIdle
+                                className={styles.tarotCanvas}
                             />
                             {/* Tarot row sits near the bottom of the picker, so
                                 tooltips pop UP toward the rune row instead of
