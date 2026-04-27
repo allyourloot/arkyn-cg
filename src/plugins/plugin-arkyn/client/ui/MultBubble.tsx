@@ -19,11 +19,36 @@ export default function MultBubbleOverlay() {
     const [positions, setPositions] = useState<{ slot: number; entryIdx: number; x: number; y: number; bubble: HandMultBubble }[]>([]);
 
     useEffect(() => {
+        // Common case: the cast has no Synapse procs. handMultBubbles is
+        // either empty or every slot is empty. Skip the DOM queries and
+        // the setState — if positions was already empty we don't trigger
+        // a needless re-render either.
+        let hasAny = false;
+        for (let i = 0; i < handMultBubbles.length; i++) {
+            const sb = handMultBubbles[i];
+            if (sb && sb.length > 0) { hasAny = true; break; }
+        }
+        if (!hasAny) {
+            setPositions(prev => prev.length === 0 ? prev : []);
+            return;
+        }
+
+        // One querySelectorAll instead of N querySelectors — a single
+        // tree walk plus an indexed lookup rather than N attribute
+        // selector matches. Matters when a Mimic-doubled Synapse fires
+        // bubbles across several Psy runes.
+        const all = document.querySelectorAll<HTMLElement>("[data-rune-index]");
+        const slotEls = new Map<number, HTMLElement>();
+        for (const el of all) {
+            const idx = Number(el.dataset.runeIndex);
+            if (!Number.isNaN(idx)) slotEls.set(idx, el);
+        }
+
         const entries: typeof positions = [];
         for (let i = 0; i < handMultBubbles.length; i++) {
             const slotBubbles = handMultBubbles[i];
             if (!slotBubbles || slotBubbles.length === 0) continue;
-            const el = document.querySelector(`[data-rune-index="${i}"]`);
+            const el = slotEls.get(i);
             if (!el) continue;
             const rect = el.getBoundingClientRect();
             for (let j = 0; j < slotBubbles.length; j++) {

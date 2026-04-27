@@ -651,7 +651,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                     const def = TAROT_DEFINITIONS[tarotId];
                     if (!def) return null;
                     const isSelected = selectedTarotIndex === i;
-                    const url = getTarotImageUrl(def.fileBasename, "2x") || getTarotImageUrl(def.fileBasename, "1x");
+                    const url = getTarotImageUrl(def.fileBasename);
                     return (
                         <button
                             key={`${tarotId}-${i}`}

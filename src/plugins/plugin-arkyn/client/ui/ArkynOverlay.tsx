@@ -195,7 +195,7 @@ export default function ArkynOverlay() {
     // Listen for sigil purchases and orchestrate the fly-to-bar animation.
     useEffect(() => {
         return onSigilPurchase((e: SigilPurchaseEvent) => {
-            const imageUrl = getSigilImageUrl(e.sigilId, 128);
+            const imageUrl = getSigilImageUrl(e.sigilId);
             if (!imageUrl) return;
             const targetSlotIndex = sigils.length;
             // Mark this sigil as in-flight so SigilBar hides its slot until

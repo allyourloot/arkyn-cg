@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import arkynThemeUrl from "/assets/audio/music/arkyn-theme.mp3?url";
 import shopThemeUrl from "/assets/audio/music/shop.mp3?url";
-import bossThemeUrl from "/assets/audio/music/boss.mp3?url";
 import { useGamePhase, useEnemyIsBoss } from "../arkynStore";
 import { getAudioContext } from "../audioContext";
 
@@ -12,61 +11,59 @@ import { getAudioContext } from "../audioContext";
  * theme) as module-level singletons so playback is never interrupted
  * when ArkynOverlay switches between its phase-branch returns and
  * remounts the component. The React component is just a thin driver
- * that loads the buffers once, kicks the first track, and crossfades
- * to the appropriate track whenever `gamePhase` changes.
+ * that loads buffers on demand and crossfades to the appropriate
+ * track whenever `gamePhase` changes.
+ *
+ * Tracks are loaded lazily — only the buffer for the track currently
+ * about to play is fetched/decoded. Saves several MB of network +
+ * decode on first paint, especially helpful on mobile.
  */
 
-type TrackKey = "theme" | "shop" | "boss";
+type TrackKey = "theme" | "shop";
+
+const TRACK_URLS: Record<TrackKey, string> = {
+    theme: arkynThemeUrl,
+    shop: shopThemeUrl,
+};
+
+// Resolved buffers, populated lazily by ensureBuffer.
+const buffers = new Map<TrackKey, AudioBuffer>();
+// In-flight fetch+decode promises, deduped per key so concurrent
+// callers share one network round-trip.
+const bufferPromises = new Map<TrackKey, Promise<AudioBuffer>>();
 
 // Shared with sfx.ts via audioContext.ts. Nodes live beyond component
 // lifecycles — we deliberately do NOT stop sources on unmount.
-let themeBuffer: AudioBuffer | null = null;
-let shopBuffer: AudioBuffer | null = null;
-let bossBuffer: AudioBuffer | null = null;
-
-// The currently-audible track. `activeSource` / `activeGain` point at
-// whichever track's gain is at (or ramping toward) BASE_VOLUME; a
-// separate outgoing source/gain may still exist briefly during a
-// crossfade but will be stopped + disconnected when its fade-out
-// timeout fires.
 let activeSource: AudioBufferSourceNode | null = null;
 let activeGain: GainNode | null = null;
 let activeTrack: TrackKey | null = null;
+// Latest track requested via crossfadeToTrack. If a buffer-load
+// completes after a newer crossfadeToTrack call, we skip its
+// crossfade so we don't override the newer target.
+let pendingTargetTrack: TrackKey | null = null;
 
 const BASE_VOLUME = 0.25;
 const PITCH_FADE_DURATION = 0.3; // seconds for pitch-shift fade down/up
 const CROSSFADE_DURATION = 1.0;  // seconds for track-switch crossfade
 
-/** Lazy-load and decode both music buffers. Idempotent. */
-async function loadBuffers(): Promise<void> {
-    const ctx = getAudioContext();
-    if (!themeBuffer) {
-        const res = await fetch(arkynThemeUrl);
+/** Lazy-load and decode a single track buffer. Idempotent + race-safe. */
+function ensureBuffer(key: TrackKey): Promise<AudioBuffer> {
+    const existing = bufferPromises.get(key);
+    if (existing) return existing;
+    const p = (async () => {
+        const ctx = getAudioContext();
+        const res = await fetch(TRACK_URLS[key]);
         const arr = await res.arrayBuffer();
-        themeBuffer = await ctx.decodeAudioData(arr);
-    }
-    if (!shopBuffer) {
-        const res = await fetch(shopThemeUrl);
-        const arr = await res.arrayBuffer();
-        shopBuffer = await ctx.decodeAudioData(arr);
-    }
-    if (!bossBuffer) {
-        const res = await fetch(bossThemeUrl);
-        const arr = await res.arrayBuffer();
-        bossBuffer = await ctx.decodeAudioData(arr);
-    }
-}
-
-function getBuffer(key: TrackKey): AudioBuffer | null {
-    if (key === "shop") return shopBuffer;
-    if (key === "boss") return bossBuffer;
-    return themeBuffer;
+        const buf = await ctx.decodeAudioData(arr);
+        buffers.set(key, buf);
+        return buf;
+    })();
+    bufferPromises.set(key, p);
+    return p;
 }
 
 /** Start a track immediately at BASE_VOLUME. Used for the first play. */
-function startTrack(key: TrackKey): void {
-    const buf = getBuffer(key);
-    if (!buf) return;
+function startTrack(key: TrackKey, buf: AudioBuffer): void {
     const ctx = getAudioContext();
 
     if (activeSource) {
@@ -93,23 +90,44 @@ function startTrack(key: TrackKey): void {
 
 /**
  * Crossfade from the currently-playing track to `key` over
- * CROSSFADE_DURATION seconds. Starts the incoming source at gain 0,
- * ramps it up while ramping the outgoing source down, then stops the
- * old source cleanly once the fade finishes.
+ * CROSSFADE_DURATION seconds. Lazy-loads the buffer if it hasn't
+ * been fetched yet.
  *
  * If nothing is currently playing the incoming track just starts at
  * BASE_VOLUME (no fade-in needed — there's nothing to fade over).
+ *
+ * Async loading is handled internally so callers can keep treating
+ * this as a fire-and-forget call. If a newer crossfadeToTrack call
+ * supersedes us before our buffer-load completes, we skip the
+ * crossfade.
  */
 export function crossfadeToTrack(key: TrackKey): void {
     if (activeTrack === key && activeSource) return;
-    const buf = getBuffer(key);
-    if (!buf) return;
+    pendingTargetTrack = key;
+
+    const ready = buffers.get(key);
+    if (ready) {
+        executeCrossfade(key, ready);
+        return;
+    }
+
+    ensureBuffer(key)
+        .then(buf => {
+            // A newer call may have changed the target; honor it.
+            if (pendingTargetTrack !== key) return;
+            executeCrossfade(key, buf);
+        })
+        .catch(() => { /* will retry on next phase change */ });
+}
+
+function executeCrossfade(key: TrackKey, buf: AudioBuffer): void {
+    if (activeTrack === key && activeSource) return;
 
     const ctx = getAudioContext();
     const now = ctx.currentTime;
 
     if (!activeSource || !activeGain) {
-        startTrack(key);
+        startTrack(key, buf);
         return;
     }
 
@@ -172,22 +190,21 @@ export default function BackgroundMusic() {
     const gamePhase = useGamePhase();
     const isBoss = useEnemyIsBoss();
 
-    // One-time setup: decode both tracks and start whichever one is
-    // currently appropriate. Deliberately does NOT stop audio on
-    // unmount — ArkynOverlay swaps the component between phase
-    // branches and we want the music to play uninterrupted across
-    // those remounts. The module-level singletons above outlive the
-    // React component lifecycle.
+    // One-time setup: kick off whichever track is currently
+    // appropriate. Deliberately does NOT stop audio on unmount —
+    // ArkynOverlay swaps the component between phase branches and we
+    // want the music to play uninterrupted across those remounts. The
+    // module-level singletons above outlive the React component
+    // lifecycle.
     useEffect(() => {
         let cancelled = false;
 
         const setup = async () => {
             try {
-                await loadBuffers();
+                const target = pickTrack(gamePhase, isBoss);
+                const buf = await ensureBuffer(target);
                 if (cancelled) return;
-                if (!activeSource) {
-                    startTrack(pickTrack(gamePhase, isBoss));
-                }
+                if (!activeSource) startTrack(target, buf);
             } catch { /* will retry on interaction */ }
         };
         setup();
@@ -198,11 +215,10 @@ export default function BackgroundMusic() {
         const handleInteraction = () => {
             getAudioContext();
             if (!activeSource) {
-                loadBuffers()
-                    .then(() => {
-                        if (!activeSource) {
-                            startTrack(pickTrack(gamePhase, isBoss));
-                        }
+                const target = pickTrack(gamePhase, isBoss);
+                ensureBuffer(target)
+                    .then(buf => {
+                        if (!activeSource) startTrack(target, buf);
                     })
                     .catch(() => { /* noop */ });
             }
@@ -224,12 +240,11 @@ export default function BackgroundMusic() {
     }, []);
 
     // Phase-driven track switch. Whenever the game phase or boss state
-    // changes, crossfade to the appropriate track.
+    // changes, crossfade to the appropriate track. crossfadeToTrack
+    // handles lazy-loading internally so the shop buffer isn't fetched
+    // until the player first enters the shop.
     useEffect(() => {
         const target = pickTrack(gamePhase, isBoss);
-        // If buffers haven't finished loading yet, crossfadeToTrack is a
-        // no-op and the setup effect's startTrack will pick the right
-        // track on first play.
         crossfadeToTrack(target);
     }, [gamePhase, isBoss]);
 

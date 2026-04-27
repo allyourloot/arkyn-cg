@@ -46,11 +46,17 @@ export default function ItemScene({ itemId, index, className, imageUrl: imageUrl
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const shadowRef = useRef<HTMLCanvasElement>(null);
     const tiltTargetRef = useRef({ x: 0, y: 0 });
+    // Cached wrapper rect captured on pointerenter and reused for every
+    // pointermove until pointerleave. Avoids a forced layout read on
+    // each move event — a real win when many ItemScenes are mounted
+    // (sigil bar + shop). The rect can theoretically stale if the
+    // wrapper resizes mid-hover, which doesn't happen in practice.
+    const cachedRectRef = useRef<DOMRect | null>(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        const resolvedUrl = imageUrlProp || getSigilImageUrl(itemId, 128);
+        const resolvedUrl = imageUrlProp || getSigilImageUrl(itemId);
         const resolvedUseFrame = useFrame ?? !imageUrlProp;
         const unregister = registerItemScene({
             canvas,
@@ -70,8 +76,12 @@ export default function ItemScene({ itemId, index, className, imageUrl: imageUrl
     // canvas (which extends 15% beyond the cell for tilt headroom). That
     // way the -1..1 tilt range maps to the visible sigil bounds, not the
     // expanded render buffer.
+    const handlePointerEnter = () => {
+        cachedRectRef.current = wrapperRef.current?.getBoundingClientRect() ?? null;
+    };
+
     const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-        const rect = wrapperRef.current?.getBoundingClientRect();
+        const rect = cachedRectRef.current;
         if (!rect) return;
         const nx = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
         const ny = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
@@ -79,6 +89,7 @@ export default function ItemScene({ itemId, index, className, imageUrl: imageUrl
     };
 
     const handlePointerLeave = () => {
+        cachedRectRef.current = null;
         tiltTargetRef.current = { x: 0, y: 0 };
     };
 
@@ -88,6 +99,7 @@ export default function ItemScene({ itemId, index, className, imageUrl: imageUrl
         <div
             ref={wrapperRef}
             className={wrapperClass}
+            onPointerEnter={HAS_HOVER ? handlePointerEnter : undefined}
             onPointerMove={HAS_HOVER ? handlePointerMove : undefined}
             onPointerLeave={HAS_HOVER ? handlePointerLeave : undefined}
         >
