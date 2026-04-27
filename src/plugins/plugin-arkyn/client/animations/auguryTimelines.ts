@@ -29,6 +29,16 @@ const ANIM_FLIP_S = 0.6;
 /** Pulse: scale 1 → 1.3 → 1. Used by duplicate (Magician) for picked originals. */
 const ANIM_PULSE_UP_S = 0.2;
 const ANIM_PULSE_DOWN_S = 0.25;
+/**
+ * Convert pop emphasis — element-change flips get a snappy scale pop +
+ * elastic settle the moment the back face lands, so the new element
+ * reads as the "result" of the conversion rather than just a passive
+ * card flip. Rarity-only flips (upgradeRarity, wheel-upgrade) skip this
+ * since the rarity bump is its own reward visual.
+ */
+const ANIM_CONVERT_POP_UP_S = 0.12;
+const ANIM_CONVERT_POP_SETTLE_S = 0.32;
+const ANIM_CONVERT_POP_SCALE = 1.18;
 /** Brief read-the-final-state hold before the exit slide kicks in. */
 const ANIM_HOLD_S = 0.35;
 /**
@@ -96,6 +106,15 @@ export interface BuildAuguryApplyTimelineOpts {
     /** Spawned runes that materialize at apply time (Lovers / World / Magician). */
     spawned: readonly RuneSpec[];
     /**
+     * Picker indices whose flip is an element conversion (newRune.element
+     * differs from the original). These slots get a brief scale-pop +
+     * elastic settle right after the flip lands so the converted element
+     * reveal hits with emphasis. The picker computes this set from the
+     * same comparison that drives the convert SFX cue, so audio + visual
+     * stay paired.
+     */
+    convertIndices?: ReadonlySet<number>;
+    /**
      * Fired before the lower-settle delay. The picker uses this to flip
      * `loweredForExit` so the still-raised converted slots drop their
      * `runeSlotSelected` class — the slot's CSS transform transition
@@ -142,6 +161,23 @@ export function buildAuguryApplyTimeline(
                     duration: ANIM_FLIP_S,
                     ease: "back.out(1.4)",
                 }, 0);
+                if (opts.convertIndices?.has(idx)) {
+                    // Scale up snappy, then settle with elastic so the
+                    // tail reads as a tiny shake on top of the pop.
+                    // Composes with the rotateY:180 GSAP holds — both
+                    // are recorded on the same element so the back face
+                    // stays facing the camera while it pops.
+                    tl.to(flipper, {
+                        scale: ANIM_CONVERT_POP_SCALE,
+                        duration: ANIM_CONVERT_POP_UP_S,
+                        ease: "power2.out",
+                    }, ANIM_FLIP_S);
+                    tl.to(flipper, {
+                        scale: 1,
+                        duration: ANIM_CONVERT_POP_SETTLE_S,
+                        ease: "elastic.out(1.4, 0.5)",
+                    }, ANIM_FLIP_S + ANIM_CONVERT_POP_UP_S);
+                }
                 break;
             case "fade":
                 // Visual is owned by the inline DissolveCanvas mounted

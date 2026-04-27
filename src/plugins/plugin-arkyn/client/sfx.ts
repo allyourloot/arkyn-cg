@@ -21,6 +21,9 @@ import addConsumableUrl from "/assets/audio/sfx/add-consumable.mp3?url";
 import blackjackUrl from "/assets/audio/sfx/blackjack.mp3?url";
 import bellUrl from "/assets/audio/sfx/bell.mp3?url";
 import openPackUrl from "/assets/audio/sfx/open-pack.mp3?url";
+import drawTarotUrl from "/assets/audio/sfx/draw-tarot.mp3?url";
+import selectTarotUrl from "/assets/audio/sfx/select-tarot.mp3?url";
+import convertUrl from "/assets/audio/sfx/convert.mp3?url";
 import { getAudioContext } from "./audioContext";
 import { haptic, HAPTIC_LIGHT, HAPTIC_MEDIUM } from "./haptics";
 
@@ -186,6 +189,22 @@ const playBuySfx = makeSfx(buyUrl, VOL_DEFAULT);
 export const playBuy = (rate = 1) => { haptic(HAPTIC_MEDIUM); playBuySfx(rate); };
 const playOpenPackSfx = makeSfx(openPackUrl, VOL_DEFAULT);
 export const playOpenPack = (rate = 1) => { haptic(HAPTIC_MEDIUM); playOpenPackSfx(rate); };
+// Augury picker — tarot card SFX. draw plays per-card with the dealt-hand
+// stagger; select fires on tap with a light haptic so the confirmation
+// feels physical; deselect re-uses the select buffer pitched down so the
+// click + un-click read as a tonal pair without the lag a reversed buffer
+// adds (reversed select-tarot starts on its long tail and lands its
+// transient last, which feels delayed).
+const playDrawTarotSfx = makeSfx(drawTarotUrl, VOL_DEFAULT);
+export const playDrawTarot = (rate = 1) => playDrawTarotSfx(rate);
+const playSelectTarotSfx = makeDetuneSfx(selectTarotUrl, VOL_DEFAULT);
+export const playSelectTarot = () => { haptic(HAPTIC_LIGHT); playSelectTarotSfx(0); };
+export const playDeselectTarot = () => { haptic(HAPTIC_LIGHT); playSelectTarotSfx(-300); };
+// Tarot rune conversion (element change) — replaces the per-rune select
+// pop on convertElement / consecrate / wheel-element-flip apply cues,
+// which read as a clicky double-tap instead of a magical transformation.
+const playConvertSfx = makeSfx(convertUrl, VOL_DEFAULT);
+export const playConvert = () => playConvertSfx();
 const playButtonSfx = makeSfx(buttonUrl, VOL_DEFAULT);
 export const playButton = (rate = 1) => { haptic(HAPTIC_MEDIUM); playButtonSfx(rate); };
 const playAddConsumableSfx = makeSfx(addConsumableUrl, VOL_DEFAULT);

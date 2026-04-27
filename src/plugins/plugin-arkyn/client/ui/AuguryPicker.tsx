@@ -1,4 +1,6 @@
 import { useMemo, useRef, useState, type CSSProperties, type Ref } from "react";
+import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
 import {
     DISSOLVE_DURATION_MS,
     sendApplyTarot,
@@ -23,7 +25,16 @@ import {
     buildAuguryExitTimeline,
     type AuguryAnimationRefs,
 } from "../animations/auguryTimelines";
-import { playButton, playDissolve, playSelectRune, playDeselectRune } from "../sfx";
+import {
+    playButton,
+    playDissolve,
+    playSelectRune,
+    playDeselectRune,
+    playDrawTarot,
+    playSelectTarot,
+    playDeselectTarot,
+    playConvert,
+} from "../sfx";
 import RuneImage from "./RuneImage";
 import Tooltip from "./Tooltip";
 import DissolveCanvas from "./DissolveCanvas";
@@ -184,6 +195,40 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
     const tarotRowRef = useRef<HTMLDivElement>(null);
     const elementRowRef = useRef<HTMLDivElement>(null);
     const actionPanelRef = useRef<HTMLDivElement>(null);
+    const tarotCardRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+    // Dealt-hand entrance: each tarot card flies up from below with a
+    // back-out ease and a per-card stagger, mirroring a dealer fanning
+    // cards out. Each card fires `playDrawTarot` on its own onStart with
+    // a slight ascending pitch step so the cascade reads as a rising
+    // arpeggio. `clearProps: "transform,opacity"` returns control to CSS
+    // so the hover/selected lift transitions still apply after the deal
+    // lands. Iterates per-card instead of using `stagger.onStart` because
+    // GSAP's `StaggerVars` type doesn't expose the per-tween callback.
+    useGSAP(() => {
+        const cards = tarotCardRefs.current.filter((c): c is HTMLButtonElement => !!c);
+        if (cards.length === 0) return;
+        const baseDelay = 0.1;
+        const stagger = 0.11;
+        const baseRate = 0.94;
+        const rateStep = 0.03;
+        cards.forEach((card, i) => {
+            gsap.fromTo(
+                card,
+                { y: 60, opacity: 0, rotation: -8 },
+                {
+                    y: 0,
+                    opacity: 1,
+                    rotation: 0,
+                    duration: 0.42,
+                    ease: "back.out(1.4)",
+                    delay: baseDelay + i * stagger,
+                    clearProps: "transform,opacity",
+                    onStart: () => playDrawTarot(baseRate + i * rateStep),
+                },
+            );
+        });
+    }, { dependencies: [] });
 
     const activeTarot: TarotDefinition | null = useMemo(() => {
         if (selectedTarotIndex === null) return null;
@@ -227,11 +272,12 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             // has its own element-pick semantics.
             setSelectedTarotIndex(null);
             setSelectedElement(null);
-            playDeselectRune();
+            playDeselectTarot();
             return;
         }
         setSelectedTarotIndex(i);
         setSelectedElement(null);
+        playSelectTarot();
 
         // If the new tarot is pouch-wide (Judgement, World), clear the
         // rune selection — the rune row hides and any held selection
@@ -255,8 +301,6 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                 return trimmed;
             });
         }
-
-        playSelectRune();
     };
 
     const handleRuneClick = (i: number) => {
@@ -326,14 +370,35 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
         setApplyStartTime(performance.now());
 
         // Per-rune apply SFX. Each fade slot (banish) → dissolve;
-        // each flip slot (modify) → select; each spawned rune (add)
-        // → select. Pulse slots (duplicate originals) don't play SFX
-        // themselves — the addition is represented by the spawn next
-        // to them, so the spawn's SFX covers the event.
+        // each flip slot routes by sub-effect — rarity-only flips
+        // (upgradeRarity / wheel-upgrade) get a per-rune select pop;
+        // element-change flips (convertElement / consecrate /
+        // wheel-element-reroll) collapse to ONE convert SFX for the
+        // whole event since stacking the convert sound per rune turns
+        // an N-rune Lovers cast into a muddy double/triple thump.
+        // Each spawned rune (add) → select. Pulse slots (duplicate
+        // originals) don't play SFX themselves — the addition is
+        // represented by the spawn next to them, so the spawn's SFX
+        // covers the event.
         const applySfxCues: (() => void)[] = [];
-        for (const [, anim] of anims) {
-            if (anim.kind === "fade") applySfxCues.push(playDissolve);
-            else if (anim.kind === "flip") applySfxCues.push(playSelectRune);
+        const convertIndices = new Set<number>();
+        let convertQueued = false;
+        for (const [pickerIndex, anim] of anims) {
+            if (anim.kind === "fade") {
+                applySfxCues.push(playDissolve);
+            } else if (anim.kind === "flip") {
+                const original = runes[pickerIndex];
+                const isElementChange = !!original && original.element !== anim.newRune.element;
+                if (isElementChange) {
+                    convertIndices.add(pickerIndex);
+                    if (!convertQueued) {
+                        applySfxCues.push(playConvert);
+                        convertQueued = true;
+                    }
+                } else {
+                    applySfxCues.push(playSelectRune);
+                }
+            }
         }
         for (let i = 0; i < spawned.length; i++) applySfxCues.push(playSelectRune);
 
@@ -372,6 +437,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             buildAuguryApplyTimeline(buildAnimationRefs(), {
                 anims,
                 spawned,
+                convertIndices,
                 applySfxCues,
                 onLowerForExit: () => setLoweredForExit(true),
                 onComplete: runExit,
@@ -589,6 +655,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                     return (
                         <button
                             key={`${tarotId}-${i}`}
+                            ref={el => { tarotCardRefs.current[i] = el; }}
                             type="button"
                             className={`${styles.tarotCard} ${isSelected ? styles.tarotCardSelected : ""}`}
                             onClick={() => handleTarotClick(i)}
