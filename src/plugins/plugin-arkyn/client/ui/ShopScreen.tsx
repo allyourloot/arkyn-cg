@@ -35,6 +35,7 @@ import buttonGreenUrl from "/assets/ui/button-green.png?url";
 import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
 import buttonGreenDisabledUrl from "/assets/ui/button-green-disabled.png?url";
 import nextRoundButtonUrl from "/assets/ui/buttons/next-round.png?url";
+import rerollButtonUrl from "/assets/ui/buttons/reroll-button.png?url";
 import styles from "./ShopScreen.module.css";
 
 // Slide durations for the shop <-> picker content swap inside the
@@ -45,7 +46,7 @@ const CONTENT_ENTER_S = 0.32;
 
 const panelStyleVars = {
     ...createPanelStyleVars(),
-    "--reroll-bg": `url(${innerFrameGreenUrl})`,
+    "--reroll-bg": `url(${rerollButtonUrl})`,
 } as CSSProperties;
 const buttonStyleVars = {
     "--btn-bg": `url(${buttonGreenUrl})`,
@@ -254,6 +255,16 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         <div ref={ref} className={styles.wrapper}>
         {renderedMode === "shop" && (
         <div ref={shopContentRef} className={styles.shopContent}>
+        {/* Drop shadow under the shop panel — same frame.png chrome
+            rendered dark + semi-transparent and offset straight down so
+            only the bottom edge peeks out below the panel. Sibling of
+            the panel (not ::before) so panel:hover-style stacking can't
+            trap it on top of the panel's own background. */}
+        <div
+            className={styles.panelShadow}
+            style={panelStyleVars}
+            aria-hidden="true"
+        />
         <div ref={panelRef} className={styles.panel} style={panelStyleVars}>
             {/* Items section (sigils today; future scrolls slot in here too). */}
             <span className={styles.sectionLabel}>Items</span>
@@ -446,6 +457,18 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                 </div>
             </div>
 
+        </div>
+        {/* Hard-edged drop shadow — same next-round.png chrome rendered
+            dark + semi-transparent + offset, painted BEFORE the button
+            in DOM so it sits behind without needing z-index gymnastics
+            (the button's :hover transform creates a stacking context
+            that would trap a ::before sibling on top of its own bg). */}
+        <div
+            className={`${styles.continueButton} ${styles.continueButtonShadow}`}
+            style={continueButtonStyleVars}
+            aria-hidden="true"
+        >
+            Next Round
         </div>
         <button
             type="button"
