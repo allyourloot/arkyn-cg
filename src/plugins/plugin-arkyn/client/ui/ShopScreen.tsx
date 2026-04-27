@@ -34,6 +34,7 @@ import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
 import buttonGreenUrl from "/assets/ui/button-green.png?url";
 import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
 import buttonGreenDisabledUrl from "/assets/ui/button-green-disabled.png?url";
+import nextRoundButtonUrl from "/assets/ui/buttons/next-round.png?url";
 import styles from "./ShopScreen.module.css";
 
 // Slide durations for the shop <-> picker content swap inside the
@@ -50,6 +51,9 @@ const buttonStyleVars = {
     "--btn-bg": `url(${buttonGreenUrl})`,
     "--btn-bg-hover": `url(${buttonGreenHoverUrl})`,
     "--btn-bg-disabled": `url(${buttonGreenDisabledUrl})`,
+} as CSSProperties;
+const continueButtonStyleVars = {
+    "--continue-bg": `url(${nextRoundButtonUrl})`,
 } as CSSProperties;
 const cardStyleVars = {
     "--card-bg": `url(${frameUrl})`,
@@ -447,7 +451,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             type="button"
             onClick={handleContinue}
             className={styles.continueButton}
-            style={buttonStyleVars}
+            style={continueButtonStyleVars}
         >
             Next Round
         </button>
