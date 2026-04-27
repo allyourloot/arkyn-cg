@@ -100,6 +100,7 @@ export const AUGURY_PACK_RUNE_CHOICES = 8;  // matches HAND_SIZE
 export const AUGURY_PACK_TAROT_CHOICES = 5;
 export const TAROT_BANISH_GOLD = 3;          // Tower per-rune payout
 export const WORLD_LEGENDARY_CHANCE = 0.20;  // The World — split between Rare (1 - this) and Legendary
+export const TEMPERANCE_GOLD_PER_SELL_VALUE = 1;  // Temperance — gold gained per 1 sell-value of each owned sigil
 
 // Per-slot rarity weights used by rollPackRunes. Tuned so packs feel
 // exciting without making rare/legendary commonplace: at 4 slots per

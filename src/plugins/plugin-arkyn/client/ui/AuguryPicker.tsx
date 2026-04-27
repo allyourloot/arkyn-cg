@@ -7,10 +7,12 @@ import {
     useAuguryPurchaseCount,
     useCurrentRound,
     useRunSeed,
+    useSigils,
     type RuneClientData,
 } from "../arkynStore";
 import {
     ELEMENT_TYPES,
+    SIGIL_DEFINITIONS,
     TAROT_DEFINITIONS,
     createRoundRng,
     getAuguryApplySeed,
@@ -40,6 +42,7 @@ import Tooltip from "./Tooltip";
 import DissolveCanvas from "./DissolveCanvas";
 import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
 import { getTarotImageUrl } from "./tarotAssets";
+import { renderDescription } from "./descriptionText";
 import { createPanelStyleVars, ELEMENT_COLORS } from "./styles";
 import buttonGreenUrl from "/assets/ui/button-green.png?url";
 import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
@@ -92,6 +95,7 @@ function computePreview(
     runSeed: number,
     currentRound: number,
     auguryPurchaseCount: number,
+    ownedSigils: readonly string[],
 ) {
     const rng = createRoundRng(runSeed, getAuguryApplySeed(currentRound, auguryPurchaseCount));
     const picked: PickedRune[] = [];
@@ -106,6 +110,7 @@ function computePreview(
         livePouch: [],   // unused on the client preview path (Judgement has no spawn)
         rng,
         nextId: makePreviewId,
+        ownedSigils,
     });
 }
 
@@ -181,6 +186,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
     const runSeed = useRunSeed();
     const currentRound = useCurrentRound();
     const auguryPurchaseCount = useAuguryPurchaseCount();
+    const ownedSigils = useSigils();
     // Refs to the rune-slot buttons + their inner flipper divs. The
     // flipper carries the GSAP rotateY / scale / opacity transforms so
     // the outer button's CSS lift (translateY on selected) isn't
@@ -362,6 +368,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             runSeed,
             currentRound,
             auguryPurchaseCount,
+            ownedSigils,
         );
 
         setSlotAnims(anims);
@@ -480,6 +487,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
         !activeTarot
         || effectiveMax > 0
         || activeTarot.effect.type === "addRandomRune"
+        || activeTarot.effect.type === "gainGoldFromSigils"
         || (isApplying && spawnedRunes.length > 0);
 
     return (
@@ -652,6 +660,19 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                     if (!def) return null;
                     const isSelected = selectedTarotIndex === i;
                     const url = getTarotImageUrl(def.fileBasename);
+                    // Live gold preview for Temperance — sum of owned sigil
+                    // sellPrices times goldPerSellValue. Mirrors the
+                    // server's `gainGoldFromSigils` mutate so the player
+                    // sees the exact gold they'd receive on Apply.
+                    let temperanceGold: number | null = null;
+                    if (def.effect.type === "gainGoldFromSigils") {
+                        let total = 0;
+                        for (const id of ownedSigils) {
+                            const sigilDef = SIGIL_DEFINITIONS[id];
+                            if (sigilDef) total += sigilDef.sellPrice;
+                        }
+                        temperanceGold = total * def.effect.goldPerSellValue;
+                    }
                     return (
                         <button
                             key={`${tarotId}-${i}`}
@@ -680,7 +701,12 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                             <Tooltip placement="top" arrow variant="framed" style={{ zIndex: 1000 }}>
                                 <span className={styles.tooltipName}>{def.name}</span>
                                 <div className={styles.tooltipDescWrap}>
-                                    <span className={styles.tooltipDesc}>{def.description}</span>
+                                    <span className={styles.tooltipDesc}>{renderDescription(def.description)}</span>
+                                    {temperanceGold !== null && (
+                                        <span className={styles.tooltipPreview}>
+                                            Currently: <span style={{ color: "#fbbf24" }}>+{temperanceGold} Gold</span>
+                                        </span>
+                                    )}
                                 </div>
                             </Tooltip>
                         </button>

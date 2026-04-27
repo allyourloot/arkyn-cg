@@ -36,7 +36,7 @@ interface TarotDefinition {
 
 | Effect kind | Used by | Banishes? | Adds? | Notes |
 |---|---|---|---|---|
-| `convertElement` | Fool / Priestess / Emperor / Chariot / Justice / Hanged Man / Death / Temperance / Devil / Star / Moon / Sun | ✓ | ✓ | 1:1 banish→add at same rarity |
+| `convertElement` | Fool / Priestess / Emperor / Chariot / Justice / Hanged Man / Death / Devil / Star / Moon / Sun | ✓ | ✓ | 1:1 banish→add at same rarity |
 | `duplicate` | Magician | ✗ | ✓ | Originals stay; copies pushed to `acquiredRunes` |
 | `upgradeRarity` | Empress (1 tier), Strength (2 tiers) | ✓ | ✓ | Strength adds `targetConstraint: "commonOrUncommonOnly"` and `maxTargets: 1` |
 | `consecrate` | Hierophant | ✓ | ✓ | Convert to chosen element + rarity+1 |
@@ -46,6 +46,7 @@ interface TarotDefinition {
 | `banishForGold` | Tower (`goldPerRune: 3`) | ✓ | ✗ | Gold = picked count × goldPerRune |
 | `upgradeAllOfElement` | Judgement | ✓ | ✓ | `minTargets: 0, maxTargets: 0` — walks the LIVE pouch by element, not the picker snapshot |
 | `addRandomRune` | World (`legendaryChance: 0.20`) | ✗ | ✓ | `minTargets: 0, maxTargets: 0` — uniform random element, 80% Rare / 20% Legendary |
+| `gainGoldFromSigils` | Temperance (`goldPerSellValue: 1`) | ✗ | ✗ | `minTargets: 0, maxTargets: 0` — no rune picks, no element. `goldDelta = sum(SIGIL_DEFINITIONS[id].sellPrice for id in player.sigils) × goldPerSellValue`. Reads `ctx.ownedSigils`. |
 
 The `targetConstraint: "commonOrUncommonOnly"` field is the only Apply-time rule that gates rune *selection* beyond min/max count. Adding a new constraint kind is a single switch arm in `handleApplyTarot.ts`.
 

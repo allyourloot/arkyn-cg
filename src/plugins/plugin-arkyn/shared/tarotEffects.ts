@@ -2,6 +2,7 @@ import { ELEMENT_TYPES, type RarityType } from "./arkynConstants";
 import type { TarotEffect } from "./tarots";
 import { bumpRarity, clampRarityIndex, rarityIndex } from "./rarityUtils";
 import { snapshotRune, type RuneSpec } from "./runeUtils";
+import { SIGIL_DEFINITIONS } from "./sigils";
 
 // =============================================================================
 // Tarot Effect Registry
@@ -55,6 +56,12 @@ export interface TarotEffectContext {
     rng: () => number;
     /** Mint a fresh rune id. Server passes `nextRuneId`; client passes a string-key generator. */
     nextId: () => string;
+    /**
+     * Owned sigil ids — used by Temperance (`gainGoldFromSigils`) to sum
+     * the player's sigil sell-value into a gold delta. Other handlers
+     * ignore this field.
+     */
+    ownedSigils: readonly string[];
 }
 
 export interface TarotMutationSet {
@@ -345,6 +352,26 @@ function rollWorld(legendaryChance: number, rng: () => number): Omit<RuneSpec, "
     return { element, rarity, level: 1 };
 }
 
+const gainGoldFromSigils: TarotEffectHandler<Extract<TarotEffect, { type: "gainGoldFromSigils" }>> = {
+    // Temperance — no rune picks, no element. Gold delta is the sum of
+    // each owned sigil's sellPrice times effect.goldPerSellValue. Mimic
+    // counts as its own sellPrice (matches the existing sell-sigil flow).
+    mutate(effect, ctx) {
+        let total = 0;
+        for (const id of ctx.ownedSigils) {
+            const def = SIGIL_DEFINITIONS[id];
+            if (def) total += def.sellPrice;
+        }
+        return { banish: [], add: [], goldDelta: total * effect.goldPerSellValue };
+    },
+    preview() {
+        // No slot anims, no spawned runes. The picker's apply path will
+        // fall into its "no anims / no spawn" branch and skip straight
+        // to the exit timeline — the gold counter pops via schema sync.
+        return EMPTY_PREVIEW;
+    },
+};
+
 // =============================================================================
 // Registry
 // =============================================================================
@@ -362,6 +389,7 @@ export const TAROT_EFFECT_HANDLERS: {
     banishForGold,
     upgradeAllOfElement,
     addRandomRune,
+    gainGoldFromSigils,
 };
 
 /**

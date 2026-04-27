@@ -153,6 +153,7 @@ export function handleApplyTarot(
         livePouch,
         rng,
         nextId: nextRuneId,
+        ownedSigils: Array.from(player.sigils),
     });
 
     // Apply: banish entries (push to schema + splice from live pouch)

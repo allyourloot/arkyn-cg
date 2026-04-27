@@ -1,14 +1,42 @@
 import type { ReactNode } from "react";
 import type { ElementType } from "../../shared/arkynConstants";
 import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
-import { ARCANE_CLUSTER_COLOR, ELEMENTAL_CLUSTER_COLOR } from "./styles";
+import { ARCANE_CLUSTER_COLOR, ELEMENT_COLORS, ELEMENTAL_CLUSTER_COLOR } from "./styles";
 
 const HIGHLIGHT_COLOR = "#309f30";
 // Mirrors the Executioner proc bubble's background — using it as text
 // color in tooltip markers ties "the fragment" to "the bubble" visually
 // without the pill chrome cluttering the description.
 const RED_HIGHLIGHT_COLOR = "#9f3030";
-const CLUSTER_WORD_REGEX = /\b(Elemental|Arcane)\b/g;
+
+// Words that get auto-colored anywhere they appear in a description.
+// Element names render in their ELEMENT_COLORS hue ("Fire" → orange,
+// "Water" → blue, etc.) so a tarot description like "Convert up to 2
+// runes to Air." or a sigil description like "Lightning runes have a
+// {1 in 4} chance to hit twice." picks up element coloring without the
+// author needing to wrap each name in a marker. The proper-noun cluster
+// labels "Elemental" / "Arcane" stay matched here too — Arcane shares
+// its hex with the arcane element color, so listing it once under the
+// element color is canonical.
+const AUTO_COLOR_WORD_TO_COLOR: Record<string, string> = {
+    Elemental: ELEMENTAL_CLUSTER_COLOR,
+    Arcane: ARCANE_CLUSTER_COLOR,   // same hex as ELEMENT_COLORS.arcane
+    Fire: ELEMENT_COLORS.fire,
+    Water: ELEMENT_COLORS.water,
+    Earth: ELEMENT_COLORS.earth,
+    Air: ELEMENT_COLORS.air,
+    Ice: ELEMENT_COLORS.ice,
+    Lightning: ELEMENT_COLORS.lightning,
+    Death: ELEMENT_COLORS.death,
+    Holy: ELEMENT_COLORS.holy,
+    Poison: ELEMENT_COLORS.poison,
+    Psy: ELEMENT_COLORS.psy,
+    Shadow: ELEMENT_COLORS.shadow,
+    Steel: ELEMENT_COLORS.steel,
+};
+// Longer words listed first so multi-character matches win against
+// shorter prefixes (regex alternation is left-to-right per position).
+const AUTO_COLOR_WORD_REGEX = /\b(Elemental|Lightning|Arcane|Shadow|Poison|Death|Earth|Steel|Water|Holy|Fire|Ice|Air|Psy)\b/g;
 
 /**
  * Matches an xMult-flavored fragment inside a `{...}` or `[[...]]` marker.
@@ -44,18 +72,18 @@ const XMULT_PILL_STYLE = {
     borderRadius: "2px",
 } as const;
 
-function applyClusterWordColors(text: string, keyPrefix: string): ReactNode[] {
+function applyAutoColorWords(text: string, keyPrefix: string): ReactNode[] {
     const out: ReactNode[] = [];
     let lastIdx = 0;
     let subIdx = 0;
-    CLUSTER_WORD_REGEX.lastIndex = 0;
+    AUTO_COLOR_WORD_REGEX.lastIndex = 0;
     let match: RegExpExecArray | null;
-    while ((match = CLUSTER_WORD_REGEX.exec(text)) !== null) {
+    while ((match = AUTO_COLOR_WORD_REGEX.exec(text)) !== null) {
         if (match.index > lastIdx) {
             out.push(text.slice(lastIdx, match.index));
         }
         const word = match[1];
-        const color = word === "Elemental" ? ELEMENTAL_CLUSTER_COLOR : ARCANE_CLUSTER_COLOR;
+        const color = AUTO_COLOR_WORD_TO_COLOR[word];
         out.push(
             <span key={`${keyPrefix}-${subIdx++}`} style={{ color }}>
                 {word}
@@ -70,7 +98,7 @@ function applyClusterWordColors(text: string, keyPrefix: string): ReactNode[] {
 }
 
 /**
- * Renders a sigil description with four levels of styling:
+ * Renders a sigil or tarot description with four levels of styling:
  *  - `{text}` markers become green highlight spans (author-controlled emphasis).
  *  - `[[text]]` markers become red-text spans — reserved for fragments that
  *    also surface as the red proc bubble (Executioner's "+0.1x Mult") so the
@@ -80,9 +108,11 @@ function applyClusterWordColors(text: string, keyPrefix: string): ReactNode[] {
  *    red-background + white-text pill, overriding the color-only treatment.
  *    This ties every "xN" / "xN Mult" in a tooltip to the same visual beat
  *    as the xMult reveal bubble in the cast animation.
- *  - Bare proper-noun occurrences of "Elemental" or "Arcane" (outside markers)
- *    get their cluster color automatically, so the two element groupings are
- *    visually consistent across every tooltip.
+ *  - Element names ("Fire", "Water", …) and the cluster proper nouns
+ *    ("Elemental" / "Arcane") auto-color in their respective hues. Applied
+ *    both inside and outside markers — `{Fire}` renders fire-orange (the
+ *    inner span overrides the outer green), and bare "Lightning" in tarot
+ *    text picks up the lightning-yellow without the author wrapping it.
  */
 export function renderDescription(desc: string): ReactNode[] {
     const parts = desc.split(/(\{[^}]+\}|\[\[[^\]]+\]\])/g);
@@ -95,9 +125,13 @@ export function renderDescription(desc: string): ReactNode[] {
                 return <span key={i} style={XMULT_PILL_STYLE}>{content}</span>;
             }
             const color = isDouble ? RED_HIGHLIGHT_COLOR : HIGHLIGHT_COLOR;
-            return <span key={i} style={{ color }}>{content}</span>;
+            return (
+                <span key={i} style={{ color }}>
+                    {applyAutoColorWords(content, `m${i}`)}
+                </span>
+            );
         }
-        return <span key={i}>{applyClusterWordColors(part, `p${i}`)}</span>;
+        return <span key={i}>{applyAutoColorWords(part, `p${i}`)}</span>;
     });
 }
 

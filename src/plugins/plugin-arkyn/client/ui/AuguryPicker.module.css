@@ -310,6 +310,18 @@
     text-align: center;
 }
 
+/* Live preview row appended below the static description (currently
+   only used by Temperance to show the gold the player would gain right
+   now). Slightly larger than the desc so the dynamic value reads as
+   the actionable number rather than as flavor text. */
+.tooltipPreview {
+    display: block;
+    margin-top: 4px;
+    font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
+    color: #d8d0c0;
+    text-align: center;
+}
+
 /* Lock applied to the bottom-UI containers (tarot row, element row,
    action panel) at the tail of the apply exit-slide. GSAP has already
    tweened them to opacity:0 + translateY(90px), but the schema-sync

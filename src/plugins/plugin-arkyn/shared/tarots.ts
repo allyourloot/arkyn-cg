@@ -1,4 +1,9 @@
-import { TAROT_BANISH_GOLD, WORLD_LEGENDARY_CHANCE, type ElementType } from "./arkynConstants";
+import {
+    TAROT_BANISH_GOLD,
+    TEMPERANCE_GOLD_PER_SELL_VALUE,
+    WORLD_LEGENDARY_CHANCE,
+    type ElementType,
+} from "./arkynConstants";
 import { RNG_NAMESPACES } from "./rngNamespace";
 
 // RNG namespace shared by server-side roll/apply (rollAuguryPack.ts,
@@ -34,7 +39,8 @@ export type TarotEffect =
     | { type: "banish" }                        // Hermit — no gold
     | { type: "banishForGold"; goldPerRune: number }   // Tower
     | { type: "upgradeAllOfElement" }           // Judgement (pouch-wide; 0 picker runes)
-    | { type: "addRandomRune"; legendaryChance: number }; // World — Rare/Legendary roll
+    | { type: "addRandomRune"; legendaryChance: number } // World — Rare/Legendary roll
+    | { type: "gainGoldFromSigils"; goldPerSellValue: number }; // Temperance — gold = sum of owned sigils' sellPrice * goldPerSellValue
 
 export interface TarotDefinition {
     /** snake_case id used as the registry key + serialized id over the wire. */
@@ -200,9 +206,9 @@ export const TAROT_DEFINITIONS: Record<string, TarotDefinition> = {
         id: "temperance",
         name: "Temperance",
         number: "XIV",
-        description: "Convert up to 2 runes to Water.",
-        effect: { type: "convertElement", element: "water" },
-        minTargets: 1, maxTargets: 2,
+        description: "Gain gold equal to the total Sell Value of all your sigils.",
+        effect: { type: "gainGoldFromSigils", goldPerSellValue: TEMPERANCE_GOLD_PER_SELL_VALUE },
+        minTargets: 0, maxTargets: 0,
         fileBasename: "14_temperance",
     },
     the_devil: {
