@@ -1,5 +1,6 @@
 import { type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
+import { requirePlayer } from "./utils/requirePlayer";
 
 const logger = new Logger("ArkynReorderSigils");
 
@@ -19,11 +20,8 @@ export function handleReorderSigils(
     client: { sessionId: string },
     payload: unknown,
 ): void {
-    const player = state.players.get(client.sessionId);
-    if (!player) {
-        logger.warn(`Reorder rejected: player ${client.sessionId} not found`);
-        return;
-    }
+    const player = requirePlayer({ state, client, logger, action: "Reorder" });
+    if (!player) return;
 
     const data = payload as { fromIndex?: unknown; toIndex?: unknown };
     const fromIndex = data?.fromIndex;

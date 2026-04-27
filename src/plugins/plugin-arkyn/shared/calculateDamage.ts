@@ -71,6 +71,35 @@ export interface SpellDamageBreakdown {
 type ScrollLevelsLike = ReadonlyMap<string, number> | { get(key: string): number | undefined };
 
 /**
+ * Per-rune crit / resist flags used across the damage pipeline. Both
+ * `calculateSpellDamage` (this file) and `composeCastModifiers` (shared
+ * helper that drives sigil bonuses) need to know which runes hit a
+ * weakness vs. a resistance, and they MUST agree on the rule. Centralizing
+ * that rule here means a future change (e.g. a "treat-as-crit" sigil that
+ * bypasses `weaknesses.includes`) is a single-call-site fix instead of a
+ * silent-desync hazard.
+ *
+ * Rule: a rune is "critical" iff its element is in the enemy's weaknesses.
+ * It is "resisted" iff it's not critical AND its element is in the enemy's
+ * resistances. Resistance-ignore sigils filter elements out of `resistances`
+ * BEFORE this helper sees the array, so the helper itself is unaware of
+ * Impale / Binoculars / etc. — that's `composeCastModifiers`'s job.
+ *
+ * The hot per-rune loop inside `calculateSpellDamage` does NOT call this
+ * helper today (allocations on the per-cast critical path); it inlines the
+ * same rule. If you change the rule here, mirror it there.
+ */
+export function computeRuneAffinityFlags(
+    elements: readonly string[],
+    resistances: readonly string[],
+    weaknesses: readonly string[],
+): { isCritical: boolean[]; isResisted: boolean[] } {
+    const isCritical = elements.map(e => weaknesses.includes(e));
+    const isResisted = elements.map((e, i) => !isCritical[i] && resistances.includes(e));
+    return { isCritical, isResisted };
+}
+
+/**
  * Compute the full Base + Mult breakdown for a resolved spell. Pure
  * function — server and client both call this with the same inputs and
  * get identical numbers.

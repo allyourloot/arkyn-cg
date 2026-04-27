@@ -1,6 +1,7 @@
 import { type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
 import { SHOP_ITEM_HANDLERS } from "./shopItemHandlers";
+import { requirePlayer } from "./utils/requirePlayer";
 
 const logger = new Logger("ArkynBuyItem");
 
@@ -9,16 +10,8 @@ export function handleBuyItem(
     client: { sessionId: string },
     payload: unknown,
 ): void {
-    const player = state.players.get(client.sessionId);
-    if (!player) {
-        logger.warn(`Buy rejected: player ${client.sessionId} not found`);
-        return;
-    }
-
-    if (player.gamePhase !== "shop") {
-        logger.warn(`Buy rejected: game phase is ${player.gamePhase}`);
-        return;
-    }
+    const player = requirePlayer({ state, client, action: "Buy", logger, allowedPhases: ["shop"] });
+    if (!player) return;
 
     const data = payload as { shopIndex?: number };
     const shopIndex = data?.shopIndex;

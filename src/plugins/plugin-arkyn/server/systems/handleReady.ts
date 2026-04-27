@@ -8,6 +8,7 @@ import { createPouch } from "../utils/createPouch";
 import { setPouch } from "../resources/playerPouch";
 import { syncPlayerPouch } from "../utils/drawRunes";
 import { clearArraySchema } from "../utils/clearArraySchema";
+import { getActiveSigils } from "../utils/sigils";
 import { spawnEnemy, applyBossDebuff } from "./handleJoin";
 
 const logger = new Logger("ArkynReady");
@@ -77,7 +78,7 @@ export function handleReady(
         // offerings.
         const nextRound = player.currentRound + 1;
         const packIds = generateShopPacks(player.runSeed, nextRound);
-        const ownedSigils = Array.from(player.sigils);
+        const ownedSigils = getActiveSigils(player);
         const sigilIds = generateShopSigils(player.runSeed, nextRound, ownedSigils);
         clearArraySchema(player.shopItems);
         // Fresh shop visit -> reset per-visit pack purchase counters so

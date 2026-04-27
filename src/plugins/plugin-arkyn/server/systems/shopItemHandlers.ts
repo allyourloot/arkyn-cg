@@ -8,6 +8,7 @@ import { rollPackRunes } from "../utils/rollPackRunes";
 import { rollCodexScrolls } from "../utils/rollCodexScrolls";
 import { rollAuguryPack } from "../utils/rollAuguryPack";
 import { createRuneInstance } from "../utils/drawRunes";
+import { getActiveSigils } from "../utils/sigils";
 import { getPouch } from "../resources/playerPouch";
 
 export interface ShopPurchaseCtx {
@@ -33,7 +34,7 @@ function handleSigilPurchase({ player, item, sessionId }: ShopPurchaseCtx): Shop
     if (player.sigils.length >= MAX_SIGILS) {
         return { ok: false, reason: `sigil slots full (${MAX_SIGILS})` };
     }
-    if (Array.from(player.sigils).includes(item.element)) {
+    if (getActiveSigils(player).includes(item.element)) {
         return { ok: false, reason: `player already owns sigil "${item.element}"` };
     }
     player.sigils.push(item.element);

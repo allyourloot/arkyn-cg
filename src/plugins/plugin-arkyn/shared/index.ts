@@ -61,6 +61,8 @@ export {
     SPELL_TABLE,
     SPELL_TIER_BASE_DAMAGE,
     SPELL_TIER_MULT,
+    MAX_SPELL_TIER,
+    clampTier,
     RUNE_BASE_DAMAGE,
     SYNERGY_PAIRS,
     TWO_PAIR_TABLE,
@@ -75,6 +77,7 @@ export {
     calculateDamage,
     calculateRuneDamageBreakdown,
     calculateSpellDamage,
+    computeRuneAffinityFlags,
 } from "./calculateDamage";
 export type { RuneDamageBreakdown, SpellDamageBreakdown } from "./calculateDamage";
 
@@ -88,6 +91,17 @@ export { ENEMY_BANK } from "./enemyBank";
 export type { EnemyTemplate } from "./enemyBank";
 
 export { seededRandom, createRoundRng, generateRunSeed } from "./seededRandom";
+
+export {
+    RNG_NAMESPACES,
+    SIGIL_RNG_OFFSET_SPACING,
+    PROC_RNG_OFFSET_BASE,
+    LIFECYCLE_RNG_OFFSET_BASE,
+    CAST_RNG_MULT_RNG_OFFSET_BASE,
+    procRngSlot,
+    lifecycleRngSlot,
+    castRngMultRngSlot,
+} from "./rngNamespace";
 
 export { generateShopPacks, generateShopSigils } from "./shopGeneration";
 

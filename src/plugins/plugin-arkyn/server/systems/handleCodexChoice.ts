@@ -1,6 +1,8 @@
 import { type ArkynState, getScrollLevelsPerUse } from "../../shared";
 import { Logger } from "@core/shared/utils";
 import { clearArraySchema } from "../utils/clearArraySchema";
+import { getActiveSigils } from "../utils/sigils";
+import { requirePlayer } from "./utils/requirePlayer";
 
 const logger = new Logger("ArkynCodexChoice");
 
@@ -17,13 +19,13 @@ export function handleCodexChoice(
     client: { sessionId: string },
     payload: unknown,
 ): void {
-    const player = state.players.get(client.sessionId);
+    const player = requirePlayer({
+        state, client, logger,
+        action: "Codex choice",
+        allowedPhases: ["shop"],
+        onMissingPlayer: "silent",
+    });
     if (!player) return;
-
-    if (player.gamePhase !== "shop") {
-        logger.warn(`Codex choice rejected: game phase is ${player.gamePhase}`);
-        return;
-    }
 
     if (player.pendingCodexScrolls.length === 0) {
         logger.warn(`Codex choice rejected: no pack is open for ${client.sessionId}`);
@@ -47,7 +49,7 @@ export function handleCodexChoice(
 
     const element = player.pendingCodexScrolls[index];
     const currentLevel = player.scrollLevels.get(element) ?? 0;
-    const levelsGained = getScrollLevelsPerUse(Array.from(player.sigils));
+    const levelsGained = getScrollLevelsPerUse(getActiveSigils(player));
     const newLevel = currentLevel + levelsGained;
     player.scrollLevels.set(element, newLevel);
 

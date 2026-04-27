@@ -19,19 +19,18 @@ import {
     useScrollUpgradeDisplay,
     useSigils,
 } from "../arkynStore";
-import { ELEMENT_COLORS, createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
+import { ELEMENT_COLORS, createPanelStyleVars, createStatBentoStyleVars, INNER_FRAME_BGS } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import BouncyText from "./BouncyText";
+import PanelFrame from "./PanelFrame";
 import StatBentoRow from "./StatBentoRow";
 import ScrollUpgradeDisplay from "./ScrollUpgradeDisplay";
 import styles from "./ShopPanel.module.css";
 
 const panelStyleVars = {
     ...createPanelStyleVars(),
-    ["--hands-bg" as string]: INNER_FRAME_BGS.green,
-    ["--discards-bg" as string]: INNER_FRAME_BGS.orange,
+    ...createStatBentoStyleVars(),
     ["--shop-chip-bg" as string]: INNER_FRAME_BGS.orange,
-    ["--bank-bg" as string]: INNER_FRAME_BGS.default,
 } as CSSProperties;
 
 type ShopPanelProps = {
@@ -93,7 +92,7 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
     const elementIconUrl = getRuneImageUrl(enemyElement);
 
     return (
-        <div ref={ref} className={styles.panel} style={panelStyleVars}>
+        <PanelFrame ref={ref} className={styles.panel} styleVars={panelStyleVars}>
             {/* --- Top: Shop chip + enemy preview --- */}
             <div className={styles.shopChip}>
                 <BouncyText className={styles.shopChipLabel}>Shop</BouncyText>
@@ -184,7 +183,7 @@ export default function ShopPanel({ ref }: ShopPanelProps = {}) {
                 discardsValue={effectiveDiscards}
                 castsChipRef={chipRef}
             />
-        </div>
+        </PanelFrame>
     );
 }
 

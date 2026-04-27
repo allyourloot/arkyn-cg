@@ -4,6 +4,7 @@ import { clearArraySchema } from "../utils/clearArraySchema";
 import { createRuneInstance, syncPlayerPouch } from "../utils/drawRunes";
 import { getPouch } from "../resources/playerPouch";
 import { nextRuneId } from "../utils/nextRuneId";
+import { requirePlayer } from "./utils/requirePlayer";
 
 const logger = new Logger("ArkynPackChoice");
 
@@ -20,13 +21,13 @@ export function handlePackChoice(
     client: { sessionId: string },
     payload: unknown,
 ): void {
-    const player = state.players.get(client.sessionId);
+    const player = requirePlayer({
+        state, client, logger,
+        action: "Pack choice",
+        allowedPhases: ["shop"],
+        onMissingPlayer: "silent",
+    });
     if (!player) return;
-
-    if (player.gamePhase !== "shop") {
-        logger.warn(`Pack choice rejected: game phase is ${player.gamePhase}`);
-        return;
-    }
 
     if (player.pendingPackRunes.length === 0) {
         logger.warn(`Pack choice rejected: no pack is open for ${client.sessionId}`);

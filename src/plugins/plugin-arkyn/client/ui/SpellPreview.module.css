@@ -1,6 +1,8 @@
+/* Layout for the spell preview panel. The 9-slice frame chrome lives in
+   PanelFrame.module.css — this class only owns sizing, flow, and per-panel
+   positioning. */
 .panel {
     pointer-events: none;
-    box-sizing: border-box;
     width: clamp(200px, 22vw, 380px);
     /* 95vh leaves a thin sliver of breathing room above and below so the
        panel doesn't sit flush against the viewport edges. align-self
@@ -13,13 +15,6 @@
     align-self: center;
     margin-left: clamp(12px, 2vw, 32px);
     flex-shrink: 0;
-    /* 9-slice frame: 24px corner slices, rendered at 24px on screen so the
-       pixel art stays crisp at any panel size. */
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 24px;
-    border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
     /* Slight padding so inner sections sit just inside the frame edge. */
     padding: 6px 4px;
     display: flex;
@@ -27,7 +22,6 @@
     align-items: stretch;
     gap: clamp(10px, 1.6vh, 20px);
     overflow: hidden;
-    image-rendering: pixelated;
 }
 
 /* Inner content sections — each one is a 9-sliced inner-frame container that

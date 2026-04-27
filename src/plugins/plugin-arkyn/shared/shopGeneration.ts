@@ -5,16 +5,18 @@ import {
     type RarityType,
 } from "./arkynConstants";
 import { PACK_TYPES, type PackType } from "./packs";
+import { RNG_NAMESPACES } from "./rngNamespace";
 import { createRoundRng } from "./seededRandom";
 import { SIGIL_DEFINITIONS, SIGIL_IDS } from "./sigils";
 
-// RNG namespace offsets — must differ from enemy selection (0), boss
-// debuff (50000), and voltage proc (300000) to avoid correlation.
-const SHOP_SIGIL_RNG_OFFSET = 200000;
-// Pack-slot rolls live in their own band, distinct from Rune Pack's roll
-// band (400000) so the pack-type pick can't correlate with the rune
-// rarities rolled inside the pack.
-const SHOP_PACK_RNG_OFFSET = 500000;
+// RNG namespace offsets — see `shared/rngNamespace.ts` for the full map.
+const SHOP_SIGIL_RNG_OFFSET = RNG_NAMESPACES.shopSigils;
+// Pack-slot rolls share their numeric base with the SIGIL_CAST_RNG_MULT
+// band (Boom Bomb at slot 0). The streams differ in seed composition
+// (`base + round` here vs `base + round*10 + castNumber` for cast-rng-mult)
+// so they don't interact today; new cast-rng-mult sigils MUST use slot ≥ 1
+// — see the namespace map.
+const SHOP_PACK_RNG_OFFSET = RNG_NAMESPACES.shopPackSlot;
 // Stride between reroll iterations of the same (seed, round) shop. 1000
 // is larger than any realistic `round` count so adjacent rounds' sigil
 // rolls can't collide with an earlier round's Nth reroll.

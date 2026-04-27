@@ -1,6 +1,7 @@
 import { type ArkynState } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { Logger } from "@core/shared/utils";
+import { requirePlayer } from "./utils/requirePlayer";
 
 const logger = new Logger("ArkynSellSigil");
 
@@ -9,11 +10,8 @@ export function handleSellSigil(
     client: { sessionId: string },
     payload: unknown,
 ): void {
-    const player = state.players.get(client.sessionId);
-    if (!player) {
-        logger.warn(`Sell rejected: player ${client.sessionId} not found`);
-        return;
-    }
+    const player = requirePlayer({ state, client, logger, action: "Sell" });
+    if (!player) return;
 
     const data = payload as { sigilId?: string };
     const sigilId = data?.sigilId;

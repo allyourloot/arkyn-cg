@@ -103,3 +103,21 @@ export function createPanelStyleVars(
     }
     return vars as React.CSSProperties;
 }
+
+/**
+ * CSS variables for the StatBentoRow chips — Bank (default), Hands (green),
+ * Discards (orange). Both ShopPanel and SpellPreview render the same
+ * three-chip layout, so the variable assignment lives in one place.
+ *
+ * Spread into the panel's `style` alongside `createPanelStyleVars(...)`.
+ * Callers that override one chip (e.g. SpellPreview's damage row tints
+ * Base/Mult/Total separately) can re-spread their own overrides after
+ * this helper.
+ */
+export function createStatBentoStyleVars(): React.CSSProperties {
+    return {
+        "--bank-bg": INNER_FRAME_BGS.default,
+        "--hands-bg": INNER_FRAME_BGS.green,
+        "--discards-bg": INNER_FRAME_BGS.orange,
+    } as React.CSSProperties;
+}

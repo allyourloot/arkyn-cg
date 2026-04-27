@@ -5,6 +5,7 @@ import {
     FULL_HOUSE_TABLE,
     COMBO_TABLE,
     HAPHAZARD_SPELL,
+    clampTier,
     isSynergyPair,
     type SpellInfo,
 } from "./spellTable";
@@ -194,7 +195,7 @@ export function resolveSpell(
             const sorted: [string, string] = a < b ? [a, b] : [b, a];
             const info = COMBO_TABLE[`${sorted[0]}+${sorted[1]}`];
             if (info) {
-                const tier = Math.min(runes.length, 5);
+                const tier = clampTier(runes.length);
                 return buildResolvedSpell(info, tier, shape.primaryElement, "duo", sorted);
             }
         }
@@ -216,7 +217,7 @@ export function resolveSpell(
         && allUniqueRunesEnabled(activeSigils ?? [])
     ) {
         const firstElement = runes[0].element;
-        const tier = Math.min(runes.length, 5);
+        const tier = clampTier(runes.length);
         const allElements = runes.map(r => r.element);
         return buildResolvedSpell(HAPHAZARD_SPELL, tier, firstElement, "haphazard", allElements);
     }
@@ -226,7 +227,7 @@ export function resolveSpell(
     //    fit any combo shape (3-distinct, 4-distinct, 5-distinct, or
     //    [2,1,1]/[3,1,1]) land here, plus non-synergy poker shapes
     //    that fell through 1 and 2 above.
-    const tier = Math.min(shape.primaryCount, 5);
+    const tier = clampTier(shape.primaryCount);
     const info = SPELL_TABLE[shape.primaryElement as ElementType]?.[tier];
     if (!info) return null;
     return buildResolvedSpell(info, tier, shape.primaryElement, "single");

@@ -22,6 +22,7 @@ import { playButton, playBuy, playOpenPack } from "../sfx";
 import { RARITY_COLORS, createPanelStyleVars } from "./styles";
 import { getPackImageUrl } from "./packAssets";
 import ItemScene from "./ItemScene";
+import PanelFrame from "./PanelFrame";
 import Tooltip from "./Tooltip";
 import RunePackPicker from "./RunePackPicker";
 import CodexPicker from "./CodexPicker";
@@ -265,7 +266,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             style={panelStyleVars}
             aria-hidden="true"
         />
-        <div ref={panelRef} className={styles.panel} style={panelStyleVars}>
+        <PanelFrame ref={panelRef} className={styles.panel} styleVars={panelStyleVars}>
             {/* Items section (sigils today; future scrolls slot in here too). */}
             <span className={styles.sectionLabel}>Items</span>
             <div className={styles.sigilRow}>
@@ -457,7 +458,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                 </div>
             </div>
 
-        </div>
+        </PanelFrame>
         {/* Hard-edged drop shadow — same next-round.png chrome rendered
             dark + semi-transparent + offset, painted BEFORE the button
             in DOM so it sits behind without needing z-index gymnastics

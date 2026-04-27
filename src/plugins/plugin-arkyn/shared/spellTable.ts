@@ -340,6 +340,19 @@ export const FULL_HOUSE_TABLE: Record<string, SpellInfo> = {
 // from spellBase up through each rune impact and the Mult chip stays
 // static at the tier-derived value.
 
+// Highest tier any cast can produce. The single-element resolver maxes
+// at 5 same-element runes; combo resolvers (loose duo, full house,
+// haphazard) cap rune-count→tier at the same ceiling. Index of the last
+// entry in SPELL_TIER_BASE_DAMAGE / SPELL_TIER_MULT.
+export const MAX_SPELL_TIER = 5;
+
+// Clamp a raw rune-count (or count-derived value) into the valid tier
+// range. Centralizes the per-resolver cap so SPELL_TIER_BASE_DAMAGE /
+// SPELL_TIER_MULT array bounds and the cap stay in lockstep.
+export function clampTier(n: number): number {
+    return Math.min(n, MAX_SPELL_TIER);
+}
+
 // Per-tier flat base damage added to the Base counter on cast.
 // Index = tier; tier 0 is unused/sentinel.
 export const SPELL_TIER_BASE_DAMAGE = [0, 4, 8, 12, 16, 20] as const;

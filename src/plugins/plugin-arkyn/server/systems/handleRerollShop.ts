@@ -4,6 +4,8 @@ import { generateShopSigils } from "../../shared/shopGeneration";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { Logger } from "@core/shared/utils";
 import { clearArraySchema } from "../utils/clearArraySchema";
+import { getActiveSigils } from "../utils/sigils";
+import { requirePlayer } from "./utils/requirePlayer";
 
 const logger = new Logger("ArkynRerollShop");
 
@@ -21,16 +23,8 @@ export function handleRerollShop(
     state: ArkynState,
     client: { sessionId: string },
 ): void {
-    const player = state.players.get(client.sessionId);
-    if (!player) {
-        logger.warn(`Reroll rejected: player ${client.sessionId} not found`);
-        return;
-    }
-
-    if (player.gamePhase !== "shop") {
-        logger.warn(`Reroll rejected: game phase is ${player.gamePhase}`);
-        return;
-    }
+    const player = requirePlayer({ state, client, logger, action: "Reroll", allowedPhases: ["shop"] });
+    if (!player) return;
 
     if (player.gold < REROLL_COST) {
         logger.warn(`Reroll rejected: insufficient gold (${player.gold} < ${REROLL_COST})`);
@@ -55,7 +49,7 @@ export function handleRerollShop(
     player.shopRerollCount++;
     player.gold -= REROLL_COST;
 
-    const ownedSigils = Array.from(player.sigils);
+    const ownedSigils = getActiveSigils(player);
     const sigilIds = generateShopSigils(
         player.runSeed,
         player.currentRound + 1,

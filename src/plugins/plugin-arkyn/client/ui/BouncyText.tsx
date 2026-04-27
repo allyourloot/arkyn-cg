@@ -1,5 +1,6 @@
 import { forwardRef, useMemo, type CSSProperties, type ReactNode } from "react";
 import styles from "./BouncyText.module.css";
+import { lerpColor } from "./utils/color";
 
 interface BouncyTextProps {
     children: string | number;
@@ -31,36 +32,6 @@ interface BouncyTextProps {
      * spell-name sizes the steps read as a smooth gradient.
      */
     colorRange?: readonly string[];
-}
-
-// Parse a `#rgb` or `#rrggbb` hex string into a [r, g, b] tuple of 0-255
-// integers. ELEMENT_COLORS values are all 7-char hex so this is the only
-// shape we need to handle.
-function parseHex(hex: string): [number, number, number] {
-    const h = hex.startsWith("#") ? hex.slice(1) : hex;
-    if (h.length === 3) {
-        return [
-            parseInt(h[0] + h[0], 16),
-            parseInt(h[1] + h[1], 16),
-            parseInt(h[2] + h[2], 16),
-        ];
-    }
-    return [
-        parseInt(h.slice(0, 2), 16),
-        parseInt(h.slice(2, 4), 16),
-        parseInt(h.slice(4, 6), 16),
-    ];
-}
-
-// Linear interpolate between two hex colors at parameter `t` (0..1) and
-// return a `rgb(...)` string suitable for an inline `color` value.
-function lerpColor(c1: string, c2: string, t: number): string {
-    const [r1, g1, b1] = parseHex(c1);
-    const [r2, g2, b2] = parseHex(c2);
-    const r = Math.round(r1 + (r2 - r1) * t);
-    const g = Math.round(g1 + (g2 - g1) * t);
-    const b = Math.round(b1 + (b2 - b1) * t);
-    return `rgb(${r}, ${g}, ${b})`;
 }
 
 /**

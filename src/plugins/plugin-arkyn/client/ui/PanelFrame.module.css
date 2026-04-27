@@ -1,0 +1,19 @@
+/* Shared 9-slice border-image chrome used by every panel in the game.
+   ShopPanel, SpellPreview, ShopScreen, RoundEndOverlay (and any future
+   panel) all want the same `frame.png` chrome — only their layout (width,
+   height, padding, flex direction) differs. The chrome rules used to be
+   duplicated across each panel's module CSS; they now live here and each
+   panel composes its own layout class onto this one via `<PanelFrame>`.
+
+   --panel-bg is set per-panel via `createPanelStyleVars(...)` so individual
+   panels (e.g. boss-round SpellPreview) can swap in a tinted frame asset
+   without changing the chrome geometry. */
+.frame {
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    image-rendering: pixelated;
+}

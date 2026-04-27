@@ -23,6 +23,7 @@ import {
     playTypewriter,
     stopTypewriter,
 } from "../sfx";
+import PanelFrame from "./PanelFrame";
 import { createPanelStyleVars } from "./styles";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import buttonGreenUrl from "/assets/ui/button-green.png?url";
@@ -252,7 +253,7 @@ export default function RoundEndOverlay() {
 
     return (
         <div className={styles.backdrop}>
-            <div className={styles.panel} style={panelStyleVars}>
+            <PanelFrame className={styles.panel} styleVars={panelStyleVars}>
                 <span className={styles.title}>Round {currentRound} Complete</span>
 
                 {/* Inner content frame — wraps the reward breakdown
@@ -345,7 +346,7 @@ export default function RoundEndOverlay() {
                 >
                     Collect
                 </button>
-            </div>
+            </PanelFrame>
         </div>
     );
 }

@@ -1,16 +1,17 @@
 import {
     type ArkynState,
     applyAccumulatorIncrements,
-    expandMimicSigilsDetailed,
     flattenMapSchema,
     getEndOfRoundSigilGold,
     SIGIL_CAST_HOOKS,
+    snapshotRune,
 } from "../../shared";
 import { resolveSpell } from "../../shared/resolveSpell";
 import { Logger } from "@core/shared/utils";
 import { calculateDamage } from "../utils/calculateDamage";
 import { refillHand } from "../utils/refillHand";
 import { createRuneInstance } from "../utils/drawRunes";
+import { getActiveSigils, getActiveSigilsExpanded } from "../utils/sigils";
 import { removeRunesFromHand, validateRuneSelection } from "./utils/runeSelection";
 import type { ArkynContext } from "../types/ArkynContext";
 import { getRunStats } from "../resources/runStats";
@@ -43,7 +44,7 @@ export function handleCast(
 
     // Resolve spell — pass active sigils so sigil-gated synergies (e.g.
     // Burnrite's Fire+Death) fire when the player owns the relevant sigil.
-    const activeSigils = Array.from(player.sigils);
+    const activeSigils = getActiveSigils(player);
     const spell = resolveSpell(
         selectedRunes.map(r => ({ element: r.element })),
         activeSigils,
@@ -63,12 +64,7 @@ export function handleCast(
     // Magic Mirror's duplicateRune effect fires. Placed here because
     // `selectedRunes` references get mutated by `removeRunesFromHand`
     // below — the snapshot keeps element/rarity/level alive for the hook.
-    const castRuneData = selectedRunes.map(r => ({
-        id: r.id,
-        element: r.element,
-        rarity: r.rarity,
-        level: r.level,
-    }));
+    const castRuneData = selectedRunes.map(snapshotRune);
 
     // Calculate damage — each contributing rune is evaluated against the
     // enemy's resistances/weaknesses individually, then summed. Sigil effects
@@ -126,7 +122,7 @@ export function handleCast(
     // read the updated value via schema sync.
     if (criticalCount > 0) {
         const updates = applyAccumulatorIncrements(
-            Array.from(player.sigils),
+            activeSigils,
             flattenMapSchema(player.sigilAccumulators),
             { criticalHit: criticalCount },
         );
@@ -159,7 +155,7 @@ export function handleCast(
         // Iterates SIGIL_END_OF_ROUND_GOLD generically — zero sigil-specific
         // branching, so adding future "+N gold per round" sigils is a data
         // entry. The client derives per-sigil rows from the same registry.
-        const sigilBonus = getEndOfRoundSigilGold(Array.from(player.sigils)).total;
+        const sigilBonus = getEndOfRoundSigilGold(activeSigils).total;
         player.lastRoundGoldBase = baseGold;
         player.lastRoundGoldHandsBonus = handsBonus;
         player.lastRoundGoldHandsCount = handsCount;
@@ -216,7 +212,7 @@ export function handleCast(
     // (0 for the original, 1 for the copy) is mixed into the synthesized
     // duplicate ids so two Magic Mirror firings in the same cast produce
     // distinct rune instances (Colyseus schema requires unique ids).
-    for (const entry of expandMimicSigilsDetailed(Array.from(player.sigils))) {
+    for (const entry of getActiveSigilsExpanded(player)) {
         const hook = SIGIL_CAST_HOOKS[entry.sigilId];
         if (!hook?.onCast) continue;
         const effects = hook.onCast({
@@ -234,25 +230,14 @@ export function handleCast(
                     // this duplicate locally at fly-complete time (its
                     // "mirror-" prefix is what the client's hand sync
                     // uses to skip the draw-in animation).
-                    const duplicateId = `mirror-${source.id}-${entry.copyIndex}`;
-                    const duplicate = createRuneInstance({
-                        id: duplicateId,
-                        element: source.element,
-                        rarity: source.rarity,
-                        level: source.level,
-                    });
-                    player.hand.push(duplicate);
+                    const duplicateData = { ...source, id: `mirror-${source.id}-${entry.copyIndex}` };
+                    player.hand.push(createRuneInstance(duplicateData));
                     // Permanent deck addition — `createPouch` on the
                     // next round rebuilds from acquiredRunes so the
                     // duplicate rejoins the pool. Push a SECOND
                     // RuneInstance (same fields) because Colyseus
                     // schema objects are single-parent.
-                    player.acquiredRunes.push(createRuneInstance({
-                        id: duplicateId,
-                        element: source.element,
-                        rarity: source.rarity,
-                        level: source.level,
-                    }));
+                    player.acquiredRunes.push(createRuneInstance(duplicateData));
                     logger.info(
                         `Player ${client.sessionId} duplicated ${source.rarity} ${source.element} ` +
                         `via "${entry.sigilId}"${entry.isMimicCopy ? " (mimic copy)" : ""}. ` +

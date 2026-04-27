@@ -23,6 +23,7 @@ import {
     type SpellTierMultEntry,
     type SpellXMultEntry,
 } from "./sigilEffects";
+import { computeRuneAffinityFlags } from "./calculateDamage";
 
 /**
  * Shared helper that composes all sigil-driven cast modifiers. The server
@@ -158,17 +159,21 @@ export function composeCastModifiers(args: ComposeCastModifiersArgs): CastModifi
         ? getCastRngMultBonus(sigils, runSeed, round, castNumber)
         : { total: 0, entries: [] as CastRngMultEntry[] };
 
-    // Per-rune crit flag, identical to the damage formula's derivation
-    // (weakness match = critical). Computed here so crit-gated sigils
-    // (Lex Divina et al.) can short-circuit without re-running the formula.
-    const contributingElements = contributingRunes.map(r => r.element);
-    const isCritical = contributingElements.map(e => weaknesses.includes(e));
-    const elementRuneBonus = getElementRuneBonus(sigils, contributingElements, isCritical);
-
     const ignoredResistances = getIgnoredResistanceElements(sigils, disabledResistance);
     const effectiveResistances = ignoredResistances.size > 0
         ? rawResistances.filter(e => !ignoredResistances.has(e))
         : [...rawResistances];
+
+    // Per-rune crit / resist flags — single source of truth shared with
+    // calculateSpellDamage. Crit-gated sigils (Lex Divina et al.) read
+    // `isCritical` to short-circuit without re-running the damage formula.
+    const contributingElements = contributingRunes.map(r => r.element);
+    const { isCritical } = computeRuneAffinityFlags(
+        contributingElements,
+        effectiveResistances,
+        weaknesses,
+    );
+    const elementRuneBonus = getElementRuneBonus(sigils, contributingElements, isCritical);
 
     return {
         bonusMult: handMult.total + playedMult.total + elementRuneBonus.totalMult + inventoryMult.total + spellTierMult.total + castRngMult.total,

@@ -15,22 +15,16 @@
 
 /* ----- Panel ----- */
 
+/* Layout for the round-end overlay panel. The 9-slice frame chrome lives
+   in PanelFrame.module.css — this class only owns sizing, padding, flow,
+   and the panel-in animation. */
 .panel {
-    box-sizing: border-box;
     width: clamp(360px, 52vw, 680px);
-    /* 9-slice frame.png — same 24px corner pattern other panels use so
-       the chrome reads as part of the same UI family. */
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 24px;
-    border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
     padding: clamp(18px, 2.4vw, 32px) clamp(24px, 3.2vw, 44px) clamp(20px, 2.6vw, 36px);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: clamp(14px, 2.2vh, 26px);
-    image-rendering: pixelated;
 
     animation: arkyn-panel-in 260ms cubic-bezier(0.2, 1.2, 0.4, 1);
 }

@@ -925,6 +925,53 @@ function previewDiscardEffects(
     return null;
 }
 
+/**
+ * Three-phase gold-proc reveal — sigil shake + bubble at `shakeDelayMs`,
+ * gold counter commit + SFX at `commitDelayMs`, bubble cleanup (+ optional
+ * extra teardown) at `cleanupDelayMs`. Shared by `discardRunes` (Ahoy
+ * grant_gold) and `runBanishFlow` (Banish), which differ only in their
+ * cleanup window — Banish waits for the dissolve to finish, Ahoy cleans
+ * up shortly after the commit.
+ *
+ * The SigilBar shake channel and the GoldCounter overlay are the same
+ * ones Voltage / Fortune use during casts, so adding a future gold-proc
+ * source (a discard-time Fortune variant, etc.) only needs to call this
+ * helper with its own timing — the visual cadence stays consistent.
+ */
+function runGoldProcSequence(args: {
+    sigilId: string;
+    grantedGold: number;
+    shakeDelayMs: number;
+    commitDelayMs: number;
+    cleanupDelayMs: number;
+    /** Extra teardown work to run alongside the bubble cleanup. */
+    onCleanup?: () => void;
+}): void {
+    const { sigilId, grantedGold, shakeDelayMs, commitDelayMs, cleanupDelayMs, onCleanup } = args;
+
+    setTimeout(() => {
+        sigilShakeSeq++;
+        activeSigilShake = { sigilId, seq: sigilShakeSeq };
+        arkynStoreInternal.triggerSigilProcBubble(sigilId, grantedGold);
+        arkynStoreInternal.triggerGoldProcBubble(grantedGold);
+        notify();
+    }, shakeDelayMs);
+
+    setTimeout(() => {
+        playGold();
+        arkynStoreInternal.addDisplayedGold(grantedGold);
+        arkynStoreInternal.unlockGoldDisplayAndSyncToServer();
+        notify();
+    }, commitDelayMs);
+
+    setTimeout(() => {
+        arkynStoreInternal.clearSigilProcBubble();
+        arkynStoreInternal.clearGoldProcBubble();
+        if (onCleanup) onCleanup();
+        notify();
+    }, cleanupDelayMs);
+}
+
 export function discardRunes() {
     const selectedRuneIds = arkynStoreInternal.getSelectedRuneIds();
     const selectedIndices = arkynStoreInternal.getSelectedIndices();
@@ -1019,26 +1066,13 @@ export function discardRunes() {
     // the counter in sync with the SFX. Same cadence as the Banish flow's
     // reward beats so the two proc UXes read as siblings.
     if (discardPreview && discardPreview.grantedGold > 0) {
-        setTimeout(() => {
-            sigilShakeSeq++;
-            activeSigilShake = { sigilId: discardPreview.sigilId, seq: sigilShakeSeq };
-            arkynStoreInternal.triggerSigilProcBubble(discardPreview.sigilId, discardPreview.grantedGold);
-            arkynStoreInternal.triggerGoldProcBubble(discardPreview.grantedGold);
-            notify();
-        }, BANISH_SIGIL_REACT_DELAY_MS);
-
-        setTimeout(() => {
-            playGold();
-            arkynStoreInternal.addDisplayedGold(discardPreview.grantedGold);
-            arkynStoreInternal.unlockGoldDisplayAndSyncToServer();
-            notify();
-        }, BANISH_GOLD_COMMIT_DELAY_MS);
-
-        setTimeout(() => {
-            arkynStoreInternal.clearSigilProcBubble();
-            arkynStoreInternal.clearGoldProcBubble();
-            notify();
-        }, BANISH_GOLD_COMMIT_DELAY_MS + BANISH_CLEANUP_EXTRA_MS);
+        runGoldProcSequence({
+            sigilId: discardPreview.sigilId,
+            grantedGold: discardPreview.grantedGold,
+            shakeDelayMs: BANISH_SIGIL_REACT_DELAY_MS,
+            commitDelayMs: BANISH_GOLD_COMMIT_DELAY_MS,
+            cleanupDelayMs: BANISH_GOLD_COMMIT_DELAY_MS + BANISH_CLEANUP_EXTRA_MS,
+        });
     }
 }
 
@@ -1078,41 +1112,24 @@ function runBanishFlow(
     // pre-proc value until we commit it alongside the SFX below.
     sendArkynMessage(ARKYN_DISCARD, { selectedIndices: serverIndices });
 
-    // Trigger the SigilBar sigil shake + the "+N Gold" proc bubble.
-    // Delayed a hair so the dissolve starts first and the UX reads as
-    // "rune tears apart → sigil reacts → gold awarded" rather than all
-    // three firing on the same frame.
-    setTimeout(() => {
-        // Sigil shake — same channel Voltage/Fortune use during casts.
-        sigilShakeSeq++;
-        activeSigilShake = { sigilId: preview.sigilId, seq: sigilShakeSeq };
-        // Gold proc bubble over the SigilBar slot.
-        arkynStoreInternal.triggerSigilProcBubble(preview.sigilId, preview.grantedGold);
-        // Also fire the GoldCounter's own "+N" overlay — matches Fortune's
-        // mid-cast proc UX and gives the player a second read of the reward.
-        arkynStoreInternal.triggerGoldProcBubble(preview.grantedGold);
-        notify();
-    }, BANISH_SIGIL_REACT_DELAY_MS);
-
-    setTimeout(() => {
-        // Commit the gold: tick the displayed counter + play the gold SFX.
-        playGold();
-        arkynStoreInternal.addDisplayedGold(preview.grantedGold);
-        arkynStoreInternal.unlockGoldDisplayAndSyncToServer();
-        notify();
-    }, BANISH_GOLD_COMMIT_DELAY_MS);
-
-    // Clean up after the dissolve completes. DISSOLVE_DURATION_MS comes
-    // from the shared timing constants so any future tuning of the dissolve
-    // visual automatically carries to the banish cleanup.
-    const cleanupDelayMs = DISSOLVE_DURATION_MS + BANISH_CLEANUP_EXTRA_MS;
-    setTimeout(() => {
-        banishingRunes = [];
-        banishingRuneIds = [];
-        banishStartTime = 0;
-        isBanishAnimating = false;
-        arkynStoreInternal.clearSigilProcBubble();
-        arkynStoreInternal.clearGoldProcBubble();
-        notify();
-    }, cleanupDelayMs);
+    // Trigger the SigilBar sigil shake + the "+N Gold" proc bubble, commit
+    // the gold counter alongside the SFX, then clean up bubbles + the
+    // banish-specific dissolve state once the dissolve finishes. Cleanup
+    // window uses DISSOLVE_DURATION_MS so any future tuning of the dissolve
+    // visual automatically carries to the banish cleanup. The first two
+    // beats are deliberately delayed a hair so the UX reads as "rune tears
+    // apart → sigil reacts → gold awarded" rather than firing on one frame.
+    runGoldProcSequence({
+        sigilId: preview.sigilId,
+        grantedGold: preview.grantedGold,
+        shakeDelayMs: BANISH_SIGIL_REACT_DELAY_MS,
+        commitDelayMs: BANISH_GOLD_COMMIT_DELAY_MS,
+        cleanupDelayMs: DISSOLVE_DURATION_MS + BANISH_CLEANUP_EXTRA_MS,
+        onCleanup: () => {
+            banishingRunes = [];
+            banishingRuneIds = [];
+            banishStartTime = 0;
+            isBanishAnimating = false;
+        },
+    });
 }

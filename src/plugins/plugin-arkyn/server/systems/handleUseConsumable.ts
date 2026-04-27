@@ -1,5 +1,7 @@
 import { type ArkynState, getConsumableDefinition, getScrollLevelsPerUse } from "../../shared";
 import { Logger } from "@core/shared/utils";
+import { getActiveSigils } from "../utils/sigils";
+import { requirePlayer } from "./utils/requirePlayer";
 
 const logger = new Logger("ArkynUseConsumable");
 
@@ -8,16 +10,12 @@ export function handleUseConsumable(
     client: { sessionId: string },
     payload: unknown,
 ): void {
-    const player = state.players.get(client.sessionId);
-    if (!player) {
-        logger.warn(`Use-consumable rejected: player ${client.sessionId} not found`);
-        return;
-    }
-
-    if (player.gamePhase !== "playing" && player.gamePhase !== "shop") {
-        logger.warn(`Use-consumable rejected: game phase is ${player.gamePhase}`);
-        return;
-    }
+    const player = requirePlayer({
+        state, client, logger,
+        action: "Use-consumable",
+        allowedPhases: ["playing", "shop"],
+    });
+    if (!player) return;
 
     const data = payload as { index?: number };
     const index = data?.index;
@@ -45,7 +43,7 @@ export function handleUseConsumable(
         case "upgradeScroll": {
             const element = def.effect.element;
             const currentLevel = player.scrollLevels.get(element) ?? 0;
-            const levelsGained = getScrollLevelsPerUse(Array.from(player.sigils));
+            const levelsGained = getScrollLevelsPerUse(getActiveSigils(player));
             const newLevel = currentLevel + levelsGained;
             player.scrollLevels.set(element, newLevel);
             logDetail = `${element} scroll → level ${newLevel}${levelsGained > 1 ? ` (+${levelsGained})` : ""}`;

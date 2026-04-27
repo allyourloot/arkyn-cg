@@ -2,15 +2,19 @@ import {
     ELEMENT_TYPES,
     RUNE_PACK_CHOICES,
     RUNE_PACK_RARITY_WEIGHTS,
+    RNG_NAMESPACES,
     createRoundRng,
     type RarityType,
 } from "../../shared";
 import { nextRuneId } from "./nextRuneId";
 import type { RuneInstanceData } from "./createPouch";
 
-// RNG namespace. Must differ from enemy selection (0), boss debuff (50000),
-// shop scrolls (100000), shop sigils (200000), and voltage proc (300000).
-const RUNE_PACK_RNG_OFFSET = 400000;
+// RNG namespace — see `shared/rngNamespace.ts` for the full map. Rune Pack
+// rolls share their numeric base with the SIGIL_LIFECYCLE_HOOKS band; the
+// `packIndex * 7919` jitter steps clear of the lifecycle slots that own
+// it (Thief at slot 0). The shared file documents the latent collision
+// and the constraints on adding new lifecycle sigils here.
+const RUNE_PACK_RNG_OFFSET = RNG_NAMESPACES.runePack;
 
 /**
  * Roll the 4 rune choices the picker shows after a player buys a Rune

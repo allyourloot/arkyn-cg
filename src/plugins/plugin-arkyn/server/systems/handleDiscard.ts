@@ -1,7 +1,8 @@
-import { expandMimicSigilsDetailed, SIGIL_DISCARD_HOOKS, type ArkynState } from "../../shared";
+import { SIGIL_DISCARD_HOOKS, snapshotRune, type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
 import { refillHand } from "../utils/refillHand";
 import { createRuneInstance } from "../utils/drawRunes";
+import { getActiveSigilsExpanded } from "../utils/sigils";
 import { removeRunesFromHand, validateRuneSelection } from "./utils/runeSelection";
 import { getRunStats } from "../resources/runStats";
 
@@ -24,10 +25,7 @@ export function handleDiscard(
     // discard-hook sigils (Banish) can inspect element/rarity/level. Indices
     // are used in their original hand-order so a future hook targeting a
     // specific rune position behaves predictably.
-    const discardedRunes = indices.map(i => {
-        const r = player.hand[i];
-        return { id: r.id, element: r.element, rarity: r.rarity, level: r.level };
-    });
+    const discardedRunes = indices.map(i => snapshotRune(player.hand[i]));
 
     // Increment BEFORE dispatching hooks so the first discard of the round
     // sees `discardNumber: 1`.
@@ -38,7 +36,7 @@ export function handleDiscard(
     // Banish is MIMIC_INCOMPATIBLE, so mimic copies never appear for it
     // today; the expansion call is for future-proofing any additional
     // discard-hook sigil that IS Mimic-compatible.
-    for (const entry of expandMimicSigilsDetailed(Array.from(player.sigils))) {
+    for (const entry of getActiveSigilsExpanded(player)) {
         const hook = SIGIL_DISCARD_HOOKS[entry.sigilId];
         if (!hook?.onDiscard) continue;
         const effects = hook.onDiscard({

@@ -1,6 +1,26 @@
 import { ARCANE_CLUSTER_ELEMENTS, ELEMENT_TYPES, type ElementType } from "./arkynConstants";
 import { createRoundRng } from "./seededRandom";
 import { SIGIL_DEFINITIONS } from "./sigils";
+import {
+    CAST_RNG_MULT_RNG_OFFSET_BASE,
+    LIFECYCLE_RNG_OFFSET_BASE,
+    PROC_RNG_OFFSET_BASE,
+    SIGIL_RNG_OFFSET_SPACING,
+    castRngMultRngSlot,
+    lifecycleRngSlot,
+    procRngSlot,
+} from "./rngNamespace";
+
+// Re-export so existing `from "./sigilEffects"` imports keep working.
+export {
+    PROC_RNG_OFFSET_BASE,
+    LIFECYCLE_RNG_OFFSET_BASE,
+    CAST_RNG_MULT_RNG_OFFSET_BASE,
+    SIGIL_RNG_OFFSET_SPACING,
+    procRngSlot,
+    lifecycleRngSlot,
+    castRngMultRngSlot,
+};
 
 /**
  * Sigil effect registries — data-driven tables that drive sigil behavior.
@@ -20,60 +40,13 @@ import { SIGIL_DEFINITIONS } from "./sigils";
 // RNG Namespace Layout
 // ============================================================================
 //
-// Deterministic RNG across server + client requires each sigil-driven roll to
-// live in its OWN namespace so rolls don't correlate. Offsets are picked in
-// 10k-wide bands per category; sigils inside a category reserve a "slot"
-// (0, 1, 2, …) and the actual offset is `base + slot * spacing`.
-//
-// Namespace map (global — flagged to avoid cross-file collisions):
-//   [      0] Enemy selection                   (enemyDefinitions)
-//   [  50000] Boss debuff roll                  (bossDebuffs)
-//   [ 100000] Shop scroll generation            (shopGeneration)
-//   [ 200000] Shop sigil generation             (shopGeneration)
-//   [ 300000–399999] SIGIL_PROCS                 (this file)
-//   [ 400000–499999] SIGIL_LIFECYCLE_HOOKS       (this file)
-//       slot 0 = Thief, slot 1 = Binoculars
-//   [ 400000 + round + packIndex*7919] Rune Pack (rollPackRunes) ⚠ shares the
-//       lifecycle base; the two streams don't interact today because Thief's
-//       read is  `400000 + round`  (slot 0 only) while Rune Pack's read is
-//       `400000 + round + packIndex*7919`  — the packIndex jitter steps clear
-//       of the lifecycle band as long as packIndex >= 1 for any OTHER
-//       lifecycle sigil in slot 1+. Adding a new lifecycle sigil here MUST
-//       pick a slot > 0 (so its stream is 410000+round, 420000+round, …)
-//       or the first pack of a given round will correlate with its roll.
-//   [ 500000–599999] SIGIL_CAST_RNG_MULT         (this file)
-//       slot 0 = Boom Bomb
-//
-// New proc sigils: pick the next unused slot (append-only to preserve replay
-// determinism for saved runs). Validated at module load — any duplicate or
-// out-of-band offset throws.
+// All RNG band-base constants and slot helpers live in `./rngNamespace.ts` —
+// see that file for the full namespace map and the rationale behind the
+// 10k-wide-band layout. The imports/re-exports above keep this file's API
+// shape stable for existing call sites.
 
-export const PROC_RNG_OFFSET_BASE = 300000;
-export const LIFECYCLE_RNG_OFFSET_BASE = 400000;
-export const CAST_RNG_MULT_RNG_OFFSET_BASE = 500000;
-export const SIGIL_RNG_OFFSET_SPACING = 10000;
 /** Width of a category's band — procs live in [300000, 400000). */
 const SIGIL_RNG_BAND_WIDTH = 100000;
-
-/**
- * Compute the RNG offset for a proc sigil's slot. Slot is append-only —
- * reusing slot 0 (Voltage), 1 (Fortune), 2 (Hourglass) preserves replay
- * determinism. Use `procRngSlot(n)` in a proc definition's `rngOffset` field
- * instead of writing the raw number.
- */
-export function procRngSlot(slot: number): number {
-    return PROC_RNG_OFFSET_BASE + slot * SIGIL_RNG_OFFSET_SPACING;
-}
-
-/** Same as `procRngSlot` but for lifecycle hooks. Slot 0 = Thief. */
-export function lifecycleRngSlot(slot: number): number {
-    return LIFECYCLE_RNG_OFFSET_BASE + slot * SIGIL_RNG_OFFSET_SPACING;
-}
-
-/** Same as `procRngSlot` but for cast-rng-mult sigils. Slot 0 = Boom Bomb. */
-export function castRngMultRngSlot(slot: number): number {
-    return CAST_RNG_MULT_RNG_OFFSET_BASE + slot * SIGIL_RNG_OFFSET_SPACING;
-}
 
 // ============================================================================
 // Mimic — "Copies the effect of the sigil to the right"

@@ -1,6 +1,5 @@
-import { useRef, memo, type CSSProperties, type RefObject } from "react";
-import { gsap } from "gsap";
-import { useGSAP } from "@gsap/react";
+import { useRef, memo, type CSSProperties } from "react";
+import { useCounterPop } from "./hooks/useCounterPop";
 import {
     useHand,
     useSelectedIndices,
@@ -20,29 +19,14 @@ import {
     SPELL_TIER_BASE_DAMAGE,
     SPELL_TIER_MULT,
 } from "../../shared";
-import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
+import { ELEMENT_COLORS, TIER_LABELS, createPanelStyleVars, createStatBentoStyleVars, INNER_FRAME_BGS } from "./styles";
 import { useEnemyIsBoss } from "../arkynStore";
 import RuneImage from "./RuneImage";
 import BouncyText from "./BouncyText";
+import PanelFrame from "./PanelFrame";
 import RoundInfo from "./RoundInfo";
 import StatBentoRow from "./StatBentoRow";
 import ScrollUpgradeDisplay from "./ScrollUpgradeDisplay";
-/** Plays a scale pop (1.45 -> 1) when `value` increments during a cast. */
-function useCounterPop(
-    ref: RefObject<HTMLElement | null>,
-    value: number,
-    isCastAnimating: boolean,
-) {
-    useGSAP(() => {
-        if (!ref.current) return;
-        if (!isCastAnimating || value <= 0) return;
-        gsap.fromTo(
-            ref.current,
-            { scale: 1.45 },
-            { scale: 1, duration: 0.32, ease: "back.out(2.6)", overwrite: "auto" },
-        );
-    }, { dependencies: [value, isCastAnimating], scope: ref });
-}
 
 import bossFrameUrl from "/assets/ui/boss-frame.png?url";
 import styles from "./SpellPreview.module.css";
@@ -53,13 +37,10 @@ import styles from "./SpellPreview.module.css";
 // reads as a distinct track at a glance.
 const basePanelStyleVars = {
     ...createPanelStyleVars("blue"),
+    ...createStatBentoStyleVars(),
     ["--base-bg" as string]: INNER_FRAME_BGS.blue,
     ["--mult-bg" as string]: INNER_FRAME_BGS.red,
     ["--total-bg" as string]: INNER_FRAME_BGS.default,
-    // Bento bottom section — mirrors ShopPanel's Bank/Casts/Discards chips.
-    ["--bank-bg" as string]: INNER_FRAME_BGS.default,
-    ["--hands-bg" as string]: INNER_FRAME_BGS.green,
-    ["--discards-bg" as string]: INNER_FRAME_BGS.orange,
 } as CSSProperties;
 
 const bossPanelStyleVars = {
@@ -183,7 +164,7 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
 
     if (!spell) {
         return (
-            <div ref={ref} className={styles.panel} style={panelStyleVars}>
+            <PanelFrame ref={ref} className={styles.panel} styleVars={panelStyleVars}>
                 <RoundInfo />
                 <div className={styles.section}>
                     {upgradeDisplay ? (
@@ -201,14 +182,14 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
                 </div>
                 <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} multRef={multRef} totalRef={totalRef} />
                 <StatBentoRow castsValue={castsRemaining} discardsValue={discardsRemaining} />
-            </div>
+            </PanelFrame>
         );
     }
 
     const elementColor = ELEMENT_COLORS[spell.element] ?? "#aaa";
 
     return (
-        <div ref={ref} className={styles.panel} style={panelStyleVars}>
+        <PanelFrame ref={ref} className={styles.panel} styleVars={panelStyleVars}>
             <RoundInfo />
 
             {/* Header section: rune recipe + spell name + tier + description.
@@ -360,7 +341,7 @@ export default function SpellPreview({ ref }: SpellPreviewProps = {}) {
             <DamageChips base={displayBase} mult={displayMult} total={displayTotal} baseRef={damageRef} multRef={multRef} totalRef={totalRef} />
 
             <StatBentoRow castsValue={castsRemaining} discardsValue={discardsRemaining} />
-        </div>
+        </PanelFrame>
     );
 }
 

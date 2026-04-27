@@ -1,13 +1,12 @@
 import {
     CODEX_PACK_CHOICES,
     ELEMENT_TYPES,
+    RNG_NAMESPACES,
     createRoundRng,
 } from "../../shared";
 
-// RNG namespace. Must differ from enemy selection (0), boss debuff (50000),
-// shop sigils (200000), voltage proc (300000), Rune Pack rolls (400000),
-// and shop pack-slot generation (500000).
-const CODEX_PACK_RNG_OFFSET = 600000;
+// RNG namespace — see `shared/rngNamespace.ts` for the full map.
+const CODEX_PACK_RNG_OFFSET = RNG_NAMESPACES.codexPack;
 
 /**
  * Roll the 4 scroll-element choices the picker shows after a player buys

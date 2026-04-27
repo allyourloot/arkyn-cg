@@ -3,7 +3,6 @@ import {
     CASTS_PER_ROUND,
     DISCARDS_PER_ROUND,
     MAX_CONSUMABLES,
-    expandMimicSigilsDetailed,
     getPlayerStatDeltas,
     SIGIL_LIFECYCLE_HOOKS,
     type ArkynPlayerState,
@@ -12,6 +11,7 @@ import { clearArraySchema } from "./clearArraySchema";
 import { createPouch } from "./createPouch";
 import { setPouch } from "../resources/playerPouch";
 import { refillHand } from "./refillHand";
+import { getActiveSigils, getActiveSigilsExpanded } from "./sigils";
 
 /**
  * Reset a player to their fresh-round state: clear hand and played runes,
@@ -48,7 +48,7 @@ export function initPlayerForRound(
     player.lastDamage = 0;
     // Apply stat deltas from all owned sigils (Caster +1 cast, future
     // +1 discard / +1 hand size / etc.). Additive across sigils.
-    const statDeltas = getPlayerStatDeltas(Array.from(player.sigils));
+    const statDeltas = getPlayerStatDeltas(getActiveSigils(player));
     player.handSize = HAND_SIZE + statDeltas.handSize;
     player.castsRemaining = CASTS_PER_ROUND + statDeltas.castsPerRound;
     player.discardsRemaining = DISCARDS_PER_ROUND + statDeltas.discardsPerRound;
@@ -83,7 +83,7 @@ export function initPlayerForRound(
     // Mimic sigil whose right neighbor is Mimic-compatible. The entry's
     // `copyIndex` feeds into the hook ctx so seeded-RNG hooks (Thief)
     // roll a different result for the copy than for the original.
-    for (const entry of expandMimicSigilsDetailed(Array.from(player.sigils))) {
+    for (const entry of getActiveSigilsExpanded(player)) {
         const hooks = SIGIL_LIFECYCLE_HOOKS[entry.sigilId];
         if (!hooks?.onRoundStart) continue;
         const effects = hooks.onRoundStart(round, runSeed, {

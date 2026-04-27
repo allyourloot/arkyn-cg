@@ -1,27 +1,20 @@
-/* Mirrors SpellPreview.module.css .panel exactly so the shop panel reads
-   as a sibling of the preview panel — same width, same vertical inset,
-   same 9-slice frame chrome. Keep these in sync with SpellPreview.module.css
-   if the combat panel ever moves. */
+/* Layout for the shop panel. The 9-slice frame chrome (border-image,
+   transparent background, image-rendering) lives in PanelFrame.module.css
+   — this class only owns sizing, flow, and per-panel positioning so it
+   reads as a sibling of SpellPreview.module.css's .panel. */
 .panel {
     pointer-events: none;
-    box-sizing: border-box;
     width: clamp(200px, 22vw, 380px);
     height: 95vh;
     align-self: center;
     margin-left: clamp(12px, 2vw, 32px);
     flex-shrink: 0;
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 24px;
-    border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
     padding: 6px 4px;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: clamp(10px, 1.6vh, 20px);
     overflow: hidden;
-    image-rendering: pixelated;
 }
 
 /* Orange inner-frame chip at the top of the panel — mirrors RoundInfo's
