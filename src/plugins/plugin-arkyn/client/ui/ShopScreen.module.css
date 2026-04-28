@@ -545,7 +545,11 @@
 
     .panel {
         max-width: clamp(300px, 56vw, 460px);
-        height: 70vh;
+        /* Trimmed from 70vh now that the Items row claims less of the
+           panel's vertical space (sigilRow flex: 0.6 below). The shorter
+           panel reads better against the SigilBar / Next Round button
+           framing. Keep `.panelShadow` height in sync. */
+        height: 62vh;
         margin-top: auto;
         margin-bottom: auto;
         border-width: 10px;
@@ -556,7 +560,7 @@
 
     .panelShadow {
         max-width: clamp(300px, 56vw, 460px);
-        height: 70vh;
+        height: 62vh;
         top: 5px;
         border-width: 10px;
         border-image: var(--panel-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
@@ -580,6 +584,14 @@
 
     .sigilRow {
         gap: clamp(4px, 0.8vw, 10px);
+        /* Shrink the Items row's share of the panel's flex space on
+           mobile (was 50/50 with the Packs section via the desktop
+           `flex: 1`). The Reroll button stretches to match the row's
+           height via `align-items: stretch`, so this single flex
+           change reduces BOTH the button and the sigils inner frame in
+           lockstep. Packs section keeps `flex: 1` and absorbs the
+           reclaimed space. */
+        flex: 0.6;
     }
 
     .rerollButton {
@@ -588,7 +600,13 @@
         border-image: var(--reroll-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
         padding: clamp(2px, 0.4vh, 6px) clamp(2px, 0.4vw, 6px);
         gap: clamp(2px, 0.4vh, 6px);
-        font-size: var(--font-size-3xs);
+        /* Bumped from var(--font-size-3xs) — REROLL is the primary
+           action and the small label was hard to read on mobile. Clamp
+           scales with viewport so the narrower 78px button at small
+           mobile doesn't overflow with the bigger text. Button height
+           stretches to match the row via align-items: stretch, so this
+           change doesn't grow the button. */
+        font-size: clamp(var(--font-size-2xs), 2.4vw, var(--font-size-xs));
         letter-spacing: 0.5px;
     }
 
@@ -601,12 +619,18 @@
     }
 
     .rerollCostIcon {
-        width: clamp(10px, 1.2vw, 16px);
-        height: clamp(10px, 1.2vw, 16px);
+        /* Bumped to match the larger REROLL label above — the prior
+           10/1.2vw/16 felt undersized next to the bigger label. Clamp
+           tracks the viewport so the cost chip stays inside the 78px
+           narrow-mobile button. */
+        width: clamp(14px, 2vw, 22px);
+        height: clamp(14px, 2vw, 22px);
     }
 
     .rerollCostValue {
-        font-size: var(--font-size-3xs);
+        /* Same bump rationale as the icon — keeps the gold price
+           visually paired with its icon at a readable size on mobile. */
+        font-size: clamp(var(--font-size-2xs), 2vw, var(--font-size-xs));
     }
 
     .itemGrid {

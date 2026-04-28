@@ -5,41 +5,16 @@ import {
     useDisplayedEnemyHp,
     useEnemyMaxHp,
     useEnemyDamageHit,
-    useEnemyName,
-    useEnemyResistances,
-    useEnemyWeaknesses,
-    useEnemyIsBoss,
-    useEnemyDebuff,
-    useSigils,
-    useDisabledResistance,
     BAR_SHAKE_FRAME_S,
 } from "../arkynStore";
-import { getDebuffById, getIgnoredResistanceElements } from "../../shared";
-import bossFrameUrl from "/assets/ui/boss-frame.png?url";
-import { ELEMENT_COLORS, createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
-import { getRuneImageUrl } from "./runeAssets";
-import Tooltip from "./Tooltip";
-import PanelFrame from "./PanelFrame";
+import { ELEMENT_COLORS, createPanelStyleVars } from "./styles";
 import { playCritical } from "../sfx";
 import criticalUrl from "/assets/ui/critical.png?url";
 import executeUrl from "/assets/ui/execute.png?url";
 import styles from "./EnemyHealthBar.module.css";
 
-// `--panel-bg` (frame.png) drives the outer card chrome AND the bar's
-// inner chrome. `--resist-bg` / `--weak-bg` paint a subtle red / green
-// inner-frame UNDER the affinity chip content (rendered via a translucent
-// ::before pseudo at low opacity) so each chip reads as a soft accent
-// rather than a saturated red/green block. The label text colour still
-// carries the primary signal.
-const baseStyleVars = {
-    ...createPanelStyleVars(),
-    "--resist-bg": INNER_FRAME_BGS.red,
-    "--weak-bg": INNER_FRAME_BGS.green,
-} as CSSProperties;
-const bossStyleVars = {
-    ...baseStyleVars,
-    "--panel-bg": `url(${bossFrameUrl})`,
-} as CSSProperties;
+// `--panel-bg` (frame.png) drives the bar's 9-slice chrome.
+const baseStyleVars = createPanelStyleVars() as CSSProperties;
 
 interface ActiveHit {
     amount: number;
@@ -59,6 +34,11 @@ type EnemyHealthBarProps = {
     ref?: React.Ref<HTMLDivElement>;
 };
 
+// Slim HP bar (fill + stripes + drain animation + shake + floating
+// damage number) mounted in the center column above the play area, so
+// the cast → damage payoff feels visually contiguous with the rune
+// dissolves and total damage count-up. Enemy identity (name, boss tag,
+// resists/weaknesses) lives in the floating right-side EnemyInfoPanel.
 export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps = {}) {
     // The bar reads the "displayed" HP, which lags behind the server's
     // authoritative `enemyHp` during a cast animation so the damage
@@ -66,23 +46,9 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
     const hp = useDisplayedEnemyHp();
     const maxHp = useEnemyMaxHp();
     const enemyDamageHit = useEnemyDamageHit();
-    const name = useEnemyName();
-    const resistances = useEnemyResistances();
-    const weaknesses = useEnemyWeaknesses();
-    const isBoss = useEnemyIsBoss();
-    const debuffId = useEnemyDebuff();
-    const debuff = debuffId ? getDebuffById(debuffId) : undefined;
-    // Resistances nullified by owned resist-ignore sigils (Impale-style) or
-    // dynamically picked per-round by Binoculars. Each matching chip renders
-    // with a red X overlay + dimmed icon to show the player the enemy's
-    // resistance is being bypassed.
-    const sigils = useSigils();
-    const disabledResistance = useDisabledResistance();
-    const ignoredResistances = getIgnoredResistanceElements(sigils, disabledResistance);
 
     // wrapperRef scopes the GSAP context for cleanup; the actual shake
-    // target is the inner barShakeRef so the name above and the affinity
-    // sections below stay rock-solid when the enemy gets hit.
+    // target is the inner barShakeRef.
     const wrapperRef = useRef<HTMLDivElement>(null);
 
     // Merge our internal wrapperRef with the optional ref forwarded from
@@ -143,8 +109,6 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
         const float = damageFloatRef.current;
 
         // Bar shake — stepped left/right with diminishing amplitude.
-        // Targets the inner .barShake element so only the bar reacts;
-        // the name and affinity frames stay still.
         if (shake) {
             gsap.set(shake, { x: 0 });
             gsap.to(shake, {
@@ -174,11 +138,11 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
             const tl = gsap.timeline({
                 onComplete: () => setActiveHit(null),
             });
-            // The card now lives on the right edge of the viewport, so the
-            // float drifts up-and-LEFT (toward the playfield) instead of
-            // up-and-right — same shape, mirrored x.
+            // Float drifts up-and-RIGHT (away from the play area below)
+            // now that the bar lives in the center column. Anchored at the
+            // bar's right edge via .damageFloat's `right: -10%`.
             tl.to(float, {
-                x: -10,
+                x: 10,
                 y: -6,
                 scale: 1.25,
                 opacity: 1,
@@ -186,20 +150,20 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
                 ease: "back.out(2)",
             })
                 .to(float, {
-                    x: -18,
+                    x: 18,
                     y: -10,
                     scale: 1,
                     duration: 0.117,
                     ease: "power2.out",
                 })
                 .to(float, {
-                    x: -50,
+                    x: 50,
                     y: -28,
                     duration: 0.45,
                     ease: "power1.out",
                 })
                 .to(float, {
-                    x: -64,
+                    x: 64,
                     y: -36,
                     scale: 0.92,
                     opacity: 0,
@@ -227,36 +191,7 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
     const damageFloatStyle = { "--stroke-color": damageStrokeColor } as CSSProperties;
 
     return (
-        <div className={styles.cardPositioner}>
-            <PanelFrame
-                ref={setWrapperRef}
-                styleVars={isBoss ? bossStyleVars : baseStyleVars}
-                className={styles.card}
-            >
-            <div className={styles.heading}>Enemy</div>
-
-            <div className={styles.nameContainer}>
-                {isBoss && (
-                    <div className={styles.bossRow}>
-                        <span
-                            className={styles.bossTag}
-                            style={{ "--boss-bg": INNER_FRAME_BGS.gold } as CSSProperties}
-                        >
-                            BOSS
-                        </span>
-                        {debuff && (
-                            <span
-                                className={styles.debuffChip}
-                                style={{ "--debuff-bg": INNER_FRAME_BGS.red } as CSSProperties}
-                            >
-                                {debuff.description}
-                            </span>
-                        )}
-                    </div>
-                )}
-                {name && <span className={styles.name}>{name}</span>}
-            </div>
-
+        <div ref={setWrapperRef} className={styles.barWrapper} style={baseStyleVars}>
             <div ref={barShakeRef} className={styles.barShake}>
                 <div className={styles.barAnchor}>
                     <div className={styles.barOuter}>
@@ -286,86 +221,6 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
                         </span>
                     )}
                 </div>
-            </div>
-
-            {(resistances.length > 0 || weaknesses.length > 0) && (
-                <div className={styles.affinityRow}>
-                    {resistances.length > 0 && (
-                        <div className={`${styles.section} ${styles.sectionResist}`}>
-                            <AffinitySection
-                                label="Resists"
-                                labelClass={styles.affinityLabelResist}
-                                elements={resistances}
-                                multiplier="0.5x"
-                                multiplierColor="#ef4444"
-                                ignored={ignoredResistances}
-                            />
-                        </div>
-                    )}
-                    {weaknesses.length > 0 && (
-                        <div className={`${styles.section} ${styles.sectionWeak}`}>
-                            <AffinitySection
-                                label="Vulnerable"
-                                labelClass={styles.affinityLabelWeak}
-                                elements={weaknesses}
-                                multiplier="2x"
-                                multiplierColor="#4ade80"
-                            />
-                        </div>
-                    )}
-                </div>
-            )}
-            </PanelFrame>
-        </div>
-    );
-}
-
-// Single inner-frame chip showing a label ("Resists" / "Weak To") above
-// a row of element rune icons. Lives inside EnemyHealthBar so the visual
-// chrome stays alongside the bar it describes.
-//
-// `ignored` flags elements whose affinity is nullified by an owned sigil
-// (e.g. Impale → Steel resistance). Flagged chips render with a red X
-// overlay + dimmed icon and swap to a "1x (ignored)" tooltip.
-function AffinitySection({ label, labelClass, elements, multiplier, multiplierColor, ignored }: { label: string; labelClass?: string; elements: readonly string[]; multiplier: string; multiplierColor: string; ignored?: ReadonlySet<string> }) {
-    return (
-        <div className={styles.affinitySection}>
-            <span className={`${styles.affinityLabel} ${labelClass ?? ""}`}>{label}</span>
-            <div className={styles.affinityIcons}>
-                {elements.map(element => {
-                    const url = getRuneImageUrl(element);
-                    if (!url) return null;
-                    const displayName = element.charAt(0).toUpperCase() + element.slice(1);
-                    const isIgnored = ignored?.has(element) ?? false;
-                    return (
-                        <span
-                            key={element}
-                            className={`${styles.affinityIconWrap} ${isIgnored ? styles.affinityIconIgnored : ""}`}
-                        >
-                            <img
-                                src={url}
-                                alt={element}
-                                className={styles.affinityIcon}
-                            />
-                            {isIgnored && <span className={styles.ignoredX} aria-hidden="true" />}
-                            <Tooltip placement="left" variant="framed">
-                                {isIgnored ? (
-                                    <>
-                                        <span className={styles.tooltipMult} style={{ color: "#e8d4b8" }}>1x</span>
-                                        {` damage from ${displayName} (ignored)`}
-                                    </>
-                                ) : (
-                                    <>
-                                        <span className={styles.tooltipMult} style={{ color: multiplierColor }}>
-                                            {multiplier}
-                                        </span>
-                                        {` damage from ${displayName}`}
-                                    </>
-                                )}
-                            </Tooltip>
-                        </span>
-                    );
-                })}
             </div>
         </div>
     );

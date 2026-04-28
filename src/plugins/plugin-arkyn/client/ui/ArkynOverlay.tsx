@@ -17,6 +17,7 @@ import {
 import type { ScrollPurchaseEvent, SigilPurchaseEvent, PackRunePickEvent, PackPurchaseEvent, RuneClientData } from "../arkynStore";
 import { ENEMY_DAMAGE_HIT_MS } from "../arkynAnimations";
 import EnemyHealthBar from "./EnemyHealthBar";
+import EnemyInfoPanel from "./EnemyInfoPanel";
 import SpellPreview from "./SpellPreview";
 import PlayArea from "./PlayArea";
 import HandDisplay from "./HandDisplay";
@@ -91,6 +92,7 @@ export default function ArkynOverlay() {
     // Refs for the animated sections.
     const spellPreviewRef = useRef<HTMLDivElement>(null);
     const enemyHealthBarRef = useRef<HTMLDivElement>(null);
+    const enemyInfoPanelRef = useRef<HTMLDivElement>(null);
     const handStackRef = useRef<HTMLDivElement>(null);
     const shopPanelRef = useRef<HTMLDivElement>(null);
     const shopScreenRef = useRef<HTMLDivElement>(null);
@@ -686,6 +688,12 @@ export default function ArkynOverlay() {
                     duration: SCREEN_EXIT_DURATION_S, ease: "power2.in",
                 }, 0);
             }
+            if (enemyInfoPanelRef.current) {
+                tl.to(enemyInfoPanelRef.current, {
+                    y: -80, opacity: 0,
+                    duration: SCREEN_EXIT_DURATION_S, ease: "power2.in",
+                }, 0);
+            }
             if (handStackRef.current) {
                 tl.to(handStackRef.current, {
                     y: 160, opacity: 0,
@@ -721,6 +729,12 @@ export default function ArkynOverlay() {
             }
             if (enemyHealthBarRef.current) {
                 gsap.fromTo(enemyHealthBarRef.current,
+                    { y: -80, opacity: 0 },
+                    { y: 0, opacity: 1, duration: SCREEN_ENTER_DURATION_S, ease: "power2.out", overwrite: "auto" },
+                );
+            }
+            if (enemyInfoPanelRef.current) {
+                gsap.fromTo(enemyInfoPanelRef.current,
                     { y: -80, opacity: 0 },
                     { y: 0, opacity: 1, duration: SCREEN_ENTER_DURATION_S, ease: "power2.out", overwrite: "auto" },
                 );
@@ -899,6 +913,7 @@ export default function ArkynOverlay() {
             <BackgroundShader />
             <SpellPreview ref={spellPreviewRef} />
             <div className={styles.centerColumn}>
+                <EnemyHealthBar ref={enemyHealthBarRef} />
                 <div className={styles.centerStage}>
                     <PlayArea />
                 </div>
@@ -908,7 +923,7 @@ export default function ArkynOverlay() {
                 </div>
             </div>
             <div className={styles.rightSpacer} aria-hidden="true" />
-            <EnemyHealthBar ref={enemyHealthBarRef} />
+            <EnemyInfoPanel ref={enemyInfoPanelRef} />
             <PouchCounter />
             <SigilBar />
             <InfoButton />

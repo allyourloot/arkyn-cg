@@ -1,204 +1,51 @@
-/* Outer positioning wrapper for the floating "Enemy" card. Vertically
-   centered against the viewport via top: 50% + translateY(-50%). The
-   inner .card is the GSAP target for the screen-transition slide
-   (y/opacity) — keeping the centering transform on this OUTER element
-   means GSAP's `y` tween on .card composes cleanly instead of fighting
-   a baseline translateY(-50%). Right edge inset matches SpellPreview's
-   left margin so the two panels read as a symmetric pair. */
-.cardPositioner {
-    position: absolute;
-    /* Card visual center matches the PlayArea, which sits a small amount
-       above viewport center: half the hand height (PlayArea's natural
-       upward bias as a flex sibling of .handStack), minus half the
-       .centerColumn padding-top (which pushes PlayArea back down toward
-       the equidistant position between SigilBar and hand). The vh-relative
-       clamp here is the residual upward offset after that subtraction. */
-    top: calc(50% - clamp(20px, 5vh, 60px));
-    right: clamp(28px, 4vw, 72px);
-    transform: translateY(-50%);
-    width: clamp(240px, 25vw, 400px);
-    pointer-events: none;
-    z-index: 10;
-}
-
-/* Layout for the card content. Composes on top of <PanelFrame>'s 9-slice
-   chrome (.frame). No positioning of its own — the outer .cardPositioner
-   handles placement. */
-.card {
+/* Center-column wrapper for the slim HP bar. The bar sits between the
+   SigilBar (top-pinned, position: absolute) and the play area (centerStage
+   flex: 1) so the cast → damage payoff (rune dissolves, total damage
+   count-up, HP impact) all read at one glance. The .centerColumn already
+   reserves padding-top to clear the SigilBar, so this wrapper is a plain
+   flow child. */
+.barWrapper {
     width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: clamp(6px, 1vh, 12px);
-    padding: 4px 4px;
-}
+    /* Wider than the old card-constrained bar (240–400px) since the bar
+       no longer shares a container with the name/affinity row. Stays
+       below playArea's natural width on desktop and shrinks gracefully
+       on narrower viewports. */
+    max-width: clamp(360px, 40vw, 560px);
 
-/* Small uppercase header above the first inner-frame chip — same
-   typography as SpellPreview's `.heading` so the two panels read as
-   one system. No chrome of its own; just text. */
-.heading {
-    box-sizing: border-box;
-    width: 100%;
-    text-align: center;
-    font-size: var(--font-size-xs);
-    font-weight: normal;
-    color: #c4a882;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    line-height: 1;
-}
+    /* Visual nudge — shifts the bar down within its flex slot WITHOUT
+       changing the slot's net outer height. Achieved by adding the
+       shift to margin-top AND subtracting the same amount from
+       margin-bottom, so centerStage's flex allocation (and therefore
+       PlayArea's centered position inside it) is identical to a
+       zero-shift layout. Tune by changing --bar-y-shift in one place. */
+    --bar-y-shift: clamp(12px, 2.4vh, 28px);
 
-/* Two-column row holding the Resists chip + Vulnerable chip side-by-side
-   beneath the HP bar. When only one of resists/weaknesses exists the
-   single chip flexes to fill the row. */
-.affinityRow {
-    width: 100%;
-    display: flex;
-    align-items: stretch;
-    justify-content: center;
-    gap: clamp(4px, 0.6vw, 8px);
-}
-
-/* Inner-frame chip used by both affinity sections. Borrows
-   SpellPreview.module.css's `.section` shape but with thinner border
-   (12px instead of 24px) since this card is more compact. Both Resists
-   and Vulnerable chips share the same neutral inner-frame chrome — only
-   the label colour signals which is which. */
-.section {
-    box-sizing: border-box;
-    flex: 1 1 0;
-    min-width: 0;
-    background: transparent;
-    /* Transparent border holds the chrome's footprint so layout stays
-       consistent between variants. Visible chrome is painted by the
-       variant-specific ::before underlay below — there is no default
-       neutral inner-frame chrome on this card (the colored variants
-       fully replace it; we never want both painted at once). */
-    border-style: solid;
-    border-color: transparent;
-    border-width: 12px;
-    padding: 4px 4px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: clamp(2px, 0.4vw, 4px);
-    image-rendering: pixelated;
-    /* Anchor for the colored chip variants' ::before underlay. */
-    position: relative;
-}
-
-/* Resists / Vulnerable variants — paint the colored inner-frame
-   (`--resist-bg` / `--weak-bg`) UNDER the chip content via a low-opacity
-   ::before pseudo so the red/green reads as a soft accent rather than a
-   saturated chip. The pseudo's `box-sizing: border-box` makes `inset:
-   -12px` predictable: pseudo's border-box extends 12px outside its
-   containing block (the section's padding-box), landing exactly at the
-   section's outer edge. The 12px border-width then paints the colored
-   chrome where the section's transparent border lives — no overflow
-   into the affinityRow gap, no overlap with the adjacent chip. */
-.sectionResist::before,
-.sectionWeak::before {
-    content: '';
-    position: absolute;
-    box-sizing: border-box;
-    inset: -12px;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 12px;
-    opacity: 0.2;
-    pointer-events: none;
-    image-rendering: pixelated;
-    z-index: 0;
-}
-
-.sectionResist::before {
-    border-image: var(--resist-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-}
-
-.sectionWeak::before {
-    border-image: var(--weak-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-}
-
-/* Lift flow content above the colored ::before underlay. The section's
-   only flow child is the AffinitySection wrapper. */
-.sectionResist > *,
-.sectionWeak > * {
-    position: relative;
-    z-index: 1;
-}
-
-/* Wrapper around the name + boss tag. position: relative anchors the
-   absolutely-placed BOSS label above the name without shifting content. */
-.nameContainer {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* Enemy name above the bar. */
-.name {
-    font-size: clamp(var(--font-size-md), 2.6vw, var(--font-size-xl));
-    font-weight: normal;
-    color: #e8d4b8;
-    text-align: center;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
-    line-height: 1;
-    white-space: nowrap;
-}
-
-/* Row that holds the BOSS label + debuff chip, absolutely positioned
-   above the enemy name so it doesn't shift content below. */
-.bossRow {
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: clamp(4px, 0.6vw, 8px);
-    margin-bottom: 4px;
-    white-space: nowrap;
-}
-
-.bossTag {
-    box-sizing: border-box;
-    font-size: var(--font-size-2xs);
-    color: #ffffff;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    line-height: 1;
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 10px;
-    border-image: var(--boss-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
-    padding: 2px 8px;
-    image-rendering: pixelated;
-}
-
-.debuffChip {
-    box-sizing: border-box;
-    font-size: var(--font-size-2xs);
-    color: #ffffff;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    line-height: 1;
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 10px;
-    border-image: var(--debuff-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
-    padding: 2px 8px;
-    image-rendering: pixelated;
+    /* Clear the top-pinned SigilBar above. The math: SigilBar's top edge
+       (clamp(20px, 6vh, 80px)) + its height (clamp(96px, 11.4vw, 128px))
+       + a 12px breathing gap, minus whatever the centerColumn's
+       padding-top (clamp(100px, 20vh, 200px)) already reserves, plus
+       the visual shift. max() provides a sensible floor for tiny
+       viewports where the calc would go negative. */
+    margin-top: max(
+        calc(16px + var(--bar-y-shift)),
+        calc(
+            clamp(20px, 6vh, 80px) +
+            clamp(96px, 11.4vw, 128px) +
+            12px -
+            clamp(100px, 20vh, 200px) +
+            var(--bar-y-shift)
+        )
+    );
+    margin-left: auto;
+    margin-right: auto;
+    /* Breathing room between the bar and the play area below, minus the
+       visual shift so the wrapper's outer-height stays constant. */
+    margin-bottom: calc(clamp(12px, 1.5vw, 24px) - var(--bar-y-shift));
+    flex-shrink: 0;
 }
 
 /* The shake target. GSAP applies a translateX shake here on every enemy
-   damage hit (see EnemyHealthBar.tsx useGSAP). The outer .section wrapper
-   above stays still so the name and the chip chrome don't jitter along
-   with the bar. The bar fills the full inner width of the name+bar chip. */
+   damage hit (see EnemyHealthBar.tsx useGSAP). */
 .barShake {
     width: 100%;
     display: flex;
@@ -207,179 +54,8 @@
     z-index: 2;
 }
 
-/* AffinitySection is now content-only — the colored chrome lives on the
-   outer .section/.sectionResist/.sectionWeak chip. This just owns the
-   label-above-icons layout. */
-.affinitySection {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: clamp(2px, 0.3vw, 4px);
-}
-
-.affinityLabel {
-    font-size: clamp(12px, 1.1vw, 14px);
-    font-weight: normal;
-    color: #b0a090;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    line-height: 1;
-}
-
-.affinityLabelResist {
-    color: #ef4444;
-}
-
-.affinityLabelWeak {
-    color: #4ade80;
-}
-
-.affinityIcons {
-    display: flex;
-    gap: clamp(3px, 0.5vw, 6px);
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.affinityIconWrap {
-    position: relative;
-    display: inline-flex;
-    pointer-events: auto;
-    cursor: default;
-}
-
-.affinityIcon {
-    width: clamp(30px, 3.4vw, 48px);
-    height: clamp(30px, 3.4vw, 48px);
-    image-rendering: pixelated;
-}
-
-/* Ignored resistance — a red X (built from two rotated bars) is layered
-   over the chip and the icon itself dims so the player reads it as
-   "this affinity is being bypassed". Driven by a sigil like Impale that
-   adds the element to SIGIL_RESIST_IGNORE. */
-.affinityIconIgnored .affinityIcon {
-    filter: grayscale(0.75) brightness(0.55);
-}
-
-.ignoredX {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 130%;
-    height: 130%;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    z-index: 2;
-}
-
-/* Two rotated bars drawn with pseudo-elements form a crisp pixel-art X.
-   A dark box-shadow outline on each bar keeps the red readable against
-   any rune icon colour underneath. */
-.ignoredX::before,
-.ignoredX::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 100%;
-    height: clamp(3px, 0.4vw, 5px);
-    background: #ef4444;
-    transform-origin: center;
-    border-radius: 1px;
-    box-shadow:
-        0 0 0 2px rgba(0, 0, 0, 0.9),
-        0 0 6px rgba(0, 0, 0, 0.6);
-}
-
-.ignoredX::before {
-    transform: translate(-50%, -50%) rotate(45deg);
-}
-
-.ignoredX::after {
-    transform: translate(-50%, -50%) rotate(-45deg);
-}
-
-.affinityIconWrap:hover :global(.arkyn-tooltip) {
-    opacity: 1;
-    font-size: var(--font-size-2xs);
-    color: #ffffff;
-    line-height: 1;
-    letter-spacing: 0.5px;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
-}
-
-.tooltipMult {
-    font-weight: normal;
-}
-
-/* The .barShake shake (translateX) and the floating damage number's pop /
-   drift / fade are both GSAP-driven from EnemyHealthBar.tsx. See useGSAP
-   in that file. */
-
-.damageFloat {
-    position: absolute;
-    /* Anchor to the bar's LEFT edge — the GSAP timeline drifts the float
-       up-and-left toward the playfield (see EnemyHealthBar.tsx useGSAP)
-       since the card now lives on the right side of the viewport. */
-    left: -10%;
-    top: 50%;
-    z-index: 20;
-
-    font-size: clamp(var(--font-size-xl), 5.5vw, var(--font-size-2xl));
-    font-weight: normal;
-    color: #ffffff;
-    line-height: 1;
-    white-space: nowrap;
-    text-shadow:
-        2px 2px 0 rgba(0, 0, 0, 0.85),
-        0 0 14px rgba(0, 0, 0, 0.55);
-    pointer-events: none;
-    will-change: transform, opacity;
-}
-
-/* Execute variant — floats the word "EXECUTED!" instead of a damage
-   number when Blackjack procs. Smaller font + uppercase letterspacing
-   so the longer text reads as a stamped label rather than overflowing
-   the bar; the underlying execute.png burst still pops as the visual
-   anchor. The natural damage number is preserved on the cast's Total
-   chip + run stats for record-keeping — only the on-enemy reveal swaps
-   to the EXECUTED label so the moment reads as a special kill rather
-   than just a big number. */
-.damageFloatExecute {
-    font-size: clamp(var(--font-size-lg), 4.6vw, var(--font-size-xl));
-    letter-spacing: 2px;
-    text-transform: uppercase;
-}
-
-/* Spiky burst graphic behind the damage number on critical (weakness) hits.
-   Centered on the text, scaled to overshoot the number so the burst reads
-   as an impact flash rather than a tight crop. */
-.criticalBg {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 250%;
-    height: auto;
-    pointer-events: none;
-    z-index: -1;
-    image-rendering: pixelated;
-}
-
-/* Execute variant — the burst hugs the EXECUTED label tighter than the
-   crit burst hugs a damage number. The label is wider than a typical
-   damage number, so a 250% scale ballooned the burst off-screen; 130%
-   keeps it framed snugly around the text. */
-.criticalBgExecute {
-    width: 130%;
-}
-
 /* Positioning anchor for the floating damage number that needs to escape
-   .barOuter (which clips overflow to keep the bar fill inside its border).
-   The anchor matches the bar's max-width so the damage number centers on
-   the bar regardless of screen size. */
+   .barOuter (which clips overflow to keep the bar fill inside its border). */
 .barAnchor {
     position: relative;
     width: 100%;
@@ -478,97 +154,98 @@
     z-index: 1;
 }
 
+/* The .barShake shake (translateX) and the floating damage number's pop /
+   drift / fade are both GSAP-driven from EnemyHealthBar.tsx. See useGSAP
+   in that file. */
+
+.damageFloat {
+    position: absolute;
+    /* Anchor to the bar's RIGHT edge — the GSAP timeline drifts the float
+       up-and-right (away from the play area below) since the bar now lives
+       in the center column above the play area. */
+    right: -10%;
+    top: 50%;
+    z-index: 20;
+
+    font-size: clamp(var(--font-size-xl), 5.5vw, var(--font-size-2xl));
+    font-weight: normal;
+    color: #ffffff;
+    line-height: 1;
+    white-space: nowrap;
+    text-shadow:
+        2px 2px 0 rgba(0, 0, 0, 0.85),
+        0 0 14px rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+    will-change: transform, opacity;
+}
+
+/* Execute variant — floats the word "EXECUTED!" instead of a damage
+   number when Blackjack procs. Smaller font + uppercase letterspacing
+   so the longer text reads as a stamped label rather than overflowing
+   the bar; the underlying execute.png burst still pops as the visual
+   anchor. The natural damage number is preserved on the cast's Total
+   chip + run stats for record-keeping — only the on-enemy reveal swaps
+   to the EXECUTED label so the moment reads as a special kill rather
+   than just a big number. */
+.damageFloatExecute {
+    font-size: clamp(var(--font-size-lg), 4.6vw, var(--font-size-xl));
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+/* Spiky burst graphic behind the damage number on critical (weakness) hits.
+   Centered on the text, scaled to overshoot the number so the burst reads
+   as an impact flash rather than a tight crop. */
+.criticalBg {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 250%;
+    height: auto;
+    pointer-events: none;
+    z-index: -1;
+    image-rendering: pixelated;
+}
+
+/* Execute variant — the burst hugs the EXECUTED label tighter than the
+   crit burst hugs a damage number. The label is wider than a typical
+   damage number, so a 250% scale ballooned the burst off-screen; 130%
+   keeps it framed snugly around the text. */
+.criticalBgExecute {
+    width: 130%;
+}
+
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
-    .cardPositioner {
-        right: clamp(8px, 2vw, 22px);
-        width: clamp(128px, 20vw, 172px);
-    }
-
-    .card {
-        gap: clamp(2px, 0.4vh, 4px);
-        padding: 0;
-        /* Override PanelFrame's shared `.frame` chrome (24px on desktop)
-           with a thinner border-image on mobile. The 9-slice slice values
-           stay 24/24/24/24 so the corner art is unchanged — only the
-           rendered border thickness shrinks, freeing ~28px of inner width
-           for the name / HP bar / affinity row on the compact card. */
-        border-width: 10px;
-        border-image: var(--panel-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
-    }
-
-    .heading {
-        font-size: var(--font-size-3xs);
-        letter-spacing: 1px;
-    }
-
-    .affinityRow {
-        gap: clamp(2px, 0.4vw, 4px);
-    }
-
-    .section {
-        border-width: 5px;
-        padding: 1px 0;
-        gap: clamp(1px, 0.2vw, 2px);
-    }
-
-    /* Mobile: pseudo extends -5px (matches the section's thinner mobile
-       border-width) so the colored chrome paints exactly over the
-       section's transparent border without spilling into the row gap. */
-    .sectionResist::before,
-    .sectionWeak::before {
-        inset: -5px;
-        border-width: 5px;
-    }
-
-    .sectionResist::before {
-        border-image: var(--resist-bg) 24 24 24 24 fill / 5px 5px 5px 5px;
-    }
-
-    .sectionWeak::before {
-        border-image: var(--weak-bg) 24 24 24 24 fill / 5px 5px 5px 5px;
-    }
-
-    .name {
-        font-size: var(--font-size-xs);
-    }
-
-    .bossRow {
-        gap: clamp(2px, 0.4vw, 5px);
-        margin-bottom: 2px;
-    }
-
-    .bossTag {
-        font-size: 8px;
-        letter-spacing: 1px;
-        border-width: 6px;
-        border-image: var(--boss-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
-        padding: 1px 4px;
-    }
-
-    .debuffChip {
-        font-size: 8px;
-        border-width: 6px;
-        border-image: var(--debuff-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
-        padding: 1px 4px;
-    }
-
-    .affinityLabel {
-        /* "VULNERABLE" was overflowing the narrow mobile chip — shrink the
-           font and drop the 1px letter-spacing so all 10 characters fit
-           inside the chip's inner width without truncation. */
-        font-size: var(--font-size-3xs);
-        letter-spacing: 0;
-    }
-
-    .affinityIcon {
-        width: clamp(22px, 3vw, 30px);
-        height: clamp(22px, 3vw, 30px);
-    }
-
-    .ignoredX::before,
-    .ignoredX::after {
-        height: clamp(2px, 0.3vw, 4px);
+    .barWrapper {
+        /* Negative shift on mobile — pulls the bar up toward the SigilBar.
+           The mobile centerColumn is much tighter than desktop, so the
+           positive shift desktop uses (which adds breathing room below the
+           SigilBar) makes the bar feel low instead. The margin-top max()
+           floor still guarantees the bar clears the SigilBar with daylight
+           between them. */
+        --bar-y-shift: clamp(-12px, -1.5vh, -4px);
+        /* Narrower than the desktop bar's clamp(360px, 40vw, 560px) so
+           the bar feels proportionate to the compact mobile layout
+           instead of stretching the full center-column width. */
+        max-width: clamp(180px, 38vw, 280px);
+        /* Mobile SigilBar uses different dimensions than desktop, so the
+           margin-top math needs to be recomputed against the mobile
+           values. SigilBar mobile: top clamp(14px, 3vh, 28px) +
+           height clamp(56px, 7.2vw, 76px); centerColumn mobile padding-top
+           clamp(90px, 20vh, 150px). */
+        margin-top: max(
+            calc(12px + var(--bar-y-shift)),
+            calc(
+                clamp(14px, 3vh, 28px) +
+                clamp(56px, 7.2vw, 76px) +
+                10px -
+                clamp(90px, 20vh, 150px) +
+                var(--bar-y-shift)
+            )
+        );
+        margin-bottom: calc(clamp(8px, 1vw, 14px) - var(--bar-y-shift));
     }
 
     .barOuter {
