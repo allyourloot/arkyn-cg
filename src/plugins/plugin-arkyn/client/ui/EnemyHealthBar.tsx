@@ -19,13 +19,16 @@ import bossFrameUrl from "/assets/ui/boss-frame.png?url";
 import { ELEMENT_COLORS, createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import Tooltip from "./Tooltip";
+import PanelFrame from "./PanelFrame";
 import { playCritical } from "../sfx";
 import criticalUrl from "/assets/ui/critical.png?url";
 import executeUrl from "/assets/ui/execute.png?url";
 import styles from "./EnemyHealthBar.module.css";
 
-// `--panel-bg` (frame.png) drives the bar chrome; `--section-bg`
-// (inner-frame.png) drives the Resists / Weak To frames below the bar.
+// `--panel-bg` (frame.png) drives the outer card chrome AND the bar's
+// inner chrome. `--section-bg` drives the two affinity chips beneath the
+// bar — both Resists and Vulnerable use the same neutral inner-frame chrome;
+// the only color signal is the label text colour (red / green).
 const baseStyleVars = createPanelStyleVars();
 const bossStyleVars = {
     ...baseStyleVars,
@@ -165,8 +168,11 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
             const tl = gsap.timeline({
                 onComplete: () => setActiveHit(null),
             });
+            // The card now lives on the right edge of the viewport, so the
+            // float drifts up-and-LEFT (toward the playfield) instead of
+            // up-and-right — same shape, mirrored x.
             tl.to(float, {
-                x: 10,
+                x: -10,
                 y: -6,
                 scale: 1.25,
                 opacity: 1,
@@ -174,20 +180,20 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
                 ease: "back.out(2)",
             })
                 .to(float, {
-                    x: 18,
+                    x: -18,
                     y: -10,
                     scale: 1,
                     duration: 0.117,
                     ease: "power2.out",
                 })
                 .to(float, {
-                    x: 50,
+                    x: -50,
                     y: -28,
                     duration: 0.45,
                     ease: "power1.out",
                 })
                 .to(float, {
-                    x: 64,
+                    x: -64,
                     y: -36,
                     scale: 0.92,
                     opacity: 0,
@@ -215,7 +221,14 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
     const damageFloatStyle = { "--stroke-color": damageStrokeColor } as CSSProperties;
 
     return (
-        <div ref={setWrapperRef} className={styles.wrapper} style={isBoss ? bossStyleVars : baseStyleVars}>
+        <div className={styles.cardPositioner}>
+            <PanelFrame
+                ref={setWrapperRef}
+                styleVars={isBoss ? bossStyleVars : baseStyleVars}
+                className={styles.card}
+            >
+            <div className={styles.heading}>Enemy</div>
+
             <div className={styles.nameContainer}>
                 {isBoss && (
                     <div className={styles.bossRow}>
@@ -238,50 +251,65 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
                 {name && <span className={styles.name}>{name}</span>}
             </div>
 
-            <div className={styles.barRow}>
-                {resistances.length > 0 ? (
-                    <AffinitySection label="Resists" labelClass={styles.affinityLabelResist} elements={resistances} multiplier="0.5x" multiplierColor="#ef4444" ignored={ignoredResistances} />
-                ) : (
-                    <div className={styles.affinitySpacer} />
-                )}
-
-                <div ref={barShakeRef} className={styles.barShake}>
-                    <div className={styles.barAnchor}>
-                        <div className={styles.barOuter}>
-                            <div
-                                className={styles.barFill}
-                                style={{ width: `${pct}%`, backgroundColor: barColor }}
-                            />
-                            <span className={styles.barText}>
-                                {hp} / {maxHp}
-                            </span>
-                        </div>
-                        {activeHit && (
-                            <span
-                                ref={damageFloatRef}
-                                key={activeHit.seq}
-                                className={`${styles.damageFloat} ${activeHit.isExecute ? styles.damageFloatExecute : ""}`}
-                                style={damageFloatStyle}
-                            >
-                                {(activeHit.isExecute || activeHit.isCritical) && (
-                                    <img
-                                        src={activeHit.isExecute ? executeUrl : criticalUrl}
-                                        alt=""
-                                        className={`${styles.criticalBg} ${activeHit.isExecute ? styles.criticalBgExecute : ""}`}
-                                    />
-                                )}
-                                {activeHit.isExecute ? "EXECUTED!" : `-${activeHit.amount}`}
-                            </span>
-                        )}
+            <div ref={barShakeRef} className={styles.barShake}>
+                <div className={styles.barAnchor}>
+                    <div className={styles.barOuter}>
+                        <div
+                            className={styles.barFill}
+                            style={{ width: `${pct}%`, backgroundColor: barColor }}
+                        />
+                        <span className={styles.barText}>
+                            {hp} / {maxHp}
+                        </span>
                     </div>
+                    {activeHit && (
+                        <span
+                            ref={damageFloatRef}
+                            key={activeHit.seq}
+                            className={`${styles.damageFloat} ${activeHit.isExecute ? styles.damageFloatExecute : ""}`}
+                            style={damageFloatStyle}
+                        >
+                            {(activeHit.isExecute || activeHit.isCritical) && (
+                                <img
+                                    src={activeHit.isExecute ? executeUrl : criticalUrl}
+                                    alt=""
+                                    className={`${styles.criticalBg} ${activeHit.isExecute ? styles.criticalBgExecute : ""}`}
+                                />
+                            )}
+                            {activeHit.isExecute ? "EXECUTED!" : `-${activeHit.amount}`}
+                        </span>
+                    )}
                 </div>
-
-                {weaknesses.length > 0 ? (
-                    <AffinitySection label="Vulnerable" labelClass={styles.affinityLabelWeak} elements={weaknesses} multiplier="2x" multiplierColor="#4ade80" />
-                ) : (
-                    <div className={styles.affinitySpacer} />
-                )}
             </div>
+
+            {(resistances.length > 0 || weaknesses.length > 0) && (
+                <div className={styles.affinityRow}>
+                    {resistances.length > 0 && (
+                        <div className={styles.section}>
+                            <AffinitySection
+                                label="Resists"
+                                labelClass={styles.affinityLabelResist}
+                                elements={resistances}
+                                multiplier="0.5x"
+                                multiplierColor="#ef4444"
+                                ignored={ignoredResistances}
+                            />
+                        </div>
+                    )}
+                    {weaknesses.length > 0 && (
+                        <div className={styles.section}>
+                            <AffinitySection
+                                label="Vulnerable"
+                                labelClass={styles.affinityLabelWeak}
+                                elements={weaknesses}
+                                multiplier="2x"
+                                multiplierColor="#4ade80"
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
+            </PanelFrame>
         </div>
     );
 }
@@ -314,7 +342,7 @@ function AffinitySection({ label, labelClass, elements, multiplier, multiplierCo
                                 className={styles.affinityIcon}
                             />
                             {isIgnored && <span className={styles.ignoredX} aria-hidden="true" />}
-                            <Tooltip placement="bottom" variant="framed">
+                            <Tooltip placement="left" variant="framed">
                                 {isIgnored ? (
                                     <>
                                         <span className={styles.tooltipMult} style={{ color: "#e8d4b8" }}>1x</span>

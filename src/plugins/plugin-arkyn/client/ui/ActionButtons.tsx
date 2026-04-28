@@ -13,7 +13,6 @@ import buttonGreenDisabledUrl from "/assets/ui/button-green-disabled.png?url";
 import buttonOrangeUrl from "/assets/ui/button-orange.png?url";
 import buttonOrangeHoverUrl from "/assets/ui/button-orange-hover.png?url";
 import buttonOrangeDisabledUrl from "/assets/ui/button-orange-disabled.png?url";
-import circleFrameUrl from "/assets/ui/circle-frame.png?url";
 import styles from "./ActionButtons.module.css";
 
 const castStateVars = {
@@ -48,7 +47,7 @@ export default function ActionButtons() {
                     className={`${styles.button} ${styles.cast}`}
                     style={castStateVars}
                 >
-                    Cast <span className={styles.countBadge} style={{ backgroundImage: `url(${circleFrameUrl})` }}>{castsRemaining}</span>
+                    Cast
                 </button>
                 <button
                     onClick={() => { haptic(HAPTIC_MEDIUM); discardRunes(); }}
@@ -56,7 +55,7 @@ export default function ActionButtons() {
                     className={`${styles.button} ${styles.discard}`}
                     style={discardStateVars}
                 >
-                    Discard <span className={styles.countBadge} style={{ backgroundImage: `url(${circleFrameUrl})` }}>{discardsRemaining}</span>
+                    Discard
                 </button>
             </div>
         </div>

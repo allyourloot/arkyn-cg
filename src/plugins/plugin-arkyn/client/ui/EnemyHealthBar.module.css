@@ -1,18 +1,84 @@
-.wrapper {
+/* Outer positioning wrapper for the floating "Enemy" card. Vertically
+   centered against the viewport via top: 50% + translateY(-50%). The
+   inner .card is the GSAP target for the screen-transition slide
+   (y/opacity) — keeping the centering transform on this OUTER element
+   means GSAP's `y` tween on .card composes cleanly instead of fighting
+   a baseline translateY(-50%). Right edge inset matches SpellPreview's
+   left margin so the two panels read as a symmetric pair. */
+.cardPositioner {
+    position: absolute;
+    /* Card visual center matches the PlayArea, which sits a small amount
+       above viewport center: half the hand height (PlayArea's natural
+       upward bias as a flex sibling of .handStack), minus half the
+       .centerColumn padding-top (which pushes PlayArea back down toward
+       the equidistant position between SigilBar and hand). The vh-relative
+       clamp here is the residual upward offset after that subtraction. */
+    top: calc(50% - clamp(20px, 5vh, 60px));
+    right: clamp(28px, 4vw, 72px);
+    transform: translateY(-50%);
+    width: clamp(240px, 25vw, 400px);
     pointer-events: none;
+    z-index: 10;
+}
+
+/* Layout for the card content. Composes on top of <PanelFrame>'s 9-slice
+   chrome (.frame). No positioning of its own — the outer .cardPositioner
+   handles placement. */
+.card {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: clamp(6px, 1vh, 12px);
+    padding: 4px 4px;
+}
+
+/* Small uppercase header above the first inner-frame chip — same
+   typography as SpellPreview's `.heading` so the two panels read as
+   one system. No chrome of its own; just text. */
+.heading {
+    box-sizing: border-box;
+    width: 100%;
+    text-align: center;
+    font-size: var(--font-size-xs);
+    font-weight: normal;
+    color: #c4a882;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    line-height: 1;
+}
+
+/* Two-column row holding the Resists chip + Vulnerable chip side-by-side
+   beneath the HP bar. When only one of resists/weaknesses exists the
+   single chip flexes to fill the row. */
+.affinityRow {
+    width: 100%;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: clamp(4px, 0.6vw, 8px);
+}
+
+/* Inner-frame chip used by both affinity sections. Borrows
+   SpellPreview.module.css's `.section` shape but with thinner border
+   (12px instead of 24px) since this card is more compact. Both Resists
+   and Vulnerable chips share the same neutral inner-frame chrome — only
+   the label colour signals which is which. */
+.section {
+    box-sizing: border-box;
+    flex: 1 1 0;
+    min-width: 0;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 4px 4px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Pushed down from the top of the viewport so the bar clears the
-       SigilBar (top: clamp(20px, 6vh, 80px) + slot height up to 100px). */
-    padding: clamp(110px, 15vw, 190px) 0 clamp(4px, 0.8vw, 8px);
-    /* Vertical rhythm between the name, the bar, and the affinity row. */
-    gap: clamp(6px, 1vh, 12px);
-    width: 100%;
-    min-width: 0;
-    /* Anchor for the absolutely-positioned floating damage number that
-       blooms out of the bar on a successful spell impact. */
-    position: relative;
+    gap: clamp(2px, 0.4vw, 4px);
+    image-rendering: pixelated;
 }
 
 /* Wrapper around the name + boss tag. position: relative anchors the
@@ -83,52 +149,27 @@
     image-rendering: pixelated;
 }
 
-/* Horizontal row: [Resists] — [Health Bar] — [Vulnerable].
-   The bar sits in the center with affinity chips flanking it. */
-.barRow {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(8px, 1.2vw, 16px);
-}
-
 /* The shake target. GSAP applies a translateX shake here on every enemy
-   damage hit (see EnemyHealthBar.tsx useGSAP). The wrapper above stays
-   still so the name and affinity frames don't jitter along with the bar. */
+   damage hit (see EnemyHealthBar.tsx useGSAP). The outer .section wrapper
+   above stays still so the name and the chip chrome don't jitter along
+   with the bar. The bar fills the full inner width of the name+bar chip. */
 .barShake {
-    flex: 1;
-    min-width: 0;
-    max-width: clamp(320px, 36vw, 520px);
+    width: 100%;
     display: flex;
     justify-content: center;
     position: relative;
     z-index: 2;
 }
 
-/* Individual Resists / Vulnerable chip. Uses the `--panel-bg` frame.png
-   9-slice (the same chrome the outer panels use). */
+/* AffinitySection is now content-only — the colored chrome lives on the
+   outer .section/.sectionResist/.sectionWeak chip. This just owns the
+   label-above-icons layout. */
 .affinitySection {
-    box-sizing: border-box;
-    flex: 0 0 auto;
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 12px;
-    border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-    padding: clamp(2px, 0.4vw, 4px) clamp(8px, 1.2vw, 14px);
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: clamp(2px, 0.3vw, 4px);
-    image-rendering: pixelated;
-}
-
-/* Invisible spacer that matches affinitySection's approximate width
-   so the bar stays centered when only one side has affinities. */
-.affinitySpacer {
-    flex: 0 0 auto;
-    width: clamp(60px, 8vw, 110px);
 }
 
 .affinityLabel {
@@ -233,7 +274,10 @@
 
 .damageFloat {
     position: absolute;
-    right: -10%;
+    /* Anchor to the bar's LEFT edge — the GSAP timeline drifts the float
+       up-and-left toward the playfield (see EnemyHealthBar.tsx useGSAP)
+       since the card now lives on the right side of the viewport. */
+    left: -10%;
     top: 50%;
     z-index: 20;
 
@@ -390,13 +434,41 @@
 
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
-    .wrapper {
-        padding: clamp(10px, 2.5vh, 24px) 0 clamp(2px, 0.4vw, 4px);
-        gap: clamp(3px, 0.6vh, 8px);
+    .cardPositioner {
+        right: clamp(8px, 2vw, 22px);
+        width: clamp(128px, 20vw, 172px);
+    }
+
+    .card {
+        gap: clamp(2px, 0.4vh, 4px);
+        padding: 0;
+        /* Override PanelFrame's shared `.frame` chrome (24px on desktop)
+           with a thinner border-image on mobile. The 9-slice slice values
+           stay 24/24/24/24 so the corner art is unchanged — only the
+           rendered border thickness shrinks, freeing ~28px of inner width
+           for the name / HP bar / affinity row on the compact card. */
+        border-width: 10px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
+    }
+
+    .heading {
+        font-size: var(--font-size-3xs);
+        letter-spacing: 1px;
+    }
+
+    .affinityRow {
+        gap: clamp(2px, 0.4vw, 4px);
+    }
+
+    .section {
+        border-width: 5px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 5px 5px 5px 5px;
+        padding: 1px 0;
+        gap: clamp(1px, 0.2vw, 2px);
     }
 
     .name {
-        font-size: var(--font-size-sm);
+        font-size: var(--font-size-xs);
     }
 
     .bossRow {
@@ -419,29 +491,14 @@
         padding: 1px 4px;
     }
 
-    .barRow {
-        gap: clamp(4px, 0.6vw, 8px);
-    }
-
-    .affinitySection {
-        border-width: 8px;
-        border-image: var(--panel-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
-        padding: clamp(1px, 0.2vw, 3px) clamp(4px, 0.8vw, 10px);
-        gap: clamp(1px, 0.2vw, 2px);
-    }
-
-    .affinitySpacer {
-        width: clamp(40px, 6vw, 80px);
-    }
-
     .affinityLabel {
         font-size: var(--font-size-2xs);
         letter-spacing: 1px;
     }
 
     .affinityIcon {
-        width: clamp(20px, 2.4vw, 32px);
-        height: clamp(20px, 2.4vw, 32px);
+        width: clamp(22px, 3vw, 30px);
+        height: clamp(22px, 3vw, 30px);
     }
 
     .ignoredX::before,
@@ -449,26 +506,14 @@
         height: clamp(2px, 0.3vw, 4px);
     }
 
-    .tooltip {
-        font-size: var(--font-size-3xs);
-        margin-top: 4px;
-        padding: 2px 4px;
-        border-width: 8px;
-        border-image: var(--panel-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
-    }
-
-    .barShake {
-        max-width: clamp(240px, 30vw, 400px);
-    }
-
     .barOuter {
-        height: clamp(28px, 3.5vw, 44px);
-        border-width: 6px;
-        border-image: var(--panel-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        height: clamp(20px, 2.8vw, 32px);
+        border-width: 4px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 4px 4px 4px 4px;
     }
 
     .barText {
-        font-size: var(--font-size-xs);
+        font-size: var(--font-size-2xs);
     }
 
     .damageFloat {

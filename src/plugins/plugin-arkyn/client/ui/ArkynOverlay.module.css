@@ -93,6 +93,14 @@
     justify-content: center;
     min-width: 0;
     padding: 0 clamp(8px, 1.6vw, 24px);
+    /* Shift PlayArea down so it reads as visually equidistant between
+       the SigilBar (top) and the hand (bottom). With .centerStage flex:1
+       and .handStack as a flex child, PlayArea's natural center sits
+       above viewport center by ~half the hand's height — much closer to
+       the SigilBar than to the hand. Adding padding-top here pushes the
+       centerStage's flex range down by P, which moves PlayArea's centered
+       position down by P/2 (centerStage shrinks from the top). */
+    padding-top: clamp(100px, 20vh, 200px);
 }
 
 /* Shop-phase variant — nudges the shop content down so it doesn't crowd
@@ -215,7 +223,9 @@
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
     .centerColumn {
-        padding: 0 clamp(4px, 1vw, 12px);
+        padding-left: clamp(4px, 1vw, 12px);
+        padding-right: clamp(4px, 1vw, 12px);
+        padding-top: clamp(90px, 20vh, 150px);
     }
 
     .centerStage {

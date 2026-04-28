@@ -899,7 +899,6 @@ export default function ArkynOverlay() {
             <BackgroundShader />
             <SpellPreview ref={spellPreviewRef} />
             <div className={styles.centerColumn}>
-                <EnemyHealthBar ref={enemyHealthBarRef} />
                 <div className={styles.centerStage}>
                     <PlayArea />
                 </div>
@@ -909,6 +908,7 @@ export default function ArkynOverlay() {
                 </div>
             </div>
             <div className={styles.rightSpacer} aria-hidden="true" />
+            <EnemyHealthBar ref={enemyHealthBarRef} />
             <PouchCounter />
             <SigilBar />
             <InfoButton />

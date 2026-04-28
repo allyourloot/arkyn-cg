@@ -23,8 +23,12 @@
     border-image: var(--btn-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
     background-color: transparent;
     image-rendering: pixelated;
-    padding: 10px 18px;
-    font-size: clamp(var(--font-size-xs), 2.4vw, var(--font-size-md));
+    padding: 14px 24px;
+    /* Match width across both buttons so "Cast" and "Discard" render the
+       same size — without min-width, the shorter "Cast" label produces a
+       narrower button than "Discard". */
+    min-width: clamp(140px, 14vw, 200px);
+    font-size: clamp(var(--font-size-xs), 2.6vw, var(--font-size-lg));
     font-family: inherit;
     font-weight: normal;
     letter-spacing: 0.04em;
@@ -60,32 +64,15 @@
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
 }
 
-.countBadge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.3em;
-    height: 1.3em;
-    margin-left: 0;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    image-rendering: pixelated;
-    font-size: 1em;
-    line-height: 1;
-    text-shadow: none;
-    vertical-align: middle;
-    padding-left: 1px;
-}
-
 /* Slightly compact the action buttons on touch devices — they don't need
    to be as chunky as on desktop and the smaller footprint leaves more
    room for the hand fan beneath them on landscape phones. */
 @media (hover: none) {
     .button {
-        padding: 6px 14px;
-        font-size: var(--font-size-xs);
+        padding: 8px 18px;
+        font-size: var(--font-size-sm);
         letter-spacing: 2px;
+        min-width: clamp(120px, 13vw, 170px);
     }
 
     .bar {
@@ -100,11 +87,12 @@
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
     .button {
-        padding: 4px 12px;
+        padding: 6px 16px;
         font-size: var(--font-size-xs);
         letter-spacing: 1px;
         border-width: 8px;
         border-image: var(--btn-bg) 10 10 10 10 fill / 8px 8px 8px 8px;
+        min-width: clamp(96px, 12vw, 140px);
     }
 
     .button:not(:disabled):hover {
