@@ -58,3 +58,27 @@
     z-index: -1;
     image-rendering: pixelated;
 }
+
+/* ── Landscape phone compact ──
+   Damage bubbles felt oversized relative to the smaller mobile rune
+   cards — the desktop sizes were calibrated against ~96–128px runes
+   but mobile runes are ~50–70px so a 37px damage number + 250% crit
+   burst easily overflowed the rune card and clashed with neighbors. */
+@media (max-height: 500px) {
+    .bubble {
+        font-size: clamp(var(--font-size-sm), 3vw, var(--font-size-lg));
+    }
+
+    .descriptorLabel {
+        font-size: clamp(var(--font-size-3xs), 1.2vw, var(--font-size-2xs));
+        letter-spacing: 1px;
+    }
+
+    /* Crit burst tracks the (now smaller) number's font-size via %, but
+       250% was still too dominant against the smaller mobile context.
+       Tighter ratio keeps the burst as an accent rather than a halo
+       that swallows neighboring runes. */
+    .criticalBg {
+        width: 200%;
+    }
+}
