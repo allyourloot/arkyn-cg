@@ -160,9 +160,9 @@ export const TAROT_DEFINITIONS: Record<string, TarotDefinition> = {
         id: "the_hermit",
         name: "The Hermit",
         number: "IX",
-        description: "Banish 1 rune permanently from your pouch.",
+        description: "Banish up to 2 runes permanently from your pouch.",
         effect: { type: "banish" },
-        minTargets: 1, maxTargets: 1,
+        minTargets: 1, maxTargets: 2,
         fileBasename: "9_theHermit",
     },
     wheel_of_fortune: {

@@ -3,6 +3,7 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
     DISSOLVE_DURATION_MS,
+    arkynStoreInternal,
     sendApplyTarot,
     useAuguryPurchaseCount,
     useCurrentRound,
@@ -10,6 +11,7 @@ import {
     useSigils,
     type RuneClientData,
 } from "../arkynStore";
+import { notify } from "../arkynStoreCore";
 import {
     ELEMENT_TYPES,
     SIGIL_DEFINITIONS,
@@ -36,6 +38,7 @@ import {
     playSelectTarot,
     playDeselectTarot,
     playConvert,
+    playGold,
 } from "../sfx";
 import ItemScene from "./ItemScene";
 import RuneImage from "./RuneImage";
@@ -121,6 +124,40 @@ function computePreview(
 const NO_TAROT_CAP_DEFAULT = Math.max(
     ...Object.values(TAROT_DEFINITIONS).map(d => d.maxTargets),
 );
+
+// Staggered "+N Gold" pop sequence over the gold counter for Tower's
+// banishForGold. Mirrors the Fortune-style two-phase reveal used in
+// the cast pipeline (bubble shows → counter ticks + SFX → bubble
+// clears) and the gold-display lock pattern from arkynAnimations.ts
+// (Banish sigil flow). One iteration per banished rune; the final
+// timeout unlocks the gold display so any drift from the server's
+// authoritative value is reconciled.
+const TOWER_POP_INTERVAL_MS = 380;
+const TOWER_POP_COMMIT_DELAY_MS = 180;
+const TOWER_POP_CLEAR_DELAY_MS = 360;
+function runTowerGoldPopSequence(banishedCount: number, goldPerRune: number): void {
+    for (let i = 0; i < banishedCount; i++) {
+        const popTime = i * TOWER_POP_INTERVAL_MS;
+        setTimeout(() => {
+            arkynStoreInternal.triggerGoldProcBubble(goldPerRune);
+            notify();
+        }, popTime);
+        setTimeout(() => {
+            playGold();
+            arkynStoreInternal.addDisplayedGold(goldPerRune);
+            notify();
+        }, popTime + TOWER_POP_COMMIT_DELAY_MS);
+        setTimeout(() => {
+            arkynStoreInternal.clearGoldProcBubble();
+            notify();
+        }, popTime + TOWER_POP_CLEAR_DELAY_MS);
+    }
+    const totalDuration = (banishedCount - 1) * TOWER_POP_INTERVAL_MS + TOWER_POP_CLEAR_DELAY_MS + 100;
+    setTimeout(() => {
+        arkynStoreInternal.unlockGoldDisplayAndSyncToServer();
+        notify();
+    }, totalDuration);
+}
 
 /**
  * Mid-shop modal that appears after the player buys an Augury Pack.
@@ -410,12 +447,37 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
         }
         for (let i = 0; i < spawned.length; i++) applySfxCues.push(playSelectRune);
 
+        // Tower's banish-for-gold needs a staggered "+N Gold" pop
+        // sequence over the gold counter — one pop per banished rune,
+        // with `playGold` per pop. We capture the per-rune amount here
+        // because activeTarot is closed over but its narrowed type
+        // isn't preserved into the deferred sendMessageOnce.
+        const isBanishForGold = activeTarot.effect.type === "banishForGold";
+        const banishGoldPerRune = activeTarot.effect.type === "banishForGold"
+            ? activeTarot.effect.goldPerRune
+            : 0;
+        const banishedCount = sortedIndices.length;
+
         const sendMessageOnce = () => {
+            // Lock displayed gold BEFORE the message goes out so the
+            // server's schema patch can't snap the counter to its
+            // post-Tower total before our staggered pops have a chance
+            // to tick it up rune-by-rune. The pops below drive
+            // displayedGold up via addDisplayedGold; the unlock at the
+            // end syncs anything left over to the server's authoritative
+            // value.
+            if (isBanishForGold && banishedCount > 0) {
+                arkynStoreInternal.lockGoldDisplay();
+                notify();
+            }
             sendApplyTarot({
                 tarotId: activeTarot.id,
                 runeIndices: sortedIndices,
                 element: selectedElement ?? undefined,
             });
+            if (isBanishForGold && banishedCount > 0) {
+                runTowerGoldPopSequence(banishedCount, banishGoldPerRune);
+            }
         };
 
         const runExit = () => {
