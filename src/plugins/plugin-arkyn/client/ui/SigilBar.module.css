@@ -402,3 +402,13 @@
         right: clamp(4px, 0.6vw, 10px);
     }
 }
+
+/* Proc bubble icons fire during cast (multiple at once on a multi-proc
+   cast), each with a filter:drop-shadow that the mobile compositor would
+   otherwise re-rasterize per frame. The bubbles are short-lived enough
+   that the missing depth is invisible at phone viewing distance. */
+@media (hover: none) {
+    .procBubbleIcon {
+        filter: none;
+    }
+}

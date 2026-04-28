@@ -690,3 +690,11 @@
         padding-right: calc(clamp(8px, 1.2vw, 14px) + 4px);
     }
 }
+
+/* Reroll cost icon's filter:drop-shadow is purely decorative depth — the
+   coin already reads clearly against the panel. Strip on touch. */
+@media (hover: none) {
+    .rerollCostIcon {
+        filter: none;
+    }
+}

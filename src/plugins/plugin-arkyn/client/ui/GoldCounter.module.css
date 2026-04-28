@@ -84,3 +84,14 @@
         font-size: var(--font-size-sm);
     }
 }
+
+/* On touch the always-visible HUD coin's drop-shadow filter is a steady-
+   state compositor cost — every paint of any UI behind it has to re-blend
+   the alpha-shape silhouette. The icon already reads clearly against the
+   dark background; strip the filter on touch. Same approach RuneCard
+   takes for its in-hand floatWrap shadows. */
+@media (hover: none) {
+    .icon {
+        filter: none;
+    }
+}

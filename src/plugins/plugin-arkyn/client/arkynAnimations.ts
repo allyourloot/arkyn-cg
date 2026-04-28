@@ -437,14 +437,31 @@ export function castSpell() {
 
     const hand = arkynStoreInternal.getHand();
 
-    // Capture DOM positions of selected runes and target slots (display order)
+    // Capture DOM positions of selected runes and target slots (display order).
+    // Two batched querySelectorAll walks + indexed Map lookups — this lets the
+    // browser coalesce the per-element getBoundingClientRect reads instead of
+    // forcing a layout flush between every sequential querySelector call (the
+    // pattern MultBubbleOverlay uses for the same reason).
     const flying: FlyingRune[] = [];
     const sortedSelected = [...selectedIndices].sort((a, b) => a - b);
 
+    const runeEls = document.querySelectorAll<HTMLElement>("[data-rune-index]");
+    const slotEls = document.querySelectorAll<HTMLElement>("[data-slot-index]");
+    const runeElByIdx = new Map<number, HTMLElement>();
+    for (const el of runeEls) {
+        const idx = Number(el.dataset.runeIndex);
+        if (!Number.isNaN(idx)) runeElByIdx.set(idx, el);
+    }
+    const slotElByIdx = new Map<number, HTMLElement>();
+    for (const el of slotEls) {
+        const idx = Number(el.dataset.slotIndex);
+        if (!Number.isNaN(idx)) slotElByIdx.set(idx, el);
+    }
+
     for (let slotIdx = 0; slotIdx < sortedSelected.length; slotIdx++) {
         const handIdx = sortedSelected[slotIdx];
-        const runeEl = document.querySelector(`[data-rune-index="${handIdx}"]`);
-        const slotEl = document.querySelector(`[data-slot-index="${slotIdx}"]`);
+        const runeEl = runeElByIdx.get(handIdx);
+        const slotEl = slotElByIdx.get(slotIdx);
 
         if (runeEl && slotEl) {
             const runeRect = runeEl.getBoundingClientRect();
@@ -598,14 +615,21 @@ export function castSpell() {
         spellBaseDamage,
         totalDamage,
         onStart: (dissolveDelayFromStartMs: number) => {
-            // Mount the flyers and lock HP. flushSync forces React to
-            // commit synchronously inside this callback so CastAnimation's
-            // useGSAP fires (and the per-flyer fly tween starts) BEFORE
-            // this function returns. Without flushSync, React would defer
-            // the commit by 1-3 frames, leaving the orchestrator's clock
-            // ahead of the fly tween's clock — which made the fly tween
-            // get killed before completing its motion. The cast SFX fires
-            // from the timeline's t=0 callback, before this runs.
+            // Capture wall-clock now BEFORE flushSync so the dissolve start
+            // time stays anchored to the cast trigger even though we mount
+            // the dissolves on the next React tick (see deferred block).
+            const castTriggerNow = performance.now();
+
+            // ── SYNCHRONOUS COMMIT — only the visible state needed before
+            // the fly tween starts. flushSync forces React to commit before
+            // returning so CastAnimation's useGSAP fires (and the per-flyer
+            // fly tween starts) ahead of the orchestrator timeline's clock.
+            // Without it, React would defer the commit by 1-3 frames, killing
+            // the fly tween before it completes. The cast SFX fires from the
+            // timeline's t=0 callback, before this runs.
+            //
+            // Anything moved out below was previously bundled here purely
+            // for convenience — it doesn't need synchronous commit.
             flushSync(() => {
                 flyingRunes = flying;
                 isCastAnimating = true;
@@ -614,15 +638,6 @@ export function castSpell() {
                 // this, the deferred server hand-sync would leave the played
                 // runes visible in the hand until the dissolve completes.
                 castingRuneIds = castRunes.map(r => r.id);
-                // Pre-mount the dissolving runes (hidden by PlayArea while
-                // flyingRunes is non-empty). dissolveStartTime is set far
-                // in the future so the shader renders the intact rune the
-                // whole time until the real dissolve kicks in. By the time
-                // the flyers unmount at fly-complete, the DissolveCanvas
-                // has booted its WebGL context + loaded textures + painted
-                // its first frame — no flicker on the handoff.
-                dissolvingRunes = castRunes;
-                dissolveStartTime = performance.now() + dissolveDelayFromStartMs;
                 // Reset the live Base counter — it'll tick up with the
                 // bubbles below. Starting at 0 reads as "calculating"; the
                 // timeline's initial t=0 tick snaps it up to spellBase
@@ -635,22 +650,37 @@ export function castSpell() {
                 // chip shows "-" until the timeline's count-up reveal
                 // tween fires (after all rune ticks have completed).
                 castTotalDamage = -1;
-                // Snapshot the resolved Base total so the Spell Preview's
-                // "Last Cast" view can render the post-cast Base value
-                // without re-running the formula against (potentially
-                // stale) enemy state after a round transition.
-                lastCastBaseDamage = baseTotal;
-                arkynStoreInternal.lockHpDisplay();
-                // Freeze the gold counter at its pre-cast value. Fortune-style
-                // procs will tick it up per event via `addDisplayedGold`;
-                // the server's schema patch (which arrives almost instantly
-                // when the cast message is sent at fly-complete) won't
-                // jump the counter ahead of the animation.
-                arkynStoreInternal.lockGoldDisplay();
                 arkynStoreInternal.clearSelection();
-                arkynStoreInternal.setLastCastRunes(castRunes);
                 notify();
             });
+
+            // ── DEFERRED COMMIT — heavy work that doesn't need to land on
+            // the cast-trigger frame. Mounting 5 DissolveCanvas children
+            // (each registers with the shared WebGL renderer + sizes its
+            // canvas + kicks texture loads) was the dominant cost inside
+            // the synchronous block above and showed up as the cast-moment
+            // FPS dip on mobile. The dissolves are hidden behind the flyers
+            // (PlayArea gates them on `runesVisible = flyingRunes.length === 0`),
+            // so a 1-tick mount delay is invisible — they still get >580ms
+            // of pre-mount window before the flyers unmount at fly-complete.
+            // The HP/gold locks just need to be in place before the cast
+            // message goes out at fly-complete (~600ms from now).
+            dissolvingRunes = castRunes;
+            dissolveStartTime = castTriggerNow + dissolveDelayFromStartMs;
+            // Snapshot the resolved Base total so the Spell Preview's
+            // "Last Cast" view can render the post-cast Base value
+            // without re-running the formula against (potentially
+            // stale) enemy state after a round transition.
+            lastCastBaseDamage = baseTotal;
+            arkynStoreInternal.lockHpDisplay();
+            // Freeze the gold counter at its pre-cast value. Fortune-style
+            // procs will tick it up per event via `addDisplayedGold`;
+            // the server's schema patch (which arrives almost instantly
+            // when the cast message is sent at fly-complete) won't
+            // jump the counter ahead of the animation.
+            arkynStoreInternal.lockGoldDisplay();
+            arkynStoreInternal.setLastCastRunes(castRunes);
+            notify();
         },
         onCountTick: (cumulative) => {
             castBaseCounter = cumulative;

@@ -512,3 +512,12 @@
         border-image: var(--skip-bg-hover) 10 10 10 10 fill / 6px 6px 6px 6px;
     }
 }
+
+/* Picker rune art uses filter:drop-shadow for a hard depth shadow on
+   each of 5 picker cards. On touch the compositor cost dominates the
+   visual benefit; strip on touch. */
+@media (hover: none) {
+    .runeArt {
+        filter: none;
+    }
+}

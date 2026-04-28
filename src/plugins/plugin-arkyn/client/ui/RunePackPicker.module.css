@@ -262,3 +262,14 @@
         border-image: var(--skip-bg-hover) 10 10 10 10 fill / 6px 6px 6px 6px;
     }
 }
+
+/* Picker rune cards run an infinite float animation with a filter +
+   `will-change: filter` permanently set — a layer-promotion cost that
+   compounds across the 4 mounted picker cards. On touch, drop the filter
+   and the will-change:filter hint; the float keeps depth via translation. */
+@media (hover: none) {
+    .runeWrap {
+        filter: none;
+        will-change: transform;
+    }
+}

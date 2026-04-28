@@ -232,3 +232,12 @@
         border-image: var(--skip-bg-hover) 10 10 10 10 fill / 6px 6px 6px 6px;
     }
 }
+
+/* See RunePackPicker — same float + filter + will-change:filter pattern,
+   same touch override. */
+@media (hover: none) {
+    .scrollWrap {
+        filter: none;
+        will-change: transform;
+    }
+}

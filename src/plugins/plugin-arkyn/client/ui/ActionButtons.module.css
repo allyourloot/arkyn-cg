@@ -123,3 +123,13 @@
         gap: clamp(6px, 1vw, 10px);
     }
 }
+
+/* Cast/Discard buttons are persistently mounted in the gameplay HUD; the
+   filter:drop-shadow on each adds a compositor layer + alpha-shape rasterize
+   per paint. The text-shadow on the label provides equivalent depth at
+   mobile viewing distance. */
+@media (hover: none) {
+    .button {
+        filter: none;
+    }
+}

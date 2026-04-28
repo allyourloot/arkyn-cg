@@ -366,3 +366,11 @@
         height: clamp(12px, 1.4vw, 18px);
     }
 }
+
+/* Strip the next-enemy icon's drop-shadow on touch — depth is decorative
+   and the icon stays legible without it. */
+@media (hover: none) {
+    .enemyIcon {
+        filter: none;
+    }
+}

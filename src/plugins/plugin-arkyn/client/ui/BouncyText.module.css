@@ -12,6 +12,16 @@
 
 .char {
     display: inline-block;
-    animation: textBob 1.6s ease-in-out infinite alternate;
-    will-change: transform;
+}
+
+/* Hover-capable devices (desktop with a mouse) get the bob. Touch
+   devices skip it entirely — 30+ visible BouncyText instances each
+   animating per-char at 60fps is a real steady-state cost on mobile
+   GPUs, and the 1px peak is sub-perceptible at typical phone viewing
+   distance. Same `(hover: hover)` gate the rest of the codebase uses
+   to pick desktop-only behaviour (see BackgroundShader, ItemScene). */
+@media (hover: hover) {
+    .char {
+        animation: textBob 1.6s ease-in-out infinite alternate;
+    }
 }

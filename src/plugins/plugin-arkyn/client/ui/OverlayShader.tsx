@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { HAS_HOVER } from "./utils/hasHover";
 import styles from "./OverlayShader.module.css";
 
 // Each rendered pixel becomes a PIXEL_SIZE×PIXEL_SIZE block on screen
@@ -44,6 +45,13 @@ export default function OverlayShader() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
+        // Touch-device skip path mirrors the JSX `return null` below — the
+        // canvas isn't mounted on mobile, so there's nothing to draw to.
+        // This guard is here purely so the hook itself is conditional-free
+        // (rules-of-hooks): `HAS_HOVER` is a module constant, so the early
+        // return resolves at compile time per environment.
+        if (!HAS_HOVER) return;
+
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
@@ -104,6 +112,15 @@ export default function OverlayShader() {
             window.removeEventListener("resize", onResize);
         };
     }, []);
+
+    // On touch devices the fullscreen `mix-blend-mode: soft-light` canvas
+    // forces every UI repaint to re-blend the entire viewport — one of the
+    // worst compositor patterns on iOS Safari/WKWebView, and the dominant
+    // mobile-FPS sink in this UI. The 18%-opacity grain is sub-perceptible
+    // at typical phone viewing distance, so we don't mount the element at
+    // all (an empty <canvas> with the blend-mode rule would still allocate
+    // a compositor layer). Desktop keeps the full effect.
+    if (!HAS_HOVER) return null;
 
     return <canvas ref={canvasRef} className={styles.canvas} />;
 }

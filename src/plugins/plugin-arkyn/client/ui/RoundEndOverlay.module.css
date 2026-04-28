@@ -342,3 +342,15 @@
         padding: clamp(4px, 0.8vh, 8px) clamp(16px, 2vw, 28px);
     }
 }
+
+/* Round-end coins animate in via the coinPop keyframe — combining a
+   transform animation with filter:drop-shadow makes the compositor
+   re-rasterize the alpha-shape on every animation frame. The pop reads
+   fine without the per-frame shadow on touch. */
+@media (hover: none) {
+    .coin,
+    .totalCoin,
+    .divider {
+        filter: none;
+    }
+}

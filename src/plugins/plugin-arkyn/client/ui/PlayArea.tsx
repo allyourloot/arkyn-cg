@@ -23,6 +23,16 @@ import RuneXMultBubble from "./RuneXMultBubble";
 import { getRuneImageUrl, getBaseRuneImageUrl } from "./runeAssets";
 import styles from "./PlayArea.module.css";
 
+// Module-scope so the per-slot shake loop reuses one frozen array instead of
+// allocating + GSAP-re-parsing a fresh one per bubble update.
+const SHAKE_KEYFRAMES = [
+    { x: -1.5, y: -0.5, rotation: -1, scale: 1.04, duration: RUNE_SHAKE_FRAME_S },
+    { x: 1.5, y: 0.5, rotation: 1, scale: 1.06, duration: RUNE_SHAKE_FRAME_S },
+    { x: -1, y: 0, rotation: -0.5, scale: 1.03, duration: RUNE_SHAKE_FRAME_S },
+    { x: 0.5, y: 0, rotation: 0.25, scale: 1.01, duration: RUNE_SHAKE_FRAME_S },
+    { x: 0, y: 0, rotation: 0, scale: 1, duration: RUNE_SHAKE_FRAME_S },
+];
+
 export default function PlayArea() {
     const dissolvingRunes = useDissolvingRunes();
     const dissolveStartTime = useDissolveStartTime();
@@ -82,19 +92,11 @@ export default function PlayArea() {
             const procBubblesForSlot = procDamageBubbles[i] ?? [];
             if (!bubble && procBubblesForSlot.length === 0) continue;
 
-            const shakeKeyframes = [
-                { x: -1.5, y: -0.5, rotation: -1, scale: 1.04, duration: RUNE_SHAKE_FRAME_S },
-                { x: 1.5, y: 0.5, rotation: 1, scale: 1.06, duration: RUNE_SHAKE_FRAME_S },
-                { x: -1, y: 0, rotation: -0.5, scale: 1.03, duration: RUNE_SHAKE_FRAME_S },
-                { x: 0.5, y: 0, rotation: 0.25, scale: 1.01, duration: RUNE_SHAKE_FRAME_S },
-                { x: 0, y: 0, rotation: 0, scale: 1, duration: RUNE_SHAKE_FRAME_S },
-            ];
-
             // Normal bubble shake
             if (bubble) {
                 gsap.set(wrapper, { x: 0, y: 0, rotation: 0, scale: 1 });
                 gsap.to(wrapper, {
-                    keyframes: shakeKeyframes,
+                    keyframes: SHAKE_KEYFRAMES,
                     ease: "power2.out",
                     delay: bubble.delayMs / 1000,
                     overwrite: "auto",
@@ -104,7 +106,7 @@ export default function PlayArea() {
             // stacked retriggers flinch the rune on every hit.
             for (const procBubble of procBubblesForSlot) {
                 gsap.to(wrapper, {
-                    keyframes: shakeKeyframes,
+                    keyframes: SHAKE_KEYFRAMES,
                     ease: "power2.out",
                     delay: procBubble.delayMs / 1000,
                     overwrite: "auto",

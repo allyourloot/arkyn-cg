@@ -10,6 +10,7 @@ import {
     configureTexture,
 } from "./utils/glProgram";
 import { hexToRgbTriple } from "./utils/color";
+import { HAS_HOVER } from "./utils/hasHover";
 import { ELEMENT_COLORS } from "./styles";
 
 /**
@@ -407,7 +408,15 @@ export function registerDissolve(cfg: DissolveRegistration): () => void {
     cfg.canvas.style.visibility = "";
     cfg.canvas.style.display = "";
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // Desktop renders at min(dpr, 2) for crisp dissolves; touch devices
+    // use 1x. The dissolve is a ~600ms transient and the fragment shader
+    // runs a 3-layer FBM noise per pixel — at 2x DPR with up to 5
+    // concurrent rune dissolves that's the dominant per-frame GPU cost
+    // during a cast. Dropping to 1x cuts the pixel count by 4× and is
+    // visually indistinguishable on a phone screen because the rune is
+    // already being torn apart by the noise. Same hover-gate pattern
+    // BackgroundShader uses for its `PIXEL_SIZE` mobile downscale.
+    const dpr = HAS_HOVER ? Math.min(window.devicePixelRatio || 1, 2) : 1;
     const pxSize = cfg.size ?? 96;
     const bufSize = pxSize * dpr;
 
