@@ -300,31 +300,39 @@
     text-align: center;
 }
 
+/* Fixed `width` (not max-width) so every tarot tooltip shares the same
+   description box dimensions regardless of how short the description
+   is. Without this, short copy like Strength's "Upgrade 1 Common or
+   Uncommon rune by 2 rarity tiers" would shrink the box to 1–2 words
+   per line while longer copy like Wheel of Fortune's hits a wider
+   layout — hard to read and visually inconsistent across the 5-card
+   row. The chosen clamp range targets ~6–8 words per line at the
+   bumped font size below. */
 .tooltipDescWrap {
     box-sizing: border-box;
     background: rgba(20, 14, 8, 0.55);
     border-radius: 4px;
-    padding: 4px 10px;
-    max-width: clamp(180px, 22vw, 280px);
+    padding: 5px 12px;
+    width: clamp(190px, 19vw, 230px);
 }
 
 .tooltipDesc {
     display: block;
-    font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
+    font-size: clamp(var(--font-size-2xs), 1.05vw, 14px);
     color: #c8c0b0;
-    line-height: 1.35;
+    line-height: 1.4;
     white-space: normal;
     text-align: center;
 }
 
 /* Live preview row appended below the static description (currently
    only used by Temperance to show the gold the player would gain right
-   now). Slightly larger than the desc so the dynamic value reads as
-   the actionable number rather than as flavor text. */
+   now). Same font scale as the description so the line reads as a
+   continuation rather than a separate UI element. */
 .tooltipPreview {
     display: block;
     margin-top: 4px;
-    font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
+    font-size: clamp(var(--font-size-2xs), 1.05vw, 14px);
     color: #d8d0c0;
     text-align: center;
 }

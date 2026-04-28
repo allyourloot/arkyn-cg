@@ -281,7 +281,7 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
         id: "boom_bomb",
         name: "Boom Bomb",
         rarity: "common",
-        description: "Each cast, roll a random {Mult bonus} from {0, 2, 4, 8, or 16}.",
+        description: "Each cast, roll a random [[Mult bonus]] from [[0, 2, 4, 8, or 16]].",
         cost: 3,
         sellPrice: 1,
     },

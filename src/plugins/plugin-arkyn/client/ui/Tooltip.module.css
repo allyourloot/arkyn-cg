@@ -42,16 +42,20 @@
     transform: translateY(-50%);
 }
 
-/* ---- Variant: framed (9-slice border-image) ---- */
-
+/* ---- Variant: framed (pure CSS) ----
+   Replaces an earlier 9-slice frame.png implementation. Downscaling the
+   24px slice to a 16px border produced subpixel-thin transparent gaps
+   at the slice boundaries on certain zoom levels. Pure CSS eliminates
+   that entirely, and the asset was a flat dark-purple rounded rect with
+   no fine detail to preserve. The inset highlight + thin outer border
+   keep the original asset's depth cue. The fill color matches the
+   arrow triangles below so they read as a continuous shape. */
 .framed {
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 16px;
-    border-image: var(--tooltip-frame) 24 24 24 24 fill / 16px;
-    image-rendering: pixelated;
-    padding: 4px 8px;
+    background: #2a2240;
+    border: 2px solid #1a1430;
+    border-radius: 10px;
+    padding: 10px 14px;
+    box-shadow: inset 0 1px 0 rgba(180, 160, 220, 0.18);
 }
 
 /* ---- Variant: plain (dark background) ---- */
@@ -63,56 +67,59 @@
     padding: 6px 12px;
 }
 
-/* ---- Arrow pseudo-elements ---- */
+/* ---- Arrow pseudo-elements ----
+   Anchored to the tooltip box's visible edge via 100% offsets (no more
+   -16px compensation for the dropped transparent border-image space).
+   Triangle fill matches the framed background for a continuous look. */
 
 .arrowBottom::before {
     content: '';
     position: absolute;
-    top: -16px;
+    bottom: 100%;
     left: 50%;
-    transform: translate(-50%, -100%);
+    transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 16px solid transparent;
-    border-right: 16px solid transparent;
-    border-bottom: 10px solid #2a2240;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid #2a2240;
 }
 
 .arrowTop::after {
     content: '';
     position: absolute;
-    bottom: -16px;
+    top: 100%;
     left: 50%;
-    transform: translate(-50%, 100%);
+    transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 16px solid transparent;
-    border-right: 16px solid transparent;
-    border-top: 10px solid #2a2240;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid #2a2240;
 }
 
 .arrowLeft::after {
     content: '';
     position: absolute;
-    right: -16px;
+    left: 100%;
     top: 50%;
-    transform: translate(100%, -50%);
+    transform: translateY(-50%);
     width: 0;
     height: 0;
-    border-top: 16px solid transparent;
-    border-bottom: 16px solid transparent;
-    border-left: 10px solid #2a2240;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    border-left: 8px solid #2a2240;
 }
 
 .arrowRight::before {
     content: '';
     position: absolute;
-    left: -16px;
+    right: 100%;
     top: 50%;
-    transform: translate(-100%, -50%);
+    transform: translateY(-50%);
     width: 0;
     height: 0;
-    border-top: 16px solid transparent;
-    border-bottom: 16px solid transparent;
-    border-right: 10px solid #2a2240;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    border-right: 8px solid #2a2240;
 }

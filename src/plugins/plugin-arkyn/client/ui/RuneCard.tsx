@@ -11,7 +11,10 @@ import {
     DESELECT_EASE,
     DESELECT_DURATION_S,
 } from "../animations/runeCardMotion";
+import { RUNE_BASE_DAMAGE } from "../../shared";
 import RuneImage from "./RuneImage";
+import Tooltip from "./Tooltip";
+import { ELEMENT_COLORS } from "./styles";
 import { HAS_HOVER } from "./utils/hasHover";
 import styles from "./RuneCard.module.css";
 
@@ -133,38 +136,70 @@ function RuneCardImpl({
         });
     };
 
+    const elementName = rune.element.charAt(0).toUpperCase() + rune.element.slice(1);
+    const runeBase = RUNE_BASE_DAMAGE[rune.rarity] ?? RUNE_BASE_DAMAGE.common;
+
     return (
-        <div
-            ref={cardRef}
-            // Tilt handlers only attach on devices with a real hover state.
-            // On touch they're a no-op, saving a setState per touchmove.
-            onPointerEnter={HAS_HOVER ? handlePointerEnter : undefined}
-            onPointerMove={HAS_HOVER ? handlePointerMove : undefined}
-            onPointerLeave={HAS_HOVER ? handlePointerLeave : undefined}
-            className={`${styles.card} ${isSelected ? styles.selected : ""}`}
-        >
+        // Fragment — `.card` and the hover Tooltip are RENDERED AS
+        // SIBLINGS into the parent .cardSlot (HandDisplay). The card
+        // root has GSAP-driven fan rotation; rendering the tooltip as
+        // a sibling (instead of a child) means the tooltip is anchored
+        // to the un-rotated .cardSlot, so it sits directly above the
+        // rune in screen space regardless of how the card is fanned.
+        // Hover visibility is wired via `.card:hover ~ .arkyn-tooltip`
+        // in RuneCard.module.css.
+        <>
             <div
-                className={styles.floatWrap}
-                // Negative delay starts each card mid-cycle so they're already
-                // out of phase on first render rather than slowly drifting apart.
-                style={{ animationDelay: `${-index * FLOAT_STAGGER_S}s` }}
+                ref={cardRef}
+                // Tilt handlers only attach on devices with a real hover state.
+                // On touch they're a no-op, saving a setState per touchmove.
+                onPointerEnter={HAS_HOVER ? handlePointerEnter : undefined}
+                onPointerMove={HAS_HOVER ? handlePointerMove : undefined}
+                onPointerLeave={HAS_HOVER ? handlePointerLeave : undefined}
+                className={`${styles.card} ${isSelected ? styles.selected : ""}`}
             >
-                <div ref={popRef} className={styles.popWrap}>
-                    <div
-                        className={styles.tiltInner}
-                        style={{
-                            transform: `perspective(${PERSPECTIVE_PX}px) rotateX(${tilt.rotX}deg) rotateY(${tilt.rotY}deg)`,
-                        }}
-                    >
-                        <RuneImage
-                            rarity={rune.rarity}
-                            element={rune.element}
-                            className={styles.layer}
-                        />
+                <div
+                    className={styles.floatWrap}
+                    // Negative delay starts each card mid-cycle so they're already
+                    // out of phase on first render rather than slowly drifting apart.
+                    style={{ animationDelay: `${-index * FLOAT_STAGGER_S}s` }}
+                >
+                    <div ref={popRef} className={styles.popWrap}>
+                        <div
+                            className={styles.tiltInner}
+                            style={{
+                                transform: `perspective(${PERSPECTIVE_PX}px) rotateX(${tilt.rotX}deg) rotateY(${tilt.rotY}deg)`,
+                            }}
+                        >
+                            <RuneImage
+                                rarity={rune.rarity}
+                                element={rune.element}
+                                className={styles.layer}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+            <Tooltip
+                placement="top"
+                arrow
+                variant="framed"
+                className={styles.runeTooltip}
+            >
+                <span
+                    className={styles.runeTooltipName}
+                    style={{ color: ELEMENT_COLORS[rune.element] ?? "#e8e0d4" }}
+                >
+                    {elementName}
+                </span>
+                {/* Plain text — the chip itself carries the Base channel
+                    color (blue background), so the inner text just stays
+                    white. No `renderDescription` here because the auto
+                    Base-color override on `{+N Base}` markers would clash
+                    with the inverted scheme. */}
+                <span className={styles.runeTooltipBase}>+{runeBase} Base</span>
+            </Tooltip>
+        </>
     );
 }
 

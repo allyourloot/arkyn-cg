@@ -1,23 +1,41 @@
 import type { ReactNode } from "react";
 import type { ElementType } from "../../shared/arkynConstants";
 import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
-import { ARCANE_CLUSTER_COLOR, ELEMENT_COLORS, ELEMENTAL_CLUSTER_COLOR } from "./styles";
+import { ARCANE_CLUSTER_COLOR, ELEMENT_COLORS, ELEMENTAL_CLUSTER_COLOR, RARITY_COLORS } from "./styles";
 
 const HIGHLIGHT_COLOR = "#309f30";
 // Mirrors the Executioner proc bubble's background — using it as text
 // color in tooltip markers ties "the fragment" to "the bubble" visually
 // without the pill chrome cluttering the description.
 const RED_HIGHLIGHT_COLOR = "#9f3030";
+// Damage-channel colors — match the Base / Mult chips in the Spell
+// Preview panel (see ELEMENT_COLORS / styles.ts). When a marker's
+// content reads as "+N Base" or "+N Mult", we paint the marker in the
+// matching channel color so the tooltip and the in-game damage chips
+// reinforce each other.
+const BASE_HIGHLIGHT_COLOR = "#1f6897";
+const MULT_HIGHLIGHT_COLOR = "#9f3030";  // intentionally same hex as RED_HIGHLIGHT_COLOR
+// "+N Base" content (e.g. "+8 Base", "+10 Base"). Numbered only.
+const BASE_CONTENT_REGEX = /^\+\d+(\.\d+)?\s+Base$/;
+// "+N Mult" content with optional number, so Elixir's "{+Mult}" matches
+// alongside "+5 Mult", "+10 Mult", etc. Excludes the xMult shapes
+// ("x3 Mult", "x1.5 Mult") because XMULT_CONTENT_REGEX above runs first
+// and routes those to the red pill instead.
+const MULT_CONTENT_REGEX = /^\+(\d+(\.\d+)?\s+)?Mult$/;
 
 // Words that get auto-colored anywhere they appear in a description.
-// Element names render in their ELEMENT_COLORS hue ("Fire" → orange,
-// "Water" → blue, etc.) so a tarot description like "Convert up to 2
-// runes to Air." or a sigil description like "Lightning runes have a
-// {1 in 4} chance to hit twice." picks up element coloring without the
-// author needing to wrap each name in a marker. The proper-noun cluster
-// labels "Elemental" / "Arcane" stay matched here too — Arcane shares
-// its hex with the arcane element color, so listing it once under the
-// element color is canonical.
+// Three categories share this single registry:
+//   - Element names render in their ELEMENT_COLORS hue ("Fire" → orange,
+//     "Water" → blue, etc.) — so descriptions like "Convert up to 2 runes
+//     to Air." or "Lightning runes have a {1 in 4} chance" pick up
+//     coloring without the author needing to wrap each name in a marker.
+//   - Cluster proper nouns ("Elemental", "Arcane") use the cluster colors.
+//     Arcane shares its hex with the arcane element color so listing it
+//     once is canonical.
+//   - Rarity proper nouns ("Uncommon" → green, "Rare" → red, "Legendary"
+//     → gold) auto-color via RARITY_COLORS. Common is intentionally
+//     omitted so it stays in the default tooltip text color (matches the
+//     "common = baseline" reading across the rest of the UI).
 const AUTO_COLOR_WORD_TO_COLOR: Record<string, string> = {
     Elemental: ELEMENTAL_CLUSTER_COLOR,
     Arcane: ARCANE_CLUSTER_COLOR,   // same hex as ELEMENT_COLORS.arcane
@@ -33,10 +51,13 @@ const AUTO_COLOR_WORD_TO_COLOR: Record<string, string> = {
     Psy: ELEMENT_COLORS.psy,
     Shadow: ELEMENT_COLORS.shadow,
     Steel: ELEMENT_COLORS.steel,
+    Uncommon: RARITY_COLORS.uncommon,
+    Rare: RARITY_COLORS.rare,
+    Legendary: RARITY_COLORS.legendary,
 };
 // Longer words listed first so multi-character matches win against
 // shorter prefixes (regex alternation is left-to-right per position).
-const AUTO_COLOR_WORD_REGEX = /\b(Elemental|Lightning|Arcane|Shadow|Poison|Death|Earth|Steel|Water|Holy|Fire|Ice|Air|Psy)\b/g;
+const AUTO_COLOR_WORD_REGEX = /\b(Elemental|Legendary|Lightning|Uncommon|Arcane|Shadow|Poison|Death|Earth|Steel|Water|Holy|Rare|Fire|Ice|Air|Psy)\b/g;
 
 /**
  * Matches an xMult-flavored fragment inside a `{...}` or `[[...]]` marker.
@@ -124,7 +145,17 @@ export function renderDescription(desc: string): ReactNode[] {
             if (XMULT_CONTENT_REGEX.test(content)) {
                 return <span key={i} style={XMULT_PILL_STYLE}>{content}</span>;
             }
-            const color = isDouble ? RED_HIGHLIGHT_COLOR : HIGHLIGHT_COLOR;
+            // Damage-channel overrides — "+N Base" / "+N Mult" content
+            // takes the channel color instead of the marker default. The
+            // checks come AFTER the xMult pill so "x3 Mult" still pills.
+            let color: string;
+            if (BASE_CONTENT_REGEX.test(content)) {
+                color = BASE_HIGHLIGHT_COLOR;
+            } else if (MULT_CONTENT_REGEX.test(content)) {
+                color = MULT_HIGHLIGHT_COLOR;
+            } else {
+                color = isDouble ? RED_HIGHLIGHT_COLOR : HIGHLIGHT_COLOR;
+            }
             return (
                 <span key={i} style={{ color }}>
                     {applyAutoColorWords(content, `m${i}`)}

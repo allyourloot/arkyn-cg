@@ -169,7 +169,7 @@ export const TAROT_DEFINITIONS: Record<string, TarotDefinition> = {
         id: "wheel_of_fortune",
         name: "Wheel of Fortune",
         number: "X",
-        description: "Reroll up to 3 runes. Each has a 50% chance to upgrade rarity, otherwise becomes a random different element.",
+        description: "Reroll up to 3 runes. Each has a {50% chance} to upgrade rarity, otherwise becomes a random different element.",
         effect: { type: "wheelReroll" },
         minTargets: 1, maxTargets: 3,
         fileBasename: "10_wheelOfFortune",

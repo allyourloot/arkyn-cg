@@ -47,9 +47,24 @@
 .cardSlot {
     /* Transform x is GSAP-driven (see HandDisplay.tsx useGSAP for slide-aside
        and useHandDragReorder.ts quickTo for the dragged slot). Opacity stays
-       on CSS for the cast/discard hide. */
+       on CSS for the cast/discard hide.
+
+       `position: relative` makes the slot the positioning context for
+       RuneCard's hover Tooltip, which is rendered as a sibling to the
+       rotated .card so it anchors to this un-rotated slot box and
+       reads centered above the rune regardless of fan rotation. */
+    position: relative;
     transition: opacity 0.1s ease;
     flex-shrink: 0;
+}
+
+/* Hovered slot lifts above its neighbors so the rune tooltip (rendered
+   inside RuneCard) escapes neighboring cards' stacking contexts. The
+   inline `style={{ zIndex: index }}` set in HandDisplay.tsx normally
+   wins the cascade — we mark this rule !important so the hover lift
+   wins for the duration of the hover regardless of the slot's index. */
+.cardSlot:hover {
+    z-index: 500 !important;
 }
 
 .cardSlot:not(:first-child) {

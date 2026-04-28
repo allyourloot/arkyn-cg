@@ -1,5 +1,4 @@
 import type { CSSProperties, ReactNode } from "react";
-import frameUrl from "/assets/ui/frame.png?url";
 import styles from "./Tooltip.module.css";
 
 type Placement = "top" | "bottom" | "left" | "right";
@@ -10,11 +9,9 @@ interface TooltipProps {
     placement?: Placement;
     /** Show a CSS arrow pointing toward the parent. Default: false */
     arrow?: boolean;
-    /** Visual style. "framed" uses a 9-slice border-image, "plain" uses a
-     *  dark background with border. Default: "framed" */
+    /** Visual style. "framed" uses a dark-purple rounded panel; "plain"
+     *  uses a dark background with a thin border. Default: "framed" */
     variant?: Variant;
-    /** For "framed" variant, a custom border-image URL. Defaults to frame.png. */
-    frameImageUrl?: string;
     /** Extra class name appended to the root element. */
     className?: string;
     /** Inline styles appended to the root element. */
@@ -35,7 +32,6 @@ export default function Tooltip({
     placement = "bottom",
     arrow = false,
     variant = "framed",
-    frameImageUrl,
     className,
     style,
     children,
@@ -51,17 +47,11 @@ export default function Tooltip({
     };
     const arrowClass = arrow ? arrowMap[placement] : "";
 
-    const frameVars: CSSProperties | undefined =
-        variant === "framed"
-            ? { "--tooltip-frame": `url(${frameImageUrl ?? frameUrl})` } as CSSProperties
-            : undefined;
-
     return (
         <div
             className={`arkyn-tooltip ${styles.tooltip} ${placementClass} ${variantClass} ${arrowClass} ${className ?? ""}`.trim()}
             style={{
                 pointerEvents: "none",
-                ...frameVars,
                 ...style,
             }}
         >
