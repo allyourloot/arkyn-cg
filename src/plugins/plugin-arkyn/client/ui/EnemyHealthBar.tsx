@@ -26,10 +26,16 @@ import executeUrl from "/assets/ui/execute.png?url";
 import styles from "./EnemyHealthBar.module.css";
 
 // `--panel-bg` (frame.png) drives the outer card chrome AND the bar's
-// inner chrome. `--section-bg` drives the two affinity chips beneath the
-// bar — both Resists and Vulnerable use the same neutral inner-frame chrome;
-// the only color signal is the label text colour (red / green).
-const baseStyleVars = createPanelStyleVars();
+// inner chrome. `--resist-bg` / `--weak-bg` paint a subtle red / green
+// inner-frame UNDER the affinity chip content (rendered via a translucent
+// ::before pseudo at low opacity) so each chip reads as a soft accent
+// rather than a saturated red/green block. The label text colour still
+// carries the primary signal.
+const baseStyleVars = {
+    ...createPanelStyleVars(),
+    "--resist-bg": INNER_FRAME_BGS.red,
+    "--weak-bg": INNER_FRAME_BGS.green,
+} as CSSProperties;
 const bossStyleVars = {
     ...baseStyleVars,
     "--panel-bg": `url(${bossFrameUrl})`,
@@ -285,7 +291,7 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
             {(resistances.length > 0 || weaknesses.length > 0) && (
                 <div className={styles.affinityRow}>
                     {resistances.length > 0 && (
-                        <div className={styles.section}>
+                        <div className={`${styles.section} ${styles.sectionResist}`}>
                             <AffinitySection
                                 label="Resists"
                                 labelClass={styles.affinityLabelResist}
@@ -297,7 +303,7 @@ export default function EnemyHealthBar({ ref: externalRef }: EnemyHealthBarProps
                         </div>
                     )}
                     {weaknesses.length > 0 && (
-                        <div className={styles.section}>
+                        <div className={`${styles.section} ${styles.sectionWeak}`}>
                             <AffinitySection
                                 label="Vulnerable"
                                 labelClass={styles.affinityLabelWeak}

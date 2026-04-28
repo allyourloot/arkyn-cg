@@ -69,16 +69,62 @@
     flex: 1 1 0;
     min-width: 0;
     background: transparent;
+    /* Transparent border holds the chrome's footprint so layout stays
+       consistent between variants. Visible chrome is painted by the
+       variant-specific ::before underlay below — there is no default
+       neutral inner-frame chrome on this card (the colored variants
+       fully replace it; we never want both painted at once). */
     border-style: solid;
     border-color: transparent;
     border-width: 12px;
-    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
     padding: 4px 4px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: clamp(2px, 0.4vw, 4px);
     image-rendering: pixelated;
+    /* Anchor for the colored chip variants' ::before underlay. */
+    position: relative;
+}
+
+/* Resists / Vulnerable variants — paint the colored inner-frame
+   (`--resist-bg` / `--weak-bg`) UNDER the chip content via a low-opacity
+   ::before pseudo so the red/green reads as a soft accent rather than a
+   saturated chip. The pseudo's `box-sizing: border-box` makes `inset:
+   -12px` predictable: pseudo's border-box extends 12px outside its
+   containing block (the section's padding-box), landing exactly at the
+   section's outer edge. The 12px border-width then paints the colored
+   chrome where the section's transparent border lives — no overflow
+   into the affinityRow gap, no overlap with the adjacent chip. */
+.sectionResist::before,
+.sectionWeak::before {
+    content: '';
+    position: absolute;
+    box-sizing: border-box;
+    inset: -12px;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    opacity: 0.2;
+    pointer-events: none;
+    image-rendering: pixelated;
+    z-index: 0;
+}
+
+.sectionResist::before {
+    border-image: var(--resist-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+}
+
+.sectionWeak::before {
+    border-image: var(--weak-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+}
+
+/* Lift flow content above the colored ::before underlay. The section's
+   only flow child is the AffinitySection wrapper. */
+.sectionResist > *,
+.sectionWeak > * {
+    position: relative;
+    z-index: 1;
 }
 
 /* Wrapper around the name + boss tag. position: relative anchors the
@@ -173,7 +219,7 @@
 }
 
 .affinityLabel {
-    font-size: var(--font-size-xs);
+    font-size: clamp(12px, 1.1vw, 14px);
     font-weight: normal;
     color: #b0a090;
     text-transform: uppercase;
@@ -462,9 +508,25 @@
 
     .section {
         border-width: 5px;
-        border-image: var(--section-bg) 24 24 24 24 fill / 5px 5px 5px 5px;
         padding: 1px 0;
         gap: clamp(1px, 0.2vw, 2px);
+    }
+
+    /* Mobile: pseudo extends -5px (matches the section's thinner mobile
+       border-width) so the colored chrome paints exactly over the
+       section's transparent border without spilling into the row gap. */
+    .sectionResist::before,
+    .sectionWeak::before {
+        inset: -5px;
+        border-width: 5px;
+    }
+
+    .sectionResist::before {
+        border-image: var(--resist-bg) 24 24 24 24 fill / 5px 5px 5px 5px;
+    }
+
+    .sectionWeak::before {
+        border-image: var(--weak-bg) 24 24 24 24 fill / 5px 5px 5px 5px;
     }
 
     .name {
@@ -492,8 +554,11 @@
     }
 
     .affinityLabel {
-        font-size: var(--font-size-2xs);
-        letter-spacing: 1px;
+        /* "VULNERABLE" was overflowing the narrow mobile chip — shrink the
+           font and drop the 1px letter-spacing so all 10 characters fit
+           inside the chip's inner width without truncation. */
+        font-size: var(--font-size-3xs);
+        letter-spacing: 0;
     }
 
     .affinityIcon {

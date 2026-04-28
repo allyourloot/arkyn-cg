@@ -99,16 +99,50 @@
     pointer-events: none;
 }
 
-/* Hover tooltip — sibling selector (`~`) instead of descendant because
-   RuneCard renders the Tooltip as a sibling to .card (not a child),
-   which keeps the tooltip anchored to the un-rotated .cardSlot in
-   screen space rather than drifting with the card's fan rotation. */
-.card:hover ~ :global(.arkyn-tooltip) {
+/* Tooltip visibility + position — sibling selector (`~`) instead of
+   descendant because RuneCard renders the Tooltip as a sibling to .card
+   (not a child), which keeps the tooltip anchored to the un-rotated
+   .cardSlot in screen space rather than drifting with the card's fan
+   rotation. */
+
+/* Hover trigger — desktop only. Gated on `(hover: hover)` so the rule
+   never matches on touch, where the browser fires :hover on tap and
+   would flash the tooltip awkwardly during selection. */
+@media (hover: hover) {
+    .card:hover ~ :global(.arkyn-tooltip) {
+        opacity: 1;
+    }
+}
+
+/* Selection-trigger visibility — only the MOST RECENTLY selected rune
+   shows its tooltip. A multi-rune selection (especially on touch where
+   hover doesn't gate visibility) used to flash all selected runes'
+   tooltips at once; restricting to `.lastSelected` makes the tooltip
+   read as "this is the rune you're focused on" — a single, calm reveal
+   that follows your latest tap. */
+.card.selected.lastSelected ~ :global(.arkyn-tooltip) {
     opacity: 1;
+}
+
+/* Lift the tooltip with the card whenever the rune is selected — even
+   if the tooltip is being shown via hover (desktop, on a non-last
+   selected rune) the lift keeps it visually attached to the lifted card.
+   The compound `.card.selected ~ .arkyn-tooltip` has higher specificity
+   than Tooltip.module.css's `.top` placement rule (3 classes vs 1), so
+   this transform wins and composes the lift with the placement's
+   `translateX(-50%)` horizontal centering. The -16px matches
+   SELECT_LIFT_PX in `runeCardMotion.ts` — keep them in sync. */
+.card.selected ~ :global(.arkyn-tooltip) {
+    transform: translateX(-50%) translateY(-16px);
 }
 
 .runeTooltip {
     z-index: 500;
+    /* Smoothly track the card's lift (SELECT_DURATION_S = 0.22s) so the
+       tooltip glides up with the rune instead of snapping to its lifted
+       position. Transition the transform; opacity inherits the base
+       Tooltip's 120ms fade for hover/select reveal. */
+    transition: opacity 120ms ease-out, transform 220ms ease-out;
 }
 
 .runeTooltipName {
@@ -137,4 +171,26 @@
     border-radius: 3px;
     background: #1f6897;
     color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+/* ── Landscape phone compact ──
+   Tighten the tooltip box and shrink the Base chip on small screens —
+   the desktop 10/14 padding is generous against the smaller mobile rune
+   card and the lifted tooltip can otherwise crowd the SigilBar above. */
+@media (max-height: 500px) {
+    /* `:global(.arkyn-tooltip).runeTooltip` is a 2-class compound that
+       beats Tooltip.module.css's `.framed` (1 class) on specificity, so
+       these padding values override the desktop variant cleanly. */
+    :global(.arkyn-tooltip).runeTooltip {
+        padding: 4px 8px;
+        gap: 2px;
+    }
+
+    .runeTooltipBase {
+        font-size: 12px;
+        padding: 1px 6px;
+        margin-top: 2px;
+    }
 }

@@ -768,6 +768,10 @@ export const arkynStoreInternal = {
 
 export function useHand() { return useSyncExternalStore(subscribe, () => hand); }
 export function useSelectedIndices() { return useSyncExternalStore(subscribe, () => selectedIndices); }
+// Chronological tail of `selectedRuneIds` — the rune the player most
+// recently tapped to select. Used to single out one rune's hover tooltip
+// so multi-selected hands don't flash several tooltips at once.
+export function useLastSelectedRuneId() { return useSyncExternalStore(subscribe, () => selectedRuneIds.length > 0 ? selectedRuneIds[selectedRuneIds.length - 1] : null); }
 export function useEnemyName() { return useSyncExternalStore(subscribe, () => enemyName); }
 export function useEnemyHp() { return useSyncExternalStore(subscribe, () => enemyHp); }
 export function useDisplayedEnemyHp() { return useSyncExternalStore(subscribe, () => displayedEnemyHp); }

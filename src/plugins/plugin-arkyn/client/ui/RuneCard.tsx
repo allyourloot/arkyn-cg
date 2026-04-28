@@ -29,6 +29,13 @@ const HOVER_SHRINK_EASE = "power3.out";
 interface RuneCardProps {
     rune: RuneClientData;
     isSelected: boolean;
+    /**
+     * True only for the rune the player most recently tapped to select.
+     * Drives the selection-triggered tooltip reveal so a multi-rune
+     * selection doesn't flash several "+N Base" tooltips at once on
+     * touch — the focused rune wins, the older selections stay quiet.
+     */
+    isLastSelected: boolean;
     index: number;
     rotation?: number;
     /** When true, tilt-on-hover is suppressed (e.g. during a drag). */
@@ -40,6 +47,7 @@ const FLOAT_STAGGER_S = 0.32;
 function RuneCardImpl({
     rune,
     isSelected,
+    isLastSelected,
     index,
     rotation = 0,
     tiltDisabled = false,
@@ -156,7 +164,7 @@ function RuneCardImpl({
                 onPointerEnter={HAS_HOVER ? handlePointerEnter : undefined}
                 onPointerMove={HAS_HOVER ? handlePointerMove : undefined}
                 onPointerLeave={HAS_HOVER ? handlePointerLeave : undefined}
-                className={`${styles.card} ${isSelected ? styles.selected : ""}`}
+                className={`${styles.card} ${isSelected ? styles.selected : ""} ${isLastSelected ? styles.lastSelected : ""}`}
             >
                 <div
                     className={styles.floatWrap}

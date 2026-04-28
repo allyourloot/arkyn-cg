@@ -4,6 +4,7 @@ import { useGSAP } from "@gsap/react";
 import {
     useHand,
     useSelectedIndices,
+    useLastSelectedRuneId,
     useIsCastAnimating,
     useIsDiscardAnimating,
     useDrawingRuneIds,
@@ -26,6 +27,7 @@ const handStyleVarsBase = {
 export default function HandDisplay() {
     const hand = useHand();
     const selectedIndices = useSelectedIndices();
+    const lastSelectedRuneId = useLastSelectedRuneId();
     const isCastAnimating = useIsCastAnimating();
     const isDiscardAnimating = useIsDiscardAnimating();
     const drawingRuneIds = useDrawingRuneIds();
@@ -345,6 +347,7 @@ export default function HandDisplay() {
                                 <RuneCard
                                     rune={rune}
                                     isSelected={isSelected}
+                                    isLastSelected={isSelected && rune.id === lastSelectedRuneId}
                                     index={index}
                                     rotation={rotation}
                                     tiltDisabled={dragInfo !== null}
