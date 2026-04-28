@@ -47,7 +47,9 @@ export function handleCollectRoundGold(
     const roundGold =
         player.lastRoundGoldBase
         + player.lastRoundGoldHandsBonus
-        + player.lastRoundGoldSigilBonus;
+        + player.lastRoundGoldSigilBonus
+        + player.lastRoundGoldBossBonus
+        + player.lastRoundGoldInterest;
     if (roundGold <= 0) return;
 
     player.gold += roundGold;
@@ -58,7 +60,8 @@ export function handleCollectRoundGold(
     logger.info(
         `Player ${client.sessionId} collected round-win gold: ` +
         `${player.lastRoundGoldBase} base + ${player.lastRoundGoldHandsBonus} hands bonus ` +
-        `+ ${player.lastRoundGoldSigilBonus} sigil bonus ` +
+        `+ ${player.lastRoundGoldSigilBonus} sigil bonus + ${player.lastRoundGoldBossBonus} boss bonus ` +
+        `+ ${player.lastRoundGoldInterest} interest ` +
         `= ${roundGold} (total: ${player.gold})`,
     );
 }

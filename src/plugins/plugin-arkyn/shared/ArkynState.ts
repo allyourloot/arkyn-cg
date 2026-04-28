@@ -50,6 +50,16 @@ export class ArkynPlayerState extends Schema {
     // walking the player's owned sigils against SIGIL_END_OF_ROUND_GOLD —
     // this field is the authoritative total paid out on collect.
     @type("number") lastRoundGoldSigilBonus = 0;
+    // Boss bonus — flat gold awarded when the killed enemy was a boss.
+    // Stamped at the killing blow alongside the other lastRoundGold*
+    // breakdown fields so the RoundEnd overlay can render a "Defeat Boss"
+    // row only when the value is non-zero.
+    @type("number") lastRoundGoldBossBonus = 0;
+    // Interest — flat gold awarded as +1 per N gold the player had
+    // banked at the moment of the killing blow (see handleCast.ts for
+    // the divisor). Stamped alongside the other breakdown fields and
+    // surfaced as its own row on the RoundEnd overlay.
+    @type("number") lastRoundGoldInterest = 0;
     // Flipped true once the client has fired ARKYN_COLLECT_ROUND_GOLD for
     // the current round_end episode. Prevents double-crediting if the
     // RoundEnd overlay unmounts + remounts before the player hits

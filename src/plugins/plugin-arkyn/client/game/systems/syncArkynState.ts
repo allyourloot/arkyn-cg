@@ -27,6 +27,8 @@ import {
     setLastRoundGoldHandsBonus,
     setLastRoundGoldHandsCount,
     setLastRoundGoldSigilBonus,
+    setLastRoundGoldBossBonus,
+    setLastRoundGoldInterest,
     setRunTotalDamage,
     setRunTotalCasts,
     setRunTotalDiscards,
@@ -173,6 +175,8 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevGoldHandsBonus = -1;
     let prevGoldHandsCount = -1;
     let prevGoldSigilBonus = -1;
+    let prevGoldBossBonus = -1;
+    let prevGoldInterest = -1;
     let prevRunTotalDamage = -1;
     let prevRunTotalCasts = -1;
     let prevRunTotalDiscards = -1;
@@ -396,6 +400,14 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (player.lastRoundGoldSigilBonus !== prevGoldSigilBonus) {
             setLastRoundGoldSigilBonus(player.lastRoundGoldSigilBonus);
             prevGoldSigilBonus = player.lastRoundGoldSigilBonus;
+        }
+        if (player.lastRoundGoldBossBonus !== prevGoldBossBonus) {
+            setLastRoundGoldBossBonus(player.lastRoundGoldBossBonus);
+            prevGoldBossBonus = player.lastRoundGoldBossBonus;
+        }
+        if (player.lastRoundGoldInterest !== prevGoldInterest) {
+            setLastRoundGoldInterest(player.lastRoundGoldInterest);
+            prevGoldInterest = player.lastRoundGoldInterest;
         }
 
         // Sync run stats

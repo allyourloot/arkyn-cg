@@ -32,10 +32,10 @@ const MULT_CONTENT_REGEX = /^\+(\d+(\.\d+)?\s+)?Mult$/;
 //   - Cluster proper nouns ("Elemental", "Arcane") use the cluster colors.
 //     Arcane shares its hex with the arcane element color so listing it
 //     once is canonical.
-//   - Rarity proper nouns ("Uncommon" → green, "Rare" → red, "Legendary"
-//     → gold) auto-color via RARITY_COLORS. Common is intentionally
-//     omitted so it stays in the default tooltip text color (matches the
-//     "common = baseline" reading across the rest of the UI).
+//   - Rarity proper nouns ("Common" → light gray, "Uncommon" → green,
+//     "Rare" → red, "Legendary" → gold) auto-color via RARITY_COLORS.
+//     Common renders in the same hex as the Common rarity chip so the
+//     tooltip and shop UI agree on the baseline rarity color.
 const AUTO_COLOR_WORD_TO_COLOR: Record<string, string> = {
     Elemental: ELEMENTAL_CLUSTER_COLOR,
     Arcane: ARCANE_CLUSTER_COLOR,   // same hex as ELEMENT_COLORS.arcane
@@ -51,13 +51,14 @@ const AUTO_COLOR_WORD_TO_COLOR: Record<string, string> = {
     Psy: ELEMENT_COLORS.psy,
     Shadow: ELEMENT_COLORS.shadow,
     Steel: ELEMENT_COLORS.steel,
+    Common: RARITY_COLORS.common,
     Uncommon: RARITY_COLORS.uncommon,
     Rare: RARITY_COLORS.rare,
     Legendary: RARITY_COLORS.legendary,
 };
 // Longer words listed first so multi-character matches win against
 // shorter prefixes (regex alternation is left-to-right per position).
-const AUTO_COLOR_WORD_REGEX = /\b(Elemental|Legendary|Lightning|Uncommon|Arcane|Shadow|Poison|Death|Earth|Steel|Water|Holy|Rare|Fire|Ice|Air|Psy)\b/g;
+const AUTO_COLOR_WORD_REGEX = /\b(Elemental|Legendary|Lightning|Uncommon|Arcane|Shadow|Poison|Common|Death|Earth|Steel|Water|Holy|Rare|Fire|Ice|Air|Psy)\b/g;
 
 /**
  * Matches an xMult-flavored fragment inside a `{...}` or `[[...]]` marker.

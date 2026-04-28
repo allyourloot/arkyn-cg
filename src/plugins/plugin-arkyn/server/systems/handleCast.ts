@@ -20,10 +20,19 @@ import { finalizeRun } from "../utils/finalizeRun";
 
 const logger = new Logger("ArkynCast");
 
-// Base gold awarded for defeating an enemy. Bonus gold is added on top
+// Base gold awarded for defeating any enemy. Bonus gold is added on top
 // equal to the player's remaining hands (cast budget) at the moment of
 // the killing blow.
-const GOLD_BASE_REWARD = 3;
+const GOLD_BASE_REWARD = 5;
+// Extra gold awarded ONLY when the killed enemy was flagged as a boss
+// (player.enemy.isBoss === true at the moment of the killing blow).
+const GOLD_BOSS_BONUS = 3;
+// Interest payout — +1 gold per `GOLD_INTEREST_THRESHOLD` gold the
+// player had banked at the moment of the killing blow. Computed via
+// `Math.floor(player.gold / GOLD_INTEREST_THRESHOLD)`. No upper cap
+// today; if the player builds enough gold to feel breakaway, we can
+// add a `GOLD_INTEREST_CAP` constant and clamp here.
+const GOLD_INTEREST_THRESHOLD = 5;
 
 export function handleCast(
     state: ArkynState,
@@ -137,10 +146,12 @@ export function handleCast(
     if (player.enemy.currentHp <= 0) {
         // Stage the gold breakdown onto the player so the Round End
         // overlay can display it:
-        //  - 3 base for the kill
+        //  - GOLD_BASE_REWARD base for the kill
         //  - +1 per remaining cast ("hand") the player still has banked.
         //    `castsRemaining` was decremented above for the killing-blow
         //    cast itself, so a 1-cast clear yields a 2-hand bonus, etc.
+        //  - GOLD_BOSS_BONUS extra when the enemy was a boss
+        //  - +1 per GOLD_INTEREST_THRESHOLD gold currently in the bank
         //
         // NOTE: the gold is NOT added to `player.gold` here — the award
         // is deferred until the player clicks Continue on the RoundEnd
@@ -156,10 +167,18 @@ export function handleCast(
         // branching, so adding future "+N gold per round" sigils is a data
         // entry. The client derives per-sigil rows from the same registry.
         const sigilBonus = getEndOfRoundSigilGold(activeSigils).total;
+        const bossBonus = player.enemy.isBoss ? GOLD_BOSS_BONUS : 0;
+        // Interest is computed BEFORE we award the round gold — the
+        // player's current bank seeds the rate. Using `player.gold`
+        // here gives the bank at the moment of the killing blow,
+        // independent of the rest of the breakdown.
+        const interest = Math.floor(player.gold / GOLD_INTEREST_THRESHOLD);
         player.lastRoundGoldBase = baseGold;
         player.lastRoundGoldHandsBonus = handsBonus;
         player.lastRoundGoldHandsCount = handsCount;
         player.lastRoundGoldSigilBonus = sigilBonus;
+        player.lastRoundGoldBossBonus = bossBonus;
+        player.lastRoundGoldInterest = interest;
         // Reset the collected flag — the client will flip it true when it
         // fires ARKYN_COLLECT_ROUND_GOLD at the overlay's Total reveal.
         player.lastRoundGoldCollected = false;
@@ -175,8 +194,8 @@ export function handleCast(
         logger.info(
             `Enemy defeated! Round ${player.currentRound} complete. ` +
             `Pending gold: ${baseGold} base + ${handsBonus} hands bonus ` +
-            `+ ${sigilBonus} sigil bonus ` +
-            `= ${baseGold + handsBonus + sigilBonus} (awarded on Continue)`,
+            `+ ${sigilBonus} sigil bonus + ${bossBonus} boss bonus + ${interest} interest ` +
+            `= ${baseGold + handsBonus + sigilBonus + bossBonus + interest} (awarded on Continue)`,
         );
         return;
     }

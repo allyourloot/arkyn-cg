@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
     useCurrentRound,
     useLastRoundGoldBase,
+    useLastRoundGoldBossBonus,
     useLastRoundGoldHandsBonus,
     useLastRoundGoldHandsCount,
+    useLastRoundGoldInterest,
     useLastRoundGoldSigilBonus,
     useSigils,
     sendCollectRoundGold,
@@ -41,6 +43,8 @@ const LINE_GAP_MS = 240;
 const INTRO_DELAY_MS = 140;
 
 const LINE_1_TEXT = "Enemy Defeated........";
+const LINE_BOSS_TEXT = "Defeat Boss............";
+const LINE_INTEREST_TEXT = "Interest...............";
 
 // `createPanelStyleVars` already wires both `--panel-bg` (frame.png) and
 // `--section-bg` (inner-frame.png), so the inner content frame can read
@@ -68,8 +72,10 @@ export default function RoundEndOverlay() {
     const handsBonus = useLastRoundGoldHandsBonus();
     const handsCount = useLastRoundGoldHandsCount();
     const sigilBonus = useLastRoundGoldSigilBonus();
+    const bossBonus = useLastRoundGoldBossBonus();
+    const interest = useLastRoundGoldInterest();
     const sigils = useSigils();
-    const totalGold = baseGold + handsBonus + sigilBonus;
+    const totalGold = baseGold + handsBonus + sigilBonus + bossBonus + interest;
 
     // Per-sigil end-of-round gold breakdown (Plunder et al.). Ordered by
     // the player's owned-sigils array so the reveal feels stable across
@@ -102,6 +108,15 @@ export default function RoundEndOverlay() {
     const [line1Coins, setLine1Coins] = useState(0);
     const [line2Text, setLine2Text] = useState("");
     const [line2Coins, setLine2Coins] = useState(0);
+    // Optional rows — only typed/popped when their amount is > 0. Boss
+    // bonus reveals between Enemy Defeated and Remaining Hands; interest
+    // reveals between Remaining Hands and the sigil rows so the
+    // "deterministic round-end income → conditional bonus" cadence reads
+    // top-to-bottom.
+    const [bossText, setBossText] = useState("");
+    const [bossCoins, setBossCoins] = useState(0);
+    const [interestText, setInterestText] = useState("");
+    const [interestCoins, setInterestCoins] = useState(0);
     // Per-sigil rows — parallel arrays indexed by sigilLines position.
     // The typewriter writes into `sigilTexts[i]` and the coins populate
     // `sigilCoins[i]`, one row at a time.
@@ -171,6 +186,10 @@ export default function RoundEndOverlay() {
         setLine1Coins(0);
         setLine2Text("");
         setLine2Coins(0);
+        setBossText("");
+        setBossCoins(0);
+        setInterestText("");
+        setInterestCoins(0);
         setSigilTexts(sigilLines.map(() => ""));
         setSigilCoins(sigilLines.map(() => 0));
         setShowTotal(false);
@@ -199,10 +218,31 @@ export default function RoundEndOverlay() {
             await typeText(LINE_1_TEXT, setLine1Text);
             await wait(60);
             await popCoins(baseGold, setLine1Coins);
+            // Boss bonus row — only revealed when the killed enemy was
+            // a boss (server stamps `lastRoundGoldBossBonus > 0`). The
+            // row stays unmounted on non-boss rounds so the breakdown
+            // doesn't show empty placeholder lines.
+            if (bossBonus > 0) {
+                await wait(LINE_GAP_MS);
+                if (cancelled) return;
+                await typeText(LINE_BOSS_TEXT, setBossText);
+                await wait(60);
+                await popCoins(bossBonus, setBossCoins);
+            }
             await wait(LINE_GAP_MS);
             await typeText(line2Full, setLine2Text);
             await wait(60);
             await popCoins(handsBonus, setLine2Coins);
+            // Interest row — only revealed when the player had enough
+            // gold banked at the killing blow to earn interest. Same
+            // unmount-on-zero treatment as the boss row.
+            if (interest > 0) {
+                await wait(LINE_GAP_MS);
+                if (cancelled) return;
+                await typeText(LINE_INTEREST_TEXT, setInterestText);
+                await wait(60);
+                await popCoins(interest, setInterestCoins);
+            }
             // Sigil rows — one per owned end-of-round-gold sigil. Same
             // typewriter → coin-pop cadence as the base/hands rows. Order
             // follows the owned-sigils array so reveals stay stable.
@@ -237,11 +277,12 @@ export default function RoundEndOverlay() {
             // animation finishes).
             stopTypewriter();
         };
-        // baseGold / handsBonus / line2Full / sigilLinesKey uniquely
-        // identify the reward breakdown — re-running on change handles
-        // the (rare) case where the player advances mid-animation and
-        // a new defeat lands before the component fully unmounts.
-    }, [baseGold, handsBonus, line2Full, sigilLines, sigilLinesKey]);
+        // baseGold / handsBonus / bossBonus / interest / line2Full /
+        // sigilLinesKey uniquely identify the reward breakdown —
+        // re-running on change handles the (rare) case where the player
+        // advances mid-animation and a new defeat lands before the
+        // component fully unmounts.
+    }, [baseGold, handsBonus, bossBonus, interest, line2Full, sigilLines, sigilLinesKey]);
 
     // The handler must be the only path that closes the overlay so an
     // accidental keypress mid-animation doesn't lose the reward.
@@ -262,10 +303,16 @@ export default function RoundEndOverlay() {
                     visually distinguishes them from the outer panel. */}
                 <div className={styles.contentFrame}>
                     <div className={styles.rewards}>
-                        {/* Row 1 — base reward for defeating the enemy */}
+                        {/* Row 1 — base reward for defeating the enemy.
+                            `--coin-count` is the row's destination count
+                            (not the live tween count) so the per-coin
+                            overlap stays stable through the pop reveal. */}
                         <div className={styles.row}>
                             <span className={styles.label}>{line1Text}</span>
-                            <div className={styles.coins}>
+                            <div
+                                className={styles.coins}
+                                style={{ "--coin-count": baseGold } as React.CSSProperties}
+                            >
                                 {Array.from({ length: line1Coins }).map((_, i) => (
                                     <img
                                         key={`l1-${i}`}
@@ -277,10 +324,35 @@ export default function RoundEndOverlay() {
                             </div>
                         </div>
 
+                        {/* Boss-only — flat bonus for defeating a boss
+                            enemy. Conditionally mounted so non-boss
+                            rounds don't show an empty row. */}
+                        {bossBonus > 0 && (
+                            <div className={styles.row}>
+                                <span className={styles.label}>{bossText}</span>
+                                <div
+                                    className={styles.coins}
+                                    style={{ "--coin-count": bossBonus } as React.CSSProperties}
+                                >
+                                    {Array.from({ length: bossCoins }).map((_, i) => (
+                                        <img
+                                            key={`boss-${i}`}
+                                            src={goldIconUrl}
+                                            alt="Gold"
+                                            className={styles.coin}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Row 2 — bonus reward for unspent hands */}
                         <div className={styles.row}>
                             <span className={styles.label}>{line2Text}</span>
-                            <div className={styles.coins}>
+                            <div
+                                className={styles.coins}
+                                style={{ "--coin-count": handsBonus } as React.CSSProperties}
+                            >
                                 {Array.from({ length: line2Coins }).map((_, i) => (
                                     <img
                                         key={`l2-${i}`}
@@ -292,6 +364,28 @@ export default function RoundEndOverlay() {
                             </div>
                         </div>
 
+                        {/* Interest — +1 gold per N gold banked at the
+                            killing blow. Conditionally mounted so rounds
+                            with an empty bank don't show an empty row. */}
+                        {interest > 0 && (
+                            <div className={styles.row}>
+                                <span className={styles.label}>{interestText}</span>
+                                <div
+                                    className={styles.coins}
+                                    style={{ "--coin-count": interest } as React.CSSProperties}
+                                >
+                                    {Array.from({ length: interestCoins }).map((_, i) => (
+                                        <img
+                                            key={`int-${i}`}
+                                            src={goldIconUrl}
+                                            alt="Gold"
+                                            className={styles.coin}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* One row per owned end-of-round-gold sigil
                             (Plunder et al.). Reveals in order after the
                             Remaining Hands row — same typewriter + coin
@@ -299,7 +393,10 @@ export default function RoundEndOverlay() {
                         {sigilLines.map((line, i) => (
                             <div key={line.sigilId} className={styles.row}>
                                 <span className={styles.label}>{sigilTexts[i] ?? ""}</span>
-                                <div className={styles.coins}>
+                                <div
+                                    className={styles.coins}
+                                    style={{ "--coin-count": line.amount } as React.CSSProperties}
+                                >
                                     {Array.from({ length: sigilCoins[i] ?? 0 }).map((_, c) => (
                                         <img
                                             key={`s-${line.sigilId}-${c}`}
