@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState, type CSSProperties, type Ref } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type Ref } from "react";
+import { createPortal } from "react-dom";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
@@ -176,7 +177,30 @@ function runTowerGoldPopSequence(banishedCount: number, goldPerRune: number): vo
  * is satisfied. The server clears the pending fields on Apply or Skip,
  * which drives the picker → shop slide via the parent's schema-sync.
  */
+// Reactive viewport check for the compact-picker layout. Mobile mode
+// portals the action panel + tooltip to document.body and uses the
+// alternate positioning rules in AuguryPicker.module.css; desktop
+// keeps the action panel inside the wrapper at its original bottom-
+// center spot. Reactive (matchMedia) so device rotation flips layout
+// without a reload.
+const COMPACT_PICKER_QUERY = "(max-height: 600px)";
+function useIsCompactPicker(): boolean {
+    const [matches, setMatches] = useState(() =>
+        typeof window !== "undefined" &&
+        window.matchMedia(COMPACT_PICKER_QUERY).matches
+    );
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const mq = window.matchMedia(COMPACT_PICKER_QUERY);
+        const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
+        mq.addEventListener("change", handler);
+        return () => mq.removeEventListener("change", handler);
+    }, []);
+    return matches;
+}
+
 export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps) {
+    const isCompactPicker = useIsCompactPicker();
     const [selectedTarotIndex, setSelectedTarotIndex] = useState<number | null>(null);
     const [selectedRuneIndices, setSelectedRuneIndices] = useState<Set<number>>(() => new Set());
     const [selectedElement, setSelectedElement] = useState<string | null>(null);
@@ -790,30 +814,85 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
                 })}
             </div>
 
-            <div ref={actionPanelRef} className={`${styles.actionPanel} ${bottomUIExited ? styles.exited : ""}`} style={{ ...panelStyleVars, ...buttonVars }}>
-                <div className={styles.promptStrip}>
-                    <span className={styles.prompt}>{prompt}</span>
-                </div>
+            {(() => {
+                const actionPanelEl = (
+                    <div ref={actionPanelRef} className={`${styles.actionPanel} ${isCompactPicker ? styles.actionPanelCompact : ""} ${bottomUIExited ? styles.exited : ""}`} style={{ ...panelStyleVars, ...buttonVars }}>
+                        <div className={styles.promptStrip}>
+                            <span className={styles.prompt}>{prompt}</span>
+                        </div>
 
-                <div className={styles.buttonRow}>
-                    <button
-                        type="button"
-                        className={styles.selectButton}
-                        onClick={handleApply}
-                        disabled={!isApplyEnabled || isApplying}
-                    >
-                        Apply
-                    </button>
-                    <button
-                        type="button"
-                        className={styles.skipButton}
-                        onClick={handleSkip}
-                        disabled={isApplying}
-                    >
-                        Skip
-                    </button>
-                </div>
-            </div>
+                        <div className={styles.buttonRow}>
+                            <button
+                                type="button"
+                                className={styles.selectButton}
+                                onClick={handleApply}
+                                disabled={!isApplyEnabled || isApplying}
+                            >
+                                Apply
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.skipButton}
+                                onClick={handleSkip}
+                                disabled={isApplying}
+                            >
+                                Skip
+                            </button>
+                        </div>
+                    </div>
+                );
+                /* Portal the action panel to document.body on mobile so
+                   `position: fixed` (used in the .actionPanelCompact rule)
+                   anchors against the viewport — the picker wrapper carries
+                   a residual GSAP transform from the shop↔picker swap, which
+                   would otherwise scope `fixed` positioning to the picker
+                   bounds and prevent the action panel from sitting in the
+                   right gutter outside the picker. Desktop keeps the panel
+                   inside the wrapper at its original absolute-positioned
+                   bottom-center spot. */
+                return isCompactPicker
+                    ? createPortal(actionPanelEl, document.body)
+                    : actionPanelEl;
+            })()}
+
+            {/* Mobile-only inline tarot info — rendered as a regular
+                flex child of the wrapper so it inherits the picker's
+                horizontal centering naturally (the wrapper is offset
+                from viewport center because the left stats panel takes
+                its share of the screen, and the picker's horizontal
+                center sits ~25px right of viewport center on iPhone
+                landscape — putting this box in-flow keeps it aligned
+                with the tarot row above). Visible only on
+                touch / compact viewports via the .mobileTarotInfo
+                media rule in AuguryPicker.module.css; the per-card
+                tooltip is hidden there so the content lives in
+                exactly one place. */}
+            {activeTarot && (() => {
+                let temperanceGold: number | null = null;
+                if (activeTarot.effect.type === "gainGoldFromSigils") {
+                    let total = 0;
+                    for (const id of ownedSigils) {
+                        const sigilDef = SIGIL_DEFINITIONS[id];
+                        if (sigilDef) total += sigilDef.sellPrice;
+                    }
+                    temperanceGold = total * activeTarot.effect.goldPerSellValue;
+                }
+                return (
+                    <div className={`${styles.mobileTarotInfo} ${bottomUIExited ? styles.exited : ""}`}>
+                        <span className={styles.mobileTarotInfoName}>{activeTarot.name}</span>
+                        <div className={styles.mobileTarotInfoDescWrap}>
+                            <span className={styles.mobileTarotInfoDesc}>
+                                {renderDescription(activeTarot.description)}
+                            </span>
+                            {temperanceGold !== null && (
+                                <span className={styles.mobileTarotInfoPreview}>
+                                    Currently: <span style={{ color: "#fbbf24" }}>+{temperanceGold} Gold</span>
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

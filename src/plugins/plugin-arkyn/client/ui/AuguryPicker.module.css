@@ -58,10 +58,17 @@
     margin-left: clamp(-22px, -1.6vw, -8px);
 }
 
-.runeSlot:hover:not(:disabled) {
-    transform: translateY(-6px);
-    filter: brightness(1.08);
-    z-index: 90 !important;
+/* Hover lift scoped to hover-capable devices — iOS Safari/Chrome
+   latches :hover on the last-tapped element until another tap moves
+   it elsewhere, which made deselecting an element/rune/tarot leave
+   it stuck partially raised. Touch devices skip the lift and rely on
+   the selected-state styles below for tap feedback. */
+@media (hover: hover) {
+    .runeSlot:hover:not(:disabled) {
+        transform: translateY(-6px);
+        filter: brightness(1.08);
+        z-index: 90 !important;
+    }
 }
 
 .runeSlotSelected,
@@ -172,44 +179,57 @@
     50% { transform: translateY(-3px); }
 }
 
-/* ── Element picker row (only shown when active tarot.requiresElement). ── */
+/* ── Element picker row (only shown when active tarot.requiresElement).
+   13 element chips laid out as an explicit single-row grid so they
+   never wrap into a sprawl. Container uses `width: fit-content` +
+   `margin: 0 auto` to hug its chips and center inside the picker
+   instead of stretching across the full picker width like the prior
+   `flex-wrap: wrap` did. ── */
 .elementRow {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(13, auto);
     justify-content: center;
     align-items: center;
-    gap: clamp(4px, 0.8vw, 10px);
-    padding: clamp(4px, 0.8vh, 8px) clamp(8px, 1.2vw, 14px);
-    background: rgba(0, 0, 0, 0.35);
+    gap: clamp(3px, 0.5vw, 6px);
+    padding: clamp(6px, 1vh, 10px) clamp(10px, 1.4vw, 16px);
+    background: rgba(20, 14, 8, 0.6);
+    border: 1px solid rgba(180, 165, 130, 0.18);
     border-radius: 6px;
     image-rendering: pixelated;
+    margin: 0 auto;
+    width: fit-content;
+    max-width: 100%;
 }
 
 .elementChip {
     box-sizing: border-box;
-    width: clamp(32px, 3.6vw, 48px);
-    height: clamp(32px, 3.6vw, 48px);
-    padding: 0;
-    background: rgba(255, 255, 255, 0.08);
-    border: 2px solid rgba(255, 255, 255, 0.12);
+    width: clamp(30px, 3vw, 40px);
+    height: clamp(30px, 3vw, 40px);
+    padding: 1px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 4px;
     cursor: pointer;
-    transition: transform 100ms ease-out, background 100ms ease-out;
+    transition: transform 100ms ease-out, background 100ms ease-out, border-color 100ms ease-out;
     image-rendering: pixelated;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.elementChip:hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.18);
+@media (hover: hover) {
+    .elementChip:hover {
+        transform: translateY(-2px);
+        background: rgba(255, 255, 255, 0.14);
+        border-color: rgba(255, 255, 255, 0.28);
+    }
 }
 
 .elementChipSelected,
 .elementChipSelected:hover {
     transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 215, 100, 0.55);
 }
 
 .elementChipImg {
@@ -255,12 +275,14 @@
     image-rendering: pixelated;
 }
 
-.tarotCard:hover {
-    transform: translateY(-6px);
-    filter: brightness(1.08);
-    /* Hovered card lifts further above its siblings so its tooltip
-       always paints over neighbor cards too. */
-    z-index: 300;
+@media (hover: hover) {
+    .tarotCard:hover {
+        transform: translateY(-6px);
+        filter: brightness(1.08);
+        /* Hovered card lifts further above its siblings so its
+           tooltip always paints over neighbor cards too. */
+        z-index: 300;
+    }
 }
 
 .tarotCardSelected,
@@ -285,8 +307,21 @@
 }
 
 /* Hover any tarot card -> reveal its <Tooltip> child. Same global
-   .arkyn-tooltip class the Sigil tooltip in ShopScreen latches onto. */
-.tarotCard:hover :global(.arkyn-tooltip) {
+   .arkyn-tooltip class the Sigil tooltip in ShopScreen latches onto.
+   Scoped to `(hover: hover)` so touch devices don't fire sticky :hover
+   on tap (iOS Safari/Chrome holds the hover state on the last tapped
+   element until another element gets tapped, which made the picker
+   look like one tarot was always pre-selected with a tooltip showing). */
+@media (hover: hover) {
+    .tarotCard:hover :global(.arkyn-tooltip) {
+        opacity: 1;
+    }
+}
+
+/* On touch, the tooltip reveals when the player explicitly taps a
+   tarot to select it — same visual feedback as the desktop hover
+   reveal, but driven by selection state instead of hover. */
+.tarotCardSelected :global(.arkyn-tooltip) {
     opacity: 1;
 }
 
@@ -333,6 +368,55 @@
     display: block;
     margin-top: 4px;
     font-size: clamp(var(--font-size-2xs), 1.05vw, 14px);
+    color: #d8d0c0;
+    text-align: center;
+}
+
+/* Mobile-only inline tarot info box — replaces the per-card tooltip
+   on touch/compact viewports where the tooltip-above-card placement
+   blocks the rune row. Rendered as a regular flex child of the
+   picker wrapper (NOT portaled / fixed-positioned), so it inherits
+   the wrapper's horizontal centering and stays aligned with the
+   tarot row above. Visual chrome mirrors the `framed` Tooltip
+   variant (Tooltip.module.css → `.framed`) plus the per-card tarot
+   tooltip inner styles (`.tooltipName`, `.tooltipDescWrap`, etc.) so
+   the mobile box reads as the same UI element as the desktop tooltip.
+   Hidden on desktop; the per-card tooltip carries the same content
+   there. */
+.mobileTarotInfo {
+    display: none;
+}
+
+.mobileTarotInfoName {
+    font-size: var(--font-size-xs);
+    font-weight: normal;
+    letter-spacing: 1px;
+    color: #e8e0d4;
+    text-align: center;
+    line-height: 1;
+}
+
+.mobileTarotInfoDescWrap {
+    box-sizing: border-box;
+    width: 100%;
+    background: rgba(20, 14, 8, 0.55);
+    border-radius: 4px;
+    padding: 5px 10px;
+}
+
+.mobileTarotInfoDesc {
+    display: block;
+    font-size: var(--font-size-2xs);
+    color: #c8c0b0;
+    line-height: 1.4;
+    white-space: normal;
+    text-align: center;
+}
+
+.mobileTarotInfoPreview {
+    display: block;
+    margin-top: 4px;
+    font-size: var(--font-size-2xs);
     color: #d8d0c0;
     text-align: center;
 }
@@ -456,22 +540,200 @@
 
 /* Compact landscape — pull everything tighter. */
 @media (max-height: 600px) {
+    /* Mobile picker layout — three independent levers, each mapping to
+       one visual adjustment:
+         - `padding-top` controls how far down the rune row sits from
+           the wrapper top (raise = smaller, lower = larger).
+         - `gap` controls the spacing between the rune row and the
+           tarot row.
+         - `.mobileTarotInfo` `bottom` (in its rule below) controls how
+           far above the wrapper bottom the tooltip sits.
+       Switching to `justify-content: flex-start` makes those three
+       levers behave intuitively — the desktop's `justify-content: center`
+       centered the content vertically and made padding-top behave
+       counter-intuitively (it shrank the centered area instead of
+       pushing content down). */
     .wrapper {
-        height: 64vh;
-        gap: clamp(4px, 0.8vh, 12px);
-        padding-bottom: clamp(20px, 4vh, 40px);
+        height: 75vh;
+        height: 75dvh;
+        justify-content: flex-start;
+        padding-top: clamp(55px, 10vh, 75px);
+        padding-bottom: 0;
+        gap: clamp(14px, 3vh, 22px);
     }
     .runeSlot {
-        width: clamp(48px, 6vw, 80px);
-        height: clamp(48px, 6vw, 80px);
+        width: clamp(40px, 5vw, 64px);
+        height: clamp(40px, 5vw, 64px);
     }
     .runeSlot:not(:first-child) {
-        margin-left: clamp(-16px, -1.4vw, -6px);
+        margin-left: clamp(-14px, -1.2vw, -5px);
+    }
+    .tarotCanvas {
+        width: clamp(36px, 4.5vw, 56px);
+    }
+    .elementRow {
+        gap: clamp(2px, 0.4vw, 4px);
+        padding: 4px clamp(6px, 1vw, 10px);
+        border-radius: 4px;
+    }
+    .elementChip {
+        width: clamp(20px, 2.5vw, 28px);
+        height: clamp(20px, 2.5vw, 28px);
+        padding: 0;
+        border-radius: 3px;
+    }
+
+    /* Hide per-card tooltips on mobile — the floating
+       .mobileTarotInfo box below carries the same content but won't
+       block the rune row when a tarot is selected. */
+    .tarotCard :global(.arkyn-tooltip) {
+        display: none !important;
+    }
+
+    /* Reveal the mobile inline tarot info — anchored absolutely
+       against the wrapper's bottom area instead of joining the flex
+       flow. Living outside the flow means the rune row + tarot row
+       never shift up when the tooltip appears/disappears (the wrapper
+       uses justify-content: center, so adding/removing a flex child
+       would otherwise reflow the centered group). The wrapper's
+       padding-bottom reserves the vertical slot for this box.
+       Horizontal centering via left: 50% + translateX(-50%) keeps the
+       box aligned with the picker's horizontal center. */
+    .mobileTarotInfo {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: absolute;
+        /* Bottom anchor — the tooltip sits this far above the wrapper's
+           bottom edge. Bumped substantially from the prior 8–40px range
+           because the tooltip's height grows with the description (up
+           to ~95–120px), and a low bottom anchor combined with that
+           height was clipping the bottom of the box at the viewport
+           edge in PWA standalone mode. The compact font sizes /
+           padding below also reduce the tooltip's overall height so
+           it fits the reserved slot cleanly. */
+        bottom: clamp(32px, 6.5vh, 48px);
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: clamp(220px, 60vw, 380px);
+        /* Match the framed Tooltip variant so the mobile box reads
+           visually identical to the desktop tooltip's chrome. */
+        background: #2a2240;
+        border: 2px solid #1a1430;
+        border-radius: 10px;
+        padding: 4px 8px;
+        box-shadow: inset 0 1px 0 rgba(180, 160, 220, 0.18);
+        gap: 3px;
+    }
+
+    /* Compact mobile font sizes — keep the tooltip's overall height
+       small so it fits cleanly in the wrapper's bottom slot without
+       clipping at the viewport edge. Names step down from xs (16px)
+       to 2xs (12px); descriptions from 2xs (12px) to 3xs (10px). */
+    .mobileTarotInfoName {
+        font-size: var(--font-size-2xs);
+    }
+
+    .mobileTarotInfoDescWrap {
+        padding: 3px 8px;
+    }
+
+    .mobileTarotInfoDesc,
+    .mobileTarotInfoPreview {
+        font-size: var(--font-size-3xs);
+    }
+
+    /* Action panel mobile variant — applied when the panel is
+       portaled to document.body (see AuguryPicker.tsx). Switches
+       from the desktop `position: absolute` (wrapper-relative,
+       bottom-center) to `position: fixed` against the viewport,
+       parked in the right gutter where the tooltip used to sit.
+       Buttons stack vertically so they fit in the narrower
+       gutter width while staying tap-friendly. Design tokens are
+       redeclared because the portaled element doesn't inherit
+       from .root in ArkynOverlay where the game's --font-* vars
+       and Knightwood font-family live.
+
+       Selector chains `.actionPanel.actionPanelCompact` (2 classes)
+       instead of just `.actionPanelCompact` (1 class) so this rule
+       beats the legacy `.actionPanel` mobile rule below in
+       specificity — without the chain, that rule's `bottom: max(...)`
+       fights the `bottom: auto` set here, and the resulting
+       `top: 50%` + `bottom: <value>` combination causes the panel
+       to auto-stretch (filling the gap with empty space below SKIP). */
+    .actionPanel.actionPanelCompact {
+        --font-family: 'Knightwood', system-ui, monospace;
+        --font-size-3xs: 0.625rem;
+        --font-size-2xs: 0.75rem;
+        --font-size-xs: 1rem;
+        --font-size-sm: 1.5rem;
+        font-family: var(--font-family);
+        -webkit-font-smoothing: none;
+        font-smooth: never;
+
+        position: fixed;
+        top: 50%;
+        right: clamp(24px, 3.6vw, 56px);
+        bottom: auto;
+        left: auto;
+        transform: translateY(-50%);
+        /* Fixed width (not max-width) so the panel doesn't shrink
+           when the prompt text gets shorter. The per-prompt content
+           wraps inside this fixed slot via white-space: normal on
+           .prompt below. */
+        width: clamp(140px, 22vw, 180px);
+        z-index: 1000;
+    }
+
+    /* Tighter action-panel chrome on mobile so the panel hugs its
+       content (less empty space around the SKIP button), and bulks
+       up the buttons themselves for a more tap-friendly target.
+       Same specificity-chain rationale as the rule above. */
+    .actionPanel.actionPanelCompact {
+        border-width: 7px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 7px 7px 7px 7px;
+        padding: 3px 8px 4px;
+        gap: 3px;
+    }
+
+    .actionPanelCompact .promptStrip {
+        min-width: 0;
+        width: 100%;
+        border-width: 4px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 4px 4px 4px 4px;
+        padding: 2px 6px;
+    }
+
+    .actionPanelCompact .prompt {
+        white-space: normal;
+        text-align: center;
+    }
+
+    .actionPanelCompact .buttonRow {
+        flex-direction: column;
+        width: 100%;
+        gap: 3px;
+    }
+
+    .actionPanelCompact .selectButton,
+    .actionPanelCompact .skipButton {
+        width: 100%;
+        /* Bigger vertical padding bumps button height from ~30px to
+           ~42px — much more tap-friendly. The horizontal padding
+           stays small since the button is already 100% width. */
+        padding: 8px 12px;
     }
     .tarotCanvas {
         width: clamp(46px, 5.6vw, 80px);
     }
     .actionPanel {
+        /* Lift off the wrapper bottom by at least a small visual gap,
+           AND respect the iOS home-indicator safe area in landscape
+           (env(safe-area-inset-bottom) is ~21px on Pro models). On
+           non-iOS / non-PWA contexts env() resolves to 0, so the
+           clamp floor still gives the panel a small gap from the
+           viewport edge. */
+        bottom: max(clamp(8px, 1.5vh, 16px), env(safe-area-inset-bottom));
         border-width: 10px;
         border-image: var(--panel-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
         padding: 4px 10px 5px;
