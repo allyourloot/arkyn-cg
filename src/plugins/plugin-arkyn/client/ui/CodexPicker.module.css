@@ -49,6 +49,19 @@
     filter: brightness(1.15);
 }
 
+/* Lift compensation — see RunePackPicker for the same pattern. The
+   shadow's vertical offset grows by exactly the lift amount so the
+   shadow's screen position stays anchored at the resting baseline. */
+@media (hover: hover) {
+    .card:hover .scrollWrap {
+        filter: drop-shadow(0 12px 0 rgba(0, 0, 0, 0.35));
+    }
+    .cardSelected .scrollWrap,
+    .cardSelected:hover .scrollWrap {
+        filter: drop-shadow(0 16px 0 rgba(0, 0, 0, 0.35));
+    }
+}
+
 /* Idle float — same keyframes used by hand cards / RunePackPicker. */
 .scrollWrap {
     position: relative;
@@ -60,6 +73,7 @@
     animation: codex-pick-float 3.6s ease-in-out infinite;
     will-change: transform, filter;
     filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+    transition: filter 120ms ease-out;
 }
 
 @keyframes codex-pick-float {

@@ -20,7 +20,12 @@
    inline so cards drift out of phase.
 
    The drop-shadow traces the actual alpha silhouette of the rune (not the
-   card's bounding box). 0 blur keeps it solid/pixel-art crisp. */
+   card's bounding box). 0 blur keeps it solid/pixel-art crisp. When the
+   card lifts on select (GSAP-driven, SELECT_LIFT_PX), the descendant rule
+   below grows this offset by exactly the lift amount so the shadow's
+   screen position stays anchored at the resting baseline — the rune
+   visually floats further off the ground rather than carrying its
+   shadow with it. */
 .floatWrap {
     position: absolute;
     inset: 0;
@@ -29,6 +34,21 @@
     animation: rune-float 3.6s ease-in-out infinite;
     will-change: transform, filter;
     filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+    /* Matches SELECT_DURATION_S (0.22s) so the shadow's offset growth
+       glides with the GSAP-driven select lift instead of snapping. */
+    transition: filter 220ms ease-out;
+}
+
+/* Lift compensation for the select-state lift (SELECT_LIFT_PX = -16,
+   defined in `runeCardMotion.ts` — keep this offset in sync). Base
+   shadow offset (6px) + select lift (16px) = 22px. Gated to
+   `(hover: hover)` so the touch-only filter strip below still wins on
+   mobile (the float-wrap drop-shadow is the per-frame compositor
+   bottleneck on touch — see the (hover: none) rule). */
+@media (hover: hover) {
+    .card.selected .floatWrap {
+        filter: drop-shadow(0 22px 0 rgba(0, 0, 0, 0.35));
+    }
 }
 
 /* On touch devices the per-card drop-shadow filters become the bottleneck:

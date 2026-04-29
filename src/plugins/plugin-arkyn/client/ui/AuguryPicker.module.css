@@ -78,6 +78,27 @@
         filter: brightness(1.08);
         z-index: 90 !important;
     }
+
+    /* Lift compensation — base shadow offset (6px) + slot lift (6px) =
+       12px. Keeps the shadow visually pinned to the resting baseline.
+       `:not(.runeSlotSelected)` excludes the selected state — without
+       it, this rule's specificity (4 classes via the nested :not())
+       beats the selected-hover rule below (3 classes), so hovering a
+       selected rune would snap the shadow from the 20px (correct for
+       the -14 selected lift) down to 12px (sized for the -6 hover
+       lift) and back, producing a visible shift on every hover. */
+    .runeSlot:not(.runeSlotSelected):hover:not(:disabled) .runeArt {
+        filter: drop-shadow(0 12px 0 rgba(0, 0, 0, 0.35));
+    }
+
+    /* Same compensation for the selected state — base 6 + lift 14 = 20.
+       Selected-state lift wins over hover-state lift in `.runeSlotSelected`
+       above (`!important`), so the shadow offset must match the selected
+       lift regardless of whether the cursor is also hovering. */
+    .runeSlotSelected .runeArt,
+    .runeSlotSelected:hover .runeArt {
+        filter: drop-shadow(0 20px 0 rgba(0, 0, 0, 0.35));
+    }
 }
 
 .runeSlotSelected,
@@ -147,7 +168,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* Hard depth shadow at rest. When the slot lifts (hover / selected),
+       the descendant rules below grow this offset by exactly the lift
+       amount so the shadow's screen position stays anchored at the
+       resting baseline — the rune visually floats further off the
+       ground instead of carrying its shadow up with it. */
     filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+    transition: filter 120ms ease-out;
 }
 
 .runeLayer {
@@ -292,6 +319,22 @@
            tooltip always paints over neighbor cards too. */
         z-index: 300;
     }
+
+    /* Shadow lift compensation — same pattern as the rune slots above.
+       The shadow canvas inside ItemScene would otherwise lift with the
+       card's transform; offsetting its `top` by exactly the card's lift
+       amount holds it in place visually. Mutually exclusive with the
+       selected rule via `:not(.tarotCardSelected)` so a hovered-and-
+       selected card doesn't bounce between the two compensation
+       offsets (the same specificity trap the rune slots had). */
+    .tarotCard:not(.tarotCardSelected):hover .tarotCanvas canvas[aria-hidden] {
+        top: calc(-15% + 6px);
+    }
+
+    .tarotCardSelected .tarotCanvas canvas[aria-hidden],
+    .tarotCardSelected:hover .tarotCanvas canvas[aria-hidden] {
+        top: calc(-15% + 12px);
+    }
 }
 
 .tarotCardSelected,
@@ -313,6 +356,17 @@
     width: clamp(60px, 7.2vw, 110px);
     aspect-ratio: 92 / 162;
     pointer-events: auto;
+}
+
+/* Smooth the lift-compensation shift so the shadow's `top` glides up
+   with the card lift instead of snapping. The shadow canvas's inline
+   `transform` is rewritten every frame by the shared renderer (for
+   tilt reactivity), but `top` is CSS-only — transitioning `top`
+   doesn't fight the renderer. Targets the shadow canvas via
+   `[aria-hidden]` since the .shadow class is hashed by CSS modules
+   inside ItemScene and isn't visible outside that file. */
+.tarotCanvas canvas[aria-hidden] {
+    transition: top 120ms ease-out;
 }
 
 /* Hover any tarot card -> reveal its <Tooltip> child. Same global
