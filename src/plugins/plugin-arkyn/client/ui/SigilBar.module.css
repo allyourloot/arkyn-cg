@@ -94,6 +94,33 @@
     pointer-events: auto;
 }
 
+/* Shadow lift compensation — same pattern as the AuguryPicker tarot
+   cards. The shadow canvas inside ItemScene rests at `top: -15%`. When
+   the slot is selected, GSAP lifts the whole .filledSlot up by
+   ACTIVE_LIFT_PX (-12px); without compensation, the shadow rides up
+   with it. Offsetting `top` by +12px keeps the shadow visually pinned
+   to the resting baseline so the sigil appears to hover off the bar.
+   ACTIVE_LIFT_PX in SigilBar.tsx — keep --selected-lift in sync. */
+.filledSlot {
+    --selected-lift: 12px;
+}
+
+.filledSlotSelected .sigilCanvas canvas[aria-hidden] {
+    top: calc(-15% + var(--selected-lift));
+}
+
+/* Smooth the compensation shift so the shadow's `top` glides up with
+   the GSAP-driven slot lift instead of snapping. The shadow canvas's
+   inline `transform` is rewritten every frame by the shared renderer
+   (for tilt reactivity), but `top` is CSS-only — transitioning `top`
+   doesn't fight the renderer. Duration matches ACTIVE_DURATION_S
+   (0.22s) in SigilBar.tsx; the GSAP ease is `back.out(1.9)` (bouncy)
+   while CSS uses `ease-out` — close enough that any drift during the
+   brief overshoot is imperceptible. */
+.sigilCanvas canvas[aria-hidden] {
+    transition: top 220ms ease-out;
+}
+
 /* Floating "+N [gold icon]" proc bubble — pops below the sigil slot when
    a discard-hook sigil (Banish) procs. GSAP-driven in SigilBar.tsx: the
    bubble spawns at the bottom of the slot, rises, then fades. Uses the
