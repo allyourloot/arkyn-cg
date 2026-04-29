@@ -24,8 +24,16 @@
 }
 
 /* Plain clickable rune card — no frame, no chip. The RuneImage (base
-   rarity layer + element glyph) carries all the visual information. */
+   rarity layer + element glyph) carries all the visual information.
+
+   Lift constants live as scoped CSS vars so the math (base + lift =
+   compensated shadow offset) is visible inline in the .runeWrap filter
+   below, and the lift values can be tweaked in one place per state. */
 .card {
+    --base-shadow: 6px;
+    --hover-lift: 6px;
+    --selected-lift: 10px;
+
     box-sizing: border-box;
     position: relative;
     display: flex;
@@ -37,41 +45,39 @@
     color: inherit;
     font-family: inherit;
     cursor: pointer;
-    transition: transform 120ms ease-out, filter 120ms ease-out;
+    transition: var(--transition-hover);
     image-rendering: pixelated;
 }
 
 .card:hover {
-    transform: translateY(-6px);
+    transform: translateY(calc(-1 * var(--hover-lift)));
     filter: brightness(1.08);
 }
 
 .cardSelected,
 .cardSelected:hover {
-    transform: translateY(-10px);
+    transform: translateY(calc(-1 * var(--selected-lift)));
     filter: brightness(1.15);
 }
 
 /* Lift compensation for the inner .runeWrap drop-shadow — when the
-   card lifts on hover / select, grow the shadow's vertical offset by
-   the same amount so the shadow stays pinned to the resting baseline.
-   Gated to `(hover: hover)` so the touch-only filter strip below still
-   wins on mobile. */
+   card lifts on hover / select, the shadow's vertical offset grows by
+   the same amount via calc() so the shadow stays pinned to the resting
+   baseline. Gated to `(hover: hover)` so the touch-only filter strip
+   below still wins on mobile. */
 @media (hover: hover) {
     .card:hover .runeWrap {
-        /* base 6 + lift 6 = 12 */
-        filter: drop-shadow(0 12px 0 rgba(0, 0, 0, 0.35));
+        filter: drop-shadow(0 calc(var(--base-shadow) + var(--hover-lift)) 0 var(--shadow-depth-color));
     }
     .cardSelected .runeWrap,
     .cardSelected:hover .runeWrap {
-        /* base 6 + lift 10 = 16 */
-        filter: drop-shadow(0 16px 0 rgba(0, 0, 0, 0.35));
+        filter: drop-shadow(0 calc(var(--base-shadow) + var(--selected-lift)) 0 var(--shadow-depth-color));
     }
 }
 
-/* Idle float animation — same keyframes + stagger used by hand cards
-   (RuneCard.module.css .floatWrap). Per-card phase is wired from React
-   via inline `animationDelay: -i * 0.32s`. */
+/* Idle float animation — shared `arkyn-idle-float` keyframe defined in
+   shared-animations.css (same 4px bob used by hand cards / CodexPicker).
+   Per-card phase is wired from React via inline `animationDelay`. */
 .runeWrap {
     position: relative;
     width: clamp(56px, 7vw, 96px);
@@ -79,15 +85,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: rune-pack-float 3.6s ease-in-out infinite;
+    animation: arkyn-idle-float 3.6s ease-in-out infinite;
     will-change: transform, filter;
-    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+    filter: drop-shadow(0 var(--base-shadow) 0 var(--shadow-depth-color));
     transition: filter 120ms ease-out;
-}
-
-@keyframes rune-pack-float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-4px); }
 }
 
 .runeLayer {

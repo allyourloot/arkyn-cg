@@ -1,7 +1,12 @@
 import { useEffect, useRef } from "react";
 import { useGamePhase, useEnemyIsBoss, usePendingPackRunes, usePendingCodexScrolls, usePendingAuguryRunes, usePendingAuguryTarots } from "../arkynStore";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./BackgroundShader.frag";
-import { createProgram, createQuadBuffer, bindQuadAttributes } from "./utils/glProgram";
+import {
+    bindQuadAttributes,
+    createContextLossHandler,
+    createProgram,
+    createQuadBuffer,
+} from "./utils/glProgram";
 import { HAS_HOVER } from "./utils/hasHover";
 import styles from "./BackgroundShader.module.css";
 
@@ -97,17 +102,16 @@ export default function BackgroundShader() {
         // visually. If the context is later restored, we don't currently
         // re-initialize — a reload or phase change would fix it.
         let contextLost = false;
-        const onContextLost = (e: Event) => {
-            e.preventDefault();
-            contextLost = true;
-            console.warn("BackgroundShader: WebGL context lost — using CSS fallback background.");
-        };
-        const onContextRestored = () => {
-            contextLost = false;
-            console.info("BackgroundShader: WebGL context restored.");
-        };
-        canvas.addEventListener("webglcontextlost", onContextLost, false);
-        canvas.addEventListener("webglcontextrestored", onContextRestored, false);
+        const disposeContextLossHandler = createContextLossHandler(canvas, {
+            onLoss: () => {
+                contextLost = true;
+                console.warn("BackgroundShader: WebGL context lost — using CSS fallback background.");
+            },
+            onRestore: () => {
+                contextLost = false;
+                console.info("BackgroundShader: WebGL context restored.");
+            },
+        });
 
         const program = createProgram(gl, VERTEX_SHADER, FRAGMENT_SHADER, "background");
         if (!program) return;
@@ -214,8 +218,7 @@ export default function BackgroundShader() {
             cancelAnimationFrame(rafId);
             window.removeEventListener("resize", resize);
             document.removeEventListener("visibilitychange", onVisibility);
-            canvas.removeEventListener("webglcontextlost", onContextLost);
-            canvas.removeEventListener("webglcontextrestored", onContextRestored);
+            disposeContextLossHandler();
             if (!contextLost) {
                 gl.deleteBuffer(buffer);
                 gl.deleteProgram(program);

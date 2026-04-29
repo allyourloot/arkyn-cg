@@ -135,7 +135,7 @@
     font-weight: normal;
     color: #e8d4b8;
     text-align: center;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    text-shadow: var(--text-shadow-medium);
     line-height: 1;
     white-space: nowrap;
 }

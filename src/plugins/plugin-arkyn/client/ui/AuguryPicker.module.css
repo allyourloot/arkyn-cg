@@ -67,8 +67,16 @@
 
 /* Outer button — owns hover / selected lift via transform. The float
    bob lives on the inner .runeFloat so the two transforms don't fight
-   (matches HandDisplay's .card / .floatWrap split). */
+   (matches HandDisplay's .card / .floatWrap split).
+
+   Lift constants as scoped CSS vars. The shadow lift compensation
+   below reads them via calc() so the math (base + lift = compensated
+   offset) is visible inline. */
 .runeSlot {
+    --base-shadow: 6px;
+    --hover-lift: 6px;
+    --selected-lift: 14px;
+
     box-sizing: border-box;
     position: relative;
     flex-shrink: 0;
@@ -78,7 +86,7 @@
     color: inherit;
     font-family: inherit;
     cursor: pointer;
-    transition: transform 120ms ease-out, filter 120ms ease-out;
+    transition: var(--transition-hover);
     image-rendering: pixelated;
     width: clamp(64px, 7.4vw, 110px);
     height: clamp(64px, 7.4vw, 110px);
@@ -98,37 +106,36 @@
    the selected-state styles below for tap feedback. */
 @media (hover: hover) {
     .runeSlot:hover:not(:disabled) {
-        transform: translateY(-6px);
+        transform: translateY(calc(-1 * var(--hover-lift)));
         filter: brightness(1.08);
         z-index: 90 !important;
     }
 
-    /* Lift compensation — base shadow offset (6px) + slot lift (6px) =
-       12px. Keeps the shadow visually pinned to the resting baseline.
-       `:not(.runeSlotSelected)` excludes the selected state — without
-       it, this rule's specificity (4 classes via the nested :not())
-       beats the selected-hover rule below (3 classes), so hovering a
-       selected rune would snap the shadow from the 20px (correct for
-       the -14 selected lift) down to 12px (sized for the -6 hover
-       lift) and back, producing a visible shift on every hover. */
+    /* Lift compensation — keeps the shadow visually pinned to the
+       resting baseline. `:not(.runeSlotSelected)` excludes the selected
+       state — without it, this rule's specificity (4 classes via the
+       nested :not()) beats the selected-hover rule below (3 classes),
+       so hovering a selected rune would snap the shadow from the
+       selected offset down to the hover offset and back, producing a
+       visible shift on every hover. */
     .runeSlot:not(.runeSlotSelected):hover:not(:disabled) .runeArt {
-        filter: drop-shadow(0 12px 0 rgba(0, 0, 0, 0.35));
+        filter: drop-shadow(0 calc(var(--base-shadow) + var(--hover-lift)) 0 var(--shadow-depth-color));
     }
 
-    /* Same compensation for the selected state — base 6 + lift 14 = 20.
-       Selected-state lift wins over hover-state lift in `.runeSlotSelected`
-       above (`!important`), so the shadow offset must match the selected
+    /* Same compensation for the selected state. Selected-state lift
+       wins over hover-state lift in `.runeSlotSelected` above
+       (`!important`), so the shadow offset must match the selected
        lift regardless of whether the cursor is also hovering. */
     .runeSlotSelected .runeArt,
     .runeSlotSelected:hover .runeArt {
-        filter: drop-shadow(0 20px 0 rgba(0, 0, 0, 0.35));
+        filter: drop-shadow(0 calc(var(--base-shadow) + var(--selected-lift)) 0 var(--shadow-depth-color));
     }
 }
 
 .runeSlotSelected,
 .runeSlotSelected:hover {
-    transform: translateY(-14px) !important;
-    filter: brightness(1.18) drop-shadow(0 0 10px rgba(255, 215, 100, 0.7)) !important;
+    transform: translateY(calc(-1 * var(--selected-lift))) !important;
+    filter: brightness(1.18) !important;
 }
 
 .runeSlotDimmed {
@@ -197,7 +204,7 @@
        amount so the shadow's screen position stays anchored at the
        resting baseline — the rune visually floats further off the
        ground instead of carrying its shadow up with it. */
-    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+    filter: drop-shadow(0 var(--base-shadow) 0 var(--shadow-depth-color));
     transition: filter 120ms ease-out;
 }
 
@@ -291,8 +298,17 @@
 /* Outer button — owns hover / selected lift via transform. The depth
    shadow lives on the inner .elementChipArt so the lift transform
    doesn't drag the shadow up with it (compensation rules in the
-   `(hover: hover)` block below). Same .runeSlot / .runeArt split. */
+   `(hover: hover)` block below). Same .runeSlot / .runeArt split.
+
+   Lift constants as scoped CSS vars — smaller lifts than the rune row
+   above since the chips are smaller. Element chip transition is 100ms
+   (slightly faster than the 120ms rune-slot/tarot rules) so it's left
+   inline rather than reading from --transition-hover. */
 .elementChip {
+    --base-shadow: 6px;
+    --hover-lift: 4px;
+    --selected-lift: 8px;
+
     box-sizing: border-box;
     position: relative;
     width: var(--el-chip-size);
@@ -318,7 +334,7 @@
     /* Same hard depth shadow as .runeArt. Hover / selected rules below
        grow the offset by the lift amount so the shadow stays anchored
        to the resting baseline. */
-    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+    filter: drop-shadow(0 var(--base-shadow) 0 var(--shadow-depth-color));
     transition: filter 100ms ease-out;
 }
 
@@ -332,26 +348,24 @@
 
 @media (hover: hover) {
     .elementChip:not(.elementChipSelected):hover {
-        transform: translateY(-4px);
+        transform: translateY(calc(-1 * var(--hover-lift)));
         filter: brightness(1.1);
     }
 
-    /* Lift compensation — base 6 + lift 4 = 10. */
     .elementChip:not(.elementChipSelected):hover .elementChipArt {
-        filter: drop-shadow(0 10px 0 rgba(0, 0, 0, 0.35));
+        filter: drop-shadow(0 calc(var(--base-shadow) + var(--hover-lift)) 0 var(--shadow-depth-color));
     }
 
-    /* Lift compensation — base 6 + lift 8 = 14. */
     .elementChipSelected .elementChipArt,
     .elementChipSelected:hover .elementChipArt {
-        filter: drop-shadow(0 14px 0 rgba(0, 0, 0, 0.35));
+        filter: drop-shadow(0 calc(var(--base-shadow) + var(--selected-lift)) 0 var(--shadow-depth-color));
     }
 }
 
 .elementChipSelected,
 .elementChipSelected:hover {
-    transform: translateY(-8px);
-    filter: brightness(1.18) drop-shadow(0 0 8px rgba(255, 215, 100, 0.55));
+    transform: translateY(calc(-1 * var(--selected-lift)));
+    filter: brightness(1.18) drop-shadow(0 0 8px var(--glow-selected-muted));
 }
 
 /* ── Tarot row (5 cards near the bottom). Cards are laid out in a
@@ -372,8 +386,15 @@
    then paint inside .tarotCard's local context and lose to the rune
    slots that escape into the root context. Pinning .tarotCard at z:200
    lifts the whole local context above the runes, so the tooltip
-   correctly stacks above them. */
+   correctly stacks above them.
+
+   Lift constants as scoped CSS vars. Tarot cards have no `--base-shadow`
+   because the depth shadow is a sibling <canvas> positioned via `top`
+   (rendered by the shared ItemScene tilt shader, not a CSS drop-shadow). */
 .tarotCard {
+    --hover-lift: 6px;
+    --selected-lift: 12px;
+
     box-sizing: border-box;
     position: relative;
     z-index: 200;
@@ -387,13 +408,13 @@
     color: inherit;
     font-family: inherit;
     cursor: pointer;
-    transition: transform 120ms ease-out, filter 120ms ease-out;
+    transition: var(--transition-hover);
     image-rendering: pixelated;
 }
 
 @media (hover: hover) {
     .tarotCard:hover {
-        transform: translateY(-6px);
+        transform: translateY(calc(-1 * var(--hover-lift)));
         filter: brightness(1.08);
         /* Hovered card lifts further above its siblings so its
            tooltip always paints over neighbor cards too. */
@@ -408,19 +429,19 @@
        selected card doesn't bounce between the two compensation
        offsets (the same specificity trap the rune slots had). */
     .tarotCard:not(.tarotCardSelected):hover .tarotCanvas canvas[aria-hidden] {
-        top: calc(-15% + 6px);
+        top: calc(-15% + var(--hover-lift));
     }
 
     .tarotCardSelected .tarotCanvas canvas[aria-hidden],
     .tarotCardSelected:hover .tarotCanvas canvas[aria-hidden] {
-        top: calc(-15% + 12px);
+        top: calc(-15% + var(--selected-lift));
     }
 }
 
 .tarotCardSelected,
 .tarotCardSelected:hover {
-    transform: translateY(-12px);
-    filter: brightness(1.18) drop-shadow(0 0 10px rgba(255, 215, 100, 0.55));
+    transform: translateY(calc(-1 * var(--selected-lift)));
+    filter: brightness(1.18);
     z-index: 300;
 }
 

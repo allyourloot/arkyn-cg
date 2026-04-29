@@ -121,3 +121,41 @@ export function createStatBentoStyleVars(): React.CSSProperties {
         "--discards-bg": INNER_FRAME_BGS.orange,
     } as React.CSSProperties;
 }
+
+// ----- Shared design tokens -----
+// CSS-side mirror of these literals lives in shared-animations.css :root
+// (so .module.css files and portaled elements can both read them via
+// var(--…)). Keep the two sides in sync.
+
+/** Drop-shadow color for picker/card lift compensation (used 30+ places). */
+export const SHADOW_DEPTH_COLOR = "rgba(0, 0, 0, 0.35)";
+/** Selected-state gold halo — strong opacity (rune slots, hand cards). */
+export const GLOW_SELECTED_STRONG = "rgba(255, 215, 100, 0.7)";
+/** Selected-state gold halo — muted (element chips, tarot cards). */
+export const GLOW_SELECTED_MUTED = "rgba(255, 215, 100, 0.55)";
+
+/** filter: brightness(...) value for hover state on pickers/cards. */
+export const BRIGHTNESS_HOVER = 1.08;
+/** filter: brightness(...) value for selected state on pickers/cards. */
+export const BRIGHTNESS_SELECTED = 1.18;
+
+/** Standard hover transition shared by pickers/cards. */
+export const TRANSITION_HOVER = "transform 120ms ease-out, filter 120ms ease-out";
+/** Standard "press down" button transition. */
+export const TRANSITION_PRESS = "transform 0.1s ease";
+
+/** Dark stroked text shadow for numbers / labels (alpha 0.85). */
+export const TEXT_SHADOW_DARK = "2px 2px 0 rgba(0, 0, 0, 0.85)";
+/** Body-text stroked shadow (alpha 0.8). */
+export const TEXT_SHADOW_MEDIUM = "2px 2px 0 rgba(0, 0, 0, 0.8)";
+
+/** Body / prompt text — light tan parchment. */
+export const COLOR_TEXT_LIGHT_TAN = "#e8d4b8";
+/** Section headers — warm gold-brown. */
+export const COLOR_TEXT_GOLD_BROWN = "#c4a882";
+/** Gold previews / Temperance preview text. */
+export const COLOR_GOLD_ACCENT = "#fbbf24";
+/** Weak / vulnerable label color (positive multipliers). */
+export const COLOR_POSITIVE_GREEN = "#4ade80";
+/** Resist label color (negative multipliers). */
+export const COLOR_NEGATIVE_RED = "#ef4444";

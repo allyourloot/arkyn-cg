@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import sigilFrameUrl from "/assets/sigils/sigil-frame-128x128.png?url";
+import { createContextLossHandler } from "./utils/glProgram";
 
 /**
  * Shared Three.js renderer for all ItemScene instances (sigils + scrolls).
@@ -390,24 +391,25 @@ function ensureInitialized(): boolean {
 
     // Context loss handling — low probability of this firing now that we
     // own a single context, but cheap insurance.
-    offscreenCanvas.addEventListener("webglcontextlost", (e) => {
-        e.preventDefault();
-        contextLost = true;
-        console.warn("sharedItemRenderer: WebGL context lost, pausing render loop.");
-    });
-    offscreenCanvas.addEventListener("webglcontextrestored", () => {
-        contextLost = false;
-        // Invalidate texture cache so textures re-upload on next render.
-        for (const tex of textureCache.values()) tex.dispose();
-        textureCache.clear();
-        for (const item of registered.values()) {
-            item.texture = getOrLoadTexture(item.imageUrl);
-        }
-        // Renderer dimensions are owned by the browser after restore; force
-        // the next frame to re-apply setSize.
-        lastRendererW = 0;
-        lastRendererH = 0;
-        console.info("sharedItemRenderer: WebGL context restored.");
+    createContextLossHandler(offscreenCanvas, {
+        onLoss: () => {
+            contextLost = true;
+            console.warn("sharedItemRenderer: WebGL context lost, pausing render loop.");
+        },
+        onRestore: () => {
+            contextLost = false;
+            // Invalidate texture cache so textures re-upload on next render.
+            for (const tex of textureCache.values()) tex.dispose();
+            textureCache.clear();
+            for (const item of registered.values()) {
+                item.texture = getOrLoadTexture(item.imageUrl);
+            }
+            // Renderer dimensions are owned by the browser after restore; force
+            // the next frame to re-apply setSize.
+            lastRendererW = 0;
+            lastRendererH = 0;
+            console.info("sharedItemRenderer: WebGL context restored.");
+        },
     });
 
     return true;

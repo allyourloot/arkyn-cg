@@ -173,7 +173,7 @@
     line-height: 1;
     white-space: nowrap;
     text-shadow:
-        2px 2px 0 rgba(0, 0, 0, 0.85),
+        var(--text-shadow-dark),
         0 0 14px rgba(0, 0, 0, 0.55);
     pointer-events: none;
     will-change: transform, opacity;

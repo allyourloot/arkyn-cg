@@ -1,17 +1,18 @@
+/* Lift constants as scoped CSS vars. RuneCard's transform is
+   GSAP-driven (SELECT_LIFT_PX = -16, defined in runeCardMotion.ts —
+   keep --selected-lift in sync). Only the inner .floatWrap filter is
+   CSS-driven; declaring the lift here makes the math (base + selected
+   = 22) visible at the .floatWrap drop-shadow filter below. */
 .card {
+    --base-shadow: 6px;
+    --selected-lift: 16px;
+
     pointer-events: auto;
     cursor: pointer;
     width: clamp(56px, 6.2vw, 96px);
     height: clamp(56px, 6.2vw, 96px);
     position: relative;
-    /* Transform is GSAP-driven (see RuneCard.tsx useGSAP). Filter still
-       transitions in CSS for the soft gold glow when selected. */
-    transition: filter 0.15s ease-out;
     user-select: none;
-}
-
-.card.selected {
-    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.7));
 }
 
 /* Wrapper that runs the idle "floating" bob. Lives between the .card (lift +
@@ -22,66 +23,43 @@
    The drop-shadow traces the actual alpha silhouette of the rune (not the
    card's bounding box). 0 blur keeps it solid/pixel-art crisp. When the
    card lifts on select (GSAP-driven, SELECT_LIFT_PX), the descendant rule
-   below grows this offset by exactly the lift amount so the shadow's
-   screen position stays anchored at the resting baseline — the rune
-   visually floats further off the ground rather than carrying its
+   below grows this offset by exactly the lift amount via calc() so the
+   shadow's screen position stays anchored at the resting baseline — the
+   rune visually floats further off the ground rather than carrying its
    shadow with it. */
 .floatWrap {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    animation: rune-float 3.6s ease-in-out infinite;
+    animation: arkyn-idle-float 3.6s ease-in-out infinite;
     will-change: transform, filter;
-    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+    filter: drop-shadow(0 var(--base-shadow) 0 var(--shadow-depth-color));
     /* Matches SELECT_DURATION_S (0.22s) so the shadow's offset growth
        glides with the GSAP-driven select lift instead of snapping. */
     transition: filter 220ms ease-out;
 }
 
-/* Lift compensation for the select-state lift (SELECT_LIFT_PX = -16,
-   defined in `runeCardMotion.ts` — keep this offset in sync). Base
-   shadow offset (6px) + select lift (16px) = 22px. Gated to
-   `(hover: hover)` so the touch-only filter strip below still wins on
-   mobile (the float-wrap drop-shadow is the per-frame compositor
-   bottleneck on touch — see the (hover: none) rule). */
+/* Lift compensation for the select-state lift. Gated to `(hover: hover)`
+   so the touch-only filter strip below still wins on mobile (the
+   float-wrap drop-shadow is the per-frame compositor bottleneck on
+   touch — see the (hover: none) rule). */
 @media (hover: hover) {
     .card.selected .floatWrap {
-        filter: drop-shadow(0 22px 0 rgba(0, 0, 0, 0.35));
+        filter: drop-shadow(0 calc(var(--base-shadow) + var(--selected-lift)) 0 var(--shadow-depth-color));
     }
 }
 
-/* On touch devices the per-card drop-shadow filters become the bottleneck:
-   each card has TWO continuously-running filters (the float-wrap depth
-   shadow and, when selected, the gold glow), and the mobile GPU has to
-   recompute the alpha silhouette every frame for every card. Strip the
-   filters on touch — the lift + fan layout is enough visual feedback,
-   and selection still highlights via the translateY in the card style.
-   The selected runes also still pulse via .card.selected scale below. */
+/* On touch devices the per-card drop-shadow filter becomes the bottleneck:
+   each card has a continuously-running float-wrap depth shadow, and the
+   mobile GPU has to recompute the alpha silhouette every frame for every
+   card. Strip it on touch — the GSAP-driven lift + fan layout is enough
+   visual feedback, and selection still highlights via the translateY in
+   the card style. */
 @media (hover: none) {
     .floatWrap {
         filter: none;
         will-change: transform;
-    }
-
-    .card.selected {
-        filter: none;
-    }
-
-    .card {
-        /* No CSS filter on touch (see .card.selected override above), so
-           drop the filter transition entirely. Transform stays GSAP-driven. */
-        transition: none;
-    }
-}
-
-@keyframes rune-float {
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-4px);
     }
 }
 
@@ -134,14 +112,20 @@
     }
 }
 
-/* Selection-trigger visibility — only the MOST RECENTLY selected rune
-   shows its tooltip. A multi-rune selection (especially on touch where
-   hover doesn't gate visibility) used to flash all selected runes'
-   tooltips at once; restricting to `.lastSelected` makes the tooltip
-   read as "this is the rune you're focused on" — a single, calm reveal
-   that follows your latest tap. */
-.card.selected.lastSelected ~ :global(.arkyn-tooltip) {
-    opacity: 1;
+/* On touch, the tooltip reveals when the player explicitly taps a rune
+   to select it — same visual feedback as the desktop hover reveal, but
+   driven by selection state. Scoped to `(hover: none)` because on
+   desktop the hover rule above already handles the show; a sticky
+   selected-state tooltip on desktop would permanently pin the "+BASE"
+   chip above every selected rune even after the player has moved on
+   to inspect another card. Restricted to `.lastSelected` so a
+   multi-rune selection only shows ONE tooltip — the most recent —
+   matching the same calm, single-focus reveal the AuguryPicker tarot
+   tooltips use. */
+@media (hover: none) {
+    .card.selected.lastSelected ~ :global(.arkyn-tooltip) {
+        opacity: 1;
+    }
 }
 
 /* Lift the tooltip with the card whenever the rune is selected — even

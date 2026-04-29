@@ -125,6 +125,37 @@ export function compileShader(
     return shader;
 }
 
+// ---- Context loss handling ----
+
+/**
+ * Wire `webglcontextlost` / `webglcontextrestored` listeners on a canvas
+ * with the standard preventDefault() + log behavior the shared renderers
+ * use. Pass `onLoss` to pause render loops / mark contextLost flags, and
+ * `onRestore` to rebuild GL resources (programs, buffers, textures) and
+ * any cached uniform locations.
+ *
+ * Returns a `dispose()` function that removes both listeners — call from
+ * the consumer's cleanup path.
+ */
+export function createContextLossHandler(
+    canvas: HTMLCanvasElement,
+    callbacks: { onLoss?: () => void; onRestore?: () => void },
+): () => void {
+    const onLost = (e: Event) => {
+        e.preventDefault();
+        callbacks.onLoss?.();
+    };
+    const onRestored = () => {
+        callbacks.onRestore?.();
+    };
+    canvas.addEventListener("webglcontextlost", onLost, false);
+    canvas.addEventListener("webglcontextrestored", onRestored, false);
+    return () => {
+        canvas.removeEventListener("webglcontextlost", onLost);
+        canvas.removeEventListener("webglcontextrestored", onRestored);
+    };
+}
+
 /**
  * Compile + link a vertex/fragment shader pair into a WebGLProgram. Returns
  * null if either shader fails to compile or the program fails to link. The

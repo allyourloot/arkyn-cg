@@ -10,7 +10,14 @@ import {
 } from "../arkynStore";
 import { getDebuffById, getIgnoredResistanceElements } from "../../shared";
 import bossFrameUrl from "/assets/ui/boss-frame.png?url";
-import { createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
+import {
+    createPanelStyleVars,
+    INNER_FRAME_BGS,
+    ELEMENT_COLORS,
+    COLOR_POSITIVE_GREEN,
+    COLOR_NEGATIVE_RED,
+    COLOR_TEXT_LIGHT_TAN,
+} from "./styles";
 import { getRuneImageUrl } from "./runeAssets";
 import Tooltip from "./Tooltip";
 import PanelFrame from "./PanelFrame";
@@ -98,7 +105,7 @@ export default function EnemyInfoPanel({ ref }: EnemyInfoPanelProps = {}) {
                                     labelClass={styles.affinityLabelWeak}
                                     elements={weaknesses}
                                     multiplier="2x"
-                                    multiplierColor="#4ade80"
+                                    multiplierColor={COLOR_POSITIVE_GREEN}
                                 />
                             </div>
                         )}
@@ -109,7 +116,7 @@ export default function EnemyInfoPanel({ ref }: EnemyInfoPanelProps = {}) {
                                     labelClass={styles.affinityLabelResist}
                                     elements={resistances}
                                     multiplier="0.5x"
-                                    multiplierColor="#ef4444"
+                                    multiplierColor={COLOR_NEGATIVE_RED}
                                     ignored={ignoredResistances}
                                 />
                             </div>
@@ -150,17 +157,20 @@ function AffinitySection({ label, labelClass, elements, multiplier, multiplierCo
                             {isIgnored && <span className={styles.ignoredX} aria-hidden="true" />}
                             <Tooltip placement="left" variant="framed">
                                 {isIgnored ? (
-                                    <>
-                                        <span className={styles.tooltipMult} style={{ color: "#e8d4b8" }}>1x</span>
-                                        {` damage from ${displayName} (ignored)`}
-                                    </>
+                                    <span>
+                                        <span className={styles.tooltipMult} style={{ color: COLOR_TEXT_LIGHT_TAN }}>1x</span>
+                                        {" damage from "}
+                                        <span style={{ color: ELEMENT_COLORS[element] }}>{displayName}</span>
+                                        {" (ignored)"}
+                                    </span>
                                 ) : (
-                                    <>
+                                    <span>
                                         <span className={styles.tooltipMult} style={{ color: multiplierColor }}>
                                             {multiplier}
                                         </span>
-                                        {` damage from ${displayName}`}
-                                    </>
+                                        {" damage from "}
+                                        <span style={{ color: ELEMENT_COLORS[element] }}>{displayName}</span>
+                                    </span>
                                 )}
                             </Tooltip>
                         </span>

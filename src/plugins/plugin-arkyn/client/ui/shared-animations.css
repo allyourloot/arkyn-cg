@@ -2,6 +2,23 @@
    Imported once at the overlay root so names are globally available.
    Prefixed with arkyn- to prevent collisions with other plugins. */
 
+/* ── Shared design tokens.
+   Mirror of the constants exported from styles.ts (SHADOW_DEPTH_COLOR,
+   GLOW_SELECTED_*, BRIGHTNESS_*, TRANSITION_HOVER, TEXT_SHADOW_*).
+   Lives at :root so portaled elements (which don't inherit from
+   ArkynOverlay's .root) can still read them. Keep in sync with
+   styles.ts — values must match. ── */
+:root {
+    --shadow-depth-color: rgba(0, 0, 0, 0.35);
+    --glow-selected-strong: rgba(255, 215, 100, 0.7);
+    --glow-selected-muted: rgba(255, 215, 100, 0.55);
+    --brightness-hover: 1.08;
+    --brightness-selected: 1.18;
+    --transition-hover: transform 120ms ease-out, filter 120ms ease-out;
+    --text-shadow-dark: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    --text-shadow-medium: 2px 2px 0 rgba(0, 0, 0, 0.8);
+}
+
 @keyframes arkyn-fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
@@ -20,4 +37,13 @@
 @keyframes arkyn-panel-in {
     from { transform: scale(0.92); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
+}
+
+/* Shared idle-float bob — used by RuneCard, RunePackPicker, CodexPicker
+   wrappers (all 4px amplitude). AuguryPicker keeps its own
+   `augury-rune-float` (3px) since its rune slots run a slightly tighter
+   bob than the hand/picker cards. */
+@keyframes arkyn-idle-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
 }

@@ -4,6 +4,7 @@ import {
     DISSOLVE_VERTEX_SHADER,
 } from "./DissolveShader.frag";
 import {
+    createContextLossHandler,
     createProgram,
     createQuadBuffer,
     bindQuadAttributes,
@@ -175,51 +176,52 @@ function ensureInitialized(): boolean {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-    offscreenCanvas.addEventListener("webglcontextlost", (e) => {
-        e.preventDefault();
-        contextLost = true;
-        console.warn("sharedDissolveRenderer: WebGL context lost, pausing.");
-    });
-    offscreenCanvas.addEventListener("webglcontextrestored", () => {
-        if (!gl) return;
-        contextLost = false;
-        // Raw-WebGL programs + buffers are invalid after context loss; rebuild
-        // them. (Three.js's WebGLRenderer handles this automatically — we
-        // have to do it by hand here.) Uniform locations are bound to the
-        // new programs, so refresh those too.
-        dualProgram = createProgram(gl, DISSOLVE_VERTEX_SHADER, DISSOLVE_FRAGMENT_SHADER, "dissolve-dual");
-        singleProgram = createProgram(gl, DISSOLVE_VERTEX_SHADER, DISSOLVE_FRAGMENT_SHADER_SINGLE, "dissolve-single");
-        quadBuffer = createQuadBuffer(gl);
-        if (dualProgram && singleProgram) {
-            dualUniforms = {
-                threshold: gl.getUniformLocation(dualProgram, "uThreshold"),
-                edgeColor: gl.getUniformLocation(dualProgram, "uEdgeColor"),
-                baseTex: gl.getUniformLocation(dualProgram, "uBaseTex"),
-                runeTex: gl.getUniformLocation(dualProgram, "uRuneTex"),
-            };
-            singleUniforms = {
-                threshold: gl.getUniformLocation(singleProgram, "uThreshold"),
-                edgeColor: gl.getUniformLocation(singleProgram, "uEdgeColor"),
-                tex: gl.getUniformLocation(singleProgram, "uTex"),
-            };
-        }
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-        // Re-upload all cached textures using their retained Image refs.
-        for (const entry of textureCache.values()) {
-            entry.tex = null;
-            entry.loaded = false;
-            if (entry.img && entry.img.complete) {
-                entry.tex = gl.createTexture();
-                configureTexture(gl, entry.tex);
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, entry.img);
-                entry.loaded = true;
+    createContextLossHandler(offscreenCanvas, {
+        onLoss: () => {
+            contextLost = true;
+            console.warn("sharedDissolveRenderer: WebGL context lost, pausing.");
+        },
+        onRestore: () => {
+            if (!gl) return;
+            contextLost = false;
+            // Raw-WebGL programs + buffers are invalid after context loss; rebuild
+            // them. (Three.js's WebGLRenderer handles this automatically — we
+            // have to do it by hand here.) Uniform locations are bound to the
+            // new programs, so refresh those too.
+            dualProgram = createProgram(gl, DISSOLVE_VERTEX_SHADER, DISSOLVE_FRAGMENT_SHADER, "dissolve-dual");
+            singleProgram = createProgram(gl, DISSOLVE_VERTEX_SHADER, DISSOLVE_FRAGMENT_SHADER_SINGLE, "dissolve-single");
+            quadBuffer = createQuadBuffer(gl);
+            if (dualProgram && singleProgram) {
+                dualUniforms = {
+                    threshold: gl.getUniformLocation(dualProgram, "uThreshold"),
+                    edgeColor: gl.getUniformLocation(dualProgram, "uEdgeColor"),
+                    baseTex: gl.getUniformLocation(dualProgram, "uBaseTex"),
+                    runeTex: gl.getUniformLocation(dualProgram, "uRuneTex"),
+                };
+                singleUniforms = {
+                    threshold: gl.getUniformLocation(singleProgram, "uThreshold"),
+                    edgeColor: gl.getUniformLocation(singleProgram, "uEdgeColor"),
+                    tex: gl.getUniformLocation(singleProgram, "uTex"),
+                };
             }
-        }
-        lastBoundProgram = null;
-        lastOffscreenSize = 0;
-        console.info("sharedDissolveRenderer: WebGL context restored.");
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+            // Re-upload all cached textures using their retained Image refs.
+            for (const entry of textureCache.values()) {
+                entry.tex = null;
+                entry.loaded = false;
+                if (entry.img && entry.img.complete) {
+                    entry.tex = gl.createTexture();
+                    configureTexture(gl, entry.tex);
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, entry.img);
+                    entry.loaded = true;
+                }
+            }
+            lastBoundProgram = null;
+            lastOffscreenSize = 0;
+            console.info("sharedDissolveRenderer: WebGL context restored.");
+        },
     });
 
     return true;

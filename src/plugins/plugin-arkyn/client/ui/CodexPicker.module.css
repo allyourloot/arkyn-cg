@@ -22,7 +22,14 @@
     width: 100%;
 }
 
+/* Lift constants as scoped CSS vars — same pattern as RunePackPicker.
+   Math (base + lift = compensated shadow offset) is visible inline
+   in the .scrollWrap filter rules below. */
 .card {
+    --base-shadow: 6px;
+    --hover-lift: 6px;
+    --selected-lift: 10px;
+
     box-sizing: border-box;
     position: relative;
     display: flex;
@@ -34,35 +41,36 @@
     color: inherit;
     font-family: inherit;
     cursor: pointer;
-    transition: transform 120ms ease-out, filter 120ms ease-out;
+    transition: var(--transition-hover);
     image-rendering: pixelated;
 }
 
 .card:hover {
-    transform: translateY(-6px);
+    transform: translateY(calc(-1 * var(--hover-lift)));
     filter: brightness(1.08);
 }
 
 .cardSelected,
 .cardSelected:hover {
-    transform: translateY(-10px);
+    transform: translateY(calc(-1 * var(--selected-lift)));
     filter: brightness(1.15);
 }
 
 /* Lift compensation — see RunePackPicker for the same pattern. The
-   shadow's vertical offset grows by exactly the lift amount so the
-   shadow's screen position stays anchored at the resting baseline. */
+   shadow's vertical offset grows by exactly the lift amount via calc()
+   so the shadow's screen position stays anchored at the resting baseline. */
 @media (hover: hover) {
     .card:hover .scrollWrap {
-        filter: drop-shadow(0 12px 0 rgba(0, 0, 0, 0.35));
+        filter: drop-shadow(0 calc(var(--base-shadow) + var(--hover-lift)) 0 var(--shadow-depth-color));
     }
     .cardSelected .scrollWrap,
     .cardSelected:hover .scrollWrap {
-        filter: drop-shadow(0 16px 0 rgba(0, 0, 0, 0.35));
+        filter: drop-shadow(0 calc(var(--base-shadow) + var(--selected-lift)) 0 var(--shadow-depth-color));
     }
 }
 
-/* Idle float — same keyframes used by hand cards / RunePackPicker. */
+/* Idle float — shared `arkyn-idle-float` keyframe defined in
+   shared-animations.css (4px bob, same as hand cards / RunePackPicker). */
 .scrollWrap {
     position: relative;
     width: clamp(72px, 9vw, 128px);
@@ -70,15 +78,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: codex-pick-float 3.6s ease-in-out infinite;
+    animation: arkyn-idle-float 3.6s ease-in-out infinite;
     will-change: transform, filter;
-    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+    filter: drop-shadow(0 var(--base-shadow) 0 var(--shadow-depth-color));
     transition: filter 120ms ease-out;
-}
-
-@keyframes codex-pick-float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-4px); }
 }
 
 /* ItemScene wrapper — renders the glossy hover/tilt shader at full
