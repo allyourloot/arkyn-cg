@@ -12,7 +12,16 @@
     max-width: clamp(560px, 78vw, 1100px);
     height: 78vh;
     pointer-events: auto;
-    gap: clamp(8px, 1.4vh, 22px);
+    gap: clamp(20px, 3vh, 44px);
+    /* Reserve space at the bottom so the flex-centered group (rune row +
+       element row + tarot row) shifts up off the action panel. The
+       action panel is `position: absolute` against the wrapper's
+       padding-box so its `bottom: 0` anchor is unaffected — only the
+       in-flow children move. Smaller value here = group sits lower in
+       the wrapper, so the tarot row ends up closer to the action panel.
+       Compact / mobile layout overrides this to 0 in the @media block
+       below. */
+    padding-bottom: clamp(20px, 3.5vh, 50px);
 }
 
 /* ── Rune row (8 cards, single horizontal row, slightly overlapping
@@ -320,9 +329,15 @@
 
 /* On touch, the tooltip reveals when the player explicitly taps a
    tarot to select it — same visual feedback as the desktop hover
-   reveal, but driven by selection state instead of hover. */
-.tarotCardSelected :global(.arkyn-tooltip) {
-    opacity: 1;
+   reveal, but driven by selection state instead of hover. Scoped to
+   `(hover: none)` because on desktop the hover rule above already
+   handles the show, and a sticky selected-state tooltip would cover
+   the rune row above the tarot — blocking rune selection while
+   adding no info the player can't get back by re-hovering. */
+@media (hover: none) {
+    .tarotCardSelected :global(.arkyn-tooltip) {
+        opacity: 1;
+    }
 }
 
 /* Tooltip styling — mirrors ShopScreen's sigil tooltip so the framed
@@ -446,11 +461,11 @@
     border-color: transparent;
     border-width: 20px;
     border-image: var(--panel-bg) 24 24 24 24 fill / 20px 20px 20px 20px;
-    padding: clamp(10px, 1.4vh, 18px) clamp(18px, 2.4vw, 32px) clamp(12px, 1.6vh, 20px);
+    padding: clamp(8px, 1.2vh, 14px) clamp(14px, 1.8vw, 22px) clamp(10px, 1.4vh, 16px);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(10px, 1.4vh, 18px);
+    gap: clamp(8px, 1.2vh, 14px);
     image-rendering: pixelated;
 }
 
@@ -461,12 +476,16 @@
     border-color: transparent;
     border-width: 12px;
     border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-    padding: clamp(4px, 0.8vh, 8px) clamp(12px, 1.8vw, 22px);
+    padding: clamp(4px, 0.8vh, 8px) clamp(10px, 1.4vw, 18px);
     display: flex;
     align-items: center;
     justify-content: center;
     image-rendering: pixelated;
-    min-width: clamp(220px, 32vw, 480px);
+    /* Drives the action panel's overall width on desktop — the buttons
+       row is narrower than this, so the prompt strip is the wider lever.
+       Tightened from the previous clamp(220px, 32vw, 480px) so the panel
+       reads as a focused control rather than a wide banner. */
+    min-width: clamp(180px, 22vw, 320px);
 }
 
 .prompt {
