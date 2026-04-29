@@ -48,7 +48,7 @@ import DissolveCanvas from "./DissolveCanvas";
 import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
 import { getTarotImageUrl } from "./tarotAssets";
 import { renderDescription } from "./descriptionText";
-import { createPanelStyleVars, ELEMENT_COLORS } from "./styles";
+import { createPanelStyleVars } from "./styles";
 import buttonGreenUrl from "/assets/ui/button-green.png?url";
 import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
 import buttonGreenDisabledUrl from "/assets/ui/button-green-disabled.png?url";
@@ -579,6 +579,15 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
 
     return (
         <div ref={ref} className={styles.wrapper}>
+            {/* Selection band — wraps the rune row + element row in a stable-
+                height container so the tarot row below never shifts when
+                the active tarot changes. The band's min-height is sized to
+                fit the largest case (rune row + element row stacked, e.g.
+                Hierophant); leaner cases (rune-only / element-only) center
+                their single row inside the same band. Without this wrapper
+                Judgement (element-only) used to collapse the band's height
+                and yank the tarot row up. */}
+            <div className={styles.selectionBand}>
             {showRuneRow && (
                 <div className={styles.runeRow}>
                     <div className={styles.runeRail}>
@@ -716,30 +725,37 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             )}
 
             {activeTarot?.requiresElement && (
-                <div ref={elementRowRef} className={`${styles.elementRow} ${bottomUIExited ? styles.exited : ""}`}>
+                <div ref={elementRowRef} className={`${styles.elementRow} ${!showRuneRow ? styles.elementRowAlone : ""} ${bottomUIExited ? styles.exited : ""}`}>
                     {ELEMENT_TYPES.map(el => {
                         const isSelected = selectedElement === el;
-                        const color = ELEMENT_COLORS[el] ?? "#b0b0b0";
                         return (
                             <button
                                 key={el}
                                 type="button"
                                 className={`${styles.elementChip} ${isSelected ? styles.elementChipSelected : ""}`}
-                                style={isSelected ? { boxShadow: `0 0 0 3px ${color}` } : undefined}
                                 onClick={() => handleElementClick(el)}
                                 title={el}
                             >
-                                <img
-                                    src={getRuneImageUrl(el)}
-                                    alt={el}
-                                    className={styles.elementChipImg}
-                                    draggable={false}
-                                />
+                                {/* Render as a "common" rune card via RuneImage so the
+                                    element picker uses the same visual language as the
+                                    rune row above (rarity frame + element glyph). The
+                                    .elementChipArt wrapper carries the depth drop-shadow
+                                    independently of .elementChip's lift transform — same
+                                    split as the rune slots, so the selected/hover lift
+                                    grows the shadow's vertical offset to compensate. */}
+                                <div className={styles.elementChipArt}>
+                                    <RuneImage
+                                        rarity="common"
+                                        element={el}
+                                        className={styles.elementChipLayer}
+                                    />
+                                </div>
                             </button>
                         );
                     })}
                 </div>
             )}
+            </div>{/* /.selectionBand */}
 
             <div ref={tarotRowRef} className={`${styles.tarotRow} ${bottomUIExited ? styles.exited : ""}`}>
                 {tarotIds.map((tarotId, i) => {

@@ -13,15 +13,39 @@
     height: 78vh;
     pointer-events: auto;
     gap: clamp(20px, 3vh, 44px);
-    /* Reserve space at the bottom so the flex-centered group (rune row +
-       element row + tarot row) shifts up off the action panel. The
-       action panel is `position: absolute` against the wrapper's
-       padding-box so its `bottom: 0` anchor is unaffected — only the
-       in-flow children move. Smaller value here = group sits lower in
-       the wrapper, so the tarot row ends up closer to the action panel.
-       Compact / mobile layout overrides this to 0 in the @media block
-       below. */
-    padding-bottom: clamp(20px, 3.5vh, 50px);
+    /* Reserve space at the bottom so the flex-centered group (selection
+       band + tarot row) shifts up off the action panel. The action
+       panel is `position: absolute` against the wrapper's padding-box
+       so its `bottom: 0` anchor is unaffected — only the in-flow
+       children move. Larger value here = group sits higher in the
+       wrapper. Tuned alongside .selectionBand min-height so the tarot
+       row's vertical position stays roughly stable across tarot
+       selections (Judgement / Hierophant / typical). Compact / mobile
+       layout overrides this to 0 in the @media block below. */
+    padding-bottom: clamp(80px, 12vh, 130px);
+}
+
+/* ── Selection band — wraps the rune row + element row in a single
+   stable-height container. Min-height locks the band to the largest-
+   case layout (rune row + gap + element row, e.g. Hierophant) so the
+   tarot row below never shifts as the active tarot changes. Sparser
+   cases (rune-only, element-only) center their single row inside the
+   same band — Judgement no longer collapses the band's height and
+   yanks the tarot row up. ── */
+.selectionBand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    /* Sized to fit the largest possible content — Hierophant: rune row
+       (clamp 80–138 incl. padding) + inner gap (clamp 12–22) + 1-row
+       element (clamp 50–66 incl. ~10px chrome). Judgement (2-row
+       element only) is shorter than this so it centers inside the
+       reserved height — the tarot row below stays at a stable y
+       regardless of which tarot is active. */
+    min-height: clamp(170px, 20vw, 230px);
+    gap: clamp(12px, 1.6vh, 22px);
 }
 
 /* ── Rune row (8 cards, single horizontal row, slightly overlapping
@@ -216,62 +240,118 @@
 }
 
 /* ── Element picker row (only shown when active tarot.requiresElement).
-   13 element chips laid out as an explicit single-row grid so they
-   never wrap into a sprawl. Container uses `width: fit-content` +
-   `margin: 0 auto` to hug its chips and center inside the picker
-   instead of stretching across the full picker width like the prior
-   `flex-wrap: wrap` did. ── */
+   13 chips laid out as a clean flex row — no box chrome on the
+   container, since each chip is a self-standing rune-card-style
+   button (rarity frame + element glyph via RuneImage) with its own
+   lift + drop-shadow mechanics. The chips' visual language matches
+   the rune row above, so the picker reads as a single coherent UI
+   instead of a styled-rune row + an oddly-skinned element strip.
+
+   Two layouts via the .elementRowAlone modifier:
+     - default (Hierophant — element alongside rune row): 1 row, smaller
+       chips, packs all 13 in a single line.
+     - .elementRowAlone (Judgement — element-only): 2 rows (7 top + 6
+       bottom), bigger chips. `flex-wrap: wrap` + a max-width capped to
+       7 chips' worth makes the 13 wrap as 7 + 6, and `justify-content:
+       center` centers each row independently — the 6-chip bottom row
+       offsets by half-a-(chip+gap) so it sits visually centered between
+       the 7 top-row chip positions.
+
+   Sizes and gaps come from CSS vars overridden by the alone modifier
+   so the max-width calc and the chip dimensions stay in sync. ── */
 .elementRow {
-    display: grid;
-    grid-template-columns: repeat(13, auto);
+    --el-chip-size: clamp(40px, 4.6vw, 56px);
+    --el-col-gap: clamp(4px, 0.6vw, 10px);
+    --el-row-gap: clamp(4px, 0.6vh, 8px);
+
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     justify-content: center;
     align-items: center;
-    gap: clamp(3px, 0.5vw, 6px);
-    padding: clamp(6px, 1vh, 10px) clamp(10px, 1.4vw, 16px);
-    background: rgba(20, 14, 8, 0.6);
-    border: 1px solid rgba(180, 165, 130, 0.18);
-    border-radius: 6px;
+    column-gap: var(--el-col-gap);
+    row-gap: var(--el-row-gap);
     image-rendering: pixelated;
     margin: 0 auto;
     width: fit-content;
     max-width: 100%;
 }
 
+/* Element-only mode (Judgement) — bigger chips, 2-row wrap, max-width
+   capped to exactly 7 chips so the 13th row breaks 7 / 6. */
+.elementRowAlone {
+    --el-chip-size: clamp(56px, 6.2vw, 84px);
+    --el-col-gap: clamp(6px, 0.8vw, 12px);
+
+    flex-wrap: wrap;
+    /* 7 chips + 6 column-gaps. Drives the 7-per-row break. */
+    max-width: calc(7 * var(--el-chip-size) + 6 * var(--el-col-gap));
+}
+
+/* Outer button — owns hover / selected lift via transform. The depth
+   shadow lives on the inner .elementChipArt so the lift transform
+   doesn't drag the shadow up with it (compensation rules in the
+   `(hover: hover)` block below). Same .runeSlot / .runeArt split. */
 .elementChip {
     box-sizing: border-box;
-    width: clamp(30px, 3vw, 40px);
-    height: clamp(30px, 3vw, 40px);
-    padding: 1px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
+    position: relative;
+    width: var(--el-chip-size);
+    height: var(--el-chip-size);
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-family: inherit;
     cursor: pointer;
-    transition: transform 100ms ease-out, background 100ms ease-out, border-color 100ms ease-out;
+    transition: transform 100ms ease-out, filter 100ms ease-out;
     image-rendering: pixelated;
+    will-change: transform, filter;
+}
+
+.elementChipArt {
+    position: relative;
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
+    /* Same hard depth shadow as .runeArt. Hover / selected rules below
+       grow the offset by the lift amount so the shadow stays anchored
+       to the resting baseline. */
+    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+    transition: filter 100ms ease-out;
+}
+
+.elementChipLayer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
 }
 
 @media (hover: hover) {
-    .elementChip:hover {
-        transform: translateY(-2px);
-        background: rgba(255, 255, 255, 0.14);
-        border-color: rgba(255, 255, 255, 0.28);
+    .elementChip:not(.elementChipSelected):hover {
+        transform: translateY(-4px);
+        filter: brightness(1.1);
+    }
+
+    /* Lift compensation — base 6 + lift 4 = 10. */
+    .elementChip:not(.elementChipSelected):hover .elementChipArt {
+        filter: drop-shadow(0 10px 0 rgba(0, 0, 0, 0.35));
+    }
+
+    /* Lift compensation — base 6 + lift 8 = 14. */
+    .elementChipSelected .elementChipArt,
+    .elementChipSelected:hover .elementChipArt {
+        filter: drop-shadow(0 14px 0 rgba(0, 0, 0, 0.35));
     }
 }
 
 .elementChipSelected,
 .elementChipSelected:hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.22);
-    border-color: rgba(255, 215, 100, 0.55);
-}
-
-.elementChipImg {
-    width: 100%;
-    height: 100%;
-    image-rendering: pixelated;
+    transform: translateY(-8px);
+    filter: brightness(1.18) drop-shadow(0 0 8px rgba(255, 215, 100, 0.55));
 }
 
 /* ── Tarot row (5 cards near the bottom). Cards are laid out in a
@@ -503,11 +583,17 @@
     pointer-events: none !important;
 }
 
-/* ── Action panel (Apply + Skip). Anchored at the wrapper's bottom. ── */
+/* ── Action panel (Apply + Skip). Anchored just above the wrapper's
+   bottom so it doesn't crowd the viewport's bottom edge — the wrapper
+   itself is taller than the shop panel (78vh vs 66vh), and pinning
+   the action panel flush at `bottom: 0` was reading as pressed
+   uncomfortably close to the screen bottom on standard 16:9 displays.
+   Mobile compact has its own `bottom` rule with iOS safe-area
+   handling further down. ── */
 .actionPanel {
     box-sizing: border-box;
     position: absolute;
-    bottom: 0;
+    bottom: clamp(20px, 3vh, 50px);
     left: 50%;
     transform: translateX(-50%);
     background: transparent;
@@ -644,17 +730,26 @@
     .tarotCanvas {
         width: clamp(36px, 4.5vw, 56px);
     }
+    /* Compact selection band — shorter min-height so the rune row +
+       element row (or just one of them) fit the tighter mobile picker
+       without wasting vertical space. */
+    .selectionBand {
+        min-height: clamp(80px, 9vh, 110px);
+        gap: clamp(6px, 1.2vh, 14px);
+    }
     .elementRow {
-        gap: clamp(2px, 0.4vw, 4px);
-        padding: 4px clamp(6px, 1vw, 10px);
-        border-radius: 4px;
-    }
-    .elementChip {
-        width: clamp(20px, 2.5vw, 28px);
-        height: clamp(20px, 2.5vw, 28px);
+        --el-chip-size: clamp(28px, 3.4vw, 44px);
+        --el-col-gap: clamp(3px, 0.5vw, 6px);
         padding: 0;
-        border-radius: 3px;
     }
+    /* Mobile alone-mode (Judgement on compact viewports) inherits the
+       desktop `.elementRowAlone` rule's `flex-wrap: wrap` + capped
+       max-width, so the 13 chips break into 7 + 6 just like desktop —
+       just at the smaller mobile chip size set by `.elementRow` above
+       (the cascade resolves --el-chip-size to whichever rule is
+       declared last for the matching element; this @media block is
+       last in source order, so the mobile size wins). No alone-mode
+       overrides needed here. */
 
     /* Hide per-card tooltips on mobile — the floating
        .mobileTarotInfo box below carries the same content but won't
