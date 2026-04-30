@@ -938,6 +938,20 @@
     line-height: 1.2;
 }
 
+/* Cost chip at the bottom of a pack tooltip — gold accent variant of
+   .tipRarity so packs read as "this costs N gold" rather than a
+   rarity tier. */
+.tipCost {
+    font-size: clamp(var(--font-size-3xs), 0.8vw, var(--font-size-2xs));
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #1a1430;
+    background: #fbbf24;
+    padding: 2px 12px;
+    border-radius: 3px;
+    line-height: 1.2;
+}
+
 /* ── Sigil grid (Sigils tab) ──
    Cards use the default ItemScene useFrame=true path, so the sigil
    art renders onto the embossed sigil-frame backdrop — same shape
@@ -983,6 +997,115 @@
 }
 
 .sigilCanvas {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    pointer-events: auto;
+}
+
+/* ── Pack grid (Packs tab) ──
+   Only 3 packs exist, so the grid uses a fixed-cell-width track that
+   doesn't stretch — packs sit at a natural ~140-200px and pack to the
+   start of the row instead of stretching across the content area.
+   Pack art is 89/160 (taller than wide) per PACK_DEFINITIONS — the
+   canvas itself stays square; ItemScene's aspectRatio prop shapes
+   the WebGL plane inside it. Top padding gives the grid breathing
+   room below the section heading. */
+.packGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 200px));
+    gap: clamp(14px, 1.8vw, 28px);
+    padding: 44px 4px 36px;
+    justify-content: start;
+}
+
+.packCard {
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    color: inherit;
+    padding: 0;
+    z-index: 1;
+    transition: transform 0.12s ease, filter 0.12s ease;
+    image-rendering: pixelated;
+}
+
+@media (hover: hover) {
+    .packCard:hover {
+        transform: translateY(-4px);
+        filter: brightness(1.1);
+        z-index: 3;
+    }
+}
+
+.packCard:focus-visible {
+    transform: translateY(-4px);
+    filter: brightness(1.1);
+    z-index: 3;
+    outline: none;
+}
+
+/* Square canvas — same as the in-game ShopScreen.module.css `.packCanvas`.
+   The pack art's 89/160 proportions come from `aspectRatio` passed to
+   <ItemScene>, which shapes the WebGL plane INSIDE the square canvas;
+   the canvas itself must stay square or the texture gets stretched
+   tall (the bug this rule fixes). */
+.packCanvas {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    pointer-events: auto;
+}
+
+/* ── Scroll grid (Scrolls tab) ──
+   13 scrolls (one per element). Square aspect, sized to comfortably
+   wrap on a desktop modal — typically 1-2 rows. */
+.scrollGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: clamp(8px, 1vw, 14px);
+    padding: 6px 4px 12px;
+}
+
+.scrollCard {
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    color: inherit;
+    padding: 0;
+    z-index: 1;
+    transition: transform 0.12s ease, filter 0.12s ease;
+    image-rendering: pixelated;
+}
+
+@media (hover: hover) {
+    .scrollCard:hover {
+        transform: translateY(-4px);
+        filter: brightness(1.1);
+        z-index: 3;
+    }
+}
+
+.scrollCard:focus-visible {
+    transform: translateY(-4px);
+    filter: brightness(1.1);
+    z-index: 3;
+    outline: none;
+}
+
+.scrollCanvas {
     position: relative;
     width: 100%;
     aspect-ratio: 1;
@@ -1220,6 +1343,17 @@
     }
 
     .sigilGrid {
+        grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+        gap: 6px;
+    }
+
+    .packGrid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 110px));
+        gap: 10px;
+        padding: 24px 4px 20px;
+    }
+
+    .scrollGrid {
         grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
         gap: 6px;
     }

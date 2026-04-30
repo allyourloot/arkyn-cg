@@ -2,19 +2,19 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import {
     ARCANE_CLUSTER_ELEMENTS,
-    AUGURY_PACK_COST,
     AUGURY_PACK_RUNE_CHOICES,
     AUGURY_PACK_TAROT_CHOICES,
     BOSS_DEBUFFS,
     CASTS_PER_ROUND,
     DISCARDS_PER_ROUND,
+    ELEMENT_TYPES,
     HAND_SIZE,
     MAX_CONSUMABLES,
     MAX_PLAY,
     MAX_SIGILS,
+    PACK_DEFINITIONS,
+    PACK_TYPES,
     RARITY_TYPES,
-    RUNE_PACK_CHOICES,
-    RUNE_PACK_COST,
     SCROLL_RUNE_BONUS,
     SIGIL_DEFINITIONS,
     SIGIL_IDS,
@@ -28,7 +28,9 @@ import { COMBINABLE_ELEMENTS } from "../../shared/arkynConstants";
 import { playMenuClose, playMenuOpen } from "../sfx";
 import { renderDescription, SigilExplainer, SigilPenaltyLine, splitPenalty } from "./descriptionText";
 import ItemScene from "./ItemScene";
+import { getPackImageUrl } from "./packAssets";
 import RuneImage from "./RuneImage";
+import { getScrollImageUrl } from "./scrollAssets";
 import {
     ARCANE_CLUSTER_COLOR,
     ELEMENTAL_CLUSTER_COLOR,
@@ -47,7 +49,7 @@ interface HowToPlayModalProps {
     onClose: () => void;
 }
 
-type Tab = "basics" | "scoring" | "combat" | "items" | "sigils" | "tarots";
+type Tab = "basics" | "scoring" | "combat" | "items" | "sigils" | "packs" | "scrolls" | "tarots";
 
 interface TabEntry {
     id: Tab;
@@ -82,6 +84,8 @@ const TABS: TabEntry[] = [
     { id: "combat", label: "Combat" },
     { id: "items", label: "Items" },
     { id: "sigils", label: "Sigils", parent: "items" },
+    { id: "packs", label: "Packs", parent: "items" },
+    { id: "scrolls", label: "Scrolls", parent: "items" },
     { id: "tarots", label: "Tarots" },
 ];
 
@@ -190,6 +194,8 @@ export default function HowToPlayModal({ onClose }: HowToPlayModalProps) {
                         {tab === "combat" && <CombatTab />}
                         {tab === "items" && <ItemsTab />}
                         {tab === "sigils" && <SigilsTab />}
+                        {tab === "packs" && <PacksTab />}
+                        {tab === "scrolls" && <ScrollsTab />}
                         {tab === "tarots" && <TarotsTab />}
                     </div>
                 </div>
@@ -486,31 +492,17 @@ function ItemsTab() {
                 <div className={styles.sectionHeading}>Scrolls</div>
                 <p className={styles.sectionText}>
                     Per-element upgrades. Each scroll level adds <span className={styles.highlight}>+{SCROLL_RUNE_BONUS} base damage</span> to
-                    every rune of that element. Stack scrolls on your favorite element to push that color
-                    well past its rarity-base contribution.
+                    every rune of that element. See the <span className={styles.highlight}>Scrolls</span> sub-tab
+                    for the full list.
                 </p>
             </div>
 
             <div className={styles.section}>
-                <div className={styles.sectionHeading}>Rune Pack</div>
-                <p className={styles.sectionRow}>
-                    <span className={styles.sectionPill}>{RUNE_PACK_COST}g</span>
-                    <span className={styles.sectionText}>
-                        Open a picker of {RUNE_PACK_CHOICES} random runes — pick one (or skip).
-                        The picked rune is added to your pouch <span className={styles.highlight}>permanently</span>.
-                        Higher rarities are rarer; legendaries are uncommon.
-                    </span>
-                </p>
-            </div>
-
-            <div className={styles.section}>
-                <div className={styles.sectionHeading}>Augury Pack</div>
-                <p className={styles.sectionRow}>
-                    <span className={styles.sectionPill}>{AUGURY_PACK_COST}g</span>
-                    <span className={styles.sectionText}>
-                        Opens a Tarot picker — see the <span className={styles.highlight}>Tarots</span> tab
-                        for how <span className={styles.augury}>Augury Packs</span> reshape your pouch.
-                    </span>
+                <div className={styles.sectionHeading}>Packs</div>
+                <p className={styles.sectionText}>
+                    Deferred-pick shop items — buy a pack and a picker opens with a randomized
+                    set, you keep one. Three pack types in play (Rune, Codex, <span className={styles.augury}>Augury</span>) —
+                    see the <span className={styles.highlight}>Packs</span> sub-tab for what each one does.
                 </p>
             </div>
         </div>
@@ -740,6 +732,184 @@ function SigilCard({ id, index }: SigilCardProps) {
                     >
                         {def.rarity}
                     </span>
+                </div>,
+                document.body,
+            )}
+        </>
+    );
+}
+
+// ── Packs ──
+
+function PacksTab() {
+    return (
+        <div className={styles.scrollArea}>
+            <div className={styles.section}>
+                <div className={styles.sectionHeading}>Packs</div>
+                <p className={styles.sectionText}>
+                    Packs are <span className={styles.highlight}>deferred-pick</span> shop items.
+                    Buy a pack and a picker opens — pick one item from a randomized set, the rest
+                    are discarded. Packs always offer a choice; nothing is forced on you.
+                </p>
+                <p className={styles.sectionNote}>
+                    Hover any pack for its full effect.
+                </p>
+            </div>
+
+            <div className={styles.section}>
+                <div className={styles.sectionHeading}>All Packs ({PACK_TYPES.length})</div>
+                <div className={styles.packGrid}>
+                    {PACK_TYPES.map((id, i) => (
+                        <PackCard key={id} id={id} index={i} />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+interface PackCardProps {
+    id: string;
+    index: number;
+}
+
+function PackCard({ id, index }: PackCardProps) {
+    const def = PACK_DEFINITIONS[id as keyof typeof PACK_DEFINITIONS];
+    const url = def ? getPackImageUrl(id, 128) : "";
+    const { ref, hovered, setHovered, pos } = usePortalTipPosition();
+
+    if (!def) return null;
+
+    return (
+        <>
+            <div
+                ref={ref}
+                className={styles.packCard}
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+                onFocus={() => setHovered(true)}
+                onBlur={() => setHovered(false)}
+                tabIndex={0}
+                aria-label={def.name}
+            >
+                {url ? (
+                    <ItemScene
+                        itemId={id}
+                        index={index}
+                        imageUrl={url}
+                        useFrame={false}
+                        aspectRatio={def.aspectRatio}
+                        displayScale={def.displayScale}
+                        smoothIdle
+                        className={styles.packCanvas}
+                    />
+                ) : (
+                    <div className={styles.tarotPlaceholder}>{def.name[0]}</div>
+                )}
+            </div>
+            {hovered && pos && createPortal(
+                <div className={styles.tarotPortalTip} style={pos}>
+                    <span className={styles.tarotTipName}>{def.name}</span>
+                    <div className={styles.tarotTipDescWrap}>
+                        <span className={styles.tarotTipDesc}>
+                            {renderDescription(def.description)}
+                        </span>
+                    </div>
+                    <span className={styles.tipCost}>{def.cost} gold</span>
+                </div>,
+                document.body,
+            )}
+        </>
+    );
+}
+
+// ── Scrolls ──
+
+// Scrolls are per-element consumables. Description is synthesized here
+// so the {+N Base} marker picks up the BASE_HIGHLIGHT_COLOR treatment
+// from `renderDescription`, and the element name auto-colors via the
+// shared element registry — the tooltip ends up reading like every
+// other in-game scroll/sigil tooltip.
+function buildScrollDescription(element: string): string {
+    const cap = element.charAt(0).toUpperCase() + element.slice(1);
+    return `Adds {+${SCROLL_RUNE_BONUS} Base} damage to ${cap} runes per scroll level.`;
+}
+
+function ScrollsTab() {
+    return (
+        <div className={styles.scrollArea}>
+            <div className={styles.section}>
+                <div className={styles.sectionHeading}>Scrolls</div>
+                <p className={styles.sectionText}>
+                    Scrolls are <span className={styles.highlight}>per-element upgrades</span>.
+                    Each level on an element's scroll adds <span className={styles.baseChip}>+{SCROLL_RUNE_BONUS} Base</span>{" "}
+                    damage to every rune of that element, applied before weakness / resistance.
+                    Stack scrolls on a single element to push its rune contribution well past the
+                    rarity baseline.
+                </p>
+                <p className={styles.sectionNote}>
+                    Found in the shop and via Codex Packs. Hover any scroll for its effect.
+                </p>
+            </div>
+
+            <div className={styles.section}>
+                <div className={styles.sectionHeading}>All Scrolls ({ELEMENT_TYPES.length})</div>
+                <div className={styles.scrollGrid}>
+                    {ELEMENT_TYPES.map((el, i) => (
+                        <ScrollCard key={el} element={el} index={i} />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+interface ScrollCardProps {
+    element: string;
+    index: number;
+}
+
+function ScrollCard({ element, index }: ScrollCardProps) {
+    const url = getScrollImageUrl(element);
+    const { ref, hovered, setHovered, pos } = usePortalTipPosition();
+    const cap = element.charAt(0).toUpperCase() + element.slice(1);
+    const name = `${cap} Scroll`;
+    const desc = buildScrollDescription(element);
+
+    return (
+        <>
+            <div
+                ref={ref}
+                className={styles.scrollCard}
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+                onFocus={() => setHovered(true)}
+                onBlur={() => setHovered(false)}
+                tabIndex={0}
+                aria-label={name}
+            >
+                {url ? (
+                    <ItemScene
+                        itemId={`scroll-${element}`}
+                        index={index}
+                        imageUrl={url}
+                        useFrame={false}
+                        aspectRatio={1}
+                        smoothIdle
+                        className={styles.scrollCanvas}
+                    />
+                ) : (
+                    <div className={styles.tarotPlaceholder}>{cap[0]}</div>
+                )}
+            </div>
+            {hovered && pos && createPortal(
+                <div className={styles.tarotPortalTip} style={pos}>
+                    <span className={styles.tarotTipName}>{name}</span>
+                    <div className={styles.tarotTipDescWrap}>
+                        <span className={styles.tarotTipDesc}>
+                            {renderDescription(desc)}
+                        </span>
+                    </div>
                 </div>,
                 document.body,
             )}
