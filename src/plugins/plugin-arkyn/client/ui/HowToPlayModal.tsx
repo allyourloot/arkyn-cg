@@ -12,9 +12,12 @@ import {
     MAX_CONSUMABLES,
     MAX_PLAY,
     MAX_SIGILS,
+    RARITY_TYPES,
     RUNE_PACK_CHOICES,
     RUNE_PACK_COST,
     SCROLL_RUNE_BONUS,
+    SIGIL_DEFINITIONS,
+    SIGIL_IDS,
     SPELL_TIER_BASE_DAMAGE,
     SPELL_TIER_MULT,
     SYNERGY_PAIRS,
@@ -23,7 +26,7 @@ import {
 } from "../../shared";
 import { COMBINABLE_ELEMENTS } from "../../shared/arkynConstants";
 import { playMenuClose, playMenuOpen } from "../sfx";
-import { renderDescription } from "./descriptionText";
+import { renderDescription, SigilExplainer, SigilPenaltyLine, splitPenalty } from "./descriptionText";
 import ItemScene from "./ItemScene";
 import RuneImage from "./RuneImage";
 import {
@@ -44,7 +47,15 @@ interface HowToPlayModalProps {
     onClose: () => void;
 }
 
-type Tab = "basics" | "scoring" | "combat" | "items" | "tarots";
+type Tab = "basics" | "scoring" | "combat" | "items" | "sigils" | "tarots";
+
+interface TabEntry {
+    id: Tab;
+    label: string;
+    /** Optional parent — child tabs render indented in the sidebar
+     *  (visual subcategory under the parent's heading). */
+    parent?: Tab;
+}
 
 const modalStyleVars: React.CSSProperties = {
     ...createPanelStyleVars(),
@@ -65,13 +76,30 @@ const ALL_SYNERGY_PAIRS: [string, string][] = Array.from(SYNERGY_PAIRS).map(
     key => key.split("+") as [string, string],
 );
 
-const TABS: { id: Tab; label: string }[] = [
+const TABS: TabEntry[] = [
     { id: "basics", label: "Basics" },
     { id: "scoring", label: "Scoring" },
     { id: "combat", label: "Combat" },
     { id: "items", label: "Items" },
+    { id: "sigils", label: "Sigils", parent: "items" },
     { id: "tarots", label: "Tarots" },
 ];
+
+// Sigils sorted by rarity (Common → Legendary), then alphabetically by
+// name within each rarity. Reads as a natural progression from the
+// cheapest baseline sigils to the rarest endgame ones, instead of the
+// arbitrary insertion order in `SIGIL_DEFINITIONS`.
+const RARITY_ORDER: Record<string, number> = Object.fromEntries(
+    RARITY_TYPES.map((r, i) => [r, i]),
+);
+const SIGIL_ORDER: string[] = SIGIL_IDS.slice().sort((a, b) => {
+    const da = SIGIL_DEFINITIONS[a];
+    const db = SIGIL_DEFINITIONS[b];
+    const ra = RARITY_ORDER[da.rarity] ?? 99;
+    const rb = RARITY_ORDER[db.rarity] ?? 99;
+    if (ra !== rb) return ra - rb;
+    return da.name.localeCompare(db.name);
+});
 
 // Tier data — mirrors the Grimoire so any future change to spell tier
 // values flows through both modals without manual sync.
@@ -139,16 +167,20 @@ export default function HowToPlayModal({ onClose }: HowToPlayModalProps) {
                 <div className={styles.body}>
                     <div className={styles.sidebar}>
                         <nav className={styles.tabList}>
-                            {TABS.map(t => (
-                                <button
-                                    key={t.id}
-                                    type="button"
-                                    className={`${styles.tab} ${tab === t.id ? styles.tabActive : ""}`}
-                                    onClick={() => setTab(t.id)}
-                                >
-                                    {t.label}
-                                </button>
-                            ))}
+                            {TABS.map(t => {
+                                const isChild = t.parent !== undefined;
+                                return (
+                                    <button
+                                        key={t.id}
+                                        type="button"
+                                        className={`${styles.tab} ${isChild ? styles.tabChild : ""} ${tab === t.id ? styles.tabActive : ""}`}
+                                        onClick={() => setTab(t.id)}
+                                    >
+                                        {isChild && <span className={styles.tabChildMarker} aria-hidden>↳</span>}
+                                        {t.label}
+                                    </button>
+                                );
+                            })}
                         </nav>
                     </div>
 
@@ -157,6 +189,7 @@ export default function HowToPlayModal({ onClose }: HowToPlayModalProps) {
                         {tab === "scoring" && <ScoringTab />}
                         {tab === "combat" && <CombatTab />}
                         {tab === "items" && <ItemsTab />}
+                        {tab === "sigils" && <SigilsTab />}
                         {tab === "tarots" && <TarotsTab />}
                     </div>
                 </div>
@@ -432,7 +465,8 @@ function ItemsTab() {
                     <span className={styles.sectionText}>
                         Permanent passive items bought from the shop. Some add flat <span className={styles.multChip}>Mult</span>,
                         some grant <span className={styles.xmultChip}>xMult</span>, others change your hand size, cast budget,
-                        or how runes are scored. Sigils stack — building synergies between them is the core of the game.
+                        or how runes are scored. Sigils stack — see the <span className={styles.highlight}>Sigils</span> sub-tab
+                        for the full list.
                     </span>
                 </p>
             </div>
@@ -518,13 +552,52 @@ function TarotsTab() {
     );
 }
 
+// Shared hook for ItemScene-card hover tooltips that need to escape
+// the modal's .scrollArea overflow. Tracks viewport-anchored coords
+// from the wrapped element's bounding rect, recomputes on capture-phase
+// scroll / resize so the portaled tip follows the card if the player
+// scrolls the modal while hovering.
+function usePortalTipPosition() {
+    const ref = useRef<HTMLDivElement>(null);
+    const [hovered, setHovered] = useState(false);
+    const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+
+    const update = useCallback(() => {
+        const node = ref.current;
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        setPos({ left: rect.left + rect.width / 2, top: rect.top - 12 });
+    }, []);
+
+    useLayoutEffect(() => {
+        if (!hovered) {
+            setPos(null);
+            return;
+        }
+        update();
+    }, [hovered, update]);
+
+    useEffect(() => {
+        if (!hovered) return;
+        const handler = () => update();
+        // Capture phase catches scrolls on the .scrollArea ancestor too,
+        // not just window — without it the tip stays anchored to the
+        // card's old viewport position when the player scrolls the modal.
+        window.addEventListener("scroll", handler, true);
+        window.addEventListener("resize", handler);
+        return () => {
+            window.removeEventListener("scroll", handler, true);
+            window.removeEventListener("resize", handler);
+        };
+    }, [hovered, update]);
+
+    return { ref, hovered, setHovered, pos };
+}
+
 // Per-card wrapper that renders the in-game ItemScene tilt shader and
-// portals its hover tooltip to <body>. The portal is what fixes the
-// previous clipping problem — the .scrollArea ancestor uses
-// `overflow-y: auto`, which clips any descendant tooltip that extends
-// past its bounds (notably the leftmost cards' tips against the sidebar
-// gutter). Portaling the tip out of that clipping context keeps the
-// overflow behavior we want for the grid AND lets tips render edge-to-edge.
+// portals its hover tooltip to <body>. Portaling fixes the previous
+// clipping problem — the .scrollArea ancestor uses `overflow-y: auto`,
+// which clips any in-flow tooltip that extends past its bounds.
 interface TarotCardProps {
     id: string;
     index: number;
@@ -533,48 +606,14 @@ interface TarotCardProps {
 function TarotCard({ id, index }: TarotCardProps) {
     const def = TAROT_DEFINITIONS[id];
     const url = def ? getTarotImageUrl(def.fileBasename) : "";
-    const cardRef = useRef<HTMLDivElement>(null);
-    const [hovered, setHovered] = useState(false);
-    const [tipPos, setTipPos] = useState<{ left: number; top: number } | null>(null);
-
-    const updateTipPos = useCallback(() => {
-        const node = cardRef.current;
-        if (!node) return;
-        const rect = node.getBoundingClientRect();
-        setTipPos({
-            left: rect.left + rect.width / 2,
-            top: rect.top - 12,
-        });
-    }, []);
-
-    useLayoutEffect(() => {
-        if (!hovered) {
-            setTipPos(null);
-            return;
-        }
-        updateTipPos();
-    }, [hovered, updateTipPos]);
-
-    useEffect(() => {
-        if (!hovered) return;
-        const onScrollOrResize = () => updateTipPos();
-        // Capture phase catches scrolls on the .scrollArea ancestor too,
-        // not just window — without it the tip stays anchored to the
-        // card's old viewport position when the player scrolls the modal.
-        window.addEventListener("scroll", onScrollOrResize, true);
-        window.addEventListener("resize", onScrollOrResize);
-        return () => {
-            window.removeEventListener("scroll", onScrollOrResize, true);
-            window.removeEventListener("resize", onScrollOrResize);
-        };
-    }, [hovered, updateTipPos]);
+    const { ref, hovered, setHovered, pos } = usePortalTipPosition();
 
     if (!def) return null;
 
     return (
         <>
             <div
-                ref={cardRef}
+                ref={ref}
                 className={styles.tarotCard}
                 onMouseEnter={() => setHovered(true)}
                 onMouseLeave={() => setHovered(false)}
@@ -597,14 +636,110 @@ function TarotCard({ id, index }: TarotCardProps) {
                     <div className={styles.tarotPlaceholder}>{def.number}</div>
                 )}
             </div>
-            {hovered && tipPos && createPortal(
-                <div className={styles.tarotPortalTip} style={tipPos}>
+            {hovered && pos && createPortal(
+                <div className={styles.tarotPortalTip} style={pos}>
                     <span className={styles.tarotTipName}>{def.name}</span>
                     <div className={styles.tarotTipDescWrap}>
                         <span className={styles.tarotTipDesc}>
                             {renderDescription(def.description)}
                         </span>
                     </div>
+                </div>,
+                document.body,
+            )}
+        </>
+    );
+}
+
+// ── Sigils ──
+
+function SigilsTab() {
+    return (
+        <div className={styles.scrollArea}>
+            <div className={styles.section}>
+                <div className={styles.sectionHeading}>Sigils</div>
+                <p className={styles.sectionText}>
+                    Sigils are <span className={styles.highlight}>permanent passive items</span> bought
+                    from the shop. Some add flat <span className={styles.multChip}>Mult</span>, some grant{" "}
+                    <span className={styles.xmultChip}>xMult</span>, others change your hand size, cast
+                    budget, or how runes are scored. Build them up — synergies between sigils are the
+                    core of every run.
+                </p>
+                <p className={styles.sectionNote}>
+                    You can hold up to <span className={styles.highlight}>{MAX_SIGILS}</span> at once.
+                    Hover any sigil for its full effect text.
+                </p>
+            </div>
+
+            <div className={styles.section}>
+                <div className={styles.sectionHeading}>All Sigils ({SIGIL_ORDER.length})</div>
+                <p className={styles.sectionCaption}>
+                    Sorted by rarity — Common, Uncommon, Rare, Legendary.
+                </p>
+                <div className={styles.sigilGrid}>
+                    {SIGIL_ORDER.map((id, i) => (
+                        <SigilCard key={id} id={id} index={i} />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+interface SigilCardProps {
+    id: string;
+    index: number;
+}
+
+function SigilCard({ id, index }: SigilCardProps) {
+    const def = SIGIL_DEFINITIONS[id];
+    const { ref, hovered, setHovered, pos } = usePortalTipPosition();
+
+    if (!def) return null;
+
+    const rarityColor = RARITY_COLORS[def.rarity] ?? "#b0b0b0";
+    const { main, penalty } = splitPenalty(def.description);
+
+    return (
+        <>
+            <div
+                ref={ref}
+                className={styles.sigilCard}
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+                onFocus={() => setHovered(true)}
+                onBlur={() => setHovered(false)}
+                tabIndex={0}
+                aria-label={def.name}
+            >
+                <ItemScene
+                    itemId={id}
+                    index={index}
+                    smoothIdle
+                    className={styles.sigilCanvas}
+                />
+            </div>
+            {hovered && pos && createPortal(
+                <div className={styles.tarotPortalTip} style={pos}>
+                    <span className={styles.tarotTipName}>{def.name}</span>
+                    <div className={styles.tarotTipDescWrap}>
+                        <span className={styles.tarotTipDesc}>
+                            {renderDescription(main)}
+                        </span>
+                        {penalty && <SigilPenaltyLine text={penalty} />}
+                        {def.explainer && (
+                            <SigilExplainer
+                                label={def.explainer.label}
+                                elements={def.explainer.elements}
+                            />
+                        )}
+                    </div>
+                    <span
+                        className={styles.tipRarity}
+                        style={{ backgroundColor: rarityColor }}
+                    >
+                        {def.rarity}
+                    </span>
                 </div>,
                 document.body,
             )}

@@ -160,6 +160,26 @@
     border-image: var(--tab-active-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
 }
 
+/* Child tab — visually nested under its parent. Smaller font, indented
+   left so the hierarchy reads at a glance, and a faint "↳" marker
+   prefix that signals the parent → child relation without a chrome
+   border-image swap. */
+.tab.tabChild {
+    font-size: var(--font-size-xs);
+    padding-left: 22px;
+    letter-spacing: 1px;
+}
+
+.tabChildMarker {
+    color: #6a5a4a;
+    margin-right: 6px;
+    line-height: 1;
+}
+
+.tab.tabChild.tabActive .tabChildMarker {
+    color: #ffffff;
+}
+
 /* ── Right content area ── */
 .content {
     flex: 1;
@@ -904,6 +924,71 @@
     text-align: center;
 }
 
+/* Rarity chip at the bottom of a sigil tooltip — same shape as the
+   in-game ShopScreen tooltipRarity (small uppercase pill colored by
+   rarity). The background color is set inline from RARITY_COLORS in
+   the React component. */
+.tipRarity {
+    font-size: clamp(var(--font-size-3xs), 0.8vw, var(--font-size-2xs));
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #ffffff;
+    padding: 2px 12px;
+    border-radius: 3px;
+    line-height: 1.2;
+}
+
+/* ── Sigil grid (Sigils tab) ──
+   Cards use the default ItemScene useFrame=true path, so the sigil
+   art renders onto the embossed sigil-frame backdrop — same shape
+   the SigilBar uses in-game. Square aspect (1:1) since the frame is
+   square; sized smaller than tarots so all 48 sigils fit in ~3-4 rows. */
+.sigilGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: clamp(8px, 1vw, 14px);
+    padding: 6px 4px 12px;
+}
+
+.sigilCard {
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    color: inherit;
+    padding: 0;
+    z-index: 1;
+    transition: transform 0.12s ease, filter 0.12s ease;
+    image-rendering: pixelated;
+}
+
+@media (hover: hover) {
+    .sigilCard:hover {
+        transform: translateY(-4px);
+        filter: brightness(1.1);
+        z-index: 3;
+    }
+}
+
+.sigilCard:focus-visible {
+    transform: translateY(-4px);
+    filter: brightness(1.1);
+    z-index: 3;
+    outline: none;
+}
+
+.sigilCanvas {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    pointer-events: auto;
+}
+
 /* ── Landscape phone compact ── */
 @media (max-height: 500px) {
     .backdrop {
@@ -1132,6 +1217,24 @@
     .tarotGrid {
         grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
         gap: 6px;
+    }
+
+    .sigilGrid {
+        grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+        gap: 6px;
+    }
+
+    /* When the sidebar collapses to a horizontal tab row on landscape
+       phones (see existing rules above), the indent + ↳ marker get
+       cramped. Flatten the child tab to the parent's visual treatment
+       since the hierarchy is no longer load-bearing in a row layout. */
+    .tab.tabChild {
+        padding-left: 6px;
+        font-size: var(--font-size-xs);
+    }
+
+    .tabChildMarker {
+        display: none;
     }
 
     .tarotPortalTip {
