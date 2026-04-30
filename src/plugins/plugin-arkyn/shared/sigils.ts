@@ -48,10 +48,10 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
     synapse: {
         id: "synapse",
         name: "Synapse",
-        rarity: "rare",
+        rarity: "common",
         description: "Each held Psy rune adds {+2 Mult} to your casts.",
-        cost: 6,
-        sellPrice: 3,
+        cost: 3,
+        sellPrice: 1,
     },
     fortune: {
         id: "fortune",

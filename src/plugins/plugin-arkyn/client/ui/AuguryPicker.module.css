@@ -512,19 +512,23 @@
    per line while longer copy like Wheel of Fortune's hits a wider
    layout — hard to read and visually inconsistent across the 5-card
    row. The chosen clamp range targets ~6–8 words per line at the
-   bumped font size below. */
+   bumped font size below.
+   Inner box chrome (bg / radius / padding / inset shadow / desc color)
+   matches the canonical Shop tooltip so every framed tooltip in the
+   game shares the same styling. */
 .tooltipDescWrap {
     box-sizing: border-box;
-    background: rgba(20, 14, 8, 0.55);
-    border-radius: 4px;
-    padding: 5px 12px;
+    background: #1f1d2e;
+    border-radius: 6px;
+    padding: 6px 12px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
     width: clamp(190px, 19vw, 230px);
 }
 
 .tooltipDesc {
     display: block;
     font-size: clamp(var(--font-size-2xs), 1.05vw, 14px);
-    color: #c8c0b0;
+    color: #b5a591;
     line-height: 1.4;
     white-space: normal;
     text-align: center;
@@ -569,15 +573,16 @@
 .mobileTarotInfoDescWrap {
     box-sizing: border-box;
     width: 100%;
-    background: rgba(20, 14, 8, 0.55);
-    border-radius: 4px;
-    padding: 5px 10px;
+    background: #1f1d2e;
+    border-radius: 6px;
+    padding: 6px 10px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .mobileTarotInfoDesc {
     display: block;
     font-size: var(--font-size-2xs);
-    color: #c8c0b0;
+    color: #b5a591;
     line-height: 1.4;
     white-space: normal;
     text-align: center;
@@ -808,7 +813,7 @@
         /* Match the framed Tooltip variant so the mobile box reads
            visually identical to the desktop tooltip's chrome. */
         background: #2a2240;
-        border: 2px solid #1a1430;
+        border: 2px solid #6a55a8;
         border-radius: 10px;
         padding: 4px 8px;
         box-shadow: inset 0 1px 0 rgba(180, 160, 220, 0.18);

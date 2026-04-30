@@ -10,7 +10,6 @@ import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import handFrameUrl from "/assets/ui/hand-frame.png?url";
-import innerFrameUrl from "/assets/ui/inner-frame.png?url";
 import { HAS_HOVER } from "./utils/hasHover";
 import { renderDescription, SigilExplainer, SigilPenaltyLine, splitPenalty } from "./descriptionText";
 import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
@@ -28,7 +27,6 @@ const RARITY_BG_COLORS: Record<string, string> = {
 
 const slotFrameVars = {
     "--slot-bg": `url(${handFrameUrl})`,
-    "--tooltip-desc-bg": `url(${innerFrameUrl})`,
 } as CSSProperties;
 
 // Hover: subtle scale pop. Active (selected): raise the slot upward.

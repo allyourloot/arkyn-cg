@@ -30,7 +30,6 @@ import AuguryPicker from "./AuguryPicker";
 import { renderDescription, SigilExplainer, SigilPenaltyLine, splitPenalty } from "./descriptionText";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import frameUrl from "/assets/ui/frame.png?url";
-import innerFrameUrl from "/assets/ui/inner-frame.png?url";
 import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
 import buttonGreenUrl from "/assets/ui/button-green.png?url";
 import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
@@ -60,7 +59,6 @@ const continueButtonStyleVars = {
 const cardStyleVars = {
     "--card-bg": `url(${frameUrl})`,
     "--buy-bg": `url(${innerFrameGreenUrl})`,
-    "--tooltip-desc-bg": `url(${innerFrameUrl})`,
 } as CSSProperties;
 
 // Pack itemTypes are recognized in the Packs section. Any future pack
@@ -185,6 +183,54 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             { x: 0, opacity: 1, duration: CONTENT_ENTER_S, ease: "power2.out", overwrite: "auto" },
         );
     }, [renderedMode]);
+
+    // Per-card pop-in stagger — fires when the visible shop content
+    // gains items the previous set didn't have. Initial shop mount and
+    // reroll are the two natural triggers (both swap in fresh items).
+    // Purchases only REMOVE an item, so the new fingerprint is a strict
+    // subset of the previous one — `hasNewItems` is false and the
+    // remaining cards don't re-pop. Picker → shop transitions land here
+    // too, but the items are unchanged from before the picker, so again
+    // no new items, no re-pop.
+    const prevShopFingerprintRef = useRef<Set<string>>(new Set());
+    useLayoutEffect(() => {
+        if (renderedMode !== "shop") return;
+        const root = shopContentRef.current;
+        if (!root) return;
+
+        // Key by the schema index (stable across purchases) — NOT the
+        // post-filter visible-list index, which shifts when an item is
+        // bought. Without the schema index, surviving cards would all
+        // get new keys after a purchase and re-pop.
+        const newSet = new Set(
+            shopItems
+                .map((i, idx) => ({ shopIndex: idx, itemType: i.itemType, element: i.element ?? "", purchased: i.purchased }))
+                .filter(x => !x.purchased)
+                .map(x => `${x.shopIndex}:${x.itemType}:${x.element}`),
+        );
+        const prevSet = prevShopFingerprintRef.current;
+        const hasNewItems = [...newSet].some(k => !prevSet.has(k));
+        prevShopFingerprintRef.current = newSet;
+
+        if (!hasNewItems) return;
+
+        // querySelectorAll returns nodes in document order, which here is
+        // Items section L→R, then Packs section L→R. Stagger ≥ duration
+        // makes the cards read as truly sequential ("one at a time")
+        // rather than a fan-out cascade.
+        const cards = root.querySelectorAll<HTMLElement>(`.${styles.itemCard}`);
+        if (cards.length === 0) return;
+        gsap.fromTo(cards,
+            { scale: 0.4, opacity: 0, y: 10 },
+            {
+                scale: 1, opacity: 1, y: 0,
+                duration: 0.14,
+                ease: "back.out(2.4)",
+                stagger: 0.07,
+                overwrite: "auto",
+            },
+        );
+    }, [renderedMode, shopItems]);
 
     // Deselect when the user clicks outside the shop panel. Card onClick
     // handles in-panel selection changes via React state; this listener only

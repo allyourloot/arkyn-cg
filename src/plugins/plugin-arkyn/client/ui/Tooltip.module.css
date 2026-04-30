@@ -54,10 +54,14 @@
    that entirely, and the asset was a flat dark-purple rounded rect with
    no fine detail to preserve. The inset highlight + thin outer border
    keep the original asset's depth cue. The fill color matches the
-   arrow triangles below so they read as a continuous shape. */
+   arrow triangles below so they read as a continuous shape.
+   Border uses the lighter `#6a55a8` purple so the tooltip lifts off
+   surrounding panel chrome instead of blending into it — this is the
+   canonical look (originally a Shop-only override; now the default so
+   every tooltip across the game shares the same outer chrome). */
 .framed {
     background: #2a2240;
-    border: 2px solid #1a1430;
+    border: 2px solid #6a55a8;
     border-radius: 10px;
     padding: 10px 14px;
     box-shadow: inset 0 1px 0 rgba(180, 160, 220, 0.18);
@@ -80,11 +84,11 @@
    Each arrow gets a 1px directional drop-shadow that paints an outline
    on ONLY the front edges (the slopes pointing toward the parent) —
    the shift direction is away from the tooltip body so the back edge
-   stays seamlessly attached. The outline color is read from
-   `--arrow-outline-color`, with a transparent default so non-shop
-   tooltips render unchanged. Consumers (e.g. ShopScreen) override the
-   variable to enable a visible outline that matches their custom
-   border treatment. */
+   stays seamlessly attached. The outline color matches the framed
+   border (`#6a55a8`) by default so every tooltip's arrow extends the
+   bordered look continuously across the slopes facing the parent.
+   Consumers can override `--arrow-outline-color` if they need a
+   different treatment. */
 
 .arrowBottom::before {
     content: '';
@@ -97,7 +101,7 @@
     border-left: 8px solid transparent;
     border-right: 8px solid transparent;
     border-bottom: 8px solid #2a2240;
-    filter: drop-shadow(0 -1px 0 var(--arrow-outline-color, transparent));
+    filter: drop-shadow(0 -1px 0 var(--arrow-outline-color, #6a55a8));
 }
 
 .arrowTop::after {
@@ -111,7 +115,7 @@
     border-left: 8px solid transparent;
     border-right: 8px solid transparent;
     border-top: 8px solid #2a2240;
-    filter: drop-shadow(0 1px 0 var(--arrow-outline-color, transparent));
+    filter: drop-shadow(0 1px 0 var(--arrow-outline-color, #6a55a8));
 }
 
 .arrowLeft::after {
@@ -125,7 +129,7 @@
     border-top: 8px solid transparent;
     border-bottom: 8px solid transparent;
     border-left: 8px solid #2a2240;
-    filter: drop-shadow(1px 0 0 var(--arrow-outline-color, transparent));
+    filter: drop-shadow(1px 0 0 var(--arrow-outline-color, #6a55a8));
 }
 
 .arrowRight::before {
@@ -139,5 +143,5 @@
     border-top: 8px solid transparent;
     border-bottom: 8px solid transparent;
     border-right: 8px solid #2a2240;
-    filter: drop-shadow(-1px 0 0 var(--arrow-outline-color, transparent));
+    filter: drop-shadow(-1px 0 0 var(--arrow-outline-color, #6a55a8));
 }

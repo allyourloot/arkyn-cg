@@ -471,18 +471,6 @@
 .itemCard :global(.arkyn-tooltip) {
     width: clamp(220px, 22vw, 280px);
     white-space: normal;
-    /* Override the Tooltip .framed default 2px solid #1a1430 border —
-       that color is darker than the tooltip's #2a2240 background and
-       reads as a lip rather than a separator. A lighter purple border
-       makes the tooltip lift off the shop panel chrome instead of
-       blending into it. */
-    border-color: #6a55a8;
-    /* Enable the directional arrow outline defined in Tooltip.module.css.
-       The arrow's drop-shadow filter reads this var; default is
-       transparent (no outline), shop sets it to match the lifted
-       border above so the arrow extends the bordered look only on
-       the slopes facing the parent — back edge stays seamless. */
-    --arrow-outline-color: #6a55a8;
 }
 
 /* Pack tooltip override — pack art is portrait (89/160 aspect) so the

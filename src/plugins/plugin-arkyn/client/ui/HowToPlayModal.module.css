@@ -839,11 +839,11 @@
 }
 
 /* Portaled to <body> via React.createPortal so it isn't clipped by
-   the modal's .scrollArea overflow. Inner styling mirrors the in-game
-   AuguryPicker tooltip exactly: framed variant outer (dark purple
-   #2a2240 with 10px radius + inset highlight) wrapping a centered
-   title and a darker description box. The bottom arrow points down
-   toward the card the tip is anchored to.
+   the modal's .scrollArea overflow. Chrome mirrors the canonical
+   framed Tooltip variant exactly: dark purple #2a2240 body with the
+   lifted #6a55a8 border, 10px radius, inset highlight, and a flat
+   #1f1d2e inner description box. The bottom arrow points down toward
+   the card the tip is anchored to.
    Position is set inline (left/top from the card's getBoundingClientRect);
    transform centers horizontally and pulls the tip above the card. */
 .tarotPortalTip {
@@ -861,7 +861,7 @@
     --font-size-sm: 1.5rem;
     --font-size-md: 2rem;
     background: #2a2240;
-    border: 2px solid #1a1430;
+    border: 2px solid #6a55a8;
     border-radius: 10px;
     padding: 10px 14px;
     box-shadow:
@@ -879,8 +879,9 @@
 
 /* Down-pointing arrow at the bottom edge — mirrors Tooltip.module.css
    `.arrowTop::after` so the chrome reads identical to the in-game
-   tooltip. Triangle fill matches the framed body so they read as one
-   continuous shape. */
+   tooltip. Triangle fill matches the framed body, and the directional
+   drop-shadow paints a 1px outline only on the slopes facing the card
+   so the arrow extends the lifted purple border continuously. */
 .tarotPortalTip::after {
     content: "";
     position: absolute;
@@ -892,6 +893,7 @@
     border-left: 8px solid transparent;
     border-right: 8px solid transparent;
     border-top: 8px solid #2a2240;
+    filter: drop-shadow(0 1px 0 #6a55a8);
 }
 
 .tarotTipName {
@@ -903,22 +905,24 @@
     line-height: 1;
 }
 
-/* Darker inner box that wraps the description — matches
-   AuguryPicker's `.tooltipDescWrap` (fixed width so every tooltip
-   shares the same description-box dimensions regardless of copy
-   length). */
+/* Darker inner box that wraps the description — matches the canonical
+   Shop tooltip's `.tooltipDescWrap`: flat #1f1d2e fill, 6px radius,
+   inset shadow for depth, and the same warm-tan body text. Fixed
+   width so every tooltip shares the same description-box dimensions
+   regardless of copy length. */
 .tarotTipDescWrap {
     box-sizing: border-box;
-    background: rgba(20, 14, 8, 0.55);
-    border-radius: 4px;
-    padding: 5px 12px;
+    background: #1f1d2e;
+    border-radius: 6px;
+    padding: 6px 12px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
     width: clamp(190px, 19vw, 230px);
 }
 
 .tarotTipDesc {
     display: block;
     font-size: clamp(var(--font-size-2xs), 1.05vw, 14px);
-    color: #c8c0b0;
+    color: #b5a591;
     line-height: 1.4;
     white-space: normal;
     text-align: center;
