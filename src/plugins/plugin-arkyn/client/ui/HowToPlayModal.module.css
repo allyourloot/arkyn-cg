@@ -1,0 +1,1154 @@
+/* ── Backdrop ── */
+.backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    pointer-events: auto;
+    animation: arkyn-fade-in 0.15s ease-out;
+}
+
+/* ── Modal shell ── */
+.modal {
+    box-sizing: border-box;
+    width: clamp(560px, 92vw, 1400px);
+    height: min(88vh, 880px);
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    padding: 8px 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: #e8d4b8;
+    image-rendering: pixelated;
+    cursor: default;
+    animation: arkyn-scale-in 0.18s cubic-bezier(0.2, 0.8, 0.4, 1);
+}
+
+/* ── Header ── */
+.header {
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    image-rendering: pixelated;
+}
+
+.title {
+    font-size: var(--font-size-md);
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+}
+
+.closeButton {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: clamp(32px, 3.6vw, 44px);
+    height: clamp(32px, 3.6vw, 44px);
+    position: relative;
+    transition: transform 0.1s ease;
+    flex-shrink: 0;
+}
+
+.closeIcon,
+.closeIconHover {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+.closeIconHover {
+    opacity: 0;
+}
+
+.closeButton:hover .closeIconHover {
+    opacity: 1;
+}
+
+.closeButton:hover .closeIcon {
+    opacity: 0;
+}
+
+.closeButton:hover {
+    transform: scale(1.08);
+}
+
+.closeButton:active {
+    transform: scale(0.94);
+}
+
+/* ── Body: sidebar | content ── */
+.body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
+.sidebar {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    width: clamp(160px, 16vw, 220px);
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 10px 10px;
+    display: flex;
+    flex-direction: column;
+    image-rendering: pixelated;
+}
+
+.tabList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tab {
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    border-image: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    color: #6a5a4a;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 4px 6px;
+    text-align: left;
+    transition: color 0.12s ease, transform 0.1s ease;
+    line-height: 1;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+    image-rendering: pixelated;
+}
+
+.tab:hover {
+    color: #c8b89a;
+}
+
+.tab:active {
+    transform: scale(0.97);
+}
+
+.tab.tabActive {
+    color: #ffffff;
+    border-image: var(--tab-active-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
+}
+
+/* ── Right content area ── */
+.content {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.scrollArea {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-right: 4px;
+}
+
+.scrollArea::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scrollArea::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.scrollArea::-webkit-scrollbar-thumb {
+    background: rgba(212, 165, 116, 0.4);
+    border-radius: 3px;
+}
+
+.scrollArea::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 165, 116, 0.6);
+}
+
+/* ── Section blocks ── */
+.section {
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 12px 14px;
+    image-rendering: pixelated;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sectionHeading {
+    font-size: var(--font-size-md);
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+}
+
+.sectionText {
+    font-size: var(--font-size-sm);
+    color: #c8b89a;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.sectionCaption {
+    font-size: var(--font-size-xs);
+    color: #8a7a6a;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.sectionNote {
+    font-size: var(--font-size-xs);
+    color: #8a7a6a;
+    line-height: 1.4;
+    font-style: italic;
+    margin: 0;
+}
+
+.subheading {
+    font-size: var(--font-size-xs);
+    color: #c4a882;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    line-height: 1;
+    margin-top: 4px;
+}
+
+.highlight {
+    color: #fbbf24;
+}
+
+/* "Augury Pack" inline emphasis — white so it stands out from
+   surrounding tan body copy as a proper noun, distinct from the
+   gold .highlight which is used for ordinary keywords. */
+.augury {
+    color: #ffffff;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+}
+
+/* Inline label colors used in body copy. Mirror the chip colors so a
+   sentence like "<b>Weak</b> doubles your damage" reads in green and
+   immediately ties back to the in-game chip. */
+.weakLabel {
+    color: #4ade80;
+}
+
+.resistLabel {
+    color: #ef4444;
+}
+
+/* Critical label — same red as the in-game crit number stroke. */
+.critLabel {
+    color: #ef4444;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+    letter-spacing: 1px;
+}
+
+/* ── Stat chip row (Basics → Round Flow) ── */
+.statRow {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.statChip {
+    flex: 1 1 0;
+    min-width: clamp(90px, 10vw, 140px);
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    image-rendering: pixelated;
+}
+
+.statValue {
+    font-size: var(--font-size-md);
+    color: #ffffff;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+}
+
+.statLabel {
+    font-size: var(--font-size-xs);
+    color: #c4a882;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
+.statSub {
+    font-size: var(--font-size-3xs);
+    color: #8a7a6a;
+    line-height: 1;
+}
+
+/* ── Element grid (Basics) ── */
+.elementGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 10px;
+}
+
+.elementCell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 2px;
+}
+
+.runeSlot {
+    position: relative;
+    width: clamp(40px, 4.2vw, 56px);
+    aspect-ratio: 1;
+    image-rendering: pixelated;
+}
+
+.runeLayer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+.elementLabel {
+    font-size: var(--font-size-xs);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+    line-height: 1;
+}
+
+/* ── Synergy pair list (Basics → Synergy Pairs) ──
+   Sized to fit all 23 default pairs in ~3 rows on desktop without
+   feeling cramped. Smaller than the element grid since each tile
+   carries two icons + a label. */
+.pairList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+}
+
+.pairCell {
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 8px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    image-rendering: pixelated;
+}
+
+.pairRunes {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.runeSlotSm {
+    position: relative;
+    width: clamp(28px, 2.6vw, 38px);
+    aspect-ratio: 1;
+    image-rendering: pixelated;
+}
+
+.pairPlus {
+    font-size: var(--font-size-xs);
+    color: #6a5a4a;
+    line-height: 1;
+}
+
+.pairLabel {
+    font-size: var(--font-size-3xs);
+    line-height: 1;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.7);
+    display: flex;
+    gap: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.pairLabelPlus {
+    color: #6a5a4a;
+}
+
+/* ── Critical hit preview (Combat tab) ── */
+.critRow {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.critPreview {
+    position: relative;
+    flex: 0 0 auto;
+    width: clamp(96px, 10vw, 140px);
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    image-rendering: pixelated;
+}
+
+.critBubble {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.6));
+}
+
+.critNumber {
+    position: relative;
+    font-size: clamp(var(--font-size-sm), 2.5vw, var(--font-size-lg));
+    color: #ffffff;
+    text-shadow:
+        2px 2px 0 rgba(0, 0, 0, 0.95),
+        -1px -1px 0 rgba(120, 0, 0, 0.9),
+        1px -1px 0 rgba(120, 0, 0, 0.9),
+        -1px 1px 0 rgba(120, 0, 0, 0.9);
+    line-height: 1;
+    letter-spacing: 1px;
+}
+
+.critBody {
+    flex: 1 1 260px;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* ── Scoring formula ── */
+/* Dark background instead of a colored 9-slice frame — the chips
+   inside (Base = blue, Mult = green, xMult = purple, Damage = red)
+   are saturated text colors that wash out against the gold parchment.
+   A flat dark panel gives every chip color clean contrast. */
+.formulaCallout {
+    box-sizing: border-box;
+    background: rgba(20, 14, 8, 0.62);
+    border: 2px solid rgba(212, 165, 116, 0.4);
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    image-rendering: pixelated;
+}
+
+.formulaRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: var(--font-size-sm);
+    line-height: 1;
+    flex-wrap: wrap;
+}
+
+.formulaOp {
+    color: #e8d4b8;
+    font-size: var(--font-size-sm);
+}
+
+/* Caption inside the dark formula callout needs lighter text than
+   the muted-brown default body caption. */
+.formulaCallout .sectionCaption {
+    color: #d4c4a6;
+}
+
+.baseChip {
+    color: #60a5fa;
+    font-weight: normal;
+}
+
+.multChip {
+    color: #4ade80;
+    font-weight: normal;
+}
+
+.totalChip {
+    color: #ef4444;
+    font-weight: normal;
+}
+
+.xmultChip {
+    color: #a855f7;
+    font-weight: normal;
+}
+
+/* ── Tier table ── */
+.tierTable {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tierHeader {
+    display: grid;
+    grid-template-columns: 80px 80px 1fr 1fr;
+    gap: 10px;
+    padding: 6px 10px;
+    font-size: var(--font-size-xs);
+    color: #8a7a6a;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
+.tierRow {
+    display: grid;
+    grid-template-columns: 80px 80px 1fr 1fr;
+    gap: 10px;
+    padding: 6px 10px;
+    font-size: var(--font-size-sm);
+    color: #e8d4b8;
+    line-height: 1;
+    border-radius: 2px;
+    transition: background 0.1s ease;
+}
+
+.tierRow:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.tierLabel {
+    color: #fbbf24;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.tierColBase {
+    color: #60a5fa;
+}
+
+.tierColMult {
+    color: #4ade80;
+}
+
+/* ── Rarity table ── */
+.rarityTable {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rarityRow {
+    display: grid;
+    grid-template-columns: 1fr 80px;
+    gap: 10px;
+    padding: 6px 10px;
+    font-size: var(--font-size-sm);
+    color: #e8d4b8;
+    line-height: 1;
+    border-radius: 2px;
+    transition: background 0.1s ease;
+}
+
+.rarityRow:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.rarityName {
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.rarityBase {
+    color: #60a5fa;
+    text-align: right;
+}
+
+/* ── Status chips (Combat → Weak / Resist) ── */
+.statusRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.weakChip,
+.resistChip {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    image-rendering: pixelated;
+    line-height: 1;
+}
+
+.weakChip {
+    border-image: var(--weak-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
+}
+
+.resistChip {
+    border-image: var(--resist-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
+}
+
+.statusLabel {
+    font-size: var(--font-size-sm);
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+}
+
+.statusValue {
+    font-size: var(--font-size-md);
+    color: #ffffff;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+}
+
+.statusDesc {
+    flex: 1 1 220px;
+    min-width: 200px;
+    font-size: var(--font-size-sm);
+    color: #c8b89a;
+    line-height: 1.3;
+    margin: 0;
+}
+
+/* ── Boss debuff list ── */
+.bossList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bossRow {
+    box-sizing: border-box;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 8px 12px;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    border-image: var(--boss-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
+    image-rendering: pixelated;
+    line-height: 1;
+}
+
+.bossName {
+    font-size: var(--font-size-sm);
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    flex: 0 0 auto;
+    min-width: 180px;
+}
+
+.bossDesc {
+    font-size: var(--font-size-sm);
+    color: #ffffff;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+}
+
+/* ── Items tab — section pills ── */
+.sectionRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 0;
+}
+
+.sectionPill {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 8px;
+    border-image: var(--accent-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+    padding: 4px 10px;
+    font-size: var(--font-size-xs);
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+    image-rendering: pixelated;
+    align-self: flex-start;
+    margin-top: 2px;
+}
+
+/* Green-frame variant — used for "Max N" item-limit chips so they
+   read as a positive constraint, distinct from gold cost chips. */
+.sectionPillMax {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 8px;
+    border-image: var(--max-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+    padding: 4px 10px;
+    font-size: var(--font-size-xs);
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+    image-rendering: pixelated;
+    align-self: flex-start;
+    margin-top: 2px;
+}
+
+/* ── Tarot grid ──
+   Cards mirror the in-game Augury picker: ItemScene-rendered tilt
+   shader, no name label below, hover tooltip portaled to <body> to
+   escape the .scrollArea overflow that clipped the prior approach.
+   Sized smaller than the picker so the full 22-card Major Arcana fits
+   in two visual rows on a desktop modal. */
+.tarotGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: clamp(8px, 1vw, 14px);
+    padding: 6px 4px 12px;
+}
+
+.tarotCard {
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    color: inherit;
+    padding: 0;
+    /* The picker pins z-index here so the ItemScene canvas + tooltip
+       paint above neighboring cells. Mirror that here for stacking
+       parity with the in-game card. */
+    z-index: 1;
+    transition: transform 0.12s ease, filter 0.12s ease;
+    image-rendering: pixelated;
+}
+
+/* Hover lift only on devices with a real hover state — iOS holds
+   `:hover` on the last-tapped element until another is tapped, which
+   would otherwise leave a card permanently lifted after the user
+   tapped to dismiss. Keyboard focus still gets the lift via
+   :focus-visible regardless of hover capability. */
+@media (hover: hover) {
+    .tarotCard:hover {
+        transform: translateY(-4px);
+        filter: brightness(1.1);
+        z-index: 3;
+    }
+}
+
+.tarotCard:focus-visible {
+    transform: translateY(-4px);
+    filter: brightness(1.1);
+    z-index: 3;
+    outline: none;
+}
+
+.tarotCanvas {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 92 / 162;
+    pointer-events: auto;
+}
+
+.tarotPlaceholder {
+    width: 100%;
+    aspect-ratio: 92 / 162;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(212, 165, 116, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-md);
+    color: #c4a882;
+}
+
+/* Portaled to <body> via React.createPortal so it isn't clipped by
+   the modal's .scrollArea overflow. Inner styling mirrors the in-game
+   AuguryPicker tooltip exactly: framed variant outer (dark purple
+   #2a2240 with 10px radius + inset highlight) wrapping a centered
+   title and a darker description box. The bottom arrow points down
+   toward the card the tip is anchored to.
+   Position is set inline (left/top from the card's getBoundingClientRect);
+   transform centers horizontally and pulls the tip above the card. */
+.tarotPortalTip {
+    position: fixed;
+    transform: translate(-50%, calc(-100% - 8px));
+    z-index: 10000;
+    /* Re-declare the design tokens locally because this element is
+       portaled to <body>, outside ArkynOverlay's `.root` scope where
+       --font-family / --font-size-* normally live. AuguryPicker's
+       mobile portaled actionPanel uses the same pattern. */
+    --font-family: 'Knightwood', system-ui, monospace;
+    --font-size-3xs: 0.625rem;
+    --font-size-2xs: 0.75rem;
+    --font-size-xs: 1rem;
+    --font-size-sm: 1.5rem;
+    --font-size-md: 2rem;
+    background: #2a2240;
+    border: 2px solid #1a1430;
+    border-radius: 10px;
+    padding: 10px 14px;
+    box-shadow:
+        inset 0 1px 0 rgba(180, 160, 220, 0.18),
+        0 6px 16px rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-family);
+    -webkit-font-smoothing: none;
+    font-smooth: never;
+}
+
+/* Down-pointing arrow at the bottom edge — mirrors Tooltip.module.css
+   `.arrowTop::after` so the chrome reads identical to the in-game
+   tooltip. Triangle fill matches the framed body so they read as one
+   continuous shape. */
+.tarotPortalTip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid #2a2240;
+}
+
+.tarotTipName {
+    font-size: clamp(var(--font-size-xs), 1.6vw, var(--font-size-sm));
+    font-weight: normal;
+    letter-spacing: 1px;
+    color: #e8e0d4;
+    text-align: center;
+    line-height: 1;
+}
+
+/* Darker inner box that wraps the description — matches
+   AuguryPicker's `.tooltipDescWrap` (fixed width so every tooltip
+   shares the same description-box dimensions regardless of copy
+   length). */
+.tarotTipDescWrap {
+    box-sizing: border-box;
+    background: rgba(20, 14, 8, 0.55);
+    border-radius: 4px;
+    padding: 5px 12px;
+    width: clamp(190px, 19vw, 230px);
+}
+
+.tarotTipDesc {
+    display: block;
+    font-size: clamp(var(--font-size-2xs), 1.05vw, 14px);
+    color: #c8c0b0;
+    line-height: 1.4;
+    white-space: normal;
+    text-align: center;
+}
+
+/* ── Landscape phone compact ── */
+@media (max-height: 500px) {
+    .backdrop {
+        justify-content: flex-end;
+        padding-right: clamp(8px, 2vw, 24px);
+    }
+
+    .modal {
+        width: clamp(340px, 70vw, 700px);
+        height: 95vh;
+        max-height: 95vh;
+        border-width: 12px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+        padding: 4px 6px 8px;
+        gap: 4px;
+    }
+
+    .header {
+        border-width: 8px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 3px 8px;
+    }
+
+    .title {
+        font-size: var(--font-size-xs);
+    }
+
+    .closeButton {
+        width: clamp(28px, 3.4vw, 38px);
+        height: clamp(28px, 3.4vw, 38px);
+    }
+
+    .body {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .sidebar {
+        width: auto;
+        flex: 0 0 auto;
+        border-width: 8px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 4px 6px;
+    }
+
+    .tabList {
+        flex-direction: row;
+        gap: 4px;
+    }
+
+    .tab {
+        font-size: var(--font-size-xs);
+        border-width: 8px;
+        padding: 2px 6px;
+        flex: 1;
+        text-align: center;
+    }
+
+    .tabActive {
+        border-image: var(--tab-active-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+    }
+
+    .section {
+        border-width: 8px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 8px 8px;
+        gap: 6px;
+    }
+
+    .sectionHeading {
+        font-size: var(--font-size-xs);
+    }
+
+    .sectionText,
+    .sectionCaption,
+    .sectionNote {
+        font-size: var(--font-size-2xs);
+    }
+
+    .subheading {
+        font-size: var(--font-size-2xs);
+    }
+
+    .statValue {
+        font-size: var(--font-size-sm);
+    }
+
+    .statLabel {
+        font-size: var(--font-size-3xs);
+    }
+
+    .statSub {
+        font-size: 0.625rem;
+    }
+
+    .runeSlot {
+        width: clamp(28px, 3.6vw, 40px);
+    }
+
+    .elementLabel {
+        font-size: var(--font-size-3xs);
+    }
+
+    .elementGrid {
+        grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+        gap: 6px;
+    }
+
+    .formulaCallout {
+        border-width: 8px;
+        border-image: var(--accent-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 6px 8px;
+    }
+
+    .formulaRow {
+        font-size: var(--font-size-2xs);
+        gap: 6px;
+    }
+
+    .formulaOp {
+        font-size: var(--font-size-2xs);
+    }
+
+    .tierHeader {
+        grid-template-columns: 56px 56px 1fr 1fr;
+        font-size: var(--font-size-3xs);
+        padding: 4px 6px;
+    }
+
+    .tierRow {
+        grid-template-columns: 56px 56px 1fr 1fr;
+        font-size: var(--font-size-2xs);
+        padding: 4px 6px;
+    }
+
+    .rarityRow {
+        grid-template-columns: 1fr 56px;
+        font-size: var(--font-size-2xs);
+        padding: 4px 6px;
+    }
+
+    .weakChip,
+    .resistChip {
+        border-width: 8px;
+        border-image: var(--weak-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 4px 10px;
+    }
+
+    .resistChip {
+        border-image: var(--resist-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+    }
+
+    .statusLabel {
+        font-size: var(--font-size-2xs);
+    }
+
+    .statusValue {
+        font-size: var(--font-size-xs);
+    }
+
+    .statusDesc {
+        font-size: var(--font-size-2xs);
+    }
+
+    .bossRow {
+        border-width: 8px;
+        border-image: var(--boss-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 4px 8px;
+    }
+
+    .bossName {
+        font-size: var(--font-size-2xs);
+        min-width: 110px;
+    }
+
+    .bossDesc {
+        font-size: var(--font-size-2xs);
+    }
+
+    .sectionPill {
+        border-width: 6px;
+        border-image: var(--accent-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        padding: 2px 6px;
+        font-size: var(--font-size-3xs);
+    }
+
+    .sectionPillMax {
+        border-width: 6px;
+        border-image: var(--max-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        padding: 2px 6px;
+        font-size: var(--font-size-3xs);
+    }
+
+    .pairList {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 6px;
+    }
+
+    .pairCell {
+        border-width: 8px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 4px 6px;
+        gap: 4px;
+    }
+
+    .runeSlotSm {
+        width: clamp(24px, 3vw, 32px);
+    }
+
+    .pairLabel {
+        font-size: var(--font-size-3xs);
+    }
+
+    .critRow {
+        gap: 8px;
+    }
+
+    .critPreview {
+        width: clamp(64px, 8vw, 96px);
+    }
+
+    .critNumber {
+        font-size: var(--font-size-sm);
+    }
+
+    .tarotGrid {
+        grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+        gap: 6px;
+    }
+
+    .tarotPortalTip {
+        padding: 6px 10px;
+        gap: 4px;
+    }
+
+    .tarotTipName {
+        font-size: var(--font-size-2xs);
+    }
+
+    .tarotTipDescWrap {
+        width: clamp(150px, 45vw, 240px);
+        padding: 4px 8px;
+    }
+
+    .tarotTipDesc {
+        font-size: var(--font-size-3xs);
+    }
+}

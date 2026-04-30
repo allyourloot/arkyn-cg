@@ -39,9 +39,19 @@
     to { transform: scale(1); opacity: 1; }
 }
 
-/* ----- Play button ----- */
+/* ----- Button row (Play | How to Play) ----- */
 
-.playButton {
+.buttonRow {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: clamp(16px, 2vw, 28px);
+    pointer-events: none;
+}
+
+/* ----- Menu buttons (shared base) ----- */
+
+.menuButton {
     pointer-events: auto;
     box-sizing: border-box;
     border-style: solid;
@@ -70,13 +80,22 @@
     to { transform: translateY(0); opacity: 1; }
 }
 
-.playButton:hover {
+.menuButton:hover {
     border-image: var(--btn-bg-hover) 10 10 10 10 fill / 10px 10px 10px 10px;
 }
 
-.playButton:active {
+.menuButton:active {
     transform: translateY(3px);
     filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35));
+}
+
+/* The How to Play button is the secondary CTA — slightly smaller text
+   so the eye lands on Play first, and it slides in 80ms after Play
+   so the row reads as a sequence rather than a pop. */
+.howToPlayButton {
+    font-size: clamp(var(--font-size-sm), 2.6vw, var(--font-size-lg));
+    padding: clamp(12px, 1.8vh, 20px) clamp(32px, 4.5vw, 60px);
+    animation-delay: 280ms;
 }
 
 /* ── Landscape phone compact ── */
@@ -89,9 +108,21 @@
         width: clamp(180px, 28vw, 340px);
     }
 
-    .playButton {
-        padding: clamp(8px, 1.2vh, 14px) clamp(32px, 4vw, 56px);
+    .buttonRow {
+        gap: clamp(8px, 1.4vw, 16px);
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .menuButton {
+        padding: clamp(8px, 1.2vh, 14px) clamp(20px, 3vw, 40px);
         font-size: clamp(var(--font-size-sm), 2.5vw, var(--font-size-md));
-        letter-spacing: 6px;
+        letter-spacing: 4px;
+    }
+
+    .howToPlayButton {
+        font-size: clamp(var(--font-size-xs), 2vw, var(--font-size-sm));
+        padding: clamp(8px, 1.2vh, 14px) clamp(16px, 2.4vw, 30px);
+        letter-spacing: 2px;
     }
 }

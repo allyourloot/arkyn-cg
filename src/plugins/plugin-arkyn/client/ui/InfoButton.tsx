@@ -1,5 +1,5 @@
 import { useState } from "react";
-import InfoModal from "./InfoModal";
+import HowToPlayModal from "./HowToPlayModal";
 import { createPanelStyleVars } from "./styles";
 import styles from "./InfoButton.module.css";
 
@@ -19,7 +19,7 @@ export default function InfoButton() {
             >
                 <span className={styles.icon}>?</span>
             </button>
-            {isOpen && <InfoModal onClose={() => setIsOpen(false)} />}
+            {isOpen && <HowToPlayModal onClose={() => setIsOpen(false)} />}
         </>
     );
 }
