@@ -25,6 +25,7 @@ import drawTarotUrl from "/assets/audio/sfx/draw-tarot.mp3?url";
 import selectTarotUrl from "/assets/audio/sfx/select-tarot.mp3?url";
 import deselectTarotUrl from "/assets/audio/sfx/deselect-tarot.mp3?url";
 import convertUrl from "/assets/audio/sfx/convert.mp3?url";
+import clickUrl from "/assets/audio/sfx/click.mp3?url";
 import { getAudioContext } from "./audioContext";
 import { haptic, HAPTIC_LIGHT, HAPTIC_MEDIUM } from "./haptics";
 
@@ -207,6 +208,12 @@ const playConvertSfx = makeSfx(convertUrl, VOL_DEFAULT);
 export const playConvert = () => playConvertSfx();
 const playButtonSfx = makeSfx(buttonUrl, VOL_DEFAULT);
 export const playButton = (rate = 1) => { haptic(HAPTIC_MEDIUM); playButtonSfx(rate); };
+// Lightweight tap sound for non-committal selections (e.g. selecting
+// a shop item to reveal its BUY button — the click reads as a UI
+// affordance, not a confirmed purchase, so it gets a softer haptic
+// + the lighter click.mp3 instead of the buy.mp3 chime).
+const playClickSfx = makeSfx(clickUrl, VOL_DEFAULT);
+export const playClick = (rate = 1) => { haptic(HAPTIC_LIGHT); playClickSfx(rate); };
 const playAddConsumableSfx = makeSfx(addConsumableUrl, VOL_DEFAULT);
 export const playAddConsumable = (rate = 1) => { haptic(HAPTIC_LIGHT); playAddConsumableSfx(rate); };
 

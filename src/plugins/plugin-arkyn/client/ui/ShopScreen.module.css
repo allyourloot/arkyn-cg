@@ -240,20 +240,49 @@
     padding: clamp(4px, 0.6vh, 8px) clamp(2px, 0.4vw, 6px);
     font-family: inherit;
     color: #fff;
-    transition: transform 100ms ease-out;
+    cursor: pointer;
+    transition: transform 180ms ease-out;
     overflow: visible;
+    transform-origin: center bottom;
 }
 
-.itemCard:hover:not(.itemCardCantAfford) {
-    transform: translateY(-4px);
-    z-index: 5;
+/* Hover pop-shake — one-shot scale-up + diminishing rotation that
+   fires once each time the cursor enters the card. Each hover
+   restarts the animation from 0% (CSS re-applies the `animation`
+   property on selector match), so leaving and re-entering re-pops
+   the card cleanly.
+
+   Replaces the prior translateY(-4px) lift, which was reading as a
+   "selected" state and conflicting with the actual selection lift
+   below. Gated to `(hover: hover)` so iOS Safari/Chrome — which
+   fires :hover on tap — doesn't pop the card on every touch.
+   Excluded for selected cards (they own the lift instead) and
+   unaffordable cards (the pop would feel mocking on a card the
+   player can't buy). */
+@media (hover: hover) {
+    .itemCard:hover:not(.itemCardCantAfford):not(.itemCardSelected) {
+        animation: arkyn-shop-item-pop-shake 0.36s ease-out 1;
+    }
 }
 
-/* Selected card — lifted above neighbors so the Buy button (anchored
-   to the right edge) paints on top of the next card. */
+@keyframes arkyn-shop-item-pop-shake {
+    0% { transform: scale(1) rotate(0deg); }
+    25% { transform: scale(1.025) rotate(-0.8deg); }
+    50% { transform: scale(1.015) rotate(0.6deg); }
+    75% { transform: scale(1.008) rotate(-0.3deg); }
+    100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Selected card — lifted above neighbors so the BUY button (positioned
+   below the canvas) paints on top of any neighbor that might overlap.
+   The translateY shift gives the player visual confirmation their
+   click registered, and visually opens the slot below the card where
+   BUY mounts — reads as "the card moved aside to make room for BUY". */
 .itemCardSelected,
 .itemCardSelected:hover {
+    transform: translateY(-8px);
     z-index: 30;
+    animation: none;
 }
 
 /* Dim only the gold price chip when the player can't afford the item —
@@ -296,13 +325,14 @@
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
 }
 
-/* --- Item image — centered in remaining card space.
-      Shrink-wrapped to the canvas size so the Buy button, positioned
-      `left: 100%` relative to this wrap, sits flush with the image edge
-      rather than the padded card edge. --- */
+/* --- Item image — shrink-wrapped to the canvas size so the BUY button
+      below sits flush against the canvas's bottom edge rather than the
+      padded card edge. The card uses `justify-content: center` to group
+      cardImageWrap + buyButton vertically, so the canvas stays roughly
+      centered in the card with BUY tucked under it. --- */
 .cardImageWrap {
     position: relative;
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -339,32 +369,46 @@
 }
 
 /* ================================================================
-   Buy button — appears on click (mirrors SigilBar's Sell flow),
-   anchored to the right of the card.
+   Buy button — appears on click, positioned absolutely BELOW the
+   card art and FLUSH against its bottom edge. Conditionally rendered
+   (mounts only when `isSelected`) so it takes no layout space when
+   hidden — the canvas's resting position in the card is unaffected
+   by BUY's presence.
+
+   Anchored to .cardImageWrap (which is shrink-wrapped to the canvas
+   wrapper). The default offset (`top: 100%`) targets sigils: ItemScene
+   paints a framed sigil that visually sits within the wrapper bounds
+   (the 15% canvas overflow holds a tilt-reactive shadow, not the
+   sigil image itself), so the wrapper bottom IS the visual sigil
+   bottom and `top: 100%` lands BUY's top edge flush with it.
+
+   Packs use a deeper offset (.packBuyButton override) — pack art is
+   portrait with displayScale: 1.3, so the visible art genuinely
+   extends ~15% past the wrapper bottom and BUY anchors at 115% to
+   sit flush with the bottom of that overflow.
    ================================================================ */
 .buyButton {
     position: absolute;
-    top: 50%;
-    left: 100%;
-    transform: translateY(-50%);
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
     box-sizing: border-box;
     background: #2d9e2d;
     border: 2px solid #1a7a1a;
-    border-radius: 0 4px 4px 0;
-    border-left: none;
+    border-radius: 4px;
     color: #fff;
     font-family: inherit;
-    font-size: clamp(var(--font-size-xs), 1.3vw, var(--font-size-md));
+    font-size: clamp(var(--font-size-xs), 1.4vw, var(--font-size-md));
     font-weight: normal;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
     cursor: pointer;
     line-height: 1;
-    padding: clamp(6px, 1vh, 10px) clamp(10px, 1.4vw, 16px);
+    padding: clamp(6px, 1vh, 10px) clamp(14px, 2vw, 22px);
     z-index: 30;
     pointer-events: auto;
-    transition: background 80ms ease-out;
+    transition: background 80ms ease-out, transform 80ms ease-out;
     white-space: nowrap;
 }
 
@@ -373,7 +417,7 @@
 }
 
 .buyButton:active {
-    transform: translateY(-50%) scale(0.93);
+    transform: translateX(-50%) scale(0.94);
 }
 
 .buyButton:disabled {
@@ -382,22 +426,17 @@
     pointer-events: none;
 }
 
-/* ----- Pack-specific chip + button anchoring -----
+/* ----- Pack-specific layout overrides -----
    Pack art is portrait (89/160 aspect, displayScale 1.3) so the
-   visible art is ~72.3% of the canvas-wrapper width AND extends
-   ~15% above/below the wrapper bounds. The default chip + buy-button
-   positions anchor to the wrapper, leaving awkward gaps next to
-   the visible art edges. These overrides re-anchor them to the
-   visible art bounds:
+   visible art extends ~15% above/below the canvas wrapper bounds.
      - .packCardImageWrap shrinks cardImageWrap to canvas-wrapper size
-       so the priceChip's positioning context matches the visible art.
+       so the priceChip's percentage offset reads off the visible art.
      - .packPriceChip moves the chip up to sit on the visible art's
        top edge (~15% of wrapper height above wrapper top).
-     - .packBuyButton anchors at the visible art's right edge instead
-       of the wrapper's right edge.
 
-   These rules MUST come after `.priceChip` + `.buyButton` so they
-   win the cascade (same-specificity, last-wins). */
+   The BUY button uses a slightly larger top margin on packs to clear
+   the visible art's 15% bottom overflow — without it, BUY would
+   visually crowd the bottom edge of the painted pack illustration. */
 .packCardImageWrap {
     flex: 0 0 auto;
 }
@@ -406,41 +445,97 @@
     top: -15%;
 }
 
+/* Pack BUY clears the portrait art's 15% bottom overflow — without
+   this override, the default `top: 100%` sigil offset would place
+   BUY behind the bottom edge of the visible pack art. */
 .packBuyButton {
-    left: 86.14%;
-    top: 35%;
+    top: 115%;
 }
 
 /* ================================================================
    Tooltip — hover trigger via the shared Tooltip component.
    Mirrors SigilBar's framed tooltip structure: name → desc-wrap → rarity.
+
+   Fixed width across every shop item (sigils + packs) so the tooltip
+   reads as a uniform panel regardless of description length. Mirrors
+   the AuguryPicker tarot tooltip approach (see AuguryPicker.module.css)
+   — short descriptions wrap fewer lines but the panel chrome stays the
+   same size, long descriptions wrap onto multiple lines within the
+   same fixed bounds. Overrides the parent .tooltip's `white-space:
+   nowrap` so descriptions actually break onto new lines.
    ================================================================ */
 .itemCard:hover :global(.arkyn-tooltip) {
     opacity: 1;
 }
 
+.itemCard :global(.arkyn-tooltip) {
+    width: clamp(220px, 22vw, 280px);
+    white-space: normal;
+    /* Override the Tooltip .framed default 2px solid #1a1430 border —
+       that color is darker than the tooltip's #2a2240 background and
+       reads as a lip rather than a separator. A lighter purple border
+       makes the tooltip lift off the shop panel chrome instead of
+       blending into it. */
+    border-color: #6a55a8;
+    /* Enable the directional arrow outline defined in Tooltip.module.css.
+       The arrow's drop-shadow filter reads this var; default is
+       transparent (no outline), shop sets it to match the lifted
+       border above so the arrow extends the bordered look only on
+       the slopes facing the parent — back edge stays seamless. */
+    --arrow-outline-color: #6a55a8;
+}
+
+/* Pack tooltip override — pack art is portrait (89/160 aspect) so the
+   painted illustration only fills the central ~55% of the canvas
+   wrapper horizontally. The default 16px tooltip offset (.left /
+   .right in Tooltip.module.css) reads as too far from the visible
+   art because there's already significant whitespace inside the
+   wrapper between the art's edge and the wrapper's edge. Shrinking
+   the side offset to 4px brings the tooltip flush against the
+   wrapper edge so it reads as anchored to the pack illustration. */
+.packTooltip {
+    --tooltip-side-offset: 4px;
+}
+
+/* Item name — near-white headline. Pairs with the gold-brown
+   description below for typographic hierarchy: bright title, warmer
+   body. The gold-brown matches the SpellPreview "BANK" / "NEXT ENEMY"
+   section labels (#c4a882) so the body text feels of-a-piece with
+   the rest of the panel chrome. */
 .tooltipName {
     font-size: clamp(var(--font-size-xs), 1.6vw, var(--font-size-sm));
     font-weight: normal;
     letter-spacing: 1px;
     color: #e8e0d4;
+    text-align: center;
 }
 
+/* Description panel — flat dark gray-purple. Less saturated than the
+   prior #1f1838 (which read as a second purple competing with the
+   tooltip body's purple) and no border (was reading as visual noise
+   against the outer chrome). The inset shadow alone gives enough
+   depth to define the panel edge.
+
+   `align-self: stretch` is critical — the parent flex container uses
+   `align-items: center`, which would otherwise shrink this child to
+   its text content and leave short descriptions in a narrower frame
+   than long ones. */
 .tooltipDescWrap {
     box-sizing: border-box;
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 12px;
-    border-image: var(--tooltip-desc-bg) 24 24 24 24 fill / 12px;
-    image-rendering: pixelated;
-    padding: 4px 10px;
+    align-self: stretch;
+    background: #1f1d2e;
+    border-radius: 6px;
+    padding: 6px 12px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .tooltipDesc {
-    font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
-    color: #c8c0b0;
-    line-height: 1.3;
+    display: block;
+    font-size: clamp(var(--font-size-2xs), 1.05vw, var(--font-size-xs));
+    color: #b5a591;
+    line-height: 1.4;
+    text-align: center;
+    white-space: normal;
 }
 
 .tooltipRarity {
@@ -675,11 +770,15 @@
         font-size: var(--font-size-2xs);
     }
 
-    /* Buy-button overlay when a card is tapped. Tighter footprint so it
-       doesn't collide with the neighbor card in the now-smaller grid. */
+    /* BUY tap target — taller + wider on mobile so it's a reliable
+       touch target. The font stays compact so the button doesn't
+       dominate the small card. Position offsets (top: 100% / 115%)
+       are inherited from desktop and resolve correctly against the
+       smaller mobile canvas — the percentages scale with the
+       wrapper. */
     .buyButton {
         font-size: var(--font-size-2xs);
-        padding: clamp(3px, 0.6vh, 6px) clamp(6px, 1vw, 10px);
+        padding: clamp(6px, 1.2vh, 9px) clamp(12px, 2.2vw, 18px);
         border-width: 1px;
     }
 
@@ -688,13 +787,19 @@
     }
 
     .tooltipDescWrap {
-        border-width: 8px;
-        border-image: var(--tooltip-desc-bg) 24 24 24 24 fill / 8px;
-        padding: 3px 6px;
+        padding: 5px 10px;
     }
 
     .tooltipDesc {
-        font-size: var(--font-size-3xs);
+        font-size: var(--font-size-2xs);
+    }
+
+    /* Mobile tooltip width — narrower than desktop so it doesn't
+       crowd the smaller shop panel. Same fixed-width pattern as the
+       desktop rule (defined above the @media block) so every card's
+       tooltip stays uniform on phones too. */
+    .itemCard :global(.arkyn-tooltip) {
+        width: clamp(180px, 50vw, 240px);
     }
 
     .continueButton {

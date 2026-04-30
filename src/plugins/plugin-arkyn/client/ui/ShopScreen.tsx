@@ -18,7 +18,7 @@ import {
 } from "../arkynStore";
 import { MAX_SIGILS, REROLL_COST, PACK_DEFINITIONS, type PackType } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
-import { playButton, playBuy, playOpenPack } from "../sfx";
+import { playButton, playBuy, playClick, playOpenPack } from "../sfx";
 import { RARITY_COLORS, createPanelStyleVars } from "./styles";
 import { getPackImageUrl } from "./packAssets";
 import ItemScene from "./ItemScene";
@@ -234,10 +234,13 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             dissolveElement: def.dissolveElement,
         });
         sendBuyItem(shopIndex);
-        // All packs use the open-pack "rip" SFX — it's the player's
-        // first cue that a picker is about to mount, so the thematic
-        // sound reads as the pack itself opening rather than a generic
-        // purchase chime.
+        // BUY chime first (matches sigil purchases — confirms the
+        // gold spend), then the open-pack "rip" as the pack flies in
+        // and dissolves. The sigil purchase only fires playBuy()
+        // because it has no follow-up animation; packs layer the
+        // open-pack on top so the player hears [chime → rip] as one
+        // continuous "I bought this and it's opening" cue.
+        playBuy();
         playOpenPack();
         setSelectedShopIndex(null);
     };
@@ -310,7 +313,13 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                 key={item.shopIndex}
                                 className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""} ${isSelected ? styles.itemCardSelected : ""}`}
                                 style={{ ...cardStyleVars } as CSSProperties}
-                                onClick={() => setSelectedShopIndex(prev => prev === item.shopIndex ? null : item.shopIndex)}
+                                onClick={() => setSelectedShopIndex(prev => {
+                                    const next = prev === item.shopIndex ? null : item.shopIndex;
+                                    // Click SFX on entering the selected state — skip on
+                                    // deselect so toggling off doesn't re-click.
+                                    if (next !== null) playClick();
+                                    return next;
+                                })}
                             >
                                 <div className={styles.priceChip}>
                                     <img src={goldIconUrl} alt="Gold" className={styles.priceIcon} />
@@ -402,15 +411,18 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                 key={item.shopIndex}
                                 className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""} ${isSelected ? styles.itemCardSelected : ""}`}
                                 style={{ ...cardStyleVars } as CSSProperties}
-                                onClick={() => setSelectedShopIndex(prev => prev === item.shopIndex ? null : item.shopIndex)}
+                                onClick={() => setSelectedShopIndex(prev => {
+                                    const next = prev === item.shopIndex ? null : item.shopIndex;
+                                    if (next !== null) playClick();
+                                    return next;
+                                })}
                             >
-                                {/* For packs, the priceChip + buyButton are rendered INSIDE
-                                    cardImageWrap (instead of as siblings of it like sigils
-                                    do) so they can anchor to the visible portrait art's
-                                    bounds rather than the square canvas-wrapper bounds.
-                                    `.packCardImageWrap` shrinks cardImageWrap to the canvas
-                                    wrapper size so priceChip's `top: -15%` and buyButton's
-                                    `left: 86.14%` resolve against the visible-art geometry. */}
+                                {/* Pack priceChip + buyButton are anchored INSIDE cardImageWrap
+                                    so their percentage offsets resolve against the visible
+                                    portrait-art bounds rather than the square canvas wrapper.
+                                    `.packCardImageWrap` shrinks cardImageWrap to canvas size
+                                    so the chip's `top: -15%` and BUY's `top: 115%` read off
+                                    the art geometry. */}
                                 <div className={`${styles.cardImageWrap} ${styles.packCardImageWrap}`}>
                                     <div className={`${styles.priceChip} ${styles.packPriceChip}`}>
                                         <img src={goldIconUrl} alt="Gold" className={styles.priceIcon} />
@@ -442,7 +454,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                     )}
                                 </div>
 
-                                <Tooltip placement={tooltipPlacement} arrow variant="framed">
+                                <Tooltip placement={tooltipPlacement} arrow variant="framed" className={styles.packTooltip}>
                                     <span className={styles.tooltipName}>
                                         {def.name}
                                     </span>

@@ -30,14 +30,19 @@
     margin-bottom: 8px;
 }
 
+/* Horizontal offset for left/right placement. Consumers can override
+   `--tooltip-side-offset` to tighten or widen the gap to the parent
+   (e.g. pack shop cards set a smaller value because the painted
+   pack art is narrower than the canvas wrapper, so the default 16px
+   reads as "too far" against the visible art). */
 .left {
-    right: calc(100% + 16px);
+    right: calc(100% + var(--tooltip-side-offset, 16px));
     top: 50%;
     transform: translateY(-50%);
 }
 
 .right {
-    left: calc(100% + 16px);
+    left: calc(100% + var(--tooltip-side-offset, 16px));
     top: 50%;
     transform: translateY(-50%);
 }
@@ -70,7 +75,16 @@
 /* ---- Arrow pseudo-elements ----
    Anchored to the tooltip box's visible edge via 100% offsets (no more
    -16px compensation for the dropped transparent border-image space).
-   Triangle fill matches the framed background for a continuous look. */
+   Triangle fill matches the framed background for a continuous look.
+
+   Each arrow gets a 1px directional drop-shadow that paints an outline
+   on ONLY the front edges (the slopes pointing toward the parent) —
+   the shift direction is away from the tooltip body so the back edge
+   stays seamlessly attached. The outline color is read from
+   `--arrow-outline-color`, with a transparent default so non-shop
+   tooltips render unchanged. Consumers (e.g. ShopScreen) override the
+   variable to enable a visible outline that matches their custom
+   border treatment. */
 
 .arrowBottom::before {
     content: '';
@@ -83,6 +97,7 @@
     border-left: 8px solid transparent;
     border-right: 8px solid transparent;
     border-bottom: 8px solid #2a2240;
+    filter: drop-shadow(0 -1px 0 var(--arrow-outline-color, transparent));
 }
 
 .arrowTop::after {
@@ -96,6 +111,7 @@
     border-left: 8px solid transparent;
     border-right: 8px solid transparent;
     border-top: 8px solid #2a2240;
+    filter: drop-shadow(0 1px 0 var(--arrow-outline-color, transparent));
 }
 
 .arrowLeft::after {
@@ -109,6 +125,7 @@
     border-top: 8px solid transparent;
     border-bottom: 8px solid transparent;
     border-left: 8px solid #2a2240;
+    filter: drop-shadow(1px 0 0 var(--arrow-outline-color, transparent));
 }
 
 .arrowRight::before {
@@ -122,4 +139,5 @@
     border-top: 8px solid transparent;
     border-bottom: 8px solid transparent;
     border-right: 8px solid #2a2240;
+    filter: drop-shadow(-1px 0 0 var(--arrow-outline-color, transparent));
 }
