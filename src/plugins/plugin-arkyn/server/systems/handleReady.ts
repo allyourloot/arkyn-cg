@@ -44,6 +44,23 @@ export function handleReady(
         // overlay's "Total" line reveals — not here. By the time the
         // player hits Continue the gold is already in their bank.
 
+        // Reanimate cleanup: the save effect was staged in handleCast
+        // (set HP to 0, flagged `reanimateConsumed`). The sigil stayed
+        // in `player.sigils` so the client could play the bubble +
+        // dissolve animation on its actual slot. Now that the player
+        // is leaving round_end, splice the sigil and clear any
+        // accumulator key so a fresh re-buy starts clean.
+        if (player.reanimateConsumed) {
+            const reanimateIdx = Array.from(player.sigils).indexOf("reanimate");
+            if (reanimateIdx >= 0) {
+                player.sigils.splice(reanimateIdx, 1);
+            }
+            if (player.sigilAccumulators.has("reanimate")) {
+                player.sigilAccumulators.delete("reanimate");
+            }
+            player.reanimateConsumed = false;
+        }
+
         // Rebuild the pouch for the shop so the PouchCounter and
         // PouchModal show the player's FULL deck composition, not the
         // leftover from the just-finished round. `initPlayerForRound`

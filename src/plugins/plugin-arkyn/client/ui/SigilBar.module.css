@@ -187,6 +187,24 @@
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
 }
 
+/* SAVED! variant — fires under Reanimate when its savior trigger lands.
+   Green pill reads as a positive rescue beat, distinct from the warm
+   gold / red xMult / purple Mimic. Slightly larger than the other pills
+   to emphasize the round-saving moment. */
+.procBubbleSave {
+    padding: 2px 8px 3px;
+    background: #309f30;
+    color: #ffffff;
+    border-radius: 3px;
+    font-size: clamp(var(--font-size-xs), 1.6vw, var(--font-size-md));
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.4),
+        2px 2px 0 rgba(0, 0, 0, 0.55);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+}
+
 /* ================================================================
    Tooltip — hover trigger via the shared Tooltip component's
    global .arkyn-tooltip class.

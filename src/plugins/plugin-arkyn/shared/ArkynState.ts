@@ -112,6 +112,13 @@ export class ArkynPlayerState extends Schema {
     // Persists across rounds within a run. Resets on new run (fresh schema).
     @type({ map: "number" }) sigilAccumulators = new MapSchema<number>();
 
+    // Reanimate save flag. Set true on the cast that triggers Reanimate's
+    // savior effect. The sigil itself is NOT spliced from `sigils` until
+    // the round_end → shop transition (handleReady) — keeping the slot
+    // mounted lets the client play the "Saved!" bubble + dissolve
+    // animation on the actual Reanimate slot before it tears apart.
+    @type("boolean") reanimateConsumed = false;
+
     // Consumable items — up to MAX_CONSUMABLES (2). Each entry is an
     // element name representing a scroll consumable (e.g. "fire").
     // Players click USE to apply the scroll (increments scrollLevels).

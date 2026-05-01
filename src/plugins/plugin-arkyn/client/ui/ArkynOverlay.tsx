@@ -5,6 +5,7 @@ import {
     useGamePhase,
     useIsCastAnimating,
     useSigils,
+    useReanimateConsumed,
     onScrollPurchase,
     onSigilPurchase,
     onPackRunePick,
@@ -34,7 +35,7 @@ import BanishAnimation from "./BanishAnimation";
 import BlackjackAnimation from "./BlackjackAnimation";
 import AchievementFlyout from "./AchievementFlyout";
 import MainMenu from "./MainMenu";
-import SigilBar from "./SigilBar";
+import SigilBar, { REANIMATE_TOTAL_MS } from "./SigilBar";
 import ItemScene from "./ItemScene";
 import MultBubbleOverlay from "./MultBubble";
 import HeldXMultBubbleOverlay from "./HeldXMultBubble";
@@ -159,6 +160,7 @@ export default function ArkynOverlay() {
     // "UPGRADE!" label — shown above the scroll after it reaches center.
     const [showUpgradeLabel, setShowUpgradeLabel] = useState(false);
 
+    const reanimateConsumed = useReanimateConsumed();
     const [showRoundEnd, setShowRoundEnd] = useState(false);
     useEffect(() => {
         if (gamePhase !== "round_end") {
@@ -166,9 +168,16 @@ export default function ArkynOverlay() {
             return;
         }
         if (isCastAnimating) return;
-        const t = setTimeout(() => setShowRoundEnd(true), ENEMY_DAMAGE_HIT_MS);
+        // When Reanimate fired, hold the round-end overlay until the
+        // SigilBar has played the bubble + dissolve sequence on the
+        // saving sigil. Without this delay the win overlay would slide
+        // up and cover the SigilBar mid-animation.
+        const delay = reanimateConsumed
+            ? Math.max(ENEMY_DAMAGE_HIT_MS, REANIMATE_TOTAL_MS)
+            : ENEMY_DAMAGE_HIT_MS;
+        const t = setTimeout(() => setShowRoundEnd(true), delay);
         return () => clearTimeout(t);
-    }, [gamePhase, isCastAnimating]);
+    }, [gamePhase, isCastAnimating, reanimateConsumed]);
 
     const [showGameOver, setShowGameOver] = useState(false);
     useEffect(() => {

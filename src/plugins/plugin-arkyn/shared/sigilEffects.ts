@@ -70,13 +70,16 @@ const SIGIL_RNG_BAND_WIDTH = 100000;
 //                  per rune on the final cast.
 //   - burnrite/fuze/impale/haphazard: binary unlocks / set-membership —
 //                  duplicating has no observable effect
-//   - executioner: SIGIL_ACCUMULATOR_XMULT keys `player.sigilAccumulators`
-//                  by sigil id, so a "second" executioner shares the same
+//   - executioner/sensei: SIGIL_ACCUMULATOR_XMULT keys `player.sigilAccumulators`
+//                  by sigil id, so a "second" copy shares the same
 //                  storage slot — can't carry a separate counter
 //   - binoculars:  writes `player.disabledResistance` (single @type string
 //                  field) — a second fire overwrites the first
 //   - banish:      SIGIL_DISCARD_HOOKS dispatcher can't banish the same
 //                  rune index twice safely in one pass
+//   - reanimate:   one-shot self-destruct in handleCast — Mimic-expanded
+//                  copies don't have their own slot to splice, so a copy
+//                  would re-fire indefinitely against a single original
 //   - mimic:       prevents `[mimic, mimic]` infinite chain / recursion
 //
 // Mimic-incompatible neighbors silently make Mimic a no-op. Mimic at the
@@ -93,8 +96,10 @@ export const MIMIC_INCOMPATIBLE: ReadonlySet<string> = new Set([
     "impale",
     "haphazard",
     "executioner",
+    "sensei",
     "binoculars",
     "banish",
+    "reanimate",
     "boom_bomb",
     "big_bang",
     "mimic",
@@ -1043,7 +1048,7 @@ export function getElementRuneBonus(
  * crits feed future casts. The client reads the same pre-cast value via
  * schema sync so server/client animation stay in lockstep.
  */
-export type AccumulatorTrigger = "criticalHit";
+export type AccumulatorTrigger = "criticalHit" | "psyScrollUsed";
 
 export interface AccumulatorXMultDefinition {
     /** What game event feeds the accumulator. */
@@ -1056,6 +1061,7 @@ export interface AccumulatorXMultDefinition {
 
 export const SIGIL_ACCUMULATOR_XMULT: Record<string, AccumulatorXMultDefinition> = {
     executioner: { trigger: "criticalHit", perEventDelta: 0.1, initialValue: 1.0 },
+    sensei: { trigger: "psyScrollUsed", perEventDelta: 0.5, initialValue: 1.0 },
 };
 
 export interface AccumulatorXMultEntry {
@@ -1077,7 +1083,7 @@ export function getAccumulatorXMult(
 ): { total: number; entries: AccumulatorXMultEntry[] } {
     let total = 1;
     const entries: AccumulatorXMultEntry[] = [];
-    // Note: Executioner (the only accumulator sigil today) is in
+    // Note: All current accumulator sigils (Executioner, Sensei) are in
     // MIMIC_INCOMPATIBLE, so Mimic never duplicates accumulator reads.
     // Future accumulator sigils that ARE Mimic-compatible would re-read
     // the same `accumulators[sigilId]` value twice — acceptable and

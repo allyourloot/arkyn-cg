@@ -1,4 +1,4 @@
-import { type ArkynState, getConsumableDefinition, getScrollLevelsPerUse } from "../../shared";
+import { type ArkynState, applyAccumulatorIncrements, flattenMapSchema, getConsumableDefinition, getScrollLevelsPerUse } from "../../shared";
 import { Logger } from "@core/shared/utils";
 import { getActiveSigils } from "../utils/sigils";
 import { requirePlayer } from "./utils/requirePlayer";
@@ -42,10 +42,21 @@ export function handleUseConsumable(
     switch (def.effect.type) {
         case "upgradeScroll": {
             const element = def.effect.element;
+            const sigils = getActiveSigils(player);
             const currentLevel = player.scrollLevels.get(element) ?? 0;
-            const levelsGained = getScrollLevelsPerUse(getActiveSigils(player));
+            const levelsGained = getScrollLevelsPerUse(sigils);
             const newLevel = currentLevel + levelsGained;
             player.scrollLevels.set(element, newLevel);
+            if (element === "psy") {
+                const updates = applyAccumulatorIncrements(
+                    sigils,
+                    flattenMapSchema(player.sigilAccumulators),
+                    { psyScrollUsed: 1 },
+                );
+                for (const sigilId of Object.keys(updates)) {
+                    player.sigilAccumulators.set(sigilId, updates[sigilId]);
+                }
+            }
             logDetail = `${element} scroll → level ${newLevel}${levelsGained > 1 ? ` (+${levelsGained})` : ""}`;
             break;
         }

@@ -3,9 +3,13 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { MAX_SIGILS, MIMIC_INCOMPATIBLE, SIGIL_ACCUMULATOR_XMULT, SIGIL_INVENTORY_MULT } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
-import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, registerSigilFrame, usePendingSigilId, useSigilProcBubble, useAhoyDiscardElement } from "../arkynStore";
-import { RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
+import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, registerSigilFrame, usePendingSigilId, useSigilProcBubble, useAhoyDiscardElement, useReanimateConsumed, useIsCastAnimating, arkynStoreInternal } from "../arkynStore";
+import { notify } from "../arkynStoreCore";
+import { DISSOLVE_DURATION_MS, RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
+import DissolveCanvas from "./DissolveCanvas";
+import { getSigilImageUrl } from "./sigilAssets";
 import { haptic, HAPTIC_LIGHT } from "../haptics";
+import { playDissolve, playPopLow } from "../sfx";
 import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
@@ -39,6 +43,13 @@ const ACTIVE_DURATION_S = 0.22;
 const HOVER_EASE = "power3.out";
 const HOVER_DURATION_S = 0.12;
 
+// Reanimate save animation timing. The bubble pops first, holds briefly
+// so the player can read it, then the dissolve takes over. ArkynOverlay
+// reads REANIMATE_TOTAL_MS to delay the round-end overlay long enough
+// for the whole sequence to land before the win screen covers it.
+const REANIMATE_BUBBLE_HOLD_MS = 700;
+export const REANIMATE_TOTAL_MS = REANIMATE_BUBBLE_HOLD_MS + DISSOLVE_DURATION_MS + 200;
+
 export default function SigilBar() {
     const sigils = useSigils();
     const accumulators = useSigilAccumulators();
@@ -46,6 +57,14 @@ export default function SigilBar() {
     const pendingSigilId = usePendingSigilId();
     const sigilProcBubble = useSigilProcBubble();
     const ahoyDiscardElement = useAhoyDiscardElement();
+    const reanimateConsumed = useReanimateConsumed();
+    const isCastAnimating = useIsCastAnimating();
+    // Reanimate dissolve-handoff state. The bubble fires AFTER the cast
+    // animation completes — so the player first sees the actual hand
+    // damage land on the enemy HP bar, then the Saved! bubble pops, then
+    // the slot dissolves. Round-end overlay is held until all three
+    // beats finish (see ArkynOverlay's setShowRoundEnd delay).
+    const [dissolveStart, setDissolveStart] = useState<number | null>(null);
     const barRef = useRef<HTMLDivElement>(null);
     const frameRef = useRef<HTMLDivElement>(null);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -82,6 +101,32 @@ export default function SigilBar() {
             setSelectedSigilId(null);
         }
     }, [sigils, selectedSigilId]);
+
+    // Reanimate save sequence — runs AFTER the cast animation completes
+    // so the player sees their hand's actual damage land on the enemy HP
+    // bar first. Sequence: Saved! bubble pops → bubble settles → slot
+    // dissolves → round-end overlay slides in. ArkynOverlay holds the
+    // overlay open for REANIMATE_TOTAL_MS so the bubble + dissolve land
+    // before the win UI covers them.
+    useEffect(() => {
+        if (!reanimateConsumed) {
+            // Reset on round_end → shop (when server clears the flag).
+            setDissolveStart(null);
+            return;
+        }
+        // Wait for the cast animation to finish so the damage hit lands
+        // on the enemy HP bar BEFORE Reanimate's feedback fires.
+        if (isCastAnimating) return;
+        arkynStoreInternal.triggerSigilProcBubble("reanimate", 0, "save");
+        playPopLow();
+        notify();
+        // Dissolve starts after the bubble's pop / drift settles.
+        const dissolveTimer = setTimeout(() => {
+            setDissolveStart(performance.now());
+            playDissolve();
+        }, REANIMATE_BUBBLE_HOLD_MS);
+        return () => clearTimeout(dissolveTimer);
+    }, [reanimateConsumed, isCastAnimating]);
 
     // Sigil shake animation — fires when activeSigilShake changes
     useGSAP(() => {
@@ -208,6 +253,15 @@ export default function SigilBar() {
                     const mimicNeighborIsIncompatible = !!mimicNeighborId
                         && MIMIC_INCOMPATIBLE.has(mimicNeighborId);
 
+                    // Reanimate post-save: the slot stays mounted in the
+                    // schema until the round_end → shop transition splices
+                    // it, but the sigil has already fired and the visual is
+                    // mid-dissolve. Block tooltip / tap / sell so the
+                    // player can't accidentally re-trigger or sell-during-
+                    // dissolve in the brief window before the round-end
+                    // overlay covers the bar.
+                    const isReanimateLocked = sigilId === "reanimate" && reanimateConsumed;
+
                     const slotClassName = `${styles.filledSlot}`
                         + (isSelected ? ` ${styles.filledSlotSelected}` : "")
                         + (isDragging ? ` ${styles.filledSlotDragging}` : "");
@@ -219,13 +273,23 @@ export default function SigilBar() {
                             data-sigil-id={sigilId}
                             ref={(el) => { slotRefs.current[i] = el; registerSigilSlot(i, el); }}
                             className={slotClassName}
-                            style={{ opacity: isPending ? 0 : 1 }}
-                            onPointerEnter={HAS_HOVER && !isPending ? () => setHoveredIdx(i) : undefined}
+                            style={{ opacity: isPending ? 0 : 1, pointerEvents: isReanimateLocked ? "none" : undefined }}
+                            onPointerEnter={HAS_HOVER && !isPending && !isReanimateLocked ? () => setHoveredIdx(i) : undefined}
                             onPointerLeave={HAS_HOVER ? () => setHoveredIdx(prev => prev === i ? null : prev) : undefined}
-                            onPointerDown={isPending ? undefined : (e) => onSlotPointerDown(e, sigilId, i)}
+                            onPointerDown={isPending || isReanimateLocked ? undefined : (e) => onSlotPointerDown(e, sigilId, i)}
                             onDragStart={(e) => e.preventDefault()}
                         >
-                            {!isPending && <ItemScene itemId={sigilId} index={i} />}
+                            {!isPending && (sigilId === "reanimate" && dissolveStart !== null
+                                ? (
+                                    <DissolveCanvas
+                                        element="reanimate"
+                                        imageUrl={getSigilImageUrl(sigilId)}
+                                        startTime={dissolveStart}
+                                        duration={DISSOLVE_DURATION_MS}
+                                    />
+                                )
+                                : <ItemScene itemId={sigilId} index={i} />
+                            )}
                             {/* Tooltip — centered below, hover-only (info) */}
                             {!isPending && (
                                 <Tooltip placement="bottom" arrow variant="framed">
@@ -366,6 +430,14 @@ export default function SigilBar() {
                             {sigilProcBubble && sigilProcBubble.sigilId === sigilId && sigilProcBubble.kind === "mimic" && (
                                 <SigilMimicProcBubble seq={sigilProcBubble.seq} />
                             )}
+                            {/* "Saved!" pill — fires under Reanimate when
+                                its savior trigger lands. After this bubble
+                                settles the slot's image dissolves; both
+                                land BEFORE the round-end overlay covers
+                                the SigilBar. */}
+                            {sigilProcBubble && sigilProcBubble.sigilId === sigilId && sigilProcBubble.kind === "save" && (
+                                <SigilSaveProcBubble seq={sigilProcBubble.seq} />
+                            )}
                         </div>
                     );
                 })}
@@ -484,6 +556,36 @@ function SigilGoldProcBubble({ amount, seq }: { amount: number; seq: number }) {
  * Same GSAP pop / drift / fade timing as the gold + xmult bubbles so
  * the variants feel like siblings.
  */
+/**
+ * Floating "Saved!" pill — fires under Reanimate when its savior effect
+ * triggers. Same chrome + GSAP animation as the other pill bubbles
+ * (Mimic / xMult); green background to read as a positive rescue beat
+ * distinct from the warm-gold gold pop and red xMult / purple Mimic.
+ * Shown JUST BEFORE the slot's sigil image dissolves so the player can
+ * read "Saved!" → "(image torn apart)" → round-end overlay.
+ */
+function SigilSaveProcBubble({ seq }: { seq: number }) {
+    const ref = useRef<HTMLSpanElement>(null);
+
+    useGSAP(() => {
+        const el = ref.current;
+        if (!el) return;
+        const rotation = (Math.random() < 0.5 ? -1 : 1) * (3 + Math.random() * 4);
+        gsap.set(el, { y: -6, scale: 0.55, opacity: 0, rotation });
+        const tl = gsap.timeline();
+        tl.to(el, { y: 8, scale: 1.2, opacity: 1, duration: 0.18, ease: "back.out(2.5)" });
+        tl.to(el, { y: 12, scale: 1, duration: 0.1, ease: "power2.out" });
+        tl.to({}, { duration: 0.45 });
+        tl.to(el, { y: 32, opacity: 0, duration: 0.35, ease: "power1.in" });
+    }, { dependencies: [seq], scope: ref });
+
+    return (
+        <span key={seq} ref={ref} className={`${styles.procBubble} ${styles.procBubbleSave}`}>
+            Saved!
+        </span>
+    );
+}
+
 function SigilMimicProcBubble({ seq }: { seq: number }) {
     const ref = useRef<HTMLSpanElement>(null);
 

@@ -42,6 +42,7 @@ import {
     setShopItems,
     setSigils,
     setSigilAccumulators,
+    setReanimateConsumed,
     setConsumables,
     setDisabledResistance,
     setAhoyDiscardElement,
@@ -196,6 +197,7 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevShopItems: { itemType: string; element: string; cost: number; purchased: boolean }[] = [];
     let prevSigils: string[] = [];
     let prevSigilAccumulators: Record<string, number> = {};
+    let prevReanimateConsumed = false;
     let prevConsumables: string[] = [];
     let prevDisabledResistance = "";
     let prevAhoyDiscardElement = "";
@@ -502,6 +504,13 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
             const next = flattenMapSchema(player.sigilAccumulators);
             prevSigilAccumulators = next;
             setSigilAccumulators(next);
+        }
+
+        // Sync Reanimate save flag — flipping false → true is the cue
+        // SigilBar watches to play the bubble + dissolve animation.
+        if (player.reanimateConsumed !== prevReanimateConsumed) {
+            prevReanimateConsumed = player.reanimateConsumed;
+            setReanimateConsumed(prevReanimateConsumed);
         }
 
         // Sync dynamic resist-ignore element (Binoculars picks one per round).

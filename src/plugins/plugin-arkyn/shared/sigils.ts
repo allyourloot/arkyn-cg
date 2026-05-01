@@ -501,6 +501,26 @@ export const SIGIL_DEFINITIONS: Record<string, SigilDefinition> = {
             elements: ["psy"] as const,
         },
     },
+    sensei: {
+        id: "sensei",
+        name: "Sensei",
+        rarity: "rare",
+        description: "Each {Psy} Scroll grants [[+0.5x Mult]] permanently.",
+        cost: 6,
+        sellPrice: 3,
+        explainer: {
+            label: "Applies to:",
+            elements: ["psy"] as const,
+        },
+    },
+    reanimate: {
+        id: "reanimate",
+        name: "Reanimate",
+        rarity: "uncommon",
+        description: "If you would be defeated with the enemy below {25% HP}, win the round. {Self-destructs} on use.",
+        cost: 4,
+        sellPrice: 2,
+    },
 };
 
 export const SIGIL_IDS = Object.keys(SIGIL_DEFINITIONS);

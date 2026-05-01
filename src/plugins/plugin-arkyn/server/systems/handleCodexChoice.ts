@@ -1,4 +1,4 @@
-import { type ArkynState, getScrollLevelsPerUse } from "../../shared";
+import { type ArkynState, applyAccumulatorIncrements, flattenMapSchema, getScrollLevelsPerUse } from "../../shared";
 import { Logger } from "@core/shared/utils";
 import { clearArraySchema } from "../utils/clearArraySchema";
 import { getActiveSigils } from "../utils/sigils";
@@ -48,10 +48,22 @@ export function handleCodexChoice(
     }
 
     const element = player.pendingCodexScrolls[index];
+    const sigils = getActiveSigils(player);
     const currentLevel = player.scrollLevels.get(element) ?? 0;
-    const levelsGained = getScrollLevelsPerUse(getActiveSigils(player));
+    const levelsGained = getScrollLevelsPerUse(sigils);
     const newLevel = currentLevel + levelsGained;
     player.scrollLevels.set(element, newLevel);
+
+    if (element === "psy") {
+        const updates = applyAccumulatorIncrements(
+            sigils,
+            flattenMapSchema(player.sigilAccumulators),
+            { psyScrollUsed: 1 },
+        );
+        for (const sigilId of Object.keys(updates)) {
+            player.sigilAccumulators.set(sigilId, updates[sigilId]);
+        }
+    }
 
     clearArraySchema(player.pendingCodexScrolls);
 

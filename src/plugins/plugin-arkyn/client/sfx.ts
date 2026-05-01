@@ -27,6 +27,7 @@ import selectTarotUrl from "/assets/audio/sfx/select-tarot.mp3?url";
 import deselectTarotUrl from "/assets/audio/sfx/deselect-tarot.mp3?url";
 import convertUrl from "/assets/audio/sfx/convert.mp3?url";
 import clickUrl from "/assets/audio/sfx/click.mp3?url";
+import popLowUrl from "/assets/audio/sfx/pop-low.mp3?url";
 import { getAudioContext } from "./audioContext";
 import { haptic, HAPTIC_LIGHT, HAPTIC_MEDIUM } from "./haptics";
 
@@ -218,6 +219,8 @@ const playClickSfx = makeSfx(clickUrl, VOL_DEFAULT);
 export const playClick = (rate = 1) => { haptic(HAPTIC_LIGHT); playClickSfx(rate); };
 const playAddConsumableSfx = makeSfx(addConsumableUrl, VOL_DEFAULT);
 export const playAddConsumable = (rate = 1) => { haptic(HAPTIC_LIGHT); playAddConsumableSfx(rate); };
+// Low-pitched pop — used for the Reanimate "Saved!" bubble.
+export const playPopLow = makeSfx(popLowUrl, VOL_DEFAULT);
 
 // Typewriter SFX — looping sound that needs clean stop/restart per line.
 // Uses a single live BufferSourceNode with loop=true. playTypewriter

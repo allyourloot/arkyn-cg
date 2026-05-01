@@ -147,6 +147,14 @@ let sigils: string[] = [];
 // fall back to the category's `initialValue` at read time.
 let sigilAccumulators: Record<string, number> = {};
 
+// Reanimate save flag — mirrors `player.reanimateConsumed`. Flips true
+// the moment the server stages a Reanimate save; SigilBar watches this
+// to play the "Saved!" bubble + dissolve, and ArkynOverlay reads it to
+// extend the round-end overlay delay so the animation lands first.
+// Reset to false on the round_end → shop transition (handleReady) when
+// the server splices the spent sigil.
+let reanimateConsumed = false;
+
 // Consumable items — array of element names (scroll consumables).
 let consumables: string[] = [];
 
@@ -232,7 +240,7 @@ let materializingRune: { id: string; startTime: number; duration: number } | nul
 //                     under the SIGIL BEING COPIED whenever a Mimic copy
 //                     procs, so the player can see "this proc was Mimic
 //                     copying me" at a glance. `amount` is unused.
-let sigilProcBubble: { sigilId: string; amount: number; kind: "gold" | "xmult" | "xmult_factor" | "mimic"; seq: number } | null = null;
+let sigilProcBubble: { sigilId: string; amount: number; kind: "gold" | "xmult" | "xmult_factor" | "mimic" | "save"; seq: number } | null = null;
 let sigilProcSeq = 0;
 
 // Blackjack execute animation — fullscreen-centered 13-frame spritesheet
@@ -371,6 +379,7 @@ export function setShopItems(items: ShopItemClientData[]) { shopItems = items; n
 // Sigil setters
 export function setSigils(s: string[]) { sigils = s; notify(); }
 export function setSigilAccumulators(a: Record<string, number>) { sigilAccumulators = a; notify(); }
+export function setReanimateConsumed(v: boolean) { reanimateConsumed = v; notify(); }
 
 // Consumable setters
 export function setConsumables(c: string[]) { consumables = c; notify(); }
@@ -777,7 +786,7 @@ export const arkynStoreInternal = {
      * (or in place of) the GoldCounter's own "+N" overlay. Fresh `seq`
      * remounts the bubble so back-to-back procs replay the animation.
      */
-    triggerSigilProcBubble(sigilId: string, amount: number, kind: "gold" | "xmult" | "xmult_factor" | "mimic" = "gold") {
+    triggerSigilProcBubble(sigilId: string, amount: number, kind: "gold" | "xmult" | "xmult_factor" | "mimic" | "save" = "gold") {
         sigilProcBubble = { sigilId, amount, kind, seq: ++sigilProcSeq };
     },
     clearSigilProcBubble() {
@@ -875,6 +884,7 @@ export function useShopItems() { return useSyncExternalStore(subscribe, () => sh
 // Sigil hooks
 export function useSigils() { return useSyncExternalStore(subscribe, () => sigils); }
 export function useSigilAccumulators() { return useSyncExternalStore(subscribe, () => sigilAccumulators); }
+export function useReanimateConsumed() { return useSyncExternalStore(subscribe, () => reanimateConsumed); }
 
 // Consumable hooks
 export function useConsumables() { return useSyncExternalStore(subscribe, () => consumables); }

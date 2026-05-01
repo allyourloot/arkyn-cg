@@ -181,8 +181,32 @@ export function handleCast(
 
     logger.info(`${spell.spellName} (Tier ${spell.tier}) deals ${damage} damage! Enemy HP: ${player.enemy.currentHp}/${player.enemy.maxHp}`);
 
-    // Check if enemy is defeated
-    if (player.enemy.currentHp <= 0) {
+    // Reanimate save: if this was the player's final cast and the enemy
+    // survived below 25% HP, flag the sigil as consumed and route the
+    // round through the win path below. The enemy's HP is intentionally
+    // left at its post-cast value — the client cast animation lands on
+    // that value (so the player sees the actual damage their hand did),
+    // and the Saved! bubble + dissolve fire AFTER the cast lands. The
+    // sigil is NOT spliced here; the splice happens on the round_end →
+    // shop transition in handleReady so the client has a real slot to
+    // animate against.
+    if (
+        player.enemy.currentHp > 0 &&
+        player.castsRemaining <= 0 &&
+        player.enemy.currentHp / player.enemy.maxHp <= 0.25 &&
+        !player.reanimateConsumed &&
+        Array.from(player.sigils).indexOf("reanimate") >= 0
+    ) {
+        player.reanimateConsumed = true;
+        logger.info(
+            `Reanimate saved player ${client.sessionId} on round ${player.currentRound}.`,
+        );
+    }
+
+    // Check if enemy is defeated — either HP hit zero or Reanimate just
+    // saved the player (treated as a round win for gold / achievement
+    // purposes; the actual HP stays at its post-cast value).
+    if (player.enemy.currentHp <= 0 || player.reanimateConsumed) {
         // Stage the gold breakdown onto the player so the Round End
         // overlay can display it:
         //  - GOLD_BASE_REWARD base for the kill
