@@ -26,6 +26,24 @@ export class EnemyState extends Schema {
     @type("string") debuff = "";
 }
 
+/**
+ * One queued achievement-unlock event awaiting display by the client. The
+ * server pushes entries onto `pendingAchievementFlyouts` whenever the
+ * evaluator finds a newly unlocked achievement; the client renders them
+ * one at a time and sends `ARKYN_DISMISS_ACHIEVEMENT_FLYOUT` to pop.
+ *
+ * `seq` is monotonic per session — the dismiss message references it so
+ * the server can splice the right entry even if multiple are queued.
+ */
+export class AchievementFlyout extends Schema {
+    @type("number") seq = 0;
+    @type("string") id = "";
+    @type("string") name = "";
+    @type("string") description = "";
+    /** Sigil id unlocked by this achievement, or "" if none. */
+    @type("string") unlocksSigilId = "";
+}
+
 export class ArkynPlayerState extends Schema {
     @type([RuneInstance]) hand = new ArraySchema<RuneInstance>();
     @type([RuneInstance]) pouch = new ArraySchema<RuneInstance>();
@@ -199,6 +217,34 @@ export class ArkynPlayerState extends Schema {
     @type("number") currentRound = 0;
     @type("number") runSeed = 0;
     @type(EnemyState) enemy = new EnemyState();
+
+    // ── Achievements ──────────────────────────────────────────────────
+    // Set of achievement ids the player has unlocked. Loaded from save
+    // data on join. Future unlocks are appended in real time so the
+    // client's progress UI stays current. Ids only — the registry
+    // (shared/achievements.ts) is the source of truth for name/description/etc.
+    @type(["string"]) unlockedAchievements = new ArraySchema<string>();
+
+    // Queue of achievement-unlock events the client hasn't acknowledged yet.
+    // The flyout component pops the head and sends ARKYN_DISMISS_ACHIEVEMENT_FLYOUT
+    // referencing `seq`. Server appends; client never mutates directly.
+    @type([AchievementFlyout]) pendingAchievementFlyouts = new ArraySchema<AchievementFlyout>();
+
+    // Lifetime stat snapshot synced to the client so the achievements
+    // modal can render progress bars without an extra round-trip. Updated
+    // alongside the persistent save data on each event the achievement
+    // system tracks. Reset to 0 only by the save data — never by run boundaries.
+    @type("number") lifetimeTotalCasts = 0;
+    @type("number") lifetimeTotalDiscards = 0;
+    @type("number") lifetimeTotalRuns = 0;
+    @type("number") lifetimeTotalEnemiesDefeated = 0;
+    @type("number") lifetimeTotalGoldEarned = 0;
+    @type("number") lifetimeRunePacksOpened = 0;
+    @type("number") lifetimeAuguryPacksOpened = 0;
+    @type("number") lifetimeSigilsSold = 0;
+    // Bitmask over ELEMENT_TYPES (bit i set = at least one cast of that
+    // element). Matches `elementsCastToBitmask` in shared/achievements.ts.
+    @type("number") lifetimeElementsCastMask = 0;
 }
 
 export class ArkynState extends PluginState {

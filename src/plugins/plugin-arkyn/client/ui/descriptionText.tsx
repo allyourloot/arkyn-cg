@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import type { ElementType } from "../../shared/arkynConstants";
 import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
-import { ARCANE_CLUSTER_COLOR, ELEMENT_COLORS, ELEMENTAL_CLUSTER_COLOR, RARITY_COLORS } from "./styles";
+import { ARCANE_CLUSTER_COLOR, COLOR_GOLD_ACCENT, ELEMENT_COLORS, ELEMENTAL_CLUSTER_COLOR, RARITY_COLORS } from "./styles";
+import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 
 const HIGHLIGHT_COLOR = "#309f30";
 // Mirrors the Executioner proc bubble's background — using it as text
@@ -94,6 +95,19 @@ const XMULT_PILL_STYLE = {
     borderRadius: "2px",
 } as const;
 
+// `{gold:N}` markers render as gold-colored "+N [icon] Gold". Used in
+// tarot/sigil descriptions so the gold payout reads in the same warm
+// hue as the gold counter and shop prices, rather than the generic
+// green highlight color.
+const GOLD_MARKER_REGEX = /^gold:(\d+)$/;
+const GOLD_ICON_INLINE_STYLE = {
+    width: "1em",
+    height: "1em",
+    verticalAlign: "-0.15em",
+    margin: "0 0.15em",
+    imageRendering: "pixelated",
+} as const;
+
 function applyAutoColorWords(text: string, keyPrefix: string): ReactNode[] {
     const out: ReactNode[] = [];
     let lastIdx = 0;
@@ -145,6 +159,16 @@ export function renderDescription(desc: string): ReactNode[] {
             const content = isDouble ? part.slice(2, -2) : part.slice(1, -1);
             if (XMULT_CONTENT_REGEX.test(content)) {
                 return <span key={i} style={XMULT_PILL_STYLE}>{content}</span>;
+            }
+            const goldMatch = isSingle ? content.match(GOLD_MARKER_REGEX) : null;
+            if (goldMatch) {
+                return (
+                    <span key={i} style={{ color: COLOR_GOLD_ACCENT }}>
+                        +{goldMatch[1]}
+                        <img src={goldIconUrl} alt="" style={GOLD_ICON_INLINE_STYLE} draggable={false} />
+                        Gold
+                    </span>
+                );
             }
             // Damage-channel overrides — "+N Base" / "+N Mult" content
             // takes the channel color instead of the marker default. The

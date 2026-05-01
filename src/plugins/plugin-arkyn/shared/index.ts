@@ -4,6 +4,7 @@ export {
     RuneInstance,
     EnemyState,
     ShopItemState,
+    AchievementFlyout,
 } from "./ArkynState";
 
 export {
@@ -36,6 +37,8 @@ export {
     ARKYN_APPLY_TAROT,
     ARKYN_REROLL_SHOP,
     ARKYN_DEBUG_GRANT_SIGIL,
+    ARKYN_DISMISS_ACHIEVEMENT_FLYOUT,
+    ARKYN_LOAD_PROFILE,
     MAX_CONSUMABLES,
     RUNE_PACK_COST,
     RUNE_PACK_CHOICES,
@@ -229,6 +232,21 @@ export {
     applyTarotMutation,
     previewTarotEffect,
 } from "./tarotEffects";
+
+export {
+    ACHIEVEMENT_DEFINITIONS,
+    ACHIEVEMENT_IDS,
+    SIGIL_UNLOCK_REQUIREMENTS,
+    isSigilUnlocked,
+    elementsCastToBitmask,
+    bitmaskHasElement,
+} from "./achievements";
+export type {
+    AchievementDefinition,
+    AchievementContext,
+    AchievementCategory,
+    AchievementTrigger,
+} from "./achievements";
 export type {
     PickedRune,
     TarotEffectContext,

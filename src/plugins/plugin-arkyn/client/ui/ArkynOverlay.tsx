@@ -32,6 +32,7 @@ import DiscardAnimation from "./DiscardAnimation";
 import DrawAnimation from "./DrawAnimation";
 import BanishAnimation from "./BanishAnimation";
 import BlackjackAnimation from "./BlackjackAnimation";
+import AchievementFlyout from "./AchievementFlyout";
 import MainMenu from "./MainMenu";
 import SigilBar from "./SigilBar";
 import ItemScene from "./ItemScene";
@@ -934,6 +935,7 @@ export default function ArkynOverlay() {
             <MultBubbleOverlay />
             <HeldXMultBubbleOverlay />
             <BlackjackAnimation />
+            <AchievementFlyout />
             <BackgroundMusic />
             {showRoundEnd && <RoundEndOverlay />}
             {showGameOver && <GameOverOverlay />}

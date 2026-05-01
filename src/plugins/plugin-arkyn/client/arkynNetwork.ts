@@ -1,4 +1,4 @@
-import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_REORDER_SIGILS, ARKYN_USE_CONSUMABLE, ARKYN_PICK_PACK_RUNE, ARKYN_PICK_CODEX_SCROLL, ARKYN_APPLY_TAROT, ARKYN_REROLL_SHOP, ARKYN_DEBUG_GRANT_SIGIL } from "../shared";
+import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_REORDER_SIGILS, ARKYN_USE_CONSUMABLE, ARKYN_PICK_PACK_RUNE, ARKYN_PICK_CODEX_SCROLL, ARKYN_APPLY_TAROT, ARKYN_REROLL_SHOP, ARKYN_DEBUG_GRANT_SIGIL, ARKYN_DISMISS_ACHIEVEMENT_FLYOUT, ARKYN_LOAD_PROFILE } from "../shared";
 
 /**
  * Network layer for Arkyn. Owns the connection sender and exposes
@@ -113,4 +113,23 @@ export function sendRerollShop(): void {
  */
 export function sendDebugGrantSigil(sigilId: string): void {
     sendArkynMessage(ARKYN_DEBUG_GRANT_SIGIL, { sigilId });
+}
+
+/**
+ * Acknowledge an achievement-unlock flyout. Server pops the matching
+ * `seq` from `pendingAchievementFlyouts`; idempotent if the entry was
+ * already removed.
+ */
+export function sendDismissAchievementFlyout(seq: number): void {
+    sendArkynMessage(ARKYN_DISMISS_ACHIEVEMENT_FLYOUT, { seq });
+}
+
+/**
+ * Fire-and-forget profile preload. Auto-called once by `initArkynGame`
+ * the moment the connection is wired up so the achievements modal
+ * (reachable from the main menu before the user clicks Play) has real
+ * data to render. Server-side handler is idempotent.
+ */
+export function sendLoadProfile(): void {
+    sendArkynMessage(ARKYN_LOAD_PROFILE, {});
 }

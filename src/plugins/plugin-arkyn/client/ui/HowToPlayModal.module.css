@@ -1116,15 +1116,19 @@
     pointer-events: auto;
 }
 
-/* ── Landscape phone compact ── */
-@media (max-height: 500px) {
+/* ── Phone compact (landscape OR narrow portrait) ──
+   The desktop modal is `clamp(560px, 92vw, 1400px)` — that 560px floor
+   overflows an iPhone in portrait (~393px viewport). Widen the
+   breakpoint to catch narrow widths too, and drop the modal min so it
+   tracks the viewport on any phone. */
+@media (max-height: 500px), (max-width: 600px) {
     .backdrop {
-        justify-content: flex-end;
-        padding-right: clamp(8px, 2vw, 24px);
+        justify-content: center;
+        padding: 4px;
     }
 
     .modal {
-        width: clamp(340px, 70vw, 700px);
+        width: min(96vw, 700px);
         height: 95vh;
         max-height: 95vh;
         border-width: 12px;
@@ -1153,25 +1157,41 @@
         gap: 4px;
     }
 
+    /* Drop the sidebar's outer frame on mobile — each tab now carries
+       its own inner frame so the row reads as a strip of buttons rather
+       than a wrapped panel. Container is just a transparent flex shell. */
     .sidebar {
         width: auto;
         flex: 0 0 auto;
-        border-width: 8px;
-        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
-        padding: 4px 6px;
+        border: none;
+        padding: 0;
     }
 
     .tabList {
         flex-direction: row;
+        flex-wrap: wrap;
         gap: 4px;
+        justify-content: center;
     }
 
+    /* Each tab gets its own section-bg frame so it reads as a discrete
+       button. flex: 0 1 auto + flex-wrap on the list means tabs sit at
+       their natural width and overflow rolls onto a second row instead
+       of clipping to the right of the modal. */
     .tab {
-        font-size: var(--font-size-xs);
+        font-size: var(--font-size-2xs);
+        letter-spacing: 1px;
         border-width: 8px;
-        padding: 2px 6px;
-        flex: 1;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 2px 8px;
+        flex: 0 1 auto;
         text-align: center;
+        min-width: 0;
+        /* Touch devices have no hover, so the desktop's muted #6a5a4a
+           inactive color stays unread. Bump to body-tan so labels read
+           against the section-bg fill while still distinguishing from
+           the white active tab. */
+        color: #d4c4a6;
     }
 
     .tabActive {
@@ -1225,9 +1245,37 @@
     }
 
     .formulaCallout {
+        padding: 8px 10px;
+        gap: 6px;
+    }
+
+    .statRow {
+        gap: 6px;
+    }
+
+    .statChip {
+        flex: 1 1 0;
+        min-width: clamp(60px, 16vw, 110px);
         border-width: 8px;
-        border-image: var(--accent-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
-        padding: 6px 8px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 4px 6px;
+    }
+
+    .statValue {
+        font-size: var(--font-size-xs);
+    }
+
+    .statusRow {
+        gap: 6px;
+    }
+
+    .bossList {
+        gap: 4px;
+    }
+
+    .sectionRow {
+        flex-wrap: wrap;
+        gap: 6px;
     }
 
     .formulaRow {
@@ -1367,8 +1415,8 @@
        cramped. Flatten the child tab to the parent's visual treatment
        since the hierarchy is no longer load-bearing in a row layout. */
     .tab.tabChild {
-        padding-left: 6px;
-        font-size: var(--font-size-xs);
+        padding-left: 8px;
+        font-size: var(--font-size-2xs);
     }
 
     .tabChildMarker {

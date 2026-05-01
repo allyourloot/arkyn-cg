@@ -18,6 +18,8 @@ import {
     ARKYN_APPLY_TAROT,
     ARKYN_REROLL_SHOP,
     ARKYN_DEBUG_GRANT_SIGIL,
+    ARKYN_DISMISS_ACHIEVEMENT_FLYOUT,
+    ARKYN_LOAD_PROFILE,
     ArkynState,
 } from "../shared";
 import { createArkynContext } from "./types/ArkynContext";
@@ -37,6 +39,8 @@ import { handleApplyTarot } from "./systems/handleApplyTarot";
 import { handleRerollShop } from "./systems/handleRerollShop";
 import { handleDebugGrantSigil } from "./systems/handleDebugGrantSigil";
 import { handleLeave } from "./systems/handleLeave";
+import { handleDismissAchievement } from "./systems/handleDismissAchievement";
+import { handleLoadProfile } from "./systems/handleLoadProfile";
 
 const logger = new Logger("ArkynServer");
 type ServerClientRef = { sessionId: string };
@@ -65,23 +69,23 @@ export function PluginArkynServer(): ServerPlugin {
             });
 
             runtime.onMessage(ARKYN_DISCARD, (client: ServerClientRef, payload: unknown) => {
-                handleDiscard(state, client, payload);
+                handleDiscard(state, client, payload, ctx);
             });
 
             runtime.onMessage(ARKYN_READY, (client: ServerClientRef) => {
-                handleReady(state, client);
+                handleReady(state, client, ctx);
             });
 
             runtime.onMessage(ARKYN_COLLECT_ROUND_GOLD, (client: ServerClientRef) => {
-                handleCollectRoundGold(state, client);
+                handleCollectRoundGold(state, client, ctx);
             });
 
             runtime.onMessage(ARKYN_BUY_ITEM, (client: ServerClientRef, payload: unknown) => {
-                handleBuyItem(state, client, payload);
+                handleBuyItem(state, client, payload, ctx);
             });
 
             runtime.onMessage(ARKYN_SELL_SIGIL, (client: ServerClientRef, payload: unknown) => {
-                handleSellSigil(state, client, payload);
+                handleSellSigil(state, client, payload, ctx);
             });
 
             runtime.onMessage(ARKYN_REORDER_SIGILS, (client: ServerClientRef, payload: unknown) => {
@@ -114,6 +118,14 @@ export function PluginArkynServer(): ServerPlugin {
 
             runtime.onMessage(ARKYN_DEBUG_GRANT_SIGIL, (client: ServerClientRef, payload: unknown) => {
                 handleDebugGrantSigil(state, client, payload);
+            });
+
+            runtime.onMessage(ARKYN_DISMISS_ACHIEVEMENT_FLYOUT, (client: ServerClientRef, payload: unknown) => {
+                handleDismissAchievement(state, client, payload);
+            });
+
+            runtime.onMessage(ARKYN_LOAD_PROFILE, (client: ServerClientRef) => {
+                handleLoadProfile(state, client, ctx);
             });
 
             runtime.onClientLeave((client: ServerClientRef) => {

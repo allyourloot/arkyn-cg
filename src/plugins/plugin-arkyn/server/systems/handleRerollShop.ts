@@ -26,6 +26,10 @@ export function handleRerollShop(
     const player = requirePlayer({ state, client, logger, action: "Reroll", allowedPhases: ["shop"] });
     if (!player) return;
 
+    // Player's currently unlocked achievements gate which sigils may
+    // appear in the shop pool — locked sigils are filtered out entirely.
+    const unlockedAchievements = new Set(Array.from(player.unlockedAchievements));
+
     if (player.gold < REROLL_COST) {
         logger.warn(`Reroll rejected: insufficient gold (${player.gold} < ${REROLL_COST})`);
         return;
@@ -54,6 +58,7 @@ export function handleRerollShop(
         player.runSeed,
         player.currentRound + 1,
         ownedSigils,
+        unlockedAchievements,
         player.shopRerollCount,
     );
 

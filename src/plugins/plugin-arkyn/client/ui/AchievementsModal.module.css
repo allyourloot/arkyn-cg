@@ -1,0 +1,637 @@
+/* ── Backdrop ── */
+.backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    pointer-events: auto;
+    animation: arkyn-fade-in 0.15s ease-out;
+}
+
+/* ── Modal shell ──
+   Slightly wider than the legacy single-column layout so two horizontal
+   cards sit comfortably side-by-side without crowding their sigil slots. */
+.modal {
+    box-sizing: border-box;
+    width: clamp(720px, 86vw, 1180px);
+    height: min(88vh, 860px);
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px;
+    border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
+    padding: 8px 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: #e8d4b8;
+    image-rendering: pixelated;
+    cursor: default;
+    animation: arkyn-scale-in 0.18s cubic-bezier(0.2, 0.8, 0.4, 1);
+}
+
+/* ── Header ── */
+.header {
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    image-rendering: pixelated;
+}
+
+/* The header reads "Achievements  —  N / TOTAL  EARNED  ✕"
+   with the count + label as a single right-flush group. */
+.headerLeft {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    min-width: 0;
+}
+
+.title {
+    font-size: var(--font-size-md);
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+}
+
+/* Tally chip — frames the "N / TOTAL" count in the same chrome the section
+   blocks use, so the running score reads like an in-game stat readout. */
+.tally {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    box-sizing: border-box;
+    background: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 8px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+    padding: 4px 10px;
+    image-rendering: pixelated;
+}
+
+.tallyValue {
+    font-size: var(--font-size-sm);
+    color: #4ade80;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+}
+
+.tallySeparator {
+    color: #6a5a4a;
+    font-size: var(--font-size-xs);
+}
+
+.tallyTotal {
+    font-size: var(--font-size-xs);
+    color: #c8b89a;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+}
+
+.tallyLabel {
+    font-size: var(--font-size-3xs);
+    color: #c4a882;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-left: 4px;
+}
+
+.closeButton {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: clamp(32px, 3.6vw, 44px);
+    height: clamp(32px, 3.6vw, 44px);
+    position: relative;
+    transition: transform 0.1s ease;
+    flex-shrink: 0;
+}
+
+.closeIcon,
+.closeIconHover {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+.closeIconHover { opacity: 0; }
+.closeButton:hover .closeIconHover { opacity: 1; }
+.closeButton:hover .closeIcon { opacity: 0; }
+.closeButton:hover { transform: scale(1.08); }
+.closeButton:active { transform: scale(0.94); }
+
+/* ── Scroll area ── */
+.scrollArea {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-right: 4px;
+}
+
+.scrollArea::-webkit-scrollbar { width: 6px; }
+.scrollArea::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+.scrollArea::-webkit-scrollbar-thumb {
+    background: rgba(212, 165, 116, 0.4);
+    border-radius: 3px;
+}
+.scrollArea::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 165, 116, 0.6);
+}
+
+/* ── Category section ──
+   Pure layout container — no chrome wrapper. Each card carries its own
+   plaque chrome, so the section's only job is to group a heading + grid
+   together with consistent spacing. The heading floats above the grid as
+   a typographic divider line. */
+.section {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 2px;
+}
+
+.sectionHeading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 4px;
+    font-size: var(--font-size-md);
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    line-height: 1;
+}
+
+/* Hairline trail after the heading text — fills the empty space between
+   the heading and the right-flush tally so the eye reads each category
+   as a structured row even without a chrome wrapper. */
+.sectionDivider {
+    flex: 1 1 auto;
+    height: 2px;
+    background: linear-gradient(
+        to right,
+        rgba(228, 200, 140, 0.28),
+        rgba(228, 200, 140, 0.04) 70%,
+        transparent
+    );
+}
+
+/* Per-section tally — small uppercase counter that reads "3 / 5". Sits
+   right-flush, no chrome (the divider already provides structure). */
+.sectionTally {
+    font-size: var(--font-size-3xs);
+    color: #c4a882;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+}
+
+.sectionTallyEarned {
+    color: #4ade80;
+}
+
+/* ── Card grid ── */
+.cardGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+/* ── Achievement card (locked default) ──
+   Compact horizontal plaque. The card chrome ITSELF carries the
+   locked/earned signal — both states swap their `border-image` to a
+   distinctly colored 9-slice (gold for locked, green for earned) so the
+   plaque is visually framed against the section's tan background and
+   never blends into it. Stagger animation on mount via inline
+   animation-delay (set in TSX).
+
+   Both states fill their interior with a near-opaque dark tint so the
+   body text always has a stable surface to sit on. Locked uses a warm
+   leather tone that pairs with the gold trim like a brass nameplate;
+   earned uses a deep forest green under the green trim like a patinaed
+   trophy plate. */
+.card {
+    --card-frame: var(--card-frame-locked);
+    /* No inset for locked — let the dark navy `inner-frame.png` chrome
+       render its natural fill so the card looks like one solid plaque
+       rather than a tinted rectangle inside a navy border. */
+    --card-tint: transparent;
+    --card-name: #f4d8a8;
+    --card-name-shadow: rgba(0, 0, 0, 0.9);
+    --card-description: #d8c4a2;
+    --card-status-fg: #c4a882;
+    --card-status-bg: rgba(0, 0, 0, 0.45);
+    --card-progress: #fbbf24;
+    --card-glow: transparent;
+
+    position: relative;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 10px;
+    border-image: var(--card-frame) 24 24 24 24 fill / 10px 10px 10px 10px;
+    padding: 8px 12px 10px;
+    min-height: 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    image-rendering: pixelated;
+    background-color: transparent;
+    box-shadow: inset 0 0 0 9999px var(--card-tint);
+    opacity: 0;
+    animation: card-rise 0.36s cubic-bezier(0.2, 0.8, 0.4, 1) both;
+}
+
+@keyframes card-rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Earned cards swap to the green inner-frame chrome AND fill their
+   interior with a deep forest green so light text reads with high
+   contrast. The bright green border becomes a thin trim around the
+   forest-green plaque rather than the dominant surface, which fixes
+   the AA contrast issue on the previous bright-green-on-bright-green
+   composition. */
+/* Earned cards reuse the same dark-navy `inner-frame.png` chrome as
+   locked cards (visual consistency across the grid) but override the
+   border-image WITHOUT the `fill` keyword so the chrome's center fill
+   is suppressed and the padding-box becomes transparent. A solid
+   `background-color` then paints the interior in mid-forest green —
+   that's the only signal that distinguishes earned from locked, and
+   it's bold enough to read at a glance without needing a second
+   chrome ribbon competing for attention. */
+.cardEarned {
+    --card-tint: #1d553a;
+    --card-name: #f4e3b8;
+    --card-name-shadow: rgba(0, 0, 0, 0.95);
+    --card-description: #d4ead4;
+    --card-status-fg: #86efac;
+    --card-status-bg: rgba(0, 0, 0, 0.6);
+    --card-progress: #86efac;
+    --card-glow: rgba(34, 197, 94, 0.22);
+
+    background-color: var(--card-tint);
+    background-clip: padding-box;
+    border-image: var(--card-frame-locked) 24 24 24 24 / 10px 10px 10px 10px;
+}
+
+.cardEarned::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    pointer-events: none;
+    box-shadow: 0 0 22px var(--card-glow);
+    opacity: 0.5;
+}
+
+/* ── Card header row: name + status chip ── */
+.cardHeader {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+
+.cardName {
+    font-size: var(--font-size-sm);
+    color: var(--card-name);
+    text-shadow: 1px 1px 0 var(--card-name-shadow);
+    line-height: 1.05;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Typographic status badge — replaces the previous lock/check emojis.
+   Small pixel-aware uppercase pill that reads instantly without an icon. */
+.cardStatus {
+    flex: 0 0 auto;
+    display: inline-block;
+    padding: 3px 7px 3px;
+    font-size: var(--font-size-3xs);
+    text-transform: uppercase;
+    letter-spacing: 1.6px;
+    color: var(--card-status-fg);
+    background-color: var(--card-status-bg);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+    image-rendering: pixelated;
+    border-radius: 1px;
+}
+
+/* ── Card body row: description + optional sigil slot ── */
+.cardBody {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 10px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cardDescription {
+    flex: 1 1 auto;
+    font-size: var(--font-size-xs);
+    color: var(--card-description);
+    line-height: 1.35;
+    margin: 0;
+    min-width: 0;
+}
+
+/* Sigil thumbnail slot — fixed dimensions so the card grid stays even
+   regardless of which cards do/don't carry a sigil unlock. */
+.sigilWrap {
+    flex: 0 0 auto;
+    width: 56px;
+    height: 56px;
+    position: relative;
+    align-self: flex-start;
+}
+
+.sigilCanvas {
+    position: absolute;
+    inset: 0;
+}
+
+/* Hidden-sigil placeholder — chrome panel with a stylized "?" glyph so
+   players know there's a reward to chase without leaking which sigil it is.
+   No emoji, no preview asset — just typographic restraint. */
+.sigilHidden {
+    flex: 0 0 auto;
+    width: 56px;
+    height: 56px;
+    align-self: flex-start;
+    position: relative;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 8px;
+    border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    image-rendering: pixelated;
+    background-color: rgba(0, 0, 0, 0.32);
+}
+
+.sigilHiddenGlyph {
+    font-size: 26px;
+    color: #6a5a4a;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+    line-height: 1;
+    /* Subtle drift so the placeholder reads as alive rather than dead pixel. */
+    animation: hidden-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes hidden-pulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
+/* Tooltip-style hover hint when hovering the placeholder — the title attr
+   shows OS chrome anyway, but we soften the dimming on hover so it's clear
+   the card is reactive. */
+.sigilHidden:hover .sigilHiddenGlyph {
+    color: #c4a882;
+}
+
+/* ── Progress bar (rendered along the bottom of the card) ──
+   Treated like a quest tracker — anchored to the bottom edge so the eye
+   parses name → description → progress in a clean reading order, and so
+   adjacent cards' bars line up across the row regardless of description
+   length. The track inherits the card's tint and the fill picks up the
+   --card-progress var (gold for locked, green for earned). */
+.progressTrack {
+    margin-top: 6px;
+    position: relative;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: 1px;
+    overflow: hidden;
+}
+
+.progressFill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--card-progress);
+    border-radius: 1px;
+    transition: width 0.4s cubic-bezier(0.2, 0.8, 0.4, 1);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.18);
+}
+
+.progressLabel {
+    position: absolute;
+    right: 0;
+    bottom: 9px;
+    font-size: var(--font-size-3xs);
+    color: #d4b89a;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.9);
+    line-height: 1;
+    pointer-events: none;
+}
+
+.cardEarned .progressLabel {
+    color: #86efac;
+}
+
+/* Used as the progress label container — sits above the bar so it doesn't
+   clip when the bar is at low percentages. */
+.progressMeta {
+    display: flex;
+    justify-content: flex-end;
+    align-items: baseline;
+    margin-top: 4px;
+}
+
+.progressMetaLabel {
+    font-size: var(--font-size-3xs);
+    color: #d4b89a;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.9);
+}
+
+.cardEarned .progressMetaLabel {
+    color: #86efac;
+}
+
+/* ── Phone compact (landscape OR narrow portrait) ──
+   The desktop modal floors at `clamp(720px, 86vw, 1180px)` which
+   overflows any phone viewport. Drop the floor and shrink chrome. */
+@media (max-height: 500px), (max-width: 700px) {
+    .backdrop {
+        padding: 4px;
+    }
+
+    .modal {
+        width: min(96vw, 720px);
+        height: 95vh;
+        max-height: 95vh;
+        border-width: 12px;
+        border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
+        padding: 4px 6px 8px;
+        gap: 4px;
+    }
+
+    .header {
+        border-width: 8px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 3px 8px;
+        gap: 6px;
+    }
+
+    .headerLeft {
+        gap: 8px;
+    }
+
+    .title {
+        font-size: var(--font-size-xs);
+    }
+
+    .tally {
+        border-width: 6px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+        padding: 2px 6px;
+        gap: 4px;
+    }
+
+    .tallyValue {
+        font-size: var(--font-size-xs);
+    }
+
+    .tallySeparator,
+    .tallyTotal {
+        font-size: var(--font-size-2xs);
+    }
+
+    .tallyLabel {
+        font-size: 0.5rem;
+        margin-left: 2px;
+    }
+
+    .closeButton {
+        width: clamp(28px, 8vw, 36px);
+        height: clamp(28px, 8vw, 36px);
+    }
+
+    .scrollArea {
+        gap: 6px;
+        padding-right: 2px;
+    }
+
+    .section {
+        gap: 4px;
+        padding: 0;
+    }
+
+    .sectionHeading {
+        font-size: var(--font-size-xs);
+        gap: 8px;
+        padding: 0 2px;
+    }
+
+    .sectionTally {
+        font-size: 0.5rem;
+        letter-spacing: 1.2px;
+    }
+
+    .cardGrid {
+        gap: 6px;
+    }
+
+    .card {
+        border-width: 8px;
+        border-image: var(--card-frame) 24 24 24 24 fill / 8px 8px 8px 8px;
+        padding: 4px 8px 6px;
+        min-height: 0;
+        gap: 2px;
+    }
+
+    .cardEarned {
+        border-image: var(--card-frame-locked) 24 24 24 24 / 8px 8px 8px 8px;
+    }
+
+    .cardHeader {
+        gap: 6px;
+    }
+
+    .cardName {
+        font-size: var(--font-size-2xs);
+        letter-spacing: 1px;
+    }
+
+    .cardStatus {
+        font-size: 0.5rem;
+        letter-spacing: 1px;
+        padding: 2px 5px;
+    }
+
+    .cardBody {
+        gap: 6px;
+    }
+
+    .cardDescription {
+        font-size: var(--font-size-3xs);
+        line-height: 1.3;
+    }
+
+    .sigilWrap,
+    .sigilHidden {
+        width: 40px;
+        height: 40px;
+    }
+
+    .sigilHidden {
+        border-width: 6px;
+        border-image: var(--section-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
+    }
+
+    .sigilHiddenGlyph {
+        font-size: 18px;
+    }
+
+    .progressTrack {
+        margin-top: 4px;
+        height: 4px;
+    }
+
+    .progressMeta {
+        margin-top: 2px;
+    }
+
+    .progressMetaLabel {
+        font-size: 0.5rem;
+        letter-spacing: 1px;
+    }
+}

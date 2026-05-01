@@ -63,6 +63,12 @@ import {
     type RuneClientData,
 } from "../../arkynStore";
 import { playAddConsumable } from "../../sfx";
+import {
+    setPendingAchievementFlyouts,
+    setUnlockedAchievements,
+    setLifetimeStats,
+    type AchievementFlyoutData,
+} from "../../achievementsStore";
 
 function runeFromSchema(r: RuneInstance): RuneClientData {
     return { id: r.id, element: r.element, rarity: r.rarity, level: r.level };
@@ -208,6 +214,21 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
     let prevBanished: RuneClientData[] = [];
     let prevDiscardsUsedThisRound = -1;
     let prevCastsUsedThisRound = -1;
+
+    // Achievement state mirrors. Identity-tracking via seq lists for
+    // flyouts (cheap allocation-free check) and string-array compare for
+    // unlocked ids (rare changes — a small alloc is fine).
+    let prevAchievementFlyoutSeqs: number[] = [];
+    let prevUnlockedAchievements: string[] = [];
+    let prevLifetimeTotalCasts = -1;
+    let prevLifetimeTotalDiscards = -1;
+    let prevLifetimeTotalRuns = -1;
+    let prevLifetimeTotalEnemiesDefeated = -1;
+    let prevLifetimeTotalGoldEarned = -1;
+    let prevLifetimeRunePacksOpened = -1;
+    let prevLifetimeAuguryPacksOpened = -1;
+    let prevLifetimeSigilsSold = -1;
+    let prevLifetimeElementsCastMask = -1;
 
     return () => {
         const player = state.players.get(sessionId);
@@ -543,6 +564,77 @@ export function createSyncArkynStateSystem(state: ArkynState, sessionId: string)
         if (player.castsUsedThisRound !== prevCastsUsedThisRound) {
             prevCastsUsedThisRound = player.castsUsedThisRound;
             setCastsUsedThisRound(prevCastsUsedThisRound);
+        }
+
+        // ── Achievements: pending flyout queue ──
+        // Cheap identity check: compare the seq arrays. If the head
+        // changes (server pushed a new entry, or client dismiss removed
+        // the head), the seq list has shifted and we re-snapshot.
+        let flyoutsChanged = player.pendingAchievementFlyouts.length !== prevAchievementFlyoutSeqs.length;
+        if (!flyoutsChanged) {
+            for (let i = 0; i < player.pendingAchievementFlyouts.length; i++) {
+                if (player.pendingAchievementFlyouts[i].seq !== prevAchievementFlyoutSeqs[i]) {
+                    flyoutsChanged = true;
+                    break;
+                }
+            }
+        }
+        if (flyoutsChanged) {
+            const next: AchievementFlyoutData[] = [];
+            const seqs: number[] = [];
+            for (let i = 0; i < player.pendingAchievementFlyouts.length; i++) {
+                const f = player.pendingAchievementFlyouts[i];
+                next.push({
+                    seq: f.seq,
+                    id: f.id,
+                    name: f.name,
+                    description: f.description,
+                    unlocksSigilId: f.unlocksSigilId,
+                });
+                seqs.push(f.seq);
+            }
+            prevAchievementFlyoutSeqs = seqs;
+            setPendingAchievementFlyouts(next);
+        }
+
+        // ── Achievements: unlocked id list ──
+        if (!stringArraysEqual(player.unlockedAchievements, prevUnlockedAchievements)) {
+            prevUnlockedAchievements = Array.from(player.unlockedAchievements);
+            setUnlockedAchievements(prevUnlockedAchievements);
+        }
+
+        // ── Achievements: lifetime progress snapshot ──
+        if (
+            player.lifetimeTotalCasts !== prevLifetimeTotalCasts ||
+            player.lifetimeTotalDiscards !== prevLifetimeTotalDiscards ||
+            player.lifetimeTotalRuns !== prevLifetimeTotalRuns ||
+            player.lifetimeTotalEnemiesDefeated !== prevLifetimeTotalEnemiesDefeated ||
+            player.lifetimeTotalGoldEarned !== prevLifetimeTotalGoldEarned ||
+            player.lifetimeRunePacksOpened !== prevLifetimeRunePacksOpened ||
+            player.lifetimeAuguryPacksOpened !== prevLifetimeAuguryPacksOpened ||
+            player.lifetimeSigilsSold !== prevLifetimeSigilsSold ||
+            player.lifetimeElementsCastMask !== prevLifetimeElementsCastMask
+        ) {
+            prevLifetimeTotalCasts = player.lifetimeTotalCasts;
+            prevLifetimeTotalDiscards = player.lifetimeTotalDiscards;
+            prevLifetimeTotalRuns = player.lifetimeTotalRuns;
+            prevLifetimeTotalEnemiesDefeated = player.lifetimeTotalEnemiesDefeated;
+            prevLifetimeTotalGoldEarned = player.lifetimeTotalGoldEarned;
+            prevLifetimeRunePacksOpened = player.lifetimeRunePacksOpened;
+            prevLifetimeAuguryPacksOpened = player.lifetimeAuguryPacksOpened;
+            prevLifetimeSigilsSold = player.lifetimeSigilsSold;
+            prevLifetimeElementsCastMask = player.lifetimeElementsCastMask;
+            setLifetimeStats({
+                totalCasts: prevLifetimeTotalCasts,
+                totalDiscards: prevLifetimeTotalDiscards,
+                totalRuns: prevLifetimeTotalRuns,
+                totalEnemiesDefeated: prevLifetimeTotalEnemiesDefeated,
+                totalGoldEarned: prevLifetimeTotalGoldEarned,
+                runePacksOpened: prevLifetimeRunePacksOpened,
+                auguryPacksOpened: prevLifetimeAuguryPacksOpened,
+                sigilsSold: prevLifetimeSigilsSold,
+                elementsCastMask: prevLifetimeElementsCastMask,
+            });
         }
     };
 }

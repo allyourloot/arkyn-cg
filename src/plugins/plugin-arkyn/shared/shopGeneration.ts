@@ -8,6 +8,7 @@ import { PACK_TYPES, type PackType } from "./packs";
 import { RNG_NAMESPACES } from "./rngNamespace";
 import { createRoundRng } from "./seededRandom";
 import { SIGIL_DEFINITIONS, SIGIL_IDS } from "./sigils";
+import { isSigilUnlocked } from "./achievements";
 
 // RNG namespace offsets — see `shared/rngNamespace.ts` for the full map.
 const SHOP_SIGIL_RNG_OFFSET = RNG_NAMESPACES.shopSigils;
@@ -50,6 +51,11 @@ export function generateShopPacks(seed: number, round: number): PackType[] {
  * so the same sigil never appears twice. Returns up to SHOP_SIGIL_COUNT
  * distinct sigil IDs (fewer if the pool is exhausted).
  *
+ * Sigils gated behind achievement unlocks (see `SIGIL_UNLOCK_REQUIREMENTS`)
+ * are also filtered out unless the player has unlocked the matching
+ * achievement — locked sigils are hidden entirely from the shop until
+ * earned.
+ *
  * Picks are **rarity-weighted** — each candidate is weighted by
  * `SHOP_SIGIL_RARITY_WEIGHTS[def.rarity]` so Legendary sigils are rare and
  * feel earned when they appear. Without weighting, a freshly-run shop
@@ -64,6 +70,7 @@ export function generateShopSigils(
     seed: number,
     round: number,
     ownedSigilIds: readonly string[],
+    unlockedAchievementIds: ReadonlySet<string> = new Set(),
     rerollCount = 0,
 ): string[] {
     const rng = createRoundRng(
@@ -71,7 +78,9 @@ export function generateShopSigils(
         round + SHOP_SIGIL_RNG_OFFSET + rerollCount * SHOP_SIGIL_REROLL_STRIDE,
     );
     const owned = new Set(ownedSigilIds);
-    const pool = SIGIL_IDS.filter(id => !owned.has(id));
+    const pool = SIGIL_IDS.filter(
+        id => !owned.has(id) && isSigilUnlocked(id, unlockedAchievementIds),
+    );
     const picks: string[] = [];
     const count = Math.min(SHOP_SIGIL_COUNT, pool.length);
     for (let i = 0; i < count; i++) {

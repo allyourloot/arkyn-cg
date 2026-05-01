@@ -7,6 +7,10 @@ import { generateRunSeed } from "../../shared/seededRandom";
 import type { ArkynContext } from "../types/ArkynContext";
 import { initRunStats } from "../resources/runStats";
 import { finalizeRun } from "../utils/finalizeRun";
+import {
+    loadUnlockedAchievementsFromSave,
+    syncLifetimeToSchema,
+} from "../utils/evaluateAchievements";
 
 const logger = new Logger("ArkynNewRun");
 
@@ -50,6 +54,11 @@ export function handleNewRun(
         player.bestRound = saveData.lifetime.highestRound;
         player.bestSingleCast = saveData.lifetime.highestSingleCastDamage;
     }
+
+    // Re-load achievement unlocks + lifetime stats onto the fresh player
+    // schema so the modal/shop gating remain accurate across runs.
+    loadUnlockedAchievementsFromSave(player, ctx, client.sessionId);
+    syncLifetimeToSchema(player, ctx, client.sessionId);
 
     // Fresh seed + round 1 enemy
     player.runSeed = generateRunSeed();

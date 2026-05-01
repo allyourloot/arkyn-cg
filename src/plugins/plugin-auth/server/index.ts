@@ -105,10 +105,29 @@ export function AuthPluginServer(): ServerPlugin {
             const authInterface = new AuthPluginInterfaceImpl(state);
             runtime.addInterface("auth", authInterface);
 
+            // Dev-only: when DEV_PLAYER_ID is set, every non-production
+            // auth resolves to the same fixed userId across refreshes
+            // (instead of handing out fresh `player-1`, `player-2`, …
+            // identities). Lets local playtesting actually exercise
+            // persistent save state — combined with the file-backed
+            // save fallback in plugin-save-states, achievements survive
+            // a browser refresh during development.
+            const pinnedDevPlayerId = process.env.DEV_PLAYER_ID?.trim() || null;
+            if (pinnedDevPlayerId && process.env.NODE_ENV !== "production") {
+                logger.info(`Dev mode: pinning auth to userId "${pinnedDevPlayerId}" (DEV_PLAYER_ID env)`);
+            }
+
             runtime.setAuthHandler(async (client, options) => {
                 const productionAuthData = await validateSessionInProduction(options);
-                const authData = productionAuthData ?? getIndexedAuthData(currentIdx);
-                if (!productionAuthData) {
+                let authData: UserAuthData;
+                if (productionAuthData) {
+                    authData = productionAuthData;
+                } else if (pinnedDevPlayerId) {
+                    // Pinned identity in dev — every connection uses the
+                    // same userId/username, so save state survives refreshes.
+                    authData = { userId: pinnedDevPlayerId, username: pinnedDevPlayerId };
+                } else {
+                    authData = getIndexedAuthData(currentIdx);
                     currentIdx += 1;
                 }
                 const entry = new AuthEntry();

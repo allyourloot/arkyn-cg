@@ -10,6 +10,8 @@ import { syncPlayerPouch } from "../utils/drawRunes";
 import { clearArraySchema } from "../utils/clearArraySchema";
 import { getActiveSigils } from "../utils/sigils";
 import { spawnEnemy, applyBossDebuff } from "./handleJoin";
+import type { ArkynContext } from "../types/ArkynContext";
+import { evaluateAchievements, syncLifetimeToSchema } from "../utils/evaluateAchievements";
 
 const logger = new Logger("ArkynReady");
 
@@ -28,6 +30,7 @@ const logger = new Logger("ArkynReady");
 export function handleReady(
     state: ArkynState,
     client: { sessionId: string },
+    ctx: ArkynContext,
 ): void {
     const player = state.players.get(client.sessionId);
     if (!player) {
@@ -79,7 +82,15 @@ export function handleReady(
         const nextRound = player.currentRound + 1;
         const packIds = generateShopPacks(player.runSeed, nextRound);
         const ownedSigils = getActiveSigils(player);
-        const sigilIds = generateShopSigils(player.runSeed, nextRound, ownedSigils);
+        // Player's currently unlocked achievements gate which sigils may
+        // appear in the shop pool — locked sigils are filtered out entirely.
+        const unlockedAchievements = new Set(Array.from(player.unlockedAchievements));
+        const sigilIds = generateShopSigils(
+            player.runSeed,
+            nextRound,
+            ownedSigils,
+            unlockedAchievements,
+        );
         clearArraySchema(player.shopItems);
         // Fresh shop visit -> reset per-visit pack purchase counters so
         // the caps enforce MAX_*_PER_SHOP per shop (not per run).
@@ -117,6 +128,13 @@ export function handleReady(
         }
 
         player.gamePhase = "shop";
+        // Round-clear evaluator pass — runs after `handleCollectRoundGold`
+        // already credited the win gold (the lifetime totalGoldEarned was
+        // bumped on collect, before this Continue press). Catches the
+        // "Wealthy" threshold when crossed by the just-completed round.
+        syncLifetimeToSchema(player, ctx, client.sessionId);
+        evaluateAchievements(client.sessionId, player, ctx, "round_clear");
+
         const bossTag = player.enemy.isBoss ? ` [BOSS - ${player.enemy.debuff}]` : "";
         logger.info(`Player ${client.sessionId} entered shop. Sigils: [${sigilIds.join(", ")}], Packs: [${packIds.join(", ")}]. Next enemy: ${player.enemy.name} (HP: ${player.enemy.maxHp})${bossTag}`);
         return;

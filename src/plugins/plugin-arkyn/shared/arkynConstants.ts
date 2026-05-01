@@ -98,7 +98,7 @@ export const CODEX_PACK_CHOICES = 4;        // scrolls shown in the picker
 export const AUGURY_PACK_COST = 4;
 export const AUGURY_PACK_RUNE_CHOICES = 8;  // matches HAND_SIZE
 export const AUGURY_PACK_TAROT_CHOICES = 5;
-export const TAROT_BANISH_GOLD = 3;          // Tower per-rune payout
+export const TAROT_BANISH_GOLD = 2;          // Tower per-rune payout
 export const WORLD_LEGENDARY_CHANCE = 0.20;  // The World — split between Rare (1 - this) and Legendary
 export const TEMPERANCE_GOLD_PER_SELL_VALUE = 1;  // Temperance — gold gained per 1 sell-value of each owned sigil
 
@@ -156,3 +156,21 @@ export const ARKYN_REROLL_SHOP = "arkyn:reroll_shop";
 // rarity-weighted shop roll). Wired to a browser-console helper on the
 // client — see `client/debugCommands.ts`. Payload: { sigilId: string }
 export const ARKYN_DEBUG_GRANT_SIGIL = "arkyn:debug_grant_sigil";
+
+// Acknowledge an achievement-unlock flyout. Client → server. Payload:
+//   { seq: number }  — the seq of the flyout the client just dismissed.
+// Server splices the matching entry from `pendingAchievementFlyouts`.
+// Idempotent: a missing seq is silently ignored (the entry was already
+// popped via a prior dismiss or via reconnect-time clear).
+export const ARKYN_DISMISS_ACHIEVEMENT_FLYOUT = "arkyn:dismiss_achievement_flyout";
+
+// Lightweight profile preload fired by the client immediately after the
+// connection is established (before the player has clicked Play). The
+// server creates an ArkynPlayerState in `gamePhase = "menu"` with the
+// achievements + lifetime + bests fields populated from save data, but
+// SKIPS run-state initialization (no enemy, no seed, no hand). This lets
+// the Achievements modal — opened from the main menu before any run
+// starts — render real progress instead of empty defaults. ARKYN_JOIN
+// (fired on Play click) replaces this menu player with a real run.
+// Payload: {} (none).
+export const ARKYN_LOAD_PROFILE = "arkyn:load_profile";

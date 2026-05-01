@@ -1,6 +1,8 @@
 import { type ArkynState } from "../../shared";
 import { Logger } from "@core/shared/utils";
 import { getRunStats } from "../resources/runStats";
+import type { ArkynContext } from "../types/ArkynContext";
+import { syncLifetimeToSchema } from "../utils/evaluateAchievements";
 
 const logger = new Logger("ArkynCollectRoundGold");
 
@@ -25,6 +27,7 @@ const logger = new Logger("ArkynCollectRoundGold");
 export function handleCollectRoundGold(
     state: ArkynState,
     client: { sessionId: string },
+    ctx: ArkynContext,
 ): void {
     const player = state.players.get(client.sessionId);
     if (!player) {
@@ -56,6 +59,12 @@ export function handleCollectRoundGold(
     player.lastRoundGoldCollected = true;
     const stats = getRunStats(client.sessionId);
     if (stats) stats.goldEarned += roundGold;
+
+    // Bump lifetime gold so the Wealthy achievement (5,000 lifetime gold)
+    // can fire on the round-clear evaluator pass that runs in handleReady.
+    const saveData = ctx.getSaveData(client.sessionId);
+    if (saveData) saveData.lifetime.totalGoldEarned += roundGold;
+    syncLifetimeToSchema(player, ctx, client.sessionId);
 
     logger.info(
         `Player ${client.sessionId} collected round-win gold: ` +

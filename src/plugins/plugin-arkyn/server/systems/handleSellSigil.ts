@@ -2,6 +2,8 @@ import { type ArkynState } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
 import { Logger } from "@core/shared/utils";
 import { requirePlayer } from "./utils/requirePlayer";
+import type { ArkynContext } from "../types/ArkynContext";
+import { evaluateAchievements, syncLifetimeToSchema } from "../utils/evaluateAchievements";
 
 const logger = new Logger("ArkynSellSigil");
 
@@ -9,6 +11,7 @@ export function handleSellSigil(
     state: ArkynState,
     client: { sessionId: string },
     payload: unknown,
+    ctx: ArkynContext,
 ): void {
     const player = requirePlayer({ state, client, logger, action: "Sell" });
     if (!player) return;
@@ -48,4 +51,10 @@ export function handleSellSigil(
         `Player ${client.sessionId} sold sigil "${sigilId}" for ${def.sellPrice} gold. ` +
         `Gold remaining: ${player.gold}`,
     );
+
+    // Achievement: Reseller (sell 25 sigils lifetime).
+    const saveData = ctx.getSaveData(client.sessionId);
+    if (saveData) saveData.lifetime.sigilsSold++;
+    syncLifetimeToSchema(player, ctx, client.sessionId);
+    evaluateAchievements(client.sessionId, player, ctx, "sigil_sold");
 }

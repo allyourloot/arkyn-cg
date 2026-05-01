@@ -1,0 +1,136 @@
+ server: [INFO] QRCodeServer - Scan to open on mobile:      
+. server:  ▄▄▄▄▄▄▄   ▄▄ ▄▄ ▄ ▄▄   ▄▄▄▄▄▄    ▄▄▄    ▄ ▄▄▄▄▄▄▄ 
+. server:  █ ▄▄▄ █ ▄  ▀ ▀▀██▄▀█▀▄▀▀█ ▄ ██▀   ▄ ▄▀▀██ █ ▄▄▄ █ 
+. server:  █ ███ █ █ ▄█▀ ▄▄▀▀ ▄▄▄██▄█▄ ▄▄█▄▄▀▀█▀█ ▀  █ ███ █ 
+. server:  █▄▄▄▄▄█ █▀█ ▄▀▄▀█▀▄ █▀█ ▄ █▀█ ▄ █▀█ █▀█ ▄ █▄▄▄▄▄█ 
+. server:  ▄ ▄▄▄▄▄ ▀▀ ▀▀█▀▀██ ▀▀ █▄▄▄█▄ ▄▀█▀▄▄▀▄ █▀▀ ▄▄▄▄▄   
+. server:     █ █▄▄▄▀▄███▀▄▄▄▄▄▀▀█▄ ▀▄▄█▄▄▀▀▄██▄▀ ▀█▄▄▀▄▀▀█▄ 
+. server:  ▄▄█▄▄▄▄▄ ▀▀▀▄▀▀▀ █▀▄ ▄▄█▄▄▄▀▀▄ ▄▀▀▄ ▄▄███    ▄▄ █ 
+. server:  ██▀▀ ▀▄▀█ █▀▀▄██▀█▄▄ ▀ ▀ █▄▀▄▀█  ▄▀▀█▄▀▀▄ ▀▀█▀ █▄ 
+. server:  ▄  ▀█ ▄ ██ ▀▀█▄▄▄▀   ▀ █▄▄▄▄ ▄▄ ▄▀▄█▄▄▄█▄█▄▀▀█▄ ▀ 
+. server:     █▀▄▄█▀▄█▀█▀▀ ▀▀▄█▀█▄▀ ▄▄▄ ▄▄  ██▀▄▄██  █▀ ▄  ▀ 
+. server:  █▄  █▄▄    ▀▄ ▀  ▀  █▄▄██▄ ▀ ▄█▄ ▀▄█▄▀ ▀█▄ ▀▀ ▄▀█ 
+. server:  ▄ █▄█▄▄█▄▄     █▄▄██ ██▄█▄▄▄▀█▀▀▀▄▄▀▀▀▄▄▄▄███▀▄█▄ 
+. server:   ▀▀██ ▄ █ ▀█▀ ▀▀ █▄▄█▄█ ▄ █▀▀▄▄ ▀ ▄▀ ▄▄██ ▄ ██▄▀▄ 
+. server:  ▀█▄▀█▄▄▄█▄█▀▀ ▄▄▄█▀▀  █▄▄▄█▄▄▀▀▀█▀▀ ▀ ▄▄█▄▄▄█▀██▄ 
+. server:   ▄▀▀▀ ▄▀▀██▀ ▀ ▀██▀ ▀▄ ███ ▀▀▄▀█▀▀█▄▄▄█▄▄   ▄▄ ▄█ 
+. server:  ▀ ▄▀██▄ █▀██  ▄▄█ ▀▀█▀▀▄██ ▄▀█▀████▀▀▄▀ ▄ ▄▄ ▀▀▄▄ 
+. server:  █▀█▀▄█▄▀▀█  ▄▄█ ▄ █▀▀ ▄▄█ █▀▄ █ ▀▀  ▀▄▄▀▄█  ▄▀▀ ▀ 
+. server:   ▀█▀█▄▄▄▀ ▄▀▄███▄▄█ ▄▄▄▄▀▀█▀█ ▄ ██▄ ▄ ▄▄▄▀▄█ ▄ ▄▀ 
+. server:  ▄ █ ██▄█  ██ ▄ ██▀█ █▄▄ █▀▄██▄▄ ▄ █▀▀████ ▄▄▄ ▄▀▀ 
+. server:   █ ▀ ▄▄███▄▀▀▄█ █▀▄▄▄▀ █▀█ ▄█▄▀▀█▄▄▀ █▄▄▀▀▀ ██  ▄ 
+. server:  ▄██▀  ▄▄▀▄▀▀█▀ █▀ █ █▄█▄███▄▄▄ ▄▀   ▀██▄█▄▄████▀  
+. server:  ▄▄▄▄▄▄▄ ▀ ▄▄█▀▀ ▀▀ █  █ ▄ █▄█▀█ ▀█▄█▀▀▀ █ ▄ █▀██▄ 
+. server:  █ ▄▄▄ █ ██▀ ▀▄▄▀▄ ██▀▄█▄▄▄█▀▀▄  ▀▀▄▄▄▄█ █▄▄▄██▀▄█ 
+. server:  █ ███ █ █▀▄ ▀▀█ ██ ▄ ▄██▄▀█ █▄▄█▄ ▄ █ ▄▄▄▄▀█▀█▄ ▄ 
+. server:  █▄▄▄▄▄█ ▄  ▄▄▀ ▄ █▀▄ ▄▄▄ ▀▀█  █▀▄▀▀▀▀▄█▄▀ ▀  ▀▄▄█ 
+. server: ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+. server:
+. server:   https://hytopia.com/play?clientUrl=https%3A%2F%2F192-168-1-7.dns-is-boring-we-do-ip-addresses.hytopiahosting.com%3A8180%2F%3FserverPort%3D8181
+. server:
+. server: 📶️❗ Colyseus latency simulation disabled.
+. server: [INFO] (Core) ColyseusServer - Serving static assets from C:\Users\17326\Desktop\HYTOPIA Games\arkyn-v3\assets
+. server:    ___      _                                    ___   _ _____
+. server:   / __\___ | |_   _ ___  ___ _   _ ___   __   __/ _ \ / |___  |
+. server:  / /  / _ \| | | | / __|/ _ \ | | / __|  \ \ / / | | || |  / /
+. server: / /__| (_) | | |_| \__ \  __/ |_| \__ \   \ V /| |_| || | / /
+. server: \____/\___/|_|\__, |___/\___|\__,_|___/    \_/  \___(_)_|/_/
+. server:               |___/
+. server:              · Multiplayer Framework for Node.js ·
+. server: 💖 Consider becoming a Sponsor on GitHub → https://github.com/sponsors/endel
+. server: 🌟 Give us a star on GitHub → https://github.com/colyseus/colyseus
+. server: ☁️  Deploy and scale your project on Colyseus Cloud → https://cloud.colyseus.io
+. server: [INFO] ServerRuntime - Server started on port 8181
+. server: [INFO] AuthPluginServer - Authenticated tom (tom) for session U3WkIsUCX
+. server: @colyseus/schema WARNING: Class "SaveStatesState" is not registered on TypeRegistry - Please either tag the class with @entity or define a @type() field.
+. server: [WARN] SaveStatesServer - KV API returned 503 for user tom
+. server: [INFO] SaveStatesServer - KV unavailable and no dev save for tom — issuing fresh empty save
+. server: [INFO] SaveStatesServer - Loaded save state for tom (v0)
+. server: [INFO] ArkynJoin - Player U3WkIsUCX joined. Seed: 834342. Hand: 8, Pouch: 44
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynDiscard - Player U3WkIsUCX discarded 5 runes. Discards remaining: 2
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynDiscard - Player U3WkIsUCX discarded 5 runes. Discards remaining: 1
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynAchievements - Player U3WkIsUCX unlocked achievement "first_cast" (First Cast)
+. server: [INFO] ArkynCast - Blade Storm (Tier 3) deals 108 damage! Enemy HP: 0/60
+. server: [INFO] ArkynCast - Enemy defeated! Round 1 complete. Pending gold: 5 base + 2 hands bonus + 0 sigil bonus + 0 boss bonus + 0 interest = 7 (awarded on Continue)
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynDismissAchievement - Player U3WkIsUCX dismissed achievement flyout seq=1
+. server: [INFO] ArkynCollectRoundGold - Player U3WkIsUCX collected round-win gold: 5 base + 2 hands bonus + 0 sigil bonus + 0 boss bonus + 0 interest = 7 (total: 7)
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynReady - Player U3WkIsUCX entered shop. Sigils: [voltage, engine], Packs: [codexPack, auguryPack]. Next enemy: Soul Eater (HP: 100)
+. server: [INFO] ArkynBuyItem - Player U3WkIsUCX bought sigil "voltage". Gold remaining: 3
+. server: [INFO] ArkynAchievements - Player U3WkIsUCX unlocked achievement "first_sigil" (First Sigil)
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynReady - Round 2 started. Enemy: Soul Eater (HP: 100)
+. server: [INFO] ArkynDismissAchievement - Player U3WkIsUCX dismissed achievement flyout seq=2
+. client: 9:06:59 PM [vite] (client) hmr update /src/plugins/plugin-arkyn/client/index.tsx, /src/plugins/plugin-arkyn/client/ui/ArkynOverlay.tsx, /src/plugins/plugin-arkyn/client/ui/DrawAnimation.tsx, /src/plugins/plugin-arkyn/client/ui/AchievementFlyout.tsx, /src/plugins/plugin-arkyn/client/ui/EnemyHealthBar.tsx, /src/plugins/plugin-arkyn/client/ui/GameOverOverlay.tsx, /src/plugins/plugin-arkyn/client/ui/BanishAnimation.tsx, /src/plugins/plugin-arkyn/client/ui/MultBubble.tsx, /src/plugins/plugin-arkyn/client/ui/HeldXMultBubble.tsx, /src/plugins/plugin-arkyn/client/ui/SpellPreview.tsx, /src/plugins/plugin-arkyn/client/ui/HandDisplay.tsx, /src/plugins/plugin-arkyn/client/ui/SigilBar.tsx, /src/plugins/plugin-arkyn/client/ui/PouchCounter.tsx, /src/plugins/plugin-arkyn/client/ui/DiscardAnimation.tsx, /src/plugins/plugin-arkyn/client/ui/ShopPanel.tsx, /src/plugins/plugin-arkyn/client/ui/ActionButtons.tsx, /src/plugins/plugin-arkyn/client/ui/MainMenu.tsx, /src/plugins/plugin-arkyn/client/ui/BackgroundShader.tsx, /src/plugins/plugin-arkyn/client/ui/PlayArea.tsx, /src/plugins/plugin-arkyn/client/ui/EnemyInfoPanel.tsx, /src/plugins/plugin-arkyn/client/ui/CastAnimation.tsx, /src/plugins/plugin-arkyn/client/ui/BackgroundMusic.tsx, /src/plugins/plugin-arkyn/client/ui/BlackjackAnimation.tsx, /src/plugins/plugin-arkyn/client/ui/RoundEndOverlay.tsx, /src/plugins/plugin-arkyn/client/ui/ShopScreen.tsx, /src/plugins/plugin-arkyn/client/ui/PouchModal.tsx, /src/plugins/plugin-arkyn/client/ui/AchievementsModal.tsx, /src/plugins/plugin-arkyn/client/ui/RoundInfo.tsx, /src/plugins/plugin-arkyn/client/ui/CodexPicker.tsx, /src/plugins/plugin-arkyn/client/ui/RunePackPicker.tsx, /src/plugins/plugin-arkyn/client/ui/AuguryPicker.tsx, /src/plugins/plugin-arkyn/client/ui/ConsumableBar.tsx, /src/plugins/plugin-arkyn/client/ui/GoldCounter.tsx, /src/plugins/plugin-arkyn/client/ui/HowToPlayModal.tsx
+. client: 9:07:00 PM [vite] (client) hmr invalidate /src/plugins/plugin-arkyn/client/ui/BackgroundMusic.tsx Could not Fast Refresh ("crossfadeToTrack" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+. client: 9:07:00 PM [vite] (client) hmr update /src/plugins/plugin-arkyn/client/ui/ArkynOverlay.tsx, /src/plugins/plugin-arkyn/client/ui/GameOverOverlay.tsx
+. client: 9:07:03 PM [vite] (client) hmr update /src/plugins/plugin-arkyn/client/index.tsx, /src/plugins/plugin-arkyn/client/ui/ArkynOverlay.tsx, /src/plugins/plugin-arkyn/client/ui/DrawAnimation.tsx, /src/plugins/plugin-arkyn/client/ui/AchievementFlyout.tsx, /src/plugins/plugin-arkyn/client/ui/EnemyHealthBar.tsx, /src/plugins/plugin-arkyn/client/ui/GameOverOverlay.tsx, /src/plugins/plugin-arkyn/client/ui/BanishAnimation.tsx, /src/plugins/plugin-arkyn/client/ui/MultBubble.tsx, /src/plugins/plugin-arkyn/client/ui/HeldXMultBubble.tsx, /src/plugins/plugin-arkyn/client/ui/SpellPreview.tsx, /src/plugins/plugin-arkyn/client/ui/HandDisplay.tsx, /src/plugins/plugin-arkyn/client/ui/SigilBar.tsx, /src/plugins/plugin-arkyn/client/ui/PouchCounter.tsx, /src/plugins/plugin-arkyn/client/ui/DiscardAnimation.tsx, /src/plugins/plugin-arkyn/client/ui/ShopPanel.tsx, /src/plugins/plugin-arkyn/client/ui/ActionButtons.tsx, /src/plugins/plugin-arkyn/client/ui/MainMenu.tsx, /src/plugins/plugin-arkyn/client/ui/BackgroundShader.tsx, /src/plugins/plugin-arkyn/client/ui/PlayArea.tsx, /src/plugins/plugin-arkyn/client/ui/EnemyInfoPanel.tsx, /src/plugins/plugin-arkyn/client/ui/CastAnimation.tsx, /src/plugins/plugin-arkyn/client/ui/BackgroundMusic.tsx, /src/plugins/plugin-arkyn/client/ui/BlackjackAnimation.tsx, /src/plugins/plugin-arkyn/client/ui/RoundEndOverlay.tsx, /src/plugins/plugin-arkyn/client/ui/ShopScreen.tsx, /src/plugins/plugin-arkyn/client/ui/PouchModal.tsx, /src/plugins/plugin-arkyn/client/ui/AchievementsModal.tsx, /src/plugins/plugin-arkyn/client/ui/RoundInfo.tsx, /src/plugins/plugin-arkyn/client/ui/CodexPicker.tsx, /src/plugins/plugin-arkyn/client/ui/RunePackPicker.tsx, /src/plugins/plugin-arkyn/client/ui/AuguryPicker.tsx, /src/plugins/plugin-arkyn/client/ui/ConsumableBar.tsx, /src/plugins/plugin-arkyn/client/ui/GoldCounter.tsx, /src/plugins/plugin-arkyn/client/ui/HowToPlayModal.tsx
+. client: 9:07:04 PM [vite] (client) hmr invalidate /src/plugins/plugin-arkyn/client/ui/BackgroundMusic.tsx Could not Fast Refresh ("crossfadeToTrack" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+. client: 9:07:04 PM [vite] (client) hmr update /src/plugins/plugin-arkyn/client/ui/ArkynOverlay.tsx, /src/plugins/plugin-arkyn/client/ui/GameOverOverlay.tsx
+. client: 9:07:07 PM [vite] (client) hmr update /src/plugins/plugin-arkyn/client/ui/AchievementFlyout.tsx
+. client: 9:07:11 PM [vite] (client) hmr update /src/plugins/plugin-arkyn/client/ui/AchievementFlyout.tsx
+. server: [INFO] ArkynLeave - Player U3WkIsUCX left, state cleaned up
+. server: [INFO] AuthPluginServer - Authenticated tom (tom) for session uIvQyNzFA
+. server: @colyseus/schema WARNING: Class "SaveStatesState" is not registered on TypeRegistry - Please either tag the class with @entity or define a @type() field.
+. server: [WARN] SaveStatesServer - KV API returned 503 for user tom
+. server: [INFO] SaveStatesServer - Loaded dev save for tom from disk (KV unavailable)
+. server: [INFO] SaveStatesServer - Loaded save state for tom (v15)
+. server: [INFO] ArkynJoin - Player uIvQyNzFA joined. Seed: 798711. Hand: 8, Pouch: 44
+. server: [INFO] ArkynLeave - Player uIvQyNzFA left, state cleaned up
+. server: [INFO] AuthPluginServer - Authenticated tom (tom) for session COcRNlLFf
+. server: @colyseus/schema WARNING: Class "SaveStatesState" is not registered on TypeRegistry - Please either tag the class with @entity or define a @type() field.
+. server: [WARN] SaveStatesServer - KV API returned 503 for user tom
+. server: [INFO] SaveStatesServer - Loaded dev save for tom from disk (KV unavailable)
+. server: [INFO] SaveStatesServer - Loaded save state for tom (v15)
+. server: [INFO] ArkynJoin - Player COcRNlLFf joined. Seed: 744796. Hand: 8, Pouch: 44
+. server: [INFO] ArkynCast - Wind Slash (Tier 2) deals 48 damage! Enemy HP: 12/60
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynAchievements - Player COcRNlLFf unlocked achievement "five_rune_spell" (Five-Rune Spell)
+. server: [INFO] ArkynCast - Dark Pulse (Tier 2) deals 80 damage! Enemy HP: 0/60
+. server: [INFO] ArkynCast - Enemy defeated! Round 1 complete. Pending gold: 5 base + 1 hands bonus + 0 sigil bonus + 0 boss bonus + 0 interest = 6 (awarded on Continue)
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynDismissAchievement - Player COcRNlLFf dismissed achievement flyout seq=1
+. server: [INFO] ArkynCollectRoundGold - Player COcRNlLFf collected round-win gold: 5 base + 1 hands bonus + 0 sigil bonus + 0 boss bonus + 0 interest = 6 (total: 6)
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynReady - Player COcRNlLFf entered shop. Sigils: [clairvoyant, tectonic], Packs: [codexPack, 
+auguryPack]. Next enemy: Toxic Slime (HP: 100)
+. server: [INFO] ArkynBuyItem - Player COcRNlLFf bought an Augury Pack. Tarots: [the_moon, the_emperor, wheel_of_fortune, the_hanged_man, the_fool]. Runes: 8. Gold remaining: 2
+. server: [INFO] ArkynAchievements - Player COcRNlLFf unlocked achievement "first_augury" (First Augury)
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynApplyTarot - Player COcRNlLFf applied tarot the_emperor: banished 2, added 2, gold +0. Post-apply state: acquiredRunes=2, banishedRunes=2, pouchSize=52, livePouch.length=52.
+. server: [INFO] ArkynReady - Round 2 started. Enemy: Toxic Slime (HP: 100)
+. server: [INFO] ArkynCast - Tidal Surge (Tier 2) deals 32 damage! Enemy HP: 68/100
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynDismissAchievement - Player COcRNlLFf dismissed achievement flyout seq=2
+. server: [INFO] ArkynDiscard - Player COcRNlLFf discarded 5 runes. Discards remaining: 2
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynCast - Fire Blast (Tier 2) deals 80 damage! Enemy HP: 0/100
+. server: [INFO] ArkynCast - Enemy defeated! Round 2 complete. Pending gold: 5 base + 1 hands bonus + 0 sigil bonus + 0 boss bonus + 0 interest = 6 (awarded on Continue)
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynCollectRoundGold - Player COcRNlLFf collected round-win gold: 5 base + 1 hands bonus + 0 sigil bonus + 0 boss bonus + 0 interest = 6 (total: 8)
+. server: [INFO] ArkynReady - Player COcRNlLFf entered shop. Sigils: [engine, golem], Packs: [codexPack, runePack]. Next enemy: Dark Stalker (HP: 170)
+. server: [WARN] SaveStatesServer - SetBulk failed with status 503
+. server: [INFO] SaveStatesServer - Flushed 1 save states
+. server: [INFO] ArkynLeave - Player COcRNlLFf left, state cleaned up
+. server: [INFO] AuthPluginServer - Authenticated tom (tom) for session bd6g_tfLg
+. server: @colyseus/schema WARNING: Class "SaveStatesState" is not registered on TypeRegistry - Please either tag the class with @entity or define a @type() field.
+. server: [WARN] SaveStatesServer - KV API returned 503 for user tom
+. server: [INFO] SaveStatesServer - Loaded dev save for tom from disk (KV unavailable)
+. server: [INFO] SaveStatesServer - Loaded save state for tom (v45)

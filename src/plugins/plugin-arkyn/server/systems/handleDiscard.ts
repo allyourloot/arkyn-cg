@@ -5,6 +5,8 @@ import { createRuneInstance } from "../utils/drawRunes";
 import { getActiveSigilsExpanded } from "../utils/sigils";
 import { removeRunesFromHand, validateRuneSelection } from "./utils/runeSelection";
 import { getRunStats } from "../resources/runStats";
+import type { ArkynContext } from "../types/ArkynContext";
+import { evaluateAchievements, syncLifetimeToSchema } from "../utils/evaluateAchievements";
 
 const logger = new Logger("ArkynDiscard");
 
@@ -12,6 +14,7 @@ export function handleDiscard(
     state: ArkynState,
     client: { sessionId: string },
     payload: unknown,
+    ctx: ArkynContext,
 ): void {
     const result = validateRuneSelection(state, client, payload, {
         logger,
@@ -81,6 +84,18 @@ export function handleDiscard(
     // Track discard in run stats
     const stats = getRunStats(client.sessionId);
     if (stats) stats.totalDiscards++;
+
+    // Bump lifetime discard counter so the achievement evaluator can
+    // catch the threshold (Discard Master = 100). Counts discard ACTIONS,
+    // not runes — matches the existing run-stats semantic. Mirrors the
+    // incremental pattern in handleCast (finalizeRun does not re-add).
+    const saveData = ctx.getSaveData(client.sessionId);
+    if (saveData) {
+        saveData.lifetime.totalDiscards++;
+    }
+    syncLifetimeToSchema(player, ctx, client.sessionId);
+
+    evaluateAchievements(client.sessionId, player, ctx, "discard");
 
     logger.info(`Player ${client.sessionId} discarded ${indices.length} runes. Discards remaining: ${player.discardsRemaining}`);
 }

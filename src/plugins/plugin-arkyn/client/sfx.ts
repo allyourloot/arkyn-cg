@@ -20,6 +20,7 @@ import typewriterUrl from "/assets/audio/sfx/typewriter.mp3?url";
 import addConsumableUrl from "/assets/audio/sfx/add-consumable.mp3?url";
 import blackjackUrl from "/assets/audio/sfx/blackjack.mp3?url";
 import bellUrl from "/assets/audio/sfx/bell.mp3?url";
+import achievementUnlockedUrl from "/assets/audio/sfx/achievement-unlocked.mp3?url";
 import openPackUrl from "/assets/audio/sfx/open-pack.mp3?url";
 import drawTarotUrl from "/assets/audio/sfx/draw-tarot.mp3?url";
 import selectTarotUrl from "/assets/audio/sfx/select-tarot.mp3?url";
@@ -179,6 +180,7 @@ export function playCritical(): void {
 export const playGold = makeSfx(goldUrl, VOL_DEFAULT);
 export const playBlackjack = makeSfx(blackjackUrl, VOL_DEFAULT);
 export const playBell = makeSfx(bellUrl, VOL_DEFAULT);
+export const playAchievementUnlocked = makeSfx(achievementUnlockedUrl, VOL_DEFAULT);
 export const playGoldTotal = makeSfx(goldTotalUrl, VOL_DEFAULT);
 export const playRoundWin = makeSfx(roundWinUrl, VOL_DEFAULT);
 export const playGameOver = makeSfx(gameOverUrl, VOL_DEFAULT);

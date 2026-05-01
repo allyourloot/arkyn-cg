@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { joinGame, setGamePhase } from "../arkynStore";
+import AchievementsModal from "./AchievementsModal";
 import HowToPlayModal from "./HowToPlayModal";
 import logoUrl from "/assets/logos/arkyn-logo.png?url";
 import buttonGreenUrl from "/assets/ui/button-green.png?url";
@@ -25,6 +26,7 @@ function handlePlay() {
 
 export default function MainMenu() {
     const [howToPlayOpen, setHowToPlayOpen] = useState(false);
+    const [achievementsOpen, setAchievementsOpen] = useState(false);
 
     return (
         <div className={styles.root}>
@@ -46,8 +48,17 @@ export default function MainMenu() {
                 >
                     How to Play
                 </button>
+                <button
+                    type="button"
+                    className={`${styles.menuButton} ${styles.howToPlayButton}`}
+                    style={howToPlayButtonStyleVars}
+                    onClick={() => setAchievementsOpen(true)}
+                >
+                    Achievements
+                </button>
             </div>
             {howToPlayOpen && <HowToPlayModal onClose={() => setHowToPlayOpen(false)} />}
+            {achievementsOpen && <AchievementsModal onClose={() => setAchievementsOpen(false)} />}
         </div>
     );
 }

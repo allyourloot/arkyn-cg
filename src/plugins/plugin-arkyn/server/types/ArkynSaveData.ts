@@ -9,6 +9,14 @@ export interface ArkynRunStats {
     spellUsage: Record<string, number>;
     goldEarned: number;
     enemiesDefeated: number;
+    /** Sigils acquired during this run (count, not unique). Drives "First Sigil"
+     *  achievements that should fire on the first acquire of a fresh run. */
+    sigilsAcquiredThisRun: number;
+    /** Peak observed sigil-bar size during this run. Drives the "Pure Run"
+     *  challenge (must remain 0 across the entire run). */
+    maxSigilsHeld: number;
+    /** Peak rune count played in any single cast this run. */
+    maxRunesPlayedInCast: number;
     startedAt: number;
     endedAt: number;
 }
@@ -26,9 +34,28 @@ export interface ArkynSaveData {
         totalGoldEarned: number;
         favoriteSpell: string;
         spellUsage: Record<string, number>;
+        /** Lifetime Rune Pack opens. Drives the "Pouchsmith" achievement. */
+        runePacksOpened: number;
+        /** Lifetime Augury Pack opens. Drives the "Diviner" achievement. */
+        auguryPacksOpened: number;
+        /** Lifetime sigils sold back to the shop. Drives the "Reseller" achievement. */
+        sigilsSold: number;
+        /** Per-element cast counter. Keys are ElementType strings; values are
+         *  the lifetime number of casts whose dominant element was that
+         *  element. Drives the "Element Scholar" achievement (a spell of every
+         *  element). */
+        elementsCast: Record<string, number>;
     };
     /** Bounded list of recent completed runs (newest first, max 15). */
     recentRuns: ArkynRunStats[];
+    /**
+     * Unlocked achievements keyed by id. Each entry records when the
+     * achievement was unlocked (epoch ms) so the modal can sort or display
+     * dates if we ever want it. The presence of an entry is the canonical
+     * "unlocked" signal — never delete entries (re-unlocking would re-fire
+     * the flyout, which would be confusing).
+     */
+    achievements: Record<string, { unlockedAt: number }>;
 }
 
 /**
@@ -49,6 +76,10 @@ export function ensureArkynSaveData(raw: Record<string, unknown>): ArkynSaveData
             totalGoldEarned: 0,
             favoriteSpell: "",
             spellUsage: {},
+            runePacksOpened: 0,
+            auguryPacksOpened: 0,
+            sigilsSold: 0,
+            elementsCast: {},
         };
     } else {
         const lt = raw.lifetime as Record<string, unknown>;
@@ -62,9 +93,16 @@ export function ensureArkynSaveData(raw: Record<string, unknown>): ArkynSaveData
         lt.totalGoldEarned ??= 0;
         lt.favoriteSpell ??= "";
         lt.spellUsage ??= {};
+        lt.runePacksOpened ??= 0;
+        lt.auguryPacksOpened ??= 0;
+        lt.sigilsSold ??= 0;
+        lt.elementsCast ??= {};
     }
     if (!Array.isArray(raw.recentRuns)) {
         raw.recentRuns = [];
+    }
+    if (!raw.achievements || typeof raw.achievements !== "object") {
+        raw.achievements = {};
     }
     return raw as unknown as ArkynSaveData;
 }
@@ -79,6 +117,9 @@ export function createEmptyRunStats(): ArkynRunStats {
         spellUsage: {},
         goldEarned: 0,
         enemiesDefeated: 0,
+        sigilsAcquiredThisRun: 0,
+        maxSigilsHeld: 0,
+        maxRunesPlayedInCast: 0,
         startedAt: Date.now(),
         endedAt: 0,
     };

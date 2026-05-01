@@ -17,6 +17,7 @@ import type { ArkynContext } from "../types/ArkynContext";
 import { getRunStats } from "../resources/runStats";
 import { syncRunStatsToSchema } from "../utils/syncRunStatsToSchema";
 import { finalizeRun } from "../utils/finalizeRun";
+import { evaluateAchievements, syncLifetimeToSchema } from "../utils/evaluateAchievements";
 
 const logger = new Logger("ArkynCast");
 
@@ -115,7 +116,44 @@ export function handleCast(
         stats.totalDamage += damage;
         stats.highestSingleCastDamage = Math.max(stats.highestSingleCastDamage, damage);
         stats.spellUsage[spell.spellName] = (stats.spellUsage[spell.spellName] ?? 0) + 1;
+        stats.maxRunesPlayedInCast = Math.max(stats.maxRunesPlayedInCast, indices.length);
     }
+
+    // Lifetime totals are bumped incrementally as events happen — that way
+    // achievement predicates that read from `saveData.lifetime` (e.g.
+    // Spellslinger at 500 lifetime casts) fire the very moment a threshold
+    // is crossed, instead of waiting until run-end aggregation. `finalizeRun`
+    // is therefore responsible only for `totalRuns++`, the bests, and
+    // pushing the run snapshot into `recentRuns`.
+    const saveData = ctx.getSaveData(client.sessionId);
+    if (saveData) {
+        saveData.lifetime.totalCasts++;
+        saveData.lifetime.totalDamageDealt += damage;
+        saveData.lifetime.highestSingleCastDamage = Math.max(
+            saveData.lifetime.highestSingleCastDamage,
+            damage,
+        );
+        saveData.lifetime.spellUsage[spell.spellName] =
+            (saveData.lifetime.spellUsage[spell.spellName] ?? 0) + 1;
+        if (spell.element) {
+            saveData.lifetime.elementsCast[spell.element] =
+                (saveData.lifetime.elementsCast[spell.element] ?? 0) + 1;
+        }
+    }
+    syncLifetimeToSchema(player, ctx, client.sessionId);
+
+    // Achievement evaluator pass — every cast triggers a check for
+    // first_cast / big_hit / massive_hit / cataclysm / five_rune_spell /
+    // death_sentence / inferno / arcane_master / element_scholar /
+    // spellslinger.
+    evaluateAchievements(client.sessionId, player, ctx, "cast", {
+        cast: {
+            damage,
+            runeCount: indices.length,
+            spellTier: spell.tier,
+            spellElement: spell.element ?? "",
+        },
+    });
 
     // Credit Fortune-style proc gold. The client mirrors the same proc roll
     // and shows "+N Gold" bubbles over the procced runes during the cast
@@ -123,6 +161,7 @@ export function handleCast(
     if (procGold > 0) {
         player.gold += procGold;
         if (stats) stats.goldEarned += procGold;
+        if (saveData) saveData.lifetime.totalGoldEarned += procGold;
     }
 
     // Patch accumulator-driven sigils (Executioner et al.) based on the
@@ -189,8 +228,29 @@ export function handleCast(
             // to handleReady so the stat accumulates at the same moment
             // the player's gold does.
         }
+        // Bump lifetime enemies-defeated for the achievement evaluator.
+        // The round-gold lifetime bump happens in handleCollectRoundGold
+        // (when the player actually banks the reward).
+        if (saveData) {
+            saveData.lifetime.totalEnemiesDefeated++;
+            saveData.lifetime.highestRound = Math.max(
+                saveData.lifetime.highestRound,
+                player.currentRound,
+            );
+        }
+        syncLifetimeToSchema(player, ctx, client.sessionId);
 
         player.gamePhase = "round_end";
+
+        // Evaluate enemy-defeated achievements: first_boss, slayer, deep_run,
+        // endgame, pure_run.
+        evaluateAchievements(client.sessionId, player, ctx, "enemy_defeated", {
+            enemyDefeat: {
+                round: player.currentRound,
+                isBoss: player.enemy.isBoss,
+            },
+        });
+
         logger.info(
             `Enemy defeated! Round ${player.currentRound} complete. ` +
             `Pending gold: ${baseGold} base + ${handsBonus} hands bonus ` +
@@ -209,6 +269,13 @@ export function handleCast(
         // client receives both in the same Colyseus state patch.
         if (stats) syncRunStatsToSchema(player, stats);
         finalizeRun(client.sessionId, ctx, player.currentRound);
+
+        // Evaluate run-end achievements (deep_run, endgame, pure_run,
+        // veteran, plus any cumulative whose threshold was just crossed).
+        // Runs AFTER finalizeRun so totalRuns/highestRound reflect the
+        // just-finished run.
+        syncLifetimeToSchema(player, ctx, client.sessionId);
+        evaluateAchievements(client.sessionId, player, ctx, "run_end");
 
         player.gamePhase = "game_over";
         logger.info(`Game over! Player ${client.sessionId} ran out of casts on round ${player.currentRound}.`);

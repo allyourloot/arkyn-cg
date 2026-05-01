@@ -8,6 +8,12 @@ import { isBossRound, pickDebuffForRound } from "../../shared/bossDebuffs";
 import { generateRunSeed } from "../../shared/seededRandom";
 import type { ArkynContext } from "../types/ArkynContext";
 import { initRunStats, removeRunStats } from "../resources/runStats";
+import {
+    clearAchievementSeq,
+    evaluateAchievements,
+    loadUnlockedAchievementsFromSave,
+    syncLifetimeToSchema,
+} from "../utils/evaluateAchievements";
 
 const logger = new Logger("ArkynJoin");
 
@@ -24,6 +30,7 @@ export function handleJoin(
         state.players.delete(client.sessionId);
         removePouch(client.sessionId);
         removeRunStats(client.sessionId);
+        clearAchievementSeq(client.sessionId);
     }
 
     // Create player state and run the standard round-init flow
@@ -40,6 +47,18 @@ export function handleJoin(
         player.bestRound = saveData.lifetime.highestRound;
         player.bestSingleCast = saveData.lifetime.highestSingleCastDamage;
     }
+
+    // Load achievement progress + unlocked set so the modal and shop
+    // gating both work on first interaction.
+    loadUnlockedAchievementsFromSave(player, ctx, client.sessionId);
+    syncLifetimeToSchema(player, ctx, client.sessionId);
+
+    // Retroactive grant pass — any cumulative achievement whose threshold
+    // is already satisfied by the player's existing lifetime stats unlocks
+    // immediately, with a flyout. Single-cast/in-run feats are gated on
+    // the `cast` / `enemy_defeated` / `run_end` triggers and won't fire
+    // here, so player progress stays "real."
+    evaluateAchievements(client.sessionId, player, ctx, "first_load");
 
     // Generate a fresh run seed and spawn enemy for round 1
     player.runSeed = generateRunSeed();

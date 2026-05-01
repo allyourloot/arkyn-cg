@@ -50,6 +50,11 @@ coverage/
 # Misc
 *.local
 
+# Dev-only persistent save states (file-backed fallback when KV is unavailable).
+# Real saves live in the remote KV API in production; this directory is
+# strictly a local convenience for `pnpm dev`.
+.dev-saves/
+
 # Local-only dev notes
 REFACTOR_NOTES.md
 CLAUDE.md
@@ -59,4 +64,5 @@ ARKYN_SIGILS.md
 ARKYN_SHOP.md
 ARKYN_UI.md
 ARKYN_RENDERING.md
+ARKYN_ACHIEVEMENTS.md
 AUGURY_TAROTS.md
