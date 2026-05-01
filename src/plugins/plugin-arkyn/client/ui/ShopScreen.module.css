@@ -192,30 +192,27 @@
     align-items: center;
     image-rendering: pixelated;
     overflow: visible;
-    /* Force a dedicated GPU compositor layer so iOS Safari doesn't
-       re-rasterize the border-image when sibling/descendant layers
-       change (drag clone mount/unmount via portal, drop-zone fade
-       in/out, source-card opacity flip). Without this, the
-       pixelated border-image briefly re-rasters at a slightly
-       different effective scale on each composite-layer transition,
-       reading as a one-frame "flicker" on the panel's inner frame.
-       translateZ(0) is the stable cross-iOS layer-promotion idiom;
-       backface-visibility: hidden pins the layer's rasterization
-       cache so the redraw on next composite reuses the same texture. */
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    /* The translateZ above creates a new stacking context, which
-       traps descendant tooltips' z-index inside the section. Without
-       this explicit z-index, the section's whole stacking context
-       paints at z-auto=0 in shopContent — and the NEXT ROUND button
-       (`.continueButton` at z-index: 5) ends up above the right-side
-       sigil tooltip even though the tooltip's local z-index is 30.
-       Bumping the section's stacking context to 10 lifts the tooltip
-       (and everything else in the section) above NEXT ROUND. The
-       sections never visually overlap NEXT ROUND themselves (it sits
-       outside the panel via left: 100%), so this only affects
-       tooltip overflow — which is exactly what we want. */
+    /* z-index: 10 on a position: relative element already creates a
+       stacking context, which is what we need to lift descendant
+       tooltips above the NEXT ROUND button (`.continueButton` at
+       z-index: 5 in shopContent). Without this z-index, the section's
+       contents would paint at z-auto=0 and the right-side sigil
+       tooltip would end up behind NEXT ROUND.
+
+       NOTE: an earlier version of this rule also added a GPU-layer
+       hint here (`transform: translateZ(0)`, then `will-change:
+       transform`) to prevent iOS Safari from re-rasterizing the
+       border-image during composite-layer transitions (drag clone
+       mount/unmount via portal, drop-zone fade in/out). Both forms
+       triggered a worse iOS bug: the section's small mobile
+       border-width (8px) + image-rendering: pixelated caused the
+       entire 9-slice border-image to either flicker on transitions
+       or fail to paint at all. The actual flicker source on mobile
+       was the iOS sticky-hover firing on the tooltip — fixed by the
+       `@media (hover: hover)` gate further down — so the layer
+       promotion isn't load-bearing. Sections never visually overlap
+       NEXT ROUND (it sits outside the panel via left: 100%), so
+       this z-index only affects tooltip overflow. */
     z-index: 10;
 }
 
@@ -284,6 +281,23 @@
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
+    /* Promote each card to its own GPU compositor layer. The drag
+       hook flips a source card's inline opacity from 1 → 0.35 → 1
+       during pickup/drop; without the layer hint, that opacity
+       change triggers iOS Safari to re-rasterize the parent
+       .section's whole layer — which re-paints the section's
+       pixelated 9-slice border-image at a slightly different
+       effective pixel grid each time, reading as a one-frame
+       "flicker" on the inner frame. With each card on its own
+       layer, the opacity change is just a composite alpha tweak
+       on the card's texture — no parent re-rasterization, no
+       border-image flicker. Layer hint goes HERE (not on .section
+       or .itemGrid) because both of those caused iOS to bleed the
+       layer into the section's small mobile border area, hiding
+       the inner-frame border-image entirely. The card's own bounds
+       are well inside the section's border so the layer can't
+       interfere with it. */
+    will-change: opacity;
 }
 
 /* Hover pop-shake — one-shot scale-up + diminishing rotation that
@@ -327,12 +341,19 @@
 
 /* Dim only the gold price chip when the player can't afford the item —
    the sigil/item art and tooltip stay full-opacity so the player can
-   still read what's on offer while they build up gold. */
+   still read what's on offer while they build up gold. The chip
+   also swaps from the affordable green (#106510) to a muted red
+   (#651010) so the can't-afford state reads at a glance even before
+   the dim registers. */
 .itemCardCantAfford .priceChip {
     opacity: 0.45;
+    background: #651010;
 }
 
-/* --- Gold price — absolute, centered on top edge of card frame --- */
+/* --- Gold price — absolute, centered on top edge of card frame.
+   Flat green pill (no 9-slice frame.png chrome) so the cost reads
+   as a clean "this costs N gold" tag rather than blending with the
+   panel chrome. */
 .priceChip {
     position: absolute;
     top: -16px;
@@ -341,26 +362,22 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 12px;
-    border-image: var(--card-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-    image-rendering: pixelated;
-    padding: 0px 4px;
+    background: #106510;
+    border-radius: clamp(4px, 0.6vw, 8px);
+    padding: clamp(2px, 0.4vh, 5px) clamp(6px, 0.9vw, 12px);
     z-index: 2;
     white-space: nowrap;
 }
 
 .priceIcon {
-    width: clamp(18px, 2vw, 26px);
-    height: clamp(18px, 2vw, 26px);
+    width: clamp(14px, 1.5vw, 20px);
+    height: clamp(14px, 1.5vw, 20px);
     image-rendering: pixelated;
 }
 
 .priceValue {
     font-size: clamp(var(--font-size-xs), 1.8vw, var(--font-size-sm));
-    color: #ffd700;
+    color: #ffffff;
     font-weight: normal;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
 }
@@ -706,6 +723,14 @@
         border-image: var(--panel-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
     }
 
+    /* Push the second sectionLabel ("PACKS") down so the heading
+       isn't crowded against the bottom edge of the Reroll button +
+       Items row above. The first sectionLabel ("ITEMS") sits at the
+       panel's natural top with no extra margin needed. */
+    .sectionLabel:nth-of-type(2) {
+        margin-top: clamp(6px, 1.4vh, 14px);
+    }
+
     .sectionLabel {
         font-size: var(--font-size-3xs);
         letter-spacing: 1px;
@@ -713,13 +738,23 @@
     }
 
     .section {
-        border-width: 8px;
-        border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
-        /* sectionLabel lives OUTSIDE the section (previous flex sibling)
-           so top padding doesn't need to reserve space for it — keep
-           both top and bottom minimal so the inner frame hugs the item
-           cards and the overall panel height stays compact. */
-        padding: clamp(2px, 0.4vh, 6px) clamp(2px, 0.4vw, 6px) clamp(1px, 0.2vh, 4px);
+        /* Mobile-only: drop the 9-slice border-image and use a flat
+           CSS background + border-radius instead. The inner-frame.png
+           is just a dark purple rounded rect, so a solid color +
+           radius reproduces it visually. We did this because iOS
+           Safari has consistent rendering quirks with the downscaled
+           9-slice border-image at small mobile sizes — the 24px slice
+           rendered at 8px sometimes fails to paint at all on certain
+           compositor configurations (only the Packs section was
+           affected — same CSS, different content layout, presumably
+           triggering a different compositor path). The flat
+           background is iOS-bulletproof. Color matches the existing
+           `.tooltipDescWrap` inner-panel chrome (#1f1d2e) so it reads
+           as the same UI vocabulary. */
+        border: none;
+        background: #291c3f;
+        border-radius: clamp(4px, 1vw, 10px);
+        padding: clamp(2px, 0.4vh, 6px) clamp(6px, 1vw, 12px) clamp(1px, 0.2vh, 4px);
     }
 
     .sigilRow {
@@ -796,19 +831,18 @@
         height: clamp(62px, 8.4vw, 100px) !important;
     }
 
-    /* Gold price chip sits on top edge of each item card — compact chrome
+    /* Gold price chip sits on top edge of each item card — compact
        so it doesn't dominate the smaller item visually. */
     .priceChip {
         top: -10px;
-        border-width: 6px;
-        border-image: var(--card-bg) 24 24 24 24 fill / 6px 6px 6px 6px;
-        padding: 0 3px;
+        border-radius: clamp(3px, 0.5vw, 6px);
+        padding: clamp(1px, 0.3vh, 3px) clamp(4px, 0.7vw, 8px);
         gap: 3px;
     }
 
     .priceIcon {
-        width: clamp(12px, 1.6vw, 18px);
-        height: clamp(12px, 1.6vw, 18px);
+        width: clamp(10px, 1.3vw, 14px);
+        height: clamp(10px, 1.3vw, 14px);
     }
 
     .priceValue {

@@ -59,16 +59,27 @@
     border-radius: 6px;
 }
 
-/* ----- Pack zone — fixed to the right edge of the viewport.
+/* ----- Pack zone — anchored to the shop panel's right edge,
+   sitting just below the NEXT ROUND button. Mounted INSIDE
+   ShopScreen's `.shopContent` (which is `position: relative`), so
+   `left: 100%` lands the drop zone at the panel's right edge —
+   mirroring how `.continueButton` (NEXT ROUND) anchors itself.
    Vertical-rectangle proportions match a card pack silhouette so
    the player reads "drop a pack here" before they read the label. */
 .zonePack {
-    position: fixed;
-    right: clamp(8px, 2vw, 24px);
-    top: 50%;
-    transform: translateY(-50%);
+    position: absolute;
+    /* Below NEXT ROUND with extra clearance so the gap reads as
+       intentional rather than crowded. NEXT ROUND's bottom edge sits
+       around clamp(60px, 11vh, 110px); this top value lands the
+       drop zone with a comfortable visual break beneath it. */
+    top: clamp(100px, 17vh, 170px);
+    left: 100%;
+    /* Slightly larger breathing gap to the right of the panel than
+       NEXT ROUND uses — gives the drop zone room to read as its own
+       UI element rather than visually merging with the panel chrome. */
+    margin-left: clamp(8px, 1.2vw, 18px);
     width: clamp(96px, 14vw, 160px);
-    height: clamp(220px, 40vh, 340px);
+    height: clamp(200px, 36vh, 300px);
     z-index: 21;
 }
 
@@ -86,7 +97,7 @@
 }
 
 .zonePack:global(.dropZoneActive) {
-    transform: translateY(-50%) scale(1.04);
+    transform: scale(1.04);
 }
 
 /* ----- Landscape phone compact ----- */
@@ -96,7 +107,12 @@
     }
 
     .zonePack {
-        right: clamp(4px, 1vw, 12px);
+        /* Mobile NEXT ROUND has a thinner border + smaller padding
+           (border-width: 8px, padding clamp(3px, 0.6vh, 6px)),
+           so its overall height is smaller — the drop zone still
+           needs a clean gap below it though. */
+        top: clamp(72px, 14vh, 130px);
+        margin-left: clamp(6px, 0.9vw, 14px);
         width: clamp(72px, 11vw, 120px);
         height: clamp(160px, 32vh, 240px);
     }

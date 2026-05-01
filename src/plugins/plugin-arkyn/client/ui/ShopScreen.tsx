@@ -28,6 +28,7 @@ import Tooltip from "./Tooltip";
 import RunePackPicker from "./RunePackPicker";
 import CodexPicker from "./CodexPicker";
 import AuguryPicker from "./AuguryPicker";
+import ShopDropZone from "./ShopDropZone";
 import { renderDescription, SigilExplainer, SigilPenaltyLine, splitPenalty } from "./descriptionText";
 import { HAS_HOVER } from "./utils/hasHover";
 import { useShopItemDrag } from "./hooks/useShopItemDrag";
@@ -194,14 +195,14 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         );
     }, [renderedMode]);
 
-    // Per-card pop-in stagger — fires when the visible shop content
-    // gains items the previous set didn't have. Initial shop mount and
-    // reroll are the two natural triggers (both swap in fresh items).
-    // Purchases only REMOVE an item, so the new fingerprint is a strict
-    // subset of the previous one — `hasNewItems` is false and the
-    // remaining cards don't re-pop. Picker → shop transitions land here
-    // too, but the items are unchanged from before the picker, so again
-    // no new items, no re-pop.
+    // Per-card pop-in stagger — fires only on cards whose fingerprint
+    // wasn't in the previous render's set, so the animation targets only
+    // freshly-added items. Initial mount pops every card; reroll pops
+    // only the items that actually rolled (sigils — packs are untouched
+    // by reroll); purchases pop nothing (the new set is a subset of the
+    // old). Each card carries `data-shop-index` so we can scope the
+    // GSAP query to just the new ones rather than re-popping everything
+    // visible whenever any subset changes.
     const prevShopFingerprintRef = useRef<Set<string>>(new Set());
     useLayoutEffect(() => {
         if (renderedMode !== "shop") return;
@@ -212,25 +213,32 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         // post-filter visible-list index, which shifts when an item is
         // bought. Without the schema index, surviving cards would all
         // get new keys after a purchase and re-pop.
+        const visibleEntries = shopItems
+            .map((i, idx) => ({ shopIndex: idx, itemType: i.itemType, element: i.element ?? "", purchased: i.purchased }))
+            .filter(x => !x.purchased);
         const newSet = new Set(
-            shopItems
-                .map((i, idx) => ({ shopIndex: idx, itemType: i.itemType, element: i.element ?? "", purchased: i.purchased }))
-                .filter(x => !x.purchased)
-                .map(x => `${x.shopIndex}:${x.itemType}:${x.element}`),
+            visibleEntries.map(x => `${x.shopIndex}:${x.itemType}:${x.element}`),
         );
         const prevSet = prevShopFingerprintRef.current;
-        const hasNewItems = [...newSet].some(k => !prevSet.has(k));
+        const newShopIndices = visibleEntries
+            .filter(x => !prevSet.has(`${x.shopIndex}:${x.itemType}:${x.element}`))
+            .map(x => x.shopIndex);
         prevShopFingerprintRef.current = newSet;
 
-        if (!hasNewItems) return;
+        if (newShopIndices.length === 0) return;
 
-        // querySelectorAll returns nodes in document order, which here is
-        // Items section L→R, then Packs section L→R. Stagger ≥ duration
-        // makes the cards read as truly sequential ("one at a time")
-        // rather than a fan-out cascade.
-        const cards = root.querySelectorAll<HTMLElement>(`.${styles.itemCard}`);
-        if (cards.length === 0) return;
-        gsap.fromTo(cards,
+        // Pick out only the newly-added cards by their data attribute,
+        // preserving document order (sorted indices map to L→R Items
+        // then L→R Packs). Stagger ≥ duration makes the pop read as
+        // sequential rather than a fan-out cascade.
+        newShopIndices.sort((a, b) => a - b);
+        const newCards: HTMLElement[] = [];
+        for (const idx of newShopIndices) {
+            const el = root.querySelector<HTMLElement>(`[data-shop-index="${idx}"]`);
+            if (el) newCards.push(el);
+        }
+        if (newCards.length === 0) return;
+        gsap.fromTo(newCards,
             { scale: 0.4, opacity: 0, y: 10 },
             {
                 scale: 1, opacity: 1, y: 0,
@@ -441,6 +449,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         return (
                             <div
                                 key={item.shopIndex}
+                                data-shop-index={item.shopIndex}
                                 className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""} ${isSelected ? styles.itemCardSelected : ""}`}
                                 style={{ ...cardStyleVars } as CSSProperties}
                                 {...cardEventHandlers}
@@ -554,6 +563,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         return (
                             <div
                                 key={item.shopIndex}
+                                data-shop-index={item.shopIndex}
                                 className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""} ${isSelected ? styles.itemCardSelected : ""}`}
                                 style={{ ...cardStyleVars } as CSSProperties}
                                 {...cardEventHandlers}
@@ -637,6 +647,13 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         >
             Next Round
         </button>
+        {/* Mobile drag-to-purchase: pack drop zone anchored to the
+            shop panel's right edge (mirrors NEXT ROUND's `left: 100%`
+            positioning) so it sits just outside the panel's right
+            side, below the NEXT ROUND button. Self-gates on
+            `useActiveDrag` for visibility and registers its DOM with
+            the store so the drag hook can hit-test it. */}
+        {!HAS_HOVER && <ShopDropZone kind="pack" />}
         </div>
         )}
 

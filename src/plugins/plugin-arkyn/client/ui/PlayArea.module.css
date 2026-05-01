@@ -15,7 +15,17 @@
     align-items: center;
     justify-content: center;
     position: relative;
-    /* Slot raise (translateY) is GSAP-driven (see PlayArea.tsx useGSAP). */
+    /* Slot raise (translateY) is GSAP-driven (see PlayArea.tsx useGSAP).
+       The GSAP transform creates a stacking context on this element,
+       which TRAPS descendant z-indices (RuneDamageBubble / RuneXMultBubble
+       set z-index: 30 to paint above EnemyHealthBar's .barWrapper at z=25,
+       but those values are interpreted INSIDE this slot's local context).
+       Lifting the slot itself to z-index: 30 hoists the whole slot context
+       above .barWrapper at the .root level — none of .area / .centerStage /
+       .centerColumn establish their own stacking context, so this z-index
+       competes directly with .barWrapper at .root. Same fix-pattern the
+       comment on EnemyHealthBar.module.css's .barWrapper describes. */
+    z-index: 30;
 }
 
 /* Wrapper around the dissolving rune canvas. Exists so we can apply a
