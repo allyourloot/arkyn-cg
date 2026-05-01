@@ -192,6 +192,19 @@
     align-items: center;
     image-rendering: pixelated;
     overflow: visible;
+    /* Force a dedicated GPU compositor layer so iOS Safari doesn't
+       re-rasterize the border-image when sibling/descendant layers
+       change (drag clone mount/unmount via portal, drop-zone fade
+       in/out, source-card opacity flip). Without this, the
+       pixelated border-image briefly re-rasters at a slightly
+       different effective scale on each composite-layer transition,
+       reading as a one-frame "flicker" on the panel's inner frame.
+       translateZ(0) is the stable cross-iOS layer-promotion idiom;
+       backface-visibility: hidden pins the layer's rasterization
+       cache so the redraw on next composite reuses the same texture. */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 /* --- Item grid: 2 items side by side --- */
