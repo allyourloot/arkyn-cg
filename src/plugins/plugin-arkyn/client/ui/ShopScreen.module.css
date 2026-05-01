@@ -244,6 +244,21 @@
     transition: transform 180ms ease-out;
     overflow: visible;
     transform-origin: center bottom;
+    /* Mobile gesture suppression. iOS Safari/Chrome's defaults on a
+       long-press fire a chain of conflicting behaviors during drag:
+       text selection, the magnifier loupe, the link/image callout,
+       and the gray tap highlight. Each one stomps on the drag UX
+       (selection bands appear behind the card, callouts pop up over
+       the drop zone, etc.). Disabling all four matches what
+       SigilBar's `.sigilFrame` already does for sigil-reorder drag.
+       `touch-action: none` also tells the browser "I own touch
+       handling here" so it doesn't try to scroll the page when the
+       player drags from a card. Safe on desktop — no-ops for mouse. */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
 }
 
 /* Hover pop-shake — one-shot scale-up + diminishing rotation that
@@ -464,8 +479,25 @@
    same fixed bounds. Overrides the parent .tooltip's `white-space:
    nowrap` so descriptions actually break onto new lines.
    ================================================================ */
-.itemCard:hover :global(.arkyn-tooltip) {
-    opacity: 1;
+/* Gated to `(hover: hover)` so iOS Safari/Chrome doesn't keep the
+   tooltip stuck on after a tap fires its sticky :hover state — that
+   sticky-hover combined with the prior tap-to-select-then-tap-deselect
+   was the source of the inner-frame "flicker" mobile bug. On touch
+   devices the tooltip is opt-in via the `.tooltipForceShow` class
+   driven by the per-card mobile tap-tooltip state in ShopScreen.tsx. */
+@media (hover: hover) {
+    .itemCard:hover :global(.arkyn-tooltip) {
+        opacity: 1;
+    }
+}
+
+/* Mobile tap-to-peek tooltip — opacity 1 regardless of hover state.
+   Set by ShopScreen.tsx as an extra className on <Tooltip> when the
+   tapped card's shopIndex matches `mobileTooltipShopIndex`. !important
+   wins over the default `.tooltip { opacity: 0 }` declared inside
+   Tooltip.module.css. */
+.tooltipForceShow {
+    opacity: 1 !important;
 }
 
 .itemCard :global(.arkyn-tooltip) {

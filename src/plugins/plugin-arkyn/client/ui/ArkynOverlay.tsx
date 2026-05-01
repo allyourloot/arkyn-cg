@@ -47,6 +47,9 @@ import PerfHud, { isPerfHudEnabled } from "./PerfHud";
 // session. Writers who want to flip it have to reload anyway.
 const PERF_HUD = isPerfHudEnabled();
 import OverlayShader from "./OverlayShader";
+import ShopDropZone from "./ShopDropZone";
+import ShopDragOverlay from "./ShopDragOverlay";
+import { HAS_HOVER } from "./utils/hasHover";
 import { getScrollImageUrl } from "./scrollAssets";
 import { getSigilImageUrl } from "./sigilAssets";
 import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
@@ -901,6 +904,18 @@ export default function ArkynOverlay() {
                         }}
                     />
                 )}
+
+                {/* Mobile shop drag-to-purchase: Pack drop zone is fixed
+                    to the right edge of the viewport (independent of the
+                    shop panel, which can exceed viewport width on portrait
+                    phones). The drag-overlay portal hosts the floating
+                    clone that follows the player's finger. Both self-gate
+                    on `useActiveDrag`, so they're cheap when idle. Only
+                    mount the pack zone on touch devices to avoid
+                    rendering an invisible always-on-top fixed element on
+                    desktop where it'd never activate. */}
+                {!HAS_HOVER && <ShopDropZone kind="pack" />}
+                <ShopDragOverlay />
 
                 <BackgroundMusic />
                 <OverlayShader />

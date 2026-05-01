@@ -601,6 +601,65 @@ export function usePendingSigilId() {
     return useSyncExternalStore(subscribe, () => pendingSigilId);
 }
 
+// ============================================================
+// Mobile shop drag-to-purchase
+// ------------------------------------------------------------
+// On touch devices the shop replaces tap-to-select-then-BUY with a
+// drag-to-drop flow: drag a sigil onto the SigilBar to buy it, drag a
+// pack onto a viewport-edge zone to buy it. The hook
+// (`useShopItemDrag`) is the producer; ShopDragOverlay renders the
+// clone, ShopDropZone instances register their hit-test rects.
+// ============================================================
+export type ShopDragItemType = "sigil" | "runePack" | "auguryPack" | "codexPack";
+export type ShopDropZoneKind = "sigil" | "pack";
+export interface ActiveDragInfo {
+    shopIndex: number;
+    itemType: ShopDragItemType;
+    /** The drop-zone kind this item routes to. Sigil → sigil, all packs → pack. */
+    targetKind: ShopDropZoneKind;
+    isBuyable: boolean;
+    /** Bounding rect of the original card at drag start — used by the
+        clone to sit at the same on-screen size and initial position. */
+    fromRect: DOMRect;
+}
+
+let activeDrag: ActiveDragInfo | null = null;
+export function setActiveDrag(d: ActiveDragInfo | null) {
+    if (activeDrag === d) return;
+    activeDrag = d;
+    notify();
+}
+export function getActiveDrag(): ActiveDragInfo | null {
+    return activeDrag;
+}
+export function useActiveDrag() {
+    return useSyncExternalStore(subscribe, () => activeDrag);
+}
+
+// Drop-zone DOM registry — ShopDropZone instances write here, the drag
+// hook reads at hit-test time.
+const shopDropZoneEls: Record<ShopDropZoneKind, HTMLElement | null> = {
+    sigil: null,
+    pack: null,
+};
+export function registerShopDropZone(kind: ShopDropZoneKind, el: HTMLElement | null) {
+    shopDropZoneEls[kind] = el;
+}
+export function getShopDropZoneEl(kind: ShopDropZoneKind): HTMLElement | null {
+    return shopDropZoneEls[kind];
+}
+
+// Drag-clone DOM registry — ShopDragOverlay registers its clone div so
+// the hook can apply per-frame transforms via gsap.quickSetter without
+// going through React state.
+let shopDragCloneEl: HTMLElement | null = null;
+export function registerShopDragCloneEl(el: HTMLElement | null) {
+    shopDragCloneEl = el;
+}
+export function getShopDragCloneEl(): HTMLElement | null {
+    return shopDragCloneEl;
+}
+
 // Run stats setters
 export function setRunTotalDamage(d: number) { runTotalDamage = d; notify(); }
 export function setRunTotalCasts(c: number) { runTotalCasts = c; notify(); }

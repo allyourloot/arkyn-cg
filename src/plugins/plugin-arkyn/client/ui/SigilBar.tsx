@@ -16,6 +16,7 @@ import { getBaseRuneImageUrl, getRuneImageUrl } from "./runeAssets";
 import { ELEMENT_COLORS } from "./styles";
 import { useSigilDragReorder } from "./hooks/useSigilDragReorder";
 import ConsumableBar from "./ConsumableBar";
+import ShopDropZone from "./ShopDropZone";
 import styles from "./SigilBar.module.css";
 
 const RARITY_BG_COLORS: Record<string, string> = {
@@ -369,6 +370,12 @@ export default function SigilBar() {
                     );
                 })}
                 <span className={styles.countLabel}>{sigils.length}/{MAX_SIGILS}</span>
+                {/* Mobile shop drag-to-purchase drop zone — overlays the
+                    sigil frame whenever the player is dragging a sigil
+                    out of the shop. Self-gates on `useActiveDrag` so
+                    it's invisible (and pointer-events:none) the rest of
+                    the time, leaving sigil-bar interactions unaffected. */}
+                <ShopDropZone kind="sigil" />
             </div>
             <ConsumableBar />
         </div>

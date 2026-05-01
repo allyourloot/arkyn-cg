@@ -1,0 +1,108 @@
+/* ============================================================
+   Shop drag-to-purchase drop zone — see ShopDropZone.tsx.
+
+   Two instances:
+     .zoneSigil — overlays SigilBar's sigilFrame (position:absolute
+                  inside the frame).
+     .zonePack  — fixed to the right edge of the viewport.
+
+   Both are always-rendered; opacity 0 + pointer-events:none when
+   inactive so they don't intercept anything but their DOM rect
+   stays available for the drag hook to register + hit-test.
+
+   The .dropZoneActive global class is toggled imperatively by
+   useShopItemDrag while the drag clone is hit-testing inside,
+   without going through React state — keeps the per-frame cost
+   off the React tree. Matched here via `:global(.dropZoneActive)`.
+   ============================================================ */
+.zone {
+    box-sizing: border-box;
+    border: 3px dashed rgba(255, 215, 112, 0.65);
+    border-radius: 10px;
+    background: rgba(45, 158, 45, 0.10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 160ms ease-out, transform 160ms ease-out, background 100ms ease-out, border-color 100ms ease-out;
+    image-rendering: pixelated;
+}
+
+.zoneVisible {
+    opacity: 1;
+}
+
+.label {
+    color: #ffd770;
+    font-family: inherit;
+    font-size: clamp(var(--font-size-2xs), 1.2vw, var(--font-size-xs));
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
+    padding: 0 8px;
+    text-align: center;
+    line-height: 1.2;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* ----- Sigil zone — overlays the SigilBar's sigil frame.
+   Mounted inside the .sigilFrame element; inset:0 makes it cover the
+   inner padding box. z-index 21 sits just above the slot z-index (1)
+   and the selected-slot z-index (30) — but selection is dismissed
+   while a drag is active, so 21 is enough to read above the slots. */
+.zoneSigil {
+    position: absolute;
+    inset: 0;
+    z-index: 21;
+    border-radius: 6px;
+}
+
+/* ----- Pack zone — fixed to the right edge of the viewport.
+   Vertical-rectangle proportions match a card pack silhouette so
+   the player reads "drop a pack here" before they read the label. */
+.zonePack {
+    position: fixed;
+    right: clamp(8px, 2vw, 24px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: clamp(96px, 14vw, 160px);
+    height: clamp(220px, 40vh, 340px);
+    z-index: 21;
+}
+
+/* ----- Active-hover state — pointer is currently inside the zone.
+   Subtle scale + brighter chrome so the player can SEE that releasing
+   right now will buy. .dropZoneActive is set imperatively (not via
+   React state) by useShopItemDrag's pointermove hit-test. */
+.zone:global(.dropZoneActive) {
+    background: rgba(45, 158, 45, 0.30);
+    border-color: rgba(255, 215, 112, 1);
+}
+
+.zoneSigil:global(.dropZoneActive) {
+    transform: scale(1.02);
+}
+
+.zonePack:global(.dropZoneActive) {
+    transform: translateY(-50%) scale(1.04);
+}
+
+/* ----- Landscape phone compact ----- */
+@media (max-height: 500px) {
+    .zone {
+        border-width: 2px;
+    }
+
+    .zonePack {
+        right: clamp(4px, 1vw, 12px);
+        width: clamp(72px, 11vw, 120px);
+        height: clamp(160px, 32vh, 240px);
+    }
+
+    .label {
+        font-size: var(--font-size-3xs);
+        letter-spacing: 1px;
+    }
+}

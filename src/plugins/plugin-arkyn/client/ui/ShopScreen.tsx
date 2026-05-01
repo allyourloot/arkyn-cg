@@ -6,6 +6,7 @@ import {
     sendRerollShop,
     useShopItems,
     useGold,
+    useActiveDrag,
     usePendingPackRunes,
     usePendingCodexScrolls,
     usePendingAuguryRunes,
@@ -28,6 +29,9 @@ import RunePackPicker from "./RunePackPicker";
 import CodexPicker from "./CodexPicker";
 import AuguryPicker from "./AuguryPicker";
 import { renderDescription, SigilExplainer, SigilPenaltyLine, splitPenalty } from "./descriptionText";
+import { HAS_HOVER } from "./utils/hasHover";
+import { useShopItemDrag } from "./hooks/useShopItemDrag";
+import type { ShopDragItemType } from "../arkynStore";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
 import frameUrl from "/assets/ui/frame.png?url";
 import innerFrameGreenUrl from "/assets/ui/inner-frame-green.png?url";
@@ -80,11 +84,17 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
     const packAnimating = usePackAnimating();
     const sigils = useSigils();
     const sigilBarFull = sigils.length >= MAX_SIGILS;
+    const activeDrag = useActiveDrag();
 
     const panelRef = useRef<HTMLDivElement>(null);
     const shopContentRef = useRef<HTMLDivElement>(null);
     const pickerContentRef = useRef<HTMLDivElement>(null);
     const [selectedShopIndex, setSelectedShopIndex] = useState<number | null>(null);
+    // Mobile-only: tap on a card opens its tooltip. Drag (pointer movement
+    // past 6px / 150ms threshold) takes precedence and dismisses the
+    // tooltip via resetting this state. Desktop never sets this — its
+    // tooltip is hover-driven via CSS.
+    const [mobileTooltipShopIndex, setMobileTooltipShopIndex] = useState<number | null>(null);
 
     // `renderedMode` lags the live picker state during exit animations so
     // React keeps the outgoing element mounted while GSAP slides it out.
@@ -234,25 +244,40 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
 
     // Deselect when the user clicks outside the shop panel. Card onClick
     // handles in-panel selection changes via React state; this listener only
-    // fires for genuinely-outside clicks.
+    // fires for genuinely-outside clicks. The mobile tap-tooltip dismisses
+    // on the same outside-click path so a single rule covers both flows.
     useEffect(() => {
-        if (selectedShopIndex === null) return;
+        if (selectedShopIndex === null && mobileTooltipShopIndex === null) return;
         const handleDocClick = (e: MouseEvent) => {
             if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
                 setSelectedShopIndex(null);
+                setMobileTooltipShopIndex(null);
             }
         };
         document.addEventListener("click", handleDocClick);
         return () => document.removeEventListener("click", handleDocClick);
-    }, [selectedShopIndex]);
+    }, [selectedShopIndex, mobileTooltipShopIndex]);
 
-    // Clear selection if the selected item is purchased or leaves the shop,
-    // so a stale Buy button doesn't linger.
+    // Clear selection / mobile tooltip if the targeted item is purchased
+    // or leaves the shop, so stale UI doesn't linger.
     useEffect(() => {
-        if (selectedShopIndex === null) return;
-        const stillAvailable = shopItems[selectedShopIndex] && !shopItems[selectedShopIndex].purchased;
-        if (!stillAvailable) setSelectedShopIndex(null);
-    }, [shopItems, selectedShopIndex]);
+        if (selectedShopIndex !== null) {
+            const stillAvailable = shopItems[selectedShopIndex] && !shopItems[selectedShopIndex].purchased;
+            if (!stillAvailable) setSelectedShopIndex(null);
+        }
+        if (mobileTooltipShopIndex !== null) {
+            const stillAvailable = shopItems[mobileTooltipShopIndex] && !shopItems[mobileTooltipShopIndex].purchased;
+            if (!stillAvailable) setMobileTooltipShopIndex(null);
+        }
+    }, [shopItems, selectedShopIndex, mobileTooltipShopIndex]);
+
+    // Drag-engage dismisses any open mobile tooltip — without this the
+    // tooltip stays semi-visible behind the dragging clone (the source
+    // card has opacity 0.35 but its tooltip child inherits the same
+    // dimmed view, which reads as a ghost UI element next to the drag).
+    useEffect(() => {
+        if (activeDrag) setMobileTooltipShopIndex(null);
+    }, [activeDrag]);
 
     const handleContinue = () => {
         playButton();
@@ -268,9 +293,24 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         const fromRect = canvas?.getBoundingClientRect() ?? new DOMRect(
             window.innerWidth / 2, window.innerHeight / 2, 0, 0,
         );
-        // Flip the gate BEFORE sending the buy so the schema-synced
-        // `pendingX` array doesn't trigger an early picker mount.
-        // ArkynOverlay's pack-fly timeline flips it back off on cleanup.
+        runBuyPack(shopIndex, packId, fromRect);
+        setSelectedShopIndex(null);
+    };
+
+    /**
+     * Pack-buy dispatcher shared between desktop's BUY-button handler
+     * (`handleBuyPack`) and the mobile drag-drop path (`onDrop` in the
+     * `useShopItemDrag` setup below). Flips the pack-animating gate
+     * BEFORE sending the buy so the schema-synced `pendingX` array
+     * doesn't trigger an early picker mount; ArkynOverlay's pack-fly
+     * timeline flips it back off on cleanup. SFX order is BUY chime
+     * first (confirms the gold spend, mirrors sigil purchases) then
+     * the open-pack "rip" as the pack flies in and dissolves —
+     * sounds as one continuous "I bought this and it's opening" cue.
+     */
+    const runBuyPack = (shopIndex: number, packId: PackType, fromRect: DOMRect) => {
+        const def = PACK_DEFINITIONS[packId];
+        if (!def) return;
         setPackAnimating(true);
         emitPackPurchase({
             packId,
@@ -280,16 +320,40 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
             dissolveElement: def.dissolveElement,
         });
         sendBuyItem(shopIndex);
-        // BUY chime first (matches sigil purchases — confirms the
-        // gold spend), then the open-pack "rip" as the pack flies in
-        // and dissolves. The sigil purchase only fires playBuy()
-        // because it has no follow-up animation; packs layer the
-        // open-pack on top so the player hears [chime → rip] as one
-        // continuous "I bought this and it's opening" cue.
         playBuy();
         playOpenPack();
-        setSelectedShopIndex(null);
     };
+
+    /**
+     * Mobile drag-to-purchase wiring. Hook is consumed unconditionally
+     * (the consumer surface is just a callback ref) but its
+     * `onCardPointerDown` only gets attached to the cards when
+     * `HAS_HOVER === false`. Desktop keeps its tap-to-select-then-BUY
+     * flow untouched.
+     *
+     * `onTap` toggles the mobile tooltip on the tapped card; `onDrop`
+     * looks up the item by shopIndex (avoids stale closures over
+     * `sigilItems` / `packItems` filters) and dispatches the right buy
+     * event with the clone's release rect as the fly-in start point.
+     */
+    const { onCardPointerDown } = useShopItemDrag({
+        onTap: (shopIndex) => {
+            setMobileTooltipShopIndex(prev => prev === shopIndex ? null : shopIndex);
+            playClick();
+        },
+        onDrop: (shopIndex, itemType, fromRect) => {
+            const item = shopItems[shopIndex];
+            if (!item) return;
+            setMobileTooltipShopIndex(null);
+            if (itemType === "sigil") {
+                sendBuyItem(shopIndex);
+                playBuy();
+                emitSigilPurchase({ sigilId: item.element, fromRect });
+            } else {
+                runBuyPack(shopIndex, itemType as PackType, fromRect);
+            }
+        },
+    });
 
     // Split items by section. Sigils → "Items" row. Pack types →
     // "Packs" row. Future Items-section additions (e.g. standalone
@@ -350,22 +414,36 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         const canBuy = canAfford && !sigilBarFull;
                         const rarityColor = RARITY_COLORS[def.rarity] ?? "#b0b0b0";
                         const isSelected = selectedShopIndex === item.shopIndex;
+                        const isMobileTooltip = mobileTooltipShopIndex === item.shopIndex;
                         // Tooltip flips side based on card position so it always
                         // extends outward (never overlapping neighbor cards).
                         const tooltipPlacement = i < sigilItems.length / 2 ? "left" : "right";
+
+                        // Branch on hover capability:
+                        //  Desktop: tap-to-select-then-tap-BUY (existing flow).
+                        //  Mobile:  drag-to-purchase via useShopItemDrag; tap
+                        //           opens the per-card tooltip overlay.
+                        const cardEventHandlers = HAS_HOVER ? {
+                            onClick: () => setSelectedShopIndex(prev => {
+                                const next = prev === item.shopIndex ? null : item.shopIndex;
+                                if (next !== null) playClick();
+                                return next;
+                            }),
+                        } : {
+                            onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => {
+                                const card = e.currentTarget;
+                                const canvas = card.querySelector(`.${styles.sigilCanvas}`) as HTMLElement | null;
+                                const fromRect = canvas?.getBoundingClientRect() ?? card.getBoundingClientRect();
+                                onCardPointerDown(e, item.shopIndex, "sigil", canBuy, fromRect);
+                            },
+                        };
 
                         return (
                             <div
                                 key={item.shopIndex}
                                 className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""} ${isSelected ? styles.itemCardSelected : ""}`}
                                 style={{ ...cardStyleVars } as CSSProperties}
-                                onClick={() => setSelectedShopIndex(prev => {
-                                    const next = prev === item.shopIndex ? null : item.shopIndex;
-                                    // Click SFX on entering the selected state — skip on
-                                    // deselect so toggling off doesn't re-click.
-                                    if (next !== null) playClick();
-                                    return next;
-                                })}
+                                {...cardEventHandlers}
                             >
                                 <div className={styles.priceChip}>
                                     <img src={goldIconUrl} alt="Gold" className={styles.priceIcon} />
@@ -377,7 +455,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                         index={i}
                                         className={styles.sigilCanvas}
                                     />
-                                    {isSelected && (
+                                    {HAS_HOVER && isSelected && (
                                         <button
                                             type="button"
                                             className={styles.buyButton}
@@ -402,7 +480,12 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                         </button>
                                     )}
                                 </div>
-                                <Tooltip placement={tooltipPlacement} arrow variant="framed">
+                                <Tooltip
+                                    placement={tooltipPlacement}
+                                    arrow
+                                    variant="framed"
+                                    className={isMobileTooltip ? styles.tooltipForceShow : undefined}
+                                >
                                     <span className={styles.tooltipName}>
                                         {def.name}
                                     </span>
@@ -449,19 +532,31 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         if (!def) return null;
                         const canAfford = gold >= item.cost;
                         const isSelected = selectedShopIndex === item.shopIndex;
+                        const isMobileTooltip = mobileTooltipShopIndex === item.shopIndex;
                         const tooltipPlacement = i < packItems.length / 2 ? "left" : "right";
                         const packImageUrl = getPackImageUrl(packId, 128);
+
+                        const cardEventHandlers = HAS_HOVER ? {
+                            onClick: () => setSelectedShopIndex(prev => {
+                                const next = prev === item.shopIndex ? null : item.shopIndex;
+                                if (next !== null) playClick();
+                                return next;
+                            }),
+                        } : {
+                            onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => {
+                                const card = e.currentTarget;
+                                const canvas = card.querySelector(`.${styles.sigilCanvas}`) as HTMLElement | null;
+                                const fromRect = canvas?.getBoundingClientRect() ?? card.getBoundingClientRect();
+                                onCardPointerDown(e, item.shopIndex, item.itemType as ShopDragItemType, canAfford, fromRect);
+                            },
+                        };
 
                         return (
                             <div
                                 key={item.shopIndex}
                                 className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""} ${isSelected ? styles.itemCardSelected : ""}`}
                                 style={{ ...cardStyleVars } as CSSProperties}
-                                onClick={() => setSelectedShopIndex(prev => {
-                                    const next = prev === item.shopIndex ? null : item.shopIndex;
-                                    if (next !== null) playClick();
-                                    return next;
-                                })}
+                                {...cardEventHandlers}
                             >
                                 {/* Pack priceChip + buyButton are anchored INSIDE cardImageWrap
                                     so their percentage offsets resolve against the visible
@@ -484,7 +579,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                         displayScale={def.displayScale}
                                         className={`${styles.sigilCanvas} ${styles.packCanvas}`}
                                     />
-                                    {isSelected && (
+                                    {HAS_HOVER && isSelected && (
                                         <button
                                             type="button"
                                             className={`${styles.buyButton} ${styles.packBuyButton}`}
@@ -500,7 +595,12 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                     )}
                                 </div>
 
-                                <Tooltip placement={tooltipPlacement} arrow variant="framed" className={styles.packTooltip}>
+                                <Tooltip
+                                    placement={tooltipPlacement}
+                                    arrow
+                                    variant="framed"
+                                    className={`${styles.packTooltip}${isMobileTooltip ? " " + styles.tooltipForceShow : ""}`}
+                                >
                                     <span className={styles.tooltipName}>
                                         {def.name}
                                     </span>
