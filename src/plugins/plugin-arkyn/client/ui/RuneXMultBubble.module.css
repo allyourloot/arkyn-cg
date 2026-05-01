@@ -22,5 +22,8 @@
     text-shadow:
         2px 2px 0 rgba(0, 0, 0, 0.85),
         0 0 6px rgba(0, 0, 0, 0.4);
-    z-index: 5;
+    /* Above EnemyHealthBar's .barWrapper (z-index: 25). This bubble drifts
+       upward out of the rune slot during cast resolution and would
+       otherwise pass behind the bar — same fix as RuneDamageBubble. */
+    z-index: 30;
 }

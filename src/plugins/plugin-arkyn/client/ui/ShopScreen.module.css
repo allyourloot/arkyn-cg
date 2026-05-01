@@ -205,6 +205,18 @@
     transform: translateZ(0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+    /* The translateZ above creates a new stacking context, which
+       traps descendant tooltips' z-index inside the section. Without
+       this explicit z-index, the section's whole stacking context
+       paints at z-auto=0 in shopContent — and the NEXT ROUND button
+       (`.continueButton` at z-index: 5) ends up above the right-side
+       sigil tooltip even though the tooltip's local z-index is 30.
+       Bumping the section's stacking context to 10 lifts the tooltip
+       (and everything else in the section) above NEXT ROUND. The
+       sections never visually overlap NEXT ROUND themselves (it sits
+       outside the panel via left: 100%), so this only affects
+       tooltip overflow — which is exactly what we want. */
+    z-index: 10;
 }
 
 /* --- Item grid: 2 items side by side --- */

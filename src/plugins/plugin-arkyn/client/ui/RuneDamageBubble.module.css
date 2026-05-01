@@ -8,6 +8,11 @@
     bottom: 100%;
     pointer-events: none;
     user-select: none;
+    /* Above EnemyHealthBar's .barWrapper (z-index: 25). The bubble drifts
+       up out of its rune slot during the cast and overlaps the bar's
+       screen-space area on tall casts; without an explicit z-index here
+       the bubble inherits z-auto from PlayArea and paints behind the bar. */
+    z-index: 30;
 
     font-size: clamp(var(--font-size-md), 4vw, var(--font-size-xl));
     font-weight: normal;
@@ -31,6 +36,9 @@
     transform: translateX(-50%);
     bottom: 100%;
     margin-bottom: 2px;
+    /* Same paint-above-the-bar concern as .bubble — the CRITICAL!/RESIST!
+       label drifts up too and would otherwise pass behind the bar. */
+    z-index: 30;
     font-size: clamp(var(--font-size-3xs), 1.6vw, var(--font-size-xs));
     font-weight: normal;
     letter-spacing: 2px;

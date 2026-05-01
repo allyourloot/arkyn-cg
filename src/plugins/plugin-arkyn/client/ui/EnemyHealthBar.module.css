@@ -5,6 +5,22 @@
    reserves padding-top to clear the SigilBar, so this wrapper is a plain
    flow child. */
 .barWrapper {
+    /* ArkynOverlay drives a screen-entrance GSAP tween on this element
+       (gsap.fromTo({y:-80,opacity:0}, {y:0,opacity:1})) which leaves
+       an inline `transform: translate(...)` on the DOM node post-
+       animation. That transform creates its own stacking context,
+       which TRAPS every descendant z-index inside this wrapper. The
+       SigilBar (z-index: 20 in .root) then paints above the
+       damageFloat — even though the float's local z-index is 20 and
+       .barShake's is 25, those are interpreted INSIDE this wrapper's
+       context, and the wrapper itself paints at z-auto=0 in .root.
+       Bumping the wrapper to z-index: 25 lifts the whole bar context
+       (and therefore the damageFloat that drifts up-and-right out of
+       it) above SigilBar. position: relative is required so z-index
+       applies even on browsers that don't honor z-index on flex
+       items without a position. */
+    position: relative;
+    z-index: 25;
     width: 100%;
     /* Wider than the old card-constrained bar (240–400px) since the bar
        no longer shares a container with the name/affinity row. Stays
@@ -45,7 +61,11 @@
 }
 
 /* The shake target. GSAP applies a translateX shake here on every enemy
-   damage hit (see EnemyHealthBar.tsx useGSAP). */
+   damage hit (see EnemyHealthBar.tsx useGSAP). The SigilBar-overlap
+   fix lives on .barWrapper above (not here) — bumping .barShake's
+   z-index does nothing for global stacking because .barWrapper's
+   GSAP-applied transform creates an outer stacking context that
+   traps everything inside. */
 .barShake {
     width: 100%;
     display: flex;
