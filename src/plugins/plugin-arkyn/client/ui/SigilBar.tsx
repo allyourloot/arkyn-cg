@@ -3,7 +3,7 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { MAX_SIGILS, MIMIC_INCOMPATIBLE, SIGIL_ACCUMULATOR_XMULT, SIGIL_INVENTORY_MULT } from "../../shared";
 import { SIGIL_DEFINITIONS } from "../../shared/sigils";
-import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, registerSigilFrame, usePendingSigilId, useSigilProcBubble, useAhoyDiscardElement, useReanimateConsumed, useIsCastAnimating, arkynStoreInternal } from "../arkynStore";
+import { useSigils, useSigilAccumulators, sendSellSigil, useActiveSigilShake, registerSigilSlot, registerSigilFrame, usePendingSigilId, useSigilProcBubble, useAhoyDiscardElement, useReanimateConsumed, useIsCastAnimating, triggerSigilProcBubble } from "../arkynStore";
 import { notify } from "../arkynStoreCore";
 import { DISSOLVE_DURATION_MS, RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
 import DissolveCanvas from "./DissolveCanvas";
@@ -117,7 +117,7 @@ export default function SigilBar() {
         // Wait for the cast animation to finish so the damage hit lands
         // on the enemy HP bar BEFORE Reanimate's feedback fires.
         if (isCastAnimating) return;
-        arkynStoreInternal.triggerSigilProcBubble("reanimate", 0, "save");
+        triggerSigilProcBubble("reanimate", 0, "save");
         playPopLow();
         notify();
         // Dissolve starts after the bubble's pop / drift settles.

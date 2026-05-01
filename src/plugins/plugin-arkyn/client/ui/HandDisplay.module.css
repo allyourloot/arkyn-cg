@@ -67,6 +67,18 @@
     z-index: 500 !important;
 }
 
+/* Mobile-equivalent of the :hover lift above. Tap-to-select doesn't
+   fire :hover, so the "+BASE" tooltip (revealed via
+   `.card.selected.lastSelected ~ .arkyn-tooltip` inside RuneCard) is
+   trapped in this slot's small inline `style={{ zIndex: index }}`
+   stacking context and paints behind PlayArea's placeholder slots
+   (z-index: 30). HandDisplay sets `cardSlotSelectedLast` on whichever
+   slot holds the most-recently-selected rune; lifting that to 500
+   matches the desktop hover lift exactly. */
+.cardSlotSelectedLast {
+    z-index: 500 !important;
+}
+
 .cardSlot:not(:first-child) {
     /* Dynamic overlap — set by HandDisplay.tsx based on card count so all
        cards fit inside the fixed-width frame. Falls back to the reference

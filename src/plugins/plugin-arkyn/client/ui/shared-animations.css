@@ -17,6 +17,19 @@
     --transition-hover: transform 120ms ease-out, filter 120ms ease-out;
     --text-shadow-dark: 2px 2px 0 rgba(0, 0, 0, 0.85);
     --text-shadow-medium: 2px 2px 0 rgba(0, 0, 0, 0.8);
+
+    /* Shop / drag-and-drop stacking layers. Read bottom-up:
+       price-chip < button < section < drop-zone < selected-slot < drag-clone < overlay-shader.
+       The shop panel itself uses its DOM-order paint ordering and doesn't
+       enter this z-stack. Adjust values here only — every shop CSS module
+       reads through these vars so a single change propagates. */
+    --z-shop-price-chip: 2;
+    --z-shop-button: 5;
+    --z-shop-section: 10;
+    --z-shop-drop-zone: 21;
+    --z-shop-selected-slot: 30;
+    --z-drag-clone: 105;
+    --z-overlay-shader: 9999;
 }
 
 @keyframes arkyn-fade-in {

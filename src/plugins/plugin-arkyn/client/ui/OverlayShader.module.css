@@ -7,7 +7,7 @@
     /* Sit on top of every other UI layer in the overlay's stacking
        context. RoundEndOverlay's backdrop is z-index 200; this needs
        to be higher so the grain shows over the round-end screen too. */
-    z-index: 9999;
+    z-index: var(--z-overlay-shader);
     display: block;
     /* Pixelated upscale: the canvas renders at 1/PIXEL_SIZE of the
        viewport (see OverlayShader.tsx) and CSS blows it up so each

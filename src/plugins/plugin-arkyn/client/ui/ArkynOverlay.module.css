@@ -126,6 +126,31 @@
        button bar so the buttons don't hug the bottom edge of the hand. */
     gap: clamp(16px, 2.4vh, 32px);
     padding-bottom: clamp(20px, 6vh, 80px);
+    /* ArkynOverlay's screen-entrance GSAP tween leaves an inline
+       `transform: translate(0,0)` on this element after completion,
+       which creates a stacking context that traps every descendant
+       z-index inside .handStack at z-auto in .root. PlayArea's `.slot`
+       (z-index: 30 in .root) then paints above any rune card lift
+       — including the selection-driven "+BASE" tooltip. Same fix
+       pattern as EnemyHealthBar's `.barWrapper`: position: relative +
+       explicit z-index so this wrapper competes at .root with a
+       known value. Base value 0 keeps PlayArea above the resting
+       hand; the rule below lifts the wrapper temporarily during a
+       rune interaction so descendant tooltips can paint above. */
+    position: relative;
+    z-index: 0;
+}
+
+/* Lift the entire hand layer above PlayArea's placeholder slots
+   (z-index: 30) while a rune is being interacted with — desktop
+   hover via `[data-rune-id]:hover`, mobile selection via
+   `[data-rune-last-selected="true"]` (set by HandDisplay when the
+   rune is the most-recently-selected one). Attribute selectors
+   are used instead of CSS Module class names because .handStack
+   lives in this module while .cardSlot lives in HandDisplay's. */
+.handStack:has([data-rune-id]:hover),
+.handStack:has([data-rune-last-selected="true"]) {
+    z-index: 100;
 }
 
 /* Invisible counterweight on the right edge — mirrors SpellPreview's

@@ -9,8 +9,8 @@
     position: fixed;
     top: 0;
     left: 0;
-    /* Above flying purchase animations (100), below OverlayShader (9999). */
-    z-index: 105;
+    /* Above flying purchase animations (100), below OverlayShader. */
+    z-index: var(--z-drag-clone);
     pointer-events: none;
     will-change: transform, opacity;
     /* opacity 0 by default so React's mount-paint doesn't flash the

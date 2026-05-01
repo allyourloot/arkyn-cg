@@ -832,6 +832,22 @@ export const arkynStoreInternal = {
     },
 };
 
+// ----- Public trigger surface for UI components -----
+//
+// Thin facade over the matching `arkynStoreInternal` methods so UI
+// components don't have to import the internal namespace. The internal
+// object stays around for the animation orchestrator + cast breakdown
+// callers, which are part of the same trust boundary as the store
+// itself; UI components should route through the named exports below.
+export const triggerSigilProcBubble = arkynStoreInternal.triggerSigilProcBubble;
+export const clearSigilProcBubble = arkynStoreInternal.clearSigilProcBubble;
+export const triggerGoldProcBubble = arkynStoreInternal.triggerGoldProcBubble;
+export const clearGoldProcBubble = arkynStoreInternal.clearGoldProcBubble;
+export const addDisplayedGold = arkynStoreInternal.addDisplayedGold;
+export const lockGoldDisplay = arkynStoreInternal.lockGoldDisplay;
+export const unlockGoldDisplayAndSyncToServer = arkynStoreInternal.unlockGoldDisplayAndSyncToServer;
+export const clearBlackjackAnimation = arkynStoreInternal.clearBlackjackAnimation;
+
 // ----- React hooks (data state) -----
 
 export function useHand() { return useSyncExternalStore(subscribe, () => hand); }

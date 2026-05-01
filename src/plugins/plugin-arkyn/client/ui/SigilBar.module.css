@@ -15,6 +15,20 @@
     gap: clamp(8px, 1.2vw, 18px);
 }
 
+/* When a sigil is being interacted with (hover, selection, drag), lift
+   the entire SigilBar wrapper above EnemyHealthBar's `.barWrapper`
+   (z-index: 25 — see comment there). Without this, the slot's tooltip
+   (z-index: 30 inside Tooltip.module.css) is trapped inside this
+   wrapper's z-index: 20 stacking context and paints UNDER the HP bar.
+   Trade-off: a damageFloat in-flight from the bar would paint behind
+   SigilBar during this state, but that float is brief and an active
+   sigil interaction during a cast animation is rare. */
+.wrapper:has(.filledSlot:hover),
+.wrapper:has(.filledSlotSelected),
+.wrapper:has(.filledSlotDragging) {
+    z-index: 30;
+}
+
 /* Single shared hand-frame containing all owned sigils. Width is
    calibrated to hold 6 sigil slots (MAX_SIGILS) + the between-slot gaps
    + the border-image padding. Sigils populate from the left edge; unused

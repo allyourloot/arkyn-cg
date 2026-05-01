@@ -213,7 +213,7 @@
        promotion isn't load-bearing. Sections never visually overlap
        NEXT ROUND (it sits outside the panel via left: 100%), so
        this z-index only affects tooltip overflow. */
-    z-index: 10;
+    z-index: var(--z-shop-section);
 }
 
 /* --- Item grid: 2 items side by side --- */
@@ -335,7 +335,7 @@
 .itemCardSelected,
 .itemCardSelected:hover {
     transform: translateY(-8px);
-    z-index: 30;
+    z-index: var(--z-shop-selected-slot);
     animation: none;
 }
 
@@ -365,7 +365,7 @@
     background: #106510;
     border-radius: clamp(4px, 0.6vw, 8px);
     padding: clamp(2px, 0.4vh, 5px) clamp(6px, 0.9vw, 12px);
-    z-index: 2;
+    z-index: var(--z-shop-price-chip);
     white-space: nowrap;
 }
 
@@ -463,7 +463,7 @@
     cursor: pointer;
     line-height: 1;
     padding: clamp(6px, 1vh, 10px) clamp(14px, 2vw, 22px);
-    z-index: 30;
+    z-index: var(--z-shop-selected-slot);
     pointer-events: auto;
     transition: background 80ms ease-out, transform 80ms ease-out;
     white-space: nowrap;
@@ -645,7 +645,7 @@
     flex-shrink: 0;
     pointer-events: auto;
     white-space: nowrap;
-    z-index: 5;
+    z-index: var(--z-shop-button);
 }
 
 .continueButton:hover {

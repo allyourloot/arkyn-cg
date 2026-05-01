@@ -4,8 +4,12 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
     DISSOLVE_DURATION_MS,
-    arkynStoreInternal,
+    addDisplayedGold,
+    clearGoldProcBubble,
+    lockGoldDisplay,
     sendApplyTarot,
+    triggerGoldProcBubble,
+    unlockGoldDisplayAndSyncToServer,
     useAuguryPurchaseCount,
     useCurrentRound,
     useRunSeed,
@@ -140,22 +144,22 @@ function runTowerGoldPopSequence(banishedCount: number, goldPerRune: number): vo
     for (let i = 0; i < banishedCount; i++) {
         const popTime = i * TOWER_POP_INTERVAL_MS;
         setTimeout(() => {
-            arkynStoreInternal.triggerGoldProcBubble(goldPerRune);
+            triggerGoldProcBubble(goldPerRune);
             notify();
         }, popTime);
         setTimeout(() => {
             playGold();
-            arkynStoreInternal.addDisplayedGold(goldPerRune);
+            addDisplayedGold(goldPerRune);
             notify();
         }, popTime + TOWER_POP_COMMIT_DELAY_MS);
         setTimeout(() => {
-            arkynStoreInternal.clearGoldProcBubble();
+            clearGoldProcBubble();
             notify();
         }, popTime + TOWER_POP_CLEAR_DELAY_MS);
     }
     const totalDuration = (banishedCount - 1) * TOWER_POP_INTERVAL_MS + TOWER_POP_CLEAR_DELAY_MS + 100;
     setTimeout(() => {
-        arkynStoreInternal.unlockGoldDisplayAndSyncToServer();
+        unlockGoldDisplayAndSyncToServer();
         notify();
     }, totalDuration);
 }
@@ -491,7 +495,7 @@ export default function AuguryPicker({ runes, tarotIds, ref }: AuguryPickerProps
             // end syncs anything left over to the server's authoritative
             // value.
             if (isBanishForGold && banishedCount > 0) {
-                arkynStoreInternal.lockGoldDisplay();
+                lockGoldDisplay();
                 notify();
             }
             sendApplyTarot({

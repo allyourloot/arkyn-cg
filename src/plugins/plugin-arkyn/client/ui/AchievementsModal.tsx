@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import {
     ACHIEVEMENT_DEFINITIONS,
     ELEMENT_TYPES,
@@ -7,7 +7,7 @@ import {
 } from "../../shared";
 import { useUnlockedAchievements, useLifetimeStats } from "../achievementsStore";
 import { useSigils } from "../arkynStore";
-import { playMenuClose, playMenuOpen } from "../sfx";
+import { useModalLifecycle } from "./hooks/useModalLifecycle";
 import ItemScene from "./ItemScene";
 import { createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
 import closeIconUrl from "/assets/icons/close-64x64.png?url";
@@ -55,22 +55,7 @@ export default function AchievementsModal({ onClose }: AchievementsModalProps) {
 
     const unlockedSet = useMemo(() => new Set(unlockedList), [unlockedList]);
 
-    useEffect(() => {
-        playMenuOpen();
-    }, []);
-
-    const closeWithSfx = useCallback(() => {
-        playMenuClose();
-        onClose();
-    }, [onClose]);
-
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") closeWithSfx();
-        };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-    }, [closeWithSfx]);
+    const closeWithSfx = useModalLifecycle(onClose);
 
     // Group definitions by category, preserving registry insertion order
     // within each. We also pre-compute per-section earned counts for the

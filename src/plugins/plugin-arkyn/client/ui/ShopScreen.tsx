@@ -71,6 +71,30 @@ const cardStyleVars = {
 // this file.
 const PACK_ITEM_TYPES = new Set<string>(Object.keys(PACK_DEFINITIONS));
 
+/**
+ * Resolve the rect that purchase fly-in animations should use as their
+ * starting point for a given shop card. Prefer the inner canvas wrapper
+ * (matches the visible item art the player picked up) and fall back to
+ * the card's outer rect if the canvas isn't found. `card` is nullable
+ * because BUY-button paths use `closest('.itemCard')` to climb up — the
+ * card lookup is theoretically nullable even though in practice the
+ * BUY button is always mounted inside one.
+ */
+function getCardFromRect(card: HTMLElement | null, canvasSelector: string): DOMRect {
+    if (!card) return new DOMRect(0, 0, 0, 0);
+    const canvas = card.querySelector(canvasSelector) as HTMLElement | null;
+    return canvas?.getBoundingClientRect() ?? card.getBoundingClientRect();
+}
+
+/**
+ * Tooltip flips side based on card position so it always extends
+ * outward (never overlapping neighbor cards). Items in the left half
+ * get a left-side tooltip, items in the right half get a right-side one.
+ */
+function getTooltipPlacement(index: number, total: number): "left" | "right" {
+    return index < total / 2 ? "left" : "right";
+}
+
 type ShopScreenProps = {
     ref?: React.Ref<HTMLDivElement>;
 };
@@ -296,11 +320,8 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         e.stopPropagation();
         const def = PACK_DEFINITIONS[packId];
         if (!def) return;
-        const card = (e.currentTarget as HTMLElement).closest(`.${styles.itemCard}`);
-        const canvas = card?.querySelector(`.${styles.sigilCanvas}`) as HTMLElement | null;
-        const fromRect = canvas?.getBoundingClientRect() ?? new DOMRect(
-            window.innerWidth / 2, window.innerHeight / 2, 0, 0,
-        );
+        const card = (e.currentTarget as HTMLElement).closest(`.${styles.itemCard}`) as HTMLElement | null;
+        const fromRect = getCardFromRect(card, `.${styles.sigilCanvas}`);
         runBuyPack(shopIndex, packId, fromRect);
         setSelectedShopIndex(null);
     };
@@ -423,9 +444,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         const rarityColor = RARITY_COLORS[def.rarity] ?? "#b0b0b0";
                         const isSelected = selectedShopIndex === item.shopIndex;
                         const isMobileTooltip = mobileTooltipShopIndex === item.shopIndex;
-                        // Tooltip flips side based on card position so it always
-                        // extends outward (never overlapping neighbor cards).
-                        const tooltipPlacement = i < sigilItems.length / 2 ? "left" : "right";
+                        const tooltipPlacement = getTooltipPlacement(i, sigilItems.length);
 
                         // Branch on hover capability:
                         //  Desktop: tap-to-select-then-tap-BUY (existing flow).
@@ -439,9 +458,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                             }),
                         } : {
                             onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => {
-                                const card = e.currentTarget;
-                                const canvas = card.querySelector(`.${styles.sigilCanvas}`) as HTMLElement | null;
-                                const fromRect = canvas?.getBoundingClientRect() ?? card.getBoundingClientRect();
+                                const fromRect = getCardFromRect(e.currentTarget, `.${styles.sigilCanvas}`);
                                 onCardPointerDown(e, item.shopIndex, "sigil", canBuy, fromRect);
                             },
                         };
@@ -474,11 +491,8 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                                 if (!canBuy) return;
                                                 sendBuyItem(item.shopIndex);
                                                 playBuy();
-                                                const card = (e.currentTarget as HTMLElement).closest(`.${styles.itemCard}`);
-                                                const canvas = card?.querySelector(`.${styles.sigilCanvas}`) as HTMLElement | null;
-                                                const fromRect = canvas?.getBoundingClientRect() ?? new DOMRect(
-                                                    window.innerWidth / 2, window.innerHeight / 2, 0, 0,
-                                                );
+                                                const card = (e.currentTarget as HTMLElement).closest(`.${styles.itemCard}`) as HTMLElement | null;
+                                                const fromRect = getCardFromRect(card, `.${styles.sigilCanvas}`);
                                                 emitSigilPurchase({ sigilId: item.element, fromRect });
                                                 setSelectedShopIndex(null);
                                             }}
@@ -542,7 +556,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         const canAfford = gold >= item.cost;
                         const isSelected = selectedShopIndex === item.shopIndex;
                         const isMobileTooltip = mobileTooltipShopIndex === item.shopIndex;
-                        const tooltipPlacement = i < packItems.length / 2 ? "left" : "right";
+                        const tooltipPlacement = getTooltipPlacement(i, packItems.length);
                         const packImageUrl = getPackImageUrl(packId, 128);
 
                         const cardEventHandlers = HAS_HOVER ? {
@@ -553,9 +567,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                             }),
                         } : {
                             onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => {
-                                const card = e.currentTarget;
-                                const canvas = card.querySelector(`.${styles.sigilCanvas}`) as HTMLElement | null;
-                                const fromRect = canvas?.getBoundingClientRect() ?? card.getBoundingClientRect();
+                                const fromRect = getCardFromRect(e.currentTarget, `.${styles.sigilCanvas}`);
                                 onCardPointerDown(e, item.shopIndex, item.itemType as ShopDragItemType, canAfford, fromRect);
                             },
                         };

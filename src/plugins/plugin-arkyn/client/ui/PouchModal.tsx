@@ -1,11 +1,10 @@
-import { useCallback, useEffect } from "react";
 import { ELEMENT_TYPES, RUNES_PER_ELEMENT } from "../../shared";
 import { useHand, usePouchContents, type RuneClientData } from "../arkynStore";
-import { playMenuClose, playMenuOpen } from "../sfx";
 import RuneImage from "./RuneImage";
 import { getRuneImageUrl } from "./runeAssets";
 import { createPanelStyleVars } from "./styles";
 import { useAcquiredRuneStats } from "./hooks/useAcquiredRuneStats";
+import { useModalLifecycle } from "./hooks/useModalLifecycle";
 import closeIconUrl from "/assets/icons/close-64x64.png?url";
 import closeHoverIconUrl from "/assets/icons/close-hover-64x64.png?url";
 import styles from "./PouchModal.module.css";
@@ -27,27 +26,7 @@ export default function PouchModal({ onClose }: PouchModalProps) {
     const hand = useHand();
     const { bonusByElement, banishedByElement, totalAll } = useAcquiredRuneStats();
 
-    // Play the shared menu-open stinger once on mount.
-    useEffect(() => {
-        playMenuOpen();
-    }, []);
-
-    // Wrap onClose so every dismiss path (backdrop click, Escape, X
-    // button) plays the menu-close stinger without each call site having
-    // to remember to fire it.
-    const closeWithSfx = useCallback(() => {
-        playMenuClose();
-        onClose();
-    }, [onClose]);
-
-    // Close on Escape.
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") closeWithSfx();
-        };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-    }, [closeWithSfx]);
+    const closeWithSfx = useModalLifecycle(onClose);
 
     // Bucket pouch + hand runes per element so we can render their real
     // rarity art (not just common). The deck grows past the base 52 via

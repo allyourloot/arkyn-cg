@@ -25,8 +25,8 @@ import {
     TAROT_IDS,
 } from "../../shared";
 import { COMBINABLE_ELEMENTS } from "../../shared/arkynConstants";
-import { playMenuClose, playMenuOpen } from "../sfx";
 import { renderDescription, SigilExplainer, SigilPenaltyLine, splitPenalty } from "./descriptionText";
+import { useModalLifecycle } from "./hooks/useModalLifecycle";
 import ItemScene from "./ItemScene";
 import { getPackImageUrl } from "./packAssets";
 import RuneImage from "./RuneImage";
@@ -131,22 +131,7 @@ const TAROT_ORDER: string[] = TAROT_IDS.slice().sort((a, b) => {
 export default function HowToPlayModal({ onClose }: HowToPlayModalProps) {
     const [tab, setTab] = useState<Tab>("basics");
 
-    useEffect(() => {
-        playMenuOpen();
-    }, []);
-
-    const closeWithSfx = useCallback(() => {
-        playMenuClose();
-        onClose();
-    }, [onClose]);
-
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") closeWithSfx();
-        };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-    }, [closeWithSfx]);
+    const closeWithSfx = useModalLifecycle(onClose);
 
     return (
         <div className={styles.backdrop} onClick={closeWithSfx}>

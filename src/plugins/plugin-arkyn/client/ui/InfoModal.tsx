@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { TWO_PAIR_TABLE, FULL_HOUSE_TABLE, SPELL_TIER_BASE_DAMAGE, SPELL_TIER_MULT } from "../../shared";
-import { playMenuClose, playMenuOpen } from "../sfx";
+import { useModalLifecycle } from "./hooks/useModalLifecycle";
 import RuneImage from "./RuneImage";
 import { createPanelStyleVars, ELEMENT_COLORS, INNER_FRAME_BGS } from "./styles";
 import closeIconUrl from "/assets/icons/close-64x64.png?url";
@@ -73,22 +73,7 @@ const TIER_DATA = [1, 2, 3, 4, 5].map(tier => ({
 export default function InfoModal({ onClose }: InfoModalProps) {
     const [tab, setTab] = useState<Tab>("synergies");
 
-    useEffect(() => {
-        playMenuOpen();
-    }, []);
-
-    const closeWithSfx = useCallback(() => {
-        playMenuClose();
-        onClose();
-    }, [onClose]);
-
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") closeWithSfx();
-        };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-    }, [closeWithSfx]);
+    const closeWithSfx = useModalLifecycle(onClose);
 
     return (
         <div className={styles.backdrop} onClick={closeWithSfx}>

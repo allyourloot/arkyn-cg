@@ -55,7 +55,7 @@
 .zoneSigil {
     position: absolute;
     inset: 0;
-    z-index: 21;
+    z-index: var(--z-shop-drop-zone);
     border-radius: 6px;
 }
 
@@ -80,7 +80,7 @@
     margin-left: clamp(8px, 1.2vw, 18px);
     width: clamp(96px, 14vw, 160px);
     height: clamp(200px, 36vh, 300px);
-    z-index: 21;
+    z-index: var(--z-shop-drop-zone);
 }
 
 /* ----- Active-hover state — pointer is currently inside the zone.

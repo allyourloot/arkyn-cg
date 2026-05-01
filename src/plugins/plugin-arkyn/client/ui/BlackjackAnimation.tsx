@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
-import { arkynStoreInternal, useBlackjackAnimation } from "../arkynStore";
+import { clearBlackjackAnimation, useBlackjackAnimation } from "../arkynStore";
 import styles from "./BlackjackAnimation.module.css";
 
 // Eager-glob load the 13 Blackjack spritesheet frames at build time so
@@ -78,7 +78,7 @@ function BlackjackSpriteRunner() {
     // old setInterval version produced.
     useEffect(() => {
         if (FRAME_URLS.length === 0) {
-            arkynStoreInternal.clearBlackjackAnimation();
+            clearBlackjackAnimation();
             return;
         }
 
@@ -120,7 +120,7 @@ function BlackjackSpriteRunner() {
 
         gsap.set(el, { opacity: 1, scale: 0.85 });
         const tl = gsap.timeline({
-            onComplete: () => arkynStoreInternal.clearBlackjackAnimation(),
+            onComplete: () => clearBlackjackAnimation(),
         });
         tl.to(el, {
             scale: 1,

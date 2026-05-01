@@ -304,6 +304,7 @@ export default function HandDisplay() {
                     const isMaterializing = materializingRune?.id === rune.id;
                     const isHidden = isHiddenForCast || isDrawingIn || isCastingOut || isBanishingOut;
                     const isDragging = dragInfo !== null && dragInfo.runeId === rune.id;
+                    const isLastSelected = isSelected && rune.id === lastSelectedRuneId;
 
                     // Slot transform x is GSAP-driven (see useGSAP above and
                     // the quickTo follow inside useHandDragReorder). Only
@@ -320,7 +321,8 @@ export default function HandDisplay() {
                             key={rune.id}
                             data-rune-index={index}
                             data-rune-id={rune.id}
-                            className={`${styles.cardSlot} ${isHidden ? styles.hidden : ""} ${isDragging ? styles.dragging : ""}`}
+                            data-rune-last-selected={isLastSelected ? "true" : undefined}
+                            className={`${styles.cardSlot} ${isHidden ? styles.hidden : ""} ${isDragging ? styles.dragging : ""} ${isLastSelected ? styles.cardSlotSelectedLast : ""}`}
                             style={slotStyle}
                             onPointerDown={(e) => onSlotPointerDown(e, rune.id, index)}
                             onDragStart={(e) => e.preventDefault()}
@@ -347,7 +349,7 @@ export default function HandDisplay() {
                                 <RuneCard
                                     rune={rune}
                                     isSelected={isSelected}
-                                    isLastSelected={isSelected && rune.id === lastSelectedRuneId}
+                                    isLastSelected={isLastSelected}
                                     index={index}
                                     rotation={rotation}
                                     tiltDisabled={dragInfo !== null}
