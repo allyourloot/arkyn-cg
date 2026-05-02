@@ -1,8 +1,19 @@
 import { build } from "esbuild";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 
 // Create dist/assets directory
 await mkdir("dist/assets", { recursive: true });
+
+// Empty mountpoints expected by the HYTOPIA deploy runtime (bind-mounts
+// .app-writable/assets/<path> over /app/assets/<path>; missing dirs fail OCI init).
+const HYTOPIA_DEPLOY_MOUNTPOINTS = [
+    "models",
+    "blocks/.atlas",
+];
+for (const path of HYTOPIA_DEPLOY_MOUNTPOINTS) {
+    await mkdir(`dist/assets/${path}`, { recursive: true });
+    await writeFile(`dist/assets/${path}/.gitkeep`, "");
+}
 
 // Build server
 await build({
@@ -30,3 +41,18 @@ const require = __nodeModule.createRequire(import.meta.url);
     },
     tsconfig: "tsconfig.server.json",
 });
+
+await writeFile(
+    "dist/package.json",
+    JSON.stringify(
+        {
+            name: "arkyn",
+            version: "1.0.0",
+            type: "module",
+            main: "index.mjs",
+            scripts: { start: "node index.mjs" },
+        },
+        null,
+        2,
+    ),
+);

@@ -50,6 +50,11 @@ coverage/
 # Misc
 *.local
 
+# Local diagnostics / pasted snapshots
+dev-saves.txt
+game-logs.txt
+page-source.html
+
 # Dev-only persistent save states (file-backed fallback when KV is unavailable).
 # Real saves live in the remote KV API in production; this directory is
 # strictly a local convenience for `pnpm dev`.

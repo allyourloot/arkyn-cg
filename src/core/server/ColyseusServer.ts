@@ -57,13 +57,23 @@ export const createColyseusServer = (
         }),
 
         express: (app: Application) => {
-            app.get("/", (_req, res) => res.send("{}"));
             app.use("/playground", playground());
 
             const cwdAssetsPath = resolve(process.cwd(), "assets");
             if (!existsSync(cwdAssetsPath)) {
                 logger.warn(`Assets directory was not found. Expected at: ${cwdAssetsPath}`);
+                app.get("/", (_req, res) => res.send("{}"));
                 return;
+            }
+
+            // Serve the bundled single-file client at "/" when it exists
+            // (production deploy). In local dev, vite owns ":8180/" and this
+            // file isn't built, so fall through to the JSON sentinel.
+            const clientHtmlPath = resolve(cwdAssetsPath, "__client/index.html");
+            if (existsSync(clientHtmlPath)) {
+                app.get("/", (_req, res) => res.sendFile(clientHtmlPath));
+            } else {
+                app.get("/", (_req, res) => res.send("{}"));
             }
 
             app.use(express.static(cwdAssetsPath));
