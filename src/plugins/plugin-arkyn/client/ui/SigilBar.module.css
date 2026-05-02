@@ -249,7 +249,7 @@
 
 .tooltipDesc {
     font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
-    color: #b5a591;
+    color: var(--color-tooltip-desc);
     line-height: 1.3;
     /* Force the span to behave as a block so text-align actually has slack
        to work with — without `display: block + width: 100%` the inline

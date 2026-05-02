@@ -594,7 +594,7 @@
 .tooltipDesc {
     display: block;
     font-size: clamp(var(--font-size-2xs), 1.05vw, var(--font-size-xs));
-    color: #b5a591;
+    color: var(--color-tooltip-desc);
     line-height: 1.4;
     text-align: center;
     white-space: normal;

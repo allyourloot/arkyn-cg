@@ -9,13 +9,15 @@ const HIGHLIGHT_COLOR = "#309f30";
 // color in tooltip markers ties "the fragment" to "the bubble" visually
 // without the pill chrome cluttering the description.
 const RED_HIGHLIGHT_COLOR = "#9f3030";
-// Damage-channel colors — match the Base / Mult chips in the Spell
-// Preview panel (see ELEMENT_COLORS / styles.ts). When a marker's
-// content reads as "+N Base" or "+N Mult", we paint the marker in the
-// matching channel color so the tooltip and the in-game damage chips
-// reinforce each other.
-const BASE_HIGHLIGHT_COLOR = "#1f6897";
-const MULT_HIGHLIGHT_COLOR = "#9f3030";  // intentionally same hex as RED_HIGHLIGHT_COLOR
+// Damage-channel colors — lifted versions of the Base / Mult chip hues
+// from the Spell Preview panel. The chip backgrounds (#1f6897 blue and
+// #9f3030 red, see RuneCard / xMult bubbles) read fine with white text
+// on top, but the same hexes used as tooltip TEXT against the dark
+// #1f1d2e tooltip body sat right around the 3:1 contrast floor and
+// were hard to read. These brighter variants keep the channel identity
+// while clearing 4.5:1 contrast on the tooltip background.
+const BASE_HIGHLIGHT_COLOR = "#5aa3d9";
+const MULT_HIGHLIGHT_COLOR = "#e35858";
 // "+N Base" content (e.g. "+8 Base", "+10 Base"). Numbered only.
 const BASE_CONTENT_REGEX = /^\+\d+(\.\d+)?\s+Base$/;
 // "+N Mult" content with optional number, so Elixir's "{+Mult}" matches

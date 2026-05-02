@@ -34,6 +34,11 @@
     --font-size-xl: 3rem;      /* 48px — damage values, gold counter */
     --font-size-2xl: 4rem;     /* 64px — floating impact numbers */
 
+    /* Body color for tooltip descriptions (sigils, tarots, shop items,
+       How-to-Play tarot tips). Centralized so the warm-tan body text
+       stays consistent across every framed tooltip in the game. */
+    --color-tooltip-desc: #d3c4b2;
+
     /* Horizontal padding = the larger of a viewport-relative clamp and the
        iOS safe-area inset (notch / Dynamic Island in landscape). This
        pushes the left and right panels inward on notched phones so they
