@@ -24,7 +24,7 @@ import { RARITY_COLORS, createPanelStyleVars } from "./styles";
 import { getPackImageUrl } from "./packAssets";
 import ItemScene from "./ItemScene";
 import PanelFrame from "./PanelFrame";
-import Tooltip from "./Tooltip";
+import ShopItemCard, { type ShopItemCardHandlers } from "./ShopItemCard";
 import RunePackPicker from "./RunePackPicker";
 import CodexPicker from "./CodexPicker";
 import AuguryPicker from "./AuguryPicker";
@@ -450,7 +450,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         //  Desktop: tap-to-select-then-tap-BUY (existing flow).
                         //  Mobile:  drag-to-purchase via useShopItemDrag; tap
                         //           opens the per-card tooltip overlay.
-                        const cardEventHandlers = HAS_HOVER ? {
+                        const cardEventHandlers: ShopItemCardHandlers = HAS_HOVER ? {
                             onClick: () => setSelectedShopIndex(prev => {
                                 const next = prev === item.shopIndex ? null : item.shopIndex;
                                 if (next !== null) playClick();
@@ -463,82 +463,66 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                             },
                         };
 
+                        const { main, penalty } = splitPenalty(def.description);
+
                         return (
-                            <div
+                            <ShopItemCard
                                 key={item.shopIndex}
-                                data-shop-index={item.shopIndex}
-                                className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""} ${isSelected ? styles.itemCardSelected : ""}`}
-                                style={{ ...cardStyleVars } as CSSProperties}
-                                {...cardEventHandlers}
-                            >
-                                <div className={styles.priceChip}>
-                                    <img src={goldIconUrl} alt="Gold" className={styles.priceIcon} />
-                                    <span className={styles.priceValue}>{item.cost}</span>
-                                </div>
-                                <div className={styles.cardImageWrap}>
+                                shopIndex={item.shopIndex}
+                                cost={item.cost}
+                                canAfford={canAfford}
+                                isSelected={isSelected}
+                                isMobileTooltip={isMobileTooltip}
+                                tooltipPlacement={tooltipPlacement}
+                                cardStyleVars={{ ...cardStyleVars } as CSSProperties}
+                                buttonStyleVars={buttonStyleVars}
+                                cardEventHandlers={cardEventHandlers}
+                                variant="sigil"
+                                itemScene={
                                     <ItemScene
                                         itemId={item.element}
                                         index={i}
                                         className={styles.sigilCanvas}
                                     />
-                                    {HAS_HOVER && isSelected && (
-                                        <button
-                                            type="button"
-                                            className={styles.buyButton}
-                                            style={buttonStyleVars}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (!canBuy) return;
-                                                sendBuyItem(item.shopIndex);
-                                                playBuy();
-                                                const card = (e.currentTarget as HTMLElement).closest(`.${styles.itemCard}`) as HTMLElement | null;
-                                                const fromRect = getCardFromRect(card, `.${styles.sigilCanvas}`);
-                                                emitSigilPurchase({ sigilId: item.element, fromRect });
-                                                setSelectedShopIndex(null);
-                                            }}
-                                            disabled={!canBuy}
-                                            title={sigilBarFull && canAfford ? "Sigil bar full — sell a sigil to make room" : undefined}
+                                }
+                                buyEnabled={canBuy}
+                                onBuyClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!canBuy) return;
+                                    sendBuyItem(item.shopIndex);
+                                    playBuy();
+                                    const card = (e.currentTarget as HTMLElement).closest(`.${styles.itemCard}`) as HTMLElement | null;
+                                    const fromRect = getCardFromRect(card, `.${styles.sigilCanvas}`);
+                                    emitSigilPurchase({ sigilId: item.element, fromRect });
+                                    setSelectedShopIndex(null);
+                                }}
+                                buyTitle={sigilBarFull && canAfford ? "Sigil bar full — sell a sigil to make room" : undefined}
+                                tooltipBody={
+                                    <>
+                                        <span className={styles.tooltipName}>
+                                            {def.name}
+                                        </span>
+                                        <div className={styles.tooltipDescWrap}>
+                                            <span className={styles.tooltipDesc}>
+                                                {renderDescription(main)}
+                                            </span>
+                                            {penalty && <SigilPenaltyLine text={penalty} />}
+                                            {def.explainer && (
+                                                <SigilExplainer
+                                                    label={def.explainer.label}
+                                                    elements={def.explainer.elements}
+                                                />
+                                            )}
+                                        </div>
+                                        <span
+                                            className={styles.tooltipRarity}
+                                            style={{ backgroundColor: rarityColor }}
                                         >
-                                            Buy
-                                        </button>
-                                    )}
-                                </div>
-                                <Tooltip
-                                    placement={tooltipPlacement}
-                                    arrow
-                                    variant="framed"
-                                    className={isMobileTooltip ? styles.tooltipForceShow : undefined}
-                                >
-                                    <span className={styles.tooltipName}>
-                                        {def.name}
-                                    </span>
-                                    <div className={styles.tooltipDescWrap}>
-                                        {(() => {
-                                            const { main, penalty } = splitPenalty(def.description);
-                                            return (
-                                                <>
-                                                    <span className={styles.tooltipDesc}>
-                                                        {renderDescription(main)}
-                                                    </span>
-                                                    {penalty && <SigilPenaltyLine text={penalty} />}
-                                                </>
-                                            );
-                                        })()}
-                                        {def.explainer && (
-                                            <SigilExplainer
-                                                label={def.explainer.label}
-                                                elements={def.explainer.elements}
-                                            />
-                                        )}
-                                    </div>
-                                    <span
-                                        className={styles.tooltipRarity}
-                                        style={{ backgroundColor: rarityColor }}
-                                    >
-                                        {def.rarity}
-                                    </span>
-                                </Tooltip>
-                            </div>
+                                            {def.rarity}
+                                        </span>
+                                    </>
+                                }
+                            />
                         );
                     }) : null}
                 </div>
@@ -559,7 +543,7 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         const tooltipPlacement = getTooltipPlacement(i, packItems.length);
                         const packImageUrl = getPackImageUrl(packId, 128);
 
-                        const cardEventHandlers = HAS_HOVER ? {
+                        const cardEventHandlers: ShopItemCardHandlers = HAS_HOVER ? {
                             onClick: () => setSelectedShopIndex(prev => {
                                 const next = prev === item.shopIndex ? null : item.shopIndex;
                                 if (next !== null) playClick();
@@ -573,25 +557,19 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         };
 
                         return (
-                            <div
+                            <ShopItemCard
                                 key={item.shopIndex}
-                                data-shop-index={item.shopIndex}
-                                className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""} ${isSelected ? styles.itemCardSelected : ""}`}
-                                style={{ ...cardStyleVars } as CSSProperties}
-                                {...cardEventHandlers}
-                            >
-                                {/* Pack priceChip + buyButton are anchored INSIDE cardImageWrap
-                                    so their percentage offsets resolve against the visible
-                                    portrait-art bounds rather than the square canvas wrapper.
-                                    `.packCardImageWrap` shrinks cardImageWrap to canvas size
-                                    so the chip's `top: -15%` and BUY's `top: 115%` read off
-                                    the art geometry. */}
-                                <div className={`${styles.cardImageWrap} ${styles.packCardImageWrap}`}>
-                                    <div className={`${styles.priceChip} ${styles.packPriceChip}`}>
-                                        <img src={goldIconUrl} alt="Gold" className={styles.priceIcon} />
-                                        <span className={styles.priceValue}>{item.cost}</span>
-                                    </div>
-
+                                shopIndex={item.shopIndex}
+                                cost={item.cost}
+                                canAfford={canAfford}
+                                isSelected={isSelected}
+                                isMobileTooltip={isMobileTooltip}
+                                tooltipPlacement={tooltipPlacement}
+                                cardStyleVars={{ ...cardStyleVars } as CSSProperties}
+                                buttonStyleVars={buttonStyleVars}
+                                cardEventHandlers={cardEventHandlers}
+                                variant="pack"
+                                itemScene={
                                     <ItemScene
                                         itemId={packId}
                                         index={sigilItems.length + i}
@@ -601,38 +579,25 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                                         displayScale={def.displayScale}
                                         className={`${styles.sigilCanvas} ${styles.packCanvas}`}
                                     />
-                                    {HAS_HOVER && isSelected && (
-                                        <button
-                                            type="button"
-                                            className={`${styles.buyButton} ${styles.packBuyButton}`}
-                                            style={buttonStyleVars}
-                                            onClick={(e) => {
-                                                if (!canAfford) return;
-                                                handleBuyPack(item.shopIndex, packId, e);
-                                            }}
-                                            disabled={!canAfford}
-                                        >
-                                            Buy
-                                        </button>
-                                    )}
-                                </div>
-
-                                <Tooltip
-                                    placement={tooltipPlacement}
-                                    arrow
-                                    variant="framed"
-                                    className={`${styles.packTooltip}${isMobileTooltip ? " " + styles.tooltipForceShow : ""}`}
-                                >
-                                    <span className={styles.tooltipName}>
-                                        {def.name}
-                                    </span>
-                                    <div className={styles.tooltipDescWrap}>
-                                        <span className={styles.tooltipDesc}>
-                                            {def.description}
+                                }
+                                buyEnabled={canAfford}
+                                onBuyClick={(e) => {
+                                    if (!canAfford) return;
+                                    handleBuyPack(item.shopIndex, packId, e);
+                                }}
+                                tooltipBody={
+                                    <>
+                                        <span className={styles.tooltipName}>
+                                            {def.name}
                                         </span>
-                                    </div>
-                                </Tooltip>
-                            </div>
+                                        <div className={styles.tooltipDescWrap}>
+                                            <span className={styles.tooltipDesc}>
+                                                {def.description}
+                                            </span>
+                                        </div>
+                                    </>
+                                }
+                            />
                         );
                     })}
                 </div>

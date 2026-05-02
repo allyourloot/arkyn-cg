@@ -1,63 +1,30 @@
+/* Backdrop, modal shell, header, title, close button compose from
+   `ModalFrame.module.css`. PouchModal is unusual in two ways:
+     - uses `max-height` instead of `height` (its body sizes to content
+       and only caps when the deck is large)
+     - the header has `position: relative` so its absolutely-positioned
+       `.subtitle` overlay can center across the full header width
+     - the close button is slightly larger than the other modals
+   No `.scrollArea` is composed because PouchModal's body doesn't
+   scroll — the rune grid sizes itself to fit. */
+
 .backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /* Must beat selected hand-card slot z-index (100) and the round-end
-       overlay (200), since both share the same overlay root and selected
-       runes would otherwise poke through the modal. */
-    z-index: 1000;
-    pointer-events: auto;
-    animation: arkyn-fade-in 0.15s ease-out;
+    composes: backdrop from "./ModalFrame.module.css";
 }
 
 .modal {
-    box-sizing: border-box;
+    composes: modal from "./ModalFrame.module.css";
     width: clamp(420px, 86vw, 920px);
     max-height: min(90vh, 760px);
-    /* 9-slice frame matching the side panels. */
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 24px;
-    border-image: var(--panel-bg) 24 24 24 24 fill / 24px 24px 24px 24px;
-    padding: 8px 12px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-
-    color: #e8d4b8;
-    image-rendering: pixelated;
-    /* Stop backdrop click from closing when clicking the modal body. */
-    cursor: default;
-    animation: arkyn-scale-in 0.18s cubic-bezier(0.2, 0.8, 0.4, 1);
 }
 
 .header {
-    box-sizing: border-box;
+    composes: header from "./ModalFrame.module.css";
     position: relative;
-    background: transparent;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 12px;
-    border-image: var(--section-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
-    padding: 8px 12px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    image-rendering: pixelated;
 }
 
 .title {
-    font-size: var(--font-size-md);
-    color: #ffffff;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
-    line-height: 1;
+    composes: title from "./ModalFrame.module.css";
 }
 
 .subtitle {
@@ -86,43 +53,17 @@
 }
 
 .closeButton {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 0;
+    composes: closeButton from "./ModalFrame.module.css";
     width: clamp(36px, 4vw, 52px);
     height: clamp(36px, 4vw, 52px);
-    position: relative;
-    transition: transform 0.1s ease;
 }
 
-.closeIcon,
-.closeIconHover {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    image-rendering: pixelated;
+.closeIcon {
+    composes: closeIcon from "./ModalFrame.module.css";
 }
 
 .closeIconHover {
-    opacity: 0;
-}
-
-.closeButton:hover .closeIconHover {
-    opacity: 1;
-}
-
-.closeButton:hover .closeIcon {
-    opacity: 0;
-}
-
-.closeButton:hover {
-    transform: scale(1.08);
-}
-
-.closeButton:active {
-    transform: scale(0.94);
+    composes: closeIconHover from "./ModalFrame.module.css";
 }
 
 /* Body splits the modal into a left-side element summary column and the

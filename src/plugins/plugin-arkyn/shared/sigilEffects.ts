@@ -59,49 +59,73 @@ const SIGIL_RNG_BAND_WIDTH = 100000;
 // neighbor's registry entry twice (original + copy).
 //
 // Certain sigils can't be cleanly duplicated and are excluded from the
-// copy. Each exclusion has a specific architectural or design reason:
-//   - caster:      design choice — avoid stacking +casts from one slot
-//   - voltage/hourglass/fortune: SIGIL_PROCS share an rngOffset across
-//                  copies, so two iterations of the same proc produce
-//                  identical rolls (deterministic but unintuitive).
-//                  Chainlink is the exception — chance: 1 means every
-//                  roll procs, so the RNG-sharing concern doesn't apply
-//                  and Mimic+Chainlink cleanly stacks a second retrigger
-//                  per rune on the final cast.
-//   - burnrite/fuze/impale/haphazard: binary unlocks / set-membership —
-//                  duplicating has no observable effect
-//   - executioner/sensei: SIGIL_ACCUMULATOR_XMULT keys `player.sigilAccumulators`
-//                  by sigil id, so a "second" copy shares the same
-//                  storage slot — can't carry a separate counter
-//   - binoculars:  writes `player.disabledResistance` (single @type string
-//                  field) — a second fire overwrites the first
-//   - banish:      SIGIL_DISCARD_HOOKS dispatcher can't banish the same
-//                  rune index twice safely in one pass
-//   - reanimate:   one-shot self-destruct in handleCast — Mimic-expanded
-//                  copies don't have their own slot to splice, so a copy
-//                  would re-fire indefinitely against a single original
-//   - mimic:       prevents `[mimic, mimic]` infinite chain / recursion
+// copy. Categories of reasons (rationale lives inline next to each entry):
+//   - design choice (would feel bad stacked from one slot)
+//   - shared RNG/storage slot (a second copy reads the same state)
+//   - binary unlock (duplicating has no observable effect)
+//   - one-shot mutator (copy would re-fire or overwrite the original)
+//   - recursion guard (mimic copying mimic)
 //
 // Mimic-incompatible neighbors silently make Mimic a no-op. Mimic at the
 // rightmost sigil slot (no neighbor) is likewise a no-op.
 
 export const MIMIC_INCOMPATIBLE: ReadonlySet<string> = new Set([
+    // Design choice — avoid stacking +casts from a single slot.
     "caster",
+
+    // SIGIL_PROCS share an rngOffset across copies, so two iterations of
+    // the same proc produce identical rolls (deterministic but
+    // unintuitive). Chainlink is the exception — chance: 1 means every
+    // roll procs, so the RNG-sharing concern doesn't apply and
+    // Mimic+Chainlink cleanly stacks a second retrigger per rune on the
+    // final cast.
     "voltage",
     "hourglass",
     "fortune",
     "blackjack",
+
+    // Binary unlocks / set membership — duplicating has no observable
+    // effect (the unlock either applies or it doesn't).
     "burnrite",
     "fuze",
     "impale",
     "haphazard",
+
+    // SIGIL_ACCUMULATOR_XMULT keys `player.sigilAccumulators` by sigil
+    // id, so a "second" copy shares the same storage slot and can't
+    // carry a separate counter. Future accumulator sigils that ARE
+    // Mimic-compatible would need per-slot accumulator storage instead.
     "executioner",
     "sensei",
+
+    // Writes `player.disabledResistance` (single string field) — a
+    // second fire overwrites the first, so a copy has no incremental
+    // effect.
     "binoculars",
+
+    // SIGIL_DISCARD_HOOKS dispatcher can't safely banish the same rune
+    // index twice in one pass (the second pass would index out of the
+    // already-modified hand).
     "banish",
+
+    // One-shot self-destruct in handleCast — Mimic-expanded copies
+    // don't have their own slot to splice, so a copy would re-fire
+    // indefinitely against a single original. This incompatibility is
+    // tied to the current implementation; if Reanimate moves to a
+    // SIGIL_ROUND_END_HOOKS registry pattern (each entry consumed by
+    // its own slot), this constraint can be lifted.
     "reanimate",
+
+    // Bomb-class sigils — one-shot mutators that consume themselves
+    // and apply a global effect; a copy has nothing to consume on its
+    // own slot and would re-apply the global effect against the
+    // original's bookkeeping.
     "boom_bomb",
     "big_bang",
+
+    // Recursion guard — prevents `[mimic, mimic]` infinite copy
+    // chains. A Mimic copying another Mimic would copy whatever the
+    // second Mimic was about to copy, then re-evaluate, etc.
     "mimic",
 ]);
 
@@ -1119,6 +1143,85 @@ export function applyAccumulatorIncrements(
         updates[sigilId] = current + count * def.perEventDelta;
     }
     return updates;
+}
+
+// ============================================================================
+// Category 12b — Round-End Hook (Reanimate pattern)
+// ============================================================================
+
+/**
+ * Snapshot of post-cast player + enemy state that round-end hooks
+ * inspect to decide whether to fire. Kept narrow on purpose so the
+ * registry stays a pure decision layer with no access to the full
+ * `ArkynPlayerState` — the caller (handleCast) is responsible for
+ * applying the side effect (flag set, splice on round-end transition,
+ * etc.) once the registry returns true.
+ */
+export interface RoundEndHookContext {
+    /** Enemy HP AFTER the just-resolved cast's damage was applied. */
+    enemyHp: number;
+    enemyMaxHp: number;
+    /** Player's remaining cast budget AFTER the just-resolved cast was
+     *  decremented. `0` means the just-resolved cast was the final one. */
+    castsRemaining: number;
+}
+
+export interface RoundEndHookDefinition {
+    /** Returns true if this sigil's round-end behavior should fire given
+     *  the post-cast state. Pure — no side effects, no flag mutation,
+     *  no splice. The caller wires the effect (typically: set a
+     *  schema-synced flag for client UI signaling, then splice the
+     *  sigil out at the round_end → shop transition).
+     *
+     *  Whether the player actually OWNS this sigil is the caller's
+     *  concern — the registry is keyed by sigil id, but the helper
+     *  `shouldRoundEndHookFire(id, ctx)` returns false for unknown
+     *  ids so callers can call it unconditionally. */
+    shouldFire(ctx: RoundEndHookContext): boolean;
+}
+
+/**
+ * Sigils that activate exactly once per round at cast resolution and
+ * consume themselves at the next round_end → shop transition. New
+ * "self-destruct on condition" sigils slot in here.
+ *
+ * Today the only entry is Reanimate: when the final cast leaves the
+ * enemy alive at ≤25% HP, fire the save effect (treat the round as a
+ * win for gold / achievement purposes) and consume the sigil at the
+ * subsequent shop entry.
+ *
+ * Note that the consumed-sigil flag (`player.reanimateConsumed`) is
+ * load-bearing UI state, schema-synced to the client so SigilBar and
+ * ArkynOverlay can drive the save bubble + dissolve animations on the
+ * sigil's actual slot. A future hook that doesn't need a UI animation
+ * could skip the flag, but Reanimate's animation timeline depends on
+ * it — see SigilBar.tsx and ArkynOverlay.tsx Reanimate paths.
+ */
+export const SIGIL_ROUND_END_HOOKS: Record<string, RoundEndHookDefinition> = {
+    reanimate: {
+        shouldFire(ctx) {
+            // Save the player iff the just-resolved cast was their final
+            // cast AND the enemy survived below the 25% HP threshold.
+            // Above 25% the player wasn't close to a clear, so the save
+            // doesn't apply. At 0 HP the enemy is already dead and the
+            // normal kill path runs.
+            return ctx.enemyHp > 0
+                && ctx.castsRemaining <= 0
+                && ctx.enemyHp / ctx.enemyMaxHp <= 0.25;
+        },
+    },
+};
+
+/**
+ * Convenience wrapper — returns `false` for unknown sigil ids so the
+ * caller can call this unconditionally without checking the registry
+ * first.
+ */
+export function shouldRoundEndHookFire(
+    sigilId: string,
+    ctx: RoundEndHookContext,
+): boolean {
+    return SIGIL_ROUND_END_HOOKS[sigilId]?.shouldFire(ctx) ?? false;
 }
 
 // ============================================================================

@@ -3,6 +3,7 @@ import {
     applyAccumulatorIncrements,
     flattenMapSchema,
     getEndOfRoundSigilGold,
+    shouldRoundEndHookFire,
     SIGIL_CAST_HOOKS,
     snapshotRune,
 } from "../../shared";
@@ -190,12 +191,20 @@ export function handleCast(
     // sigil is NOT spliced here; the splice happens on the round_end →
     // shop transition in handleReady so the client has a real slot to
     // animate against.
+    //
+    // Trigger condition lives in `SIGIL_ROUND_END_HOOKS.reanimate`
+    // (shared/sigilEffects.ts) — keep new "consume on condition" sigils
+    // there. The flag set + splice pattern stays here per-sigil because
+    // `reanimateConsumed` is load-bearing UI state schema-synced to the
+    // client's animation timeline.
     if (
-        player.enemy.currentHp > 0 &&
-        player.castsRemaining <= 0 &&
-        player.enemy.currentHp / player.enemy.maxHp <= 0.25 &&
         !player.reanimateConsumed &&
-        Array.from(player.sigils).indexOf("reanimate") >= 0
+        Array.from(player.sigils).indexOf("reanimate") >= 0 &&
+        shouldRoundEndHookFire("reanimate", {
+            enemyHp: player.enemy.currentHp,
+            enemyMaxHp: player.enemy.maxHp,
+            castsRemaining: player.castsRemaining,
+        })
     ) {
         player.reanimateConsumed = true;
         logger.info(
