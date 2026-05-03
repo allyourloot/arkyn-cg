@@ -230,7 +230,7 @@
     border-style: solid;
     border-color: transparent;
     border-width: 10px;
-    border-image: var(--btn-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
+    border-image: var(--btn-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
     background-color: transparent;
     color: #fff;
 
@@ -257,7 +257,8 @@
 }
 
 .buttonVisible:hover {
-    border-image: var(--btn-bg-hover) 10 10 10 10 fill / 10px 10px 10px 10px;
+    border-image: var(--btn-bg-hover) 24 24 24 24 fill / 10px 10px 10px 10px;
+    filter: brightness(1.15);
 }
 
 .buttonVisible:active {

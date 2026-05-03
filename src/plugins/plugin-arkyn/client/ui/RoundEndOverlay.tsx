@@ -26,11 +26,8 @@ import {
     stopTypewriter,
 } from "../sfx";
 import PanelFrame from "./PanelFrame";
-import { createPanelStyleVars } from "./styles";
+import { createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
-import buttonGreenUrl from "/assets/ui/button-green.png?url";
-import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
-import buttonGreenDisabledUrl from "/assets/ui/button-green-disabled.png?url";
 import styles from "./RoundEndOverlay.module.css";
 
 // Per-character delay for the typewriter reveal — fast but still legible.
@@ -51,9 +48,8 @@ const LINE_INTEREST_TEXT = "Interest...............";
 // the same variable the rest of the panel chrome uses.
 const panelStyleVars = createPanelStyleVars();
 const buttonStyleVars = {
-    "--btn-bg": `url(${buttonGreenUrl})`,
-    "--btn-bg-hover": `url(${buttonGreenHoverUrl})`,
-    "--btn-bg-disabled": `url(${buttonGreenDisabledUrl})`,
+    "--btn-bg": INNER_FRAME_BGS.green,
+    "--btn-bg-hover": INNER_FRAME_BGS.green,
 } as React.CSSProperties;
 
 /**
@@ -289,6 +285,7 @@ export default function RoundEndOverlay() {
     const handleContinue = () => {
         if (!showButton) return;
         playButton();
+        playGold();
         sendReady();
     };
 

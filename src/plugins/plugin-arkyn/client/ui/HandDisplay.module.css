@@ -36,10 +36,15 @@
     right: clamp(8px, 1vw, 16px);
     top: 100%;
     margin-top: clamp(2px, 0.4vh, 6px);
-    font-size: var(--font-size-xs, 1rem);
+    /* Same clamp formula as SigilBar/ConsumableBar's `.countLabel` so
+       all three "N/M" readouts match in size on every viewport (was
+       `var(--font-size-xs)` which read significantly larger than the
+       other two count labels, especially on mobile). */
+    font-size: clamp(var(--font-size-3xs), 0.9vw, var(--font-size-2xs));
     color: #ffffff;
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
     letter-spacing: 1px;
+    line-height: 1;
     pointer-events: none;
     opacity: 0.7;
 }

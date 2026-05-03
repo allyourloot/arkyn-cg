@@ -166,16 +166,18 @@
     image-rendering: pixelated;
 }
 
-/* ── Landscape phone compact ── */
-@media (max-height: 500px) {
+/* ── Phone compact (landscape OR narrow portrait) ──
+   Extends the existing landscape rule to catch portrait phones too —
+   the desktop subtitle is absolute-positioned + center-aligned and
+   wraps onto three lines on a narrow modal, so portrait phones need
+   the same compact header treatment landscape already had. */
+@media (max-height: 500px), (max-width: 600px) {
     .backdrop {
-        justify-content: flex-end;
-        padding-right: clamp(8px, 2vw, 24px);
+        padding: 4px;
     }
 
     .modal {
-        width: clamp(340px, 48vw, 560px);
-        height: 95vh;
+        width: min(96vw, 640px);
         max-height: 95vh;
         border-width: 12px;
         border-image: var(--panel-bg) 24 24 24 24 fill / 12px 12px 12px 12px;
@@ -183,45 +185,42 @@
         gap: 4px;
     }
 
+    /* Title + subtitle + close all sit on a single row. Subtitle is
+       inline-flex with nowrap so the three "N remaining / drawn / spent"
+       groups can't break onto separate lines. */
     .header {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        grid-template-rows: auto auto;
+        display: flex;
+        flex-direction: row;
         align-items: center;
+        gap: 8px;
         border-width: 8px;
         border-image: var(--section-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
         padding: 3px 8px;
-        gap: 2px 6px;
-    }
-
-    .title {
-        grid-column: 1;
-        grid-row: 1;
-    }
-
-    .subtitle {
-        position: static;
-        grid-column: 1 / -1;
-        grid-row: 2;
-        text-align: left;
-        pointer-events: auto;
-        font-size: var(--font-size-2xs);
-    }
-
-    .closeButton {
-        grid-column: 3;
-        grid-row: 1 / -1;
-        align-self: center;
-        width: clamp(28px, 3.4vw, 38px);
-        height: clamp(28px, 3.4vw, 38px);
     }
 
     .title {
         font-size: var(--font-size-xs);
+        letter-spacing: 1px;
+        flex: 0 0 auto;
     }
 
     .subtitle {
-        font-size: var(--font-size-2xs);
+        position: static;
+        text-align: left;
+        pointer-events: auto;
+        font-size: var(--font-size-3xs);
+        letter-spacing: 0.5px;
+        flex: 1 1 auto;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .closeButton {
+        flex: 0 0 auto;
+        width: clamp(28px, 3.4vw, 38px);
+        height: clamp(28px, 3.4vw, 38px);
     }
 
     .body {
@@ -258,8 +257,8 @@
     .grid {
         order: 0;
         flex: 1;
-        padding: 8px clamp(10px, 2.5vw, 24px);
-        row-gap: clamp(10px, 2vh, 18px);
+        padding: 4px 6px;
+        row-gap: clamp(8px, 1.6vh, 14px);
         justify-content: flex-start;
         overflow-y: auto;
     }

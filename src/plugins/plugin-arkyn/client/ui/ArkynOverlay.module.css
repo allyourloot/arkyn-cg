@@ -263,7 +263,14 @@
     }
 
     .handStack {
-        gap: clamp(2px, 0.4vh, 6px);
+        /* Larger gap than the previous near-zero value so the action
+           buttons have visible separation from the hand cards - at the
+           prior 2-6px gap, players were accidentally tapping Cast /
+           Discard while reaching for runes. The taller stack also gets
+           pushed up by the centerColumn's `justify-content: center`,
+           so the hand + PlayArea both shift up slightly as a side
+           effect (which the user also wants). */
+        gap: clamp(16px, 2.8vh, 26px);
         padding-bottom: clamp(14px, 3vh, 26px);
     }
 
