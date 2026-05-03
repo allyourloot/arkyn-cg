@@ -14,6 +14,7 @@ import {
     usePackAnimating,
     useSigils,
     setPackAnimating,
+    setShopDropZonePreview,
     emitSigilPurchase,
     emitPackPurchase,
 } from "../arkynStore";
@@ -311,6 +312,34 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
         if (activeDrag) setMobileTooltipShopIndex(null);
     }, [activeDrag]);
 
+    // Mobile drop-zone preview — when the user taps a buyable card to
+    // open its tooltip, light up the matching drop zone so they can SEE
+    // where the item needs to go (otherwise the drop zones only appear
+    // after a drag is engaged, which players don't always discover).
+    // Sigils light the sigil zone, packs light the pack zone. Skipped
+    // for unbuyable items (can't afford / sigil-bar-full) since the
+    // drag would just bounce — showing the zone there would mislead.
+    // Cleared whenever the tap-tooltip closes, the user starts a real
+    // drag (activeDrag visibility takes over), or the shop unmounts.
+    useEffect(() => {
+        if (HAS_HOVER) return;
+        if (mobileTooltipShopIndex === null) {
+            setShopDropZonePreview(null);
+            return;
+        }
+        const item = shopItems[mobileTooltipShopIndex];
+        if (!item || item.purchased) {
+            setShopDropZonePreview(null);
+            return;
+        }
+        const isSigil = item.itemType === "sigil";
+        const buyable = isSigil
+            ? gold >= item.cost && !sigilBarFull
+            : gold >= item.cost;
+        setShopDropZonePreview(buyable ? (isSigil ? "sigil" : "pack") : null);
+    }, [mobileTooltipShopIndex, shopItems, gold, sigilBarFull]);
+    useEffect(() => () => { setShopDropZonePreview(null); }, []);
+
     const handleContinue = () => {
         playButton();
         sendReady();
@@ -540,7 +569,17 @@ export default function ShopScreen({ ref }: ShopScreenProps = {}) {
                         const canAfford = gold >= item.cost;
                         const isSelected = selectedShopIndex === item.shopIndex;
                         const isMobileTooltip = mobileTooltipShopIndex === item.shopIndex;
-                        const tooltipPlacement = getTooltipPlacement(i, packItems.length);
+                        // On touch the pack drop zone is anchored to the
+                        // right edge of the viewport, so a right-side
+                        // tooltip on the second pack would land directly
+                        // on top of the drop zone — pinning all pack
+                        // tooltips to the left on mobile keeps the
+                        // tooltip and the drop-zone hint visible at the
+                        // same time. Desktop keeps the auto left/right
+                        // split since there's no drop zone competing.
+                        const tooltipPlacement = HAS_HOVER
+                            ? getTooltipPlacement(i, packItems.length)
+                            : "left";
                         const packImageUrl = getPackImageUrl(packId, 128);
 
                         const cardEventHandlers: ShopItemCardHandlers = HAS_HOVER ? {

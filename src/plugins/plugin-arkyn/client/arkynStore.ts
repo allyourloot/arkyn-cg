@@ -645,6 +645,22 @@ export function useActiveDrag() {
     return useSyncExternalStore(subscribe, () => activeDrag);
 }
 
+// Mobile-only "drop zone preview". Set when the user taps a buyable
+// shop card to open its tooltip — the matching drop zone lights up so
+// the player gets a discoverability hint that drag-to-buy is the
+// gesture (without actually requiring the drag to engage). Cleared on
+// tap-dismiss, on outside click, on drag-engage (activeDrag takes over),
+// and when the shop unmounts.
+let shopDropZonePreview: ShopDropZoneKind | null = null;
+export function setShopDropZonePreview(k: ShopDropZoneKind | null) {
+    if (shopDropZonePreview === k) return;
+    shopDropZonePreview = k;
+    notify();
+}
+export function useShopDropZonePreview() {
+    return useSyncExternalStore(subscribe, () => shopDropZonePreview);
+}
+
 // Drop-zone DOM registry — ShopDropZone instances write here, the drag
 // hook reads at hit-test time.
 const shopDropZoneEls: Record<ShopDropZoneKind, HTMLElement | null> = {

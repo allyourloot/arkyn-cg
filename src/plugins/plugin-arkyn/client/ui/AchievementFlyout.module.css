@@ -21,8 +21,11 @@
     align-items: center;
     gap: 16px;
     padding: 14px 18px;
-    min-width: 360px;
-    max-width: 520px;
+    /* Floor at min(360px, viewport-12px) so narrow phone portraits don't
+       overflow the screen edge. The desktop max stays at 520px. */
+    min-width: min(360px, calc(100vw - 24px));
+    max-width: min(520px, calc(100vw - 24px));
+    box-sizing: border-box;
     image-rendering: pixelated;
     user-select: none;
     transition: filter 120ms ease-out, transform 120ms ease-out;
@@ -85,4 +88,47 @@
 .sigilCanvas {
     position: absolute;
     inset: 0;
+}
+
+/* ── Phone compact (landscape OR narrow portrait) ──
+   Matches the breakpoint used by AchievementsModal so the flyout shrinks
+   in lockstep with the rest of the UI on mobile. The desktop card is
+   roughly half the height of a typical phone in landscape, which made
+   the unlock pop visually overwhelming on iPhone playtests. */
+@media (max-height: 500px), (max-width: 700px) {
+    .root {
+        top: 10px;
+    }
+
+    .card {
+        gap: 10px;
+        padding: 8px 12px;
+        min-width: min(260px, calc(100vw - 16px));
+        max-width: min(360px, calc(100vw - 16px));
+    }
+
+    .heading {
+        font-size: 9px;
+        letter-spacing: 0.14em;
+    }
+
+    .name {
+        font-size: 15px;
+    }
+
+    .description {
+        font-size: 11px;
+        line-height: 1.25;
+    }
+
+    .unlockTag {
+        margin-top: 2px;
+        font-size: 8px;
+        letter-spacing: 0.12em;
+    }
+
+    .sigilWrap {
+        width: 44px;
+        height: 44px;
+    }
 }

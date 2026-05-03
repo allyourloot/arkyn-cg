@@ -118,12 +118,14 @@ export default function ShopItemCard({
     return (
         <div
             data-shop-index={shopIndex}
-            className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""} ${isSelected ? styles.itemCardSelected : ""}`}
+            className={`${styles.itemCard} ${!canAfford ? styles.itemCardCantAfford : ""} ${isSelected ? styles.itemCardSelected : ""} ${isMobileTooltip ? styles.itemCardTooltipOpen : ""}`}
             style={cardStyleVars}
             {...cardEventHandlers}
         >
-            {!isPack && priceChip}
-            {cardImageWrap}
+            <div className={styles.itemCardInner}>
+                {!isPack && priceChip}
+                {cardImageWrap}
+            </div>
             <Tooltip
                 placement={tooltipPlacement}
                 arrow

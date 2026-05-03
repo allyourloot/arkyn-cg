@@ -26,6 +26,14 @@
     --z-shop-price-chip: 2;
     --z-shop-button: 5;
     --z-shop-section: 10;
+    /* Bumped above sibling sections (also z-shop-section) when a tooltip
+       is open inside via the `:has(.itemCard:hover)` /
+       `:has(.itemCardTooltipOpen)` rules in ShopScreen.module.css —
+       tooltips painting outside the card's bounds (e.g. a sigil tooltip
+       extending downward) would otherwise be covered by the next
+       section's 9-slice border-image chrome. Sits below drop-zone (21)
+       so the active drag overlay still wins. */
+    --z-shop-section-elevated: 20;
     --z-shop-drop-zone: 21;
     --z-shop-selected-slot: 30;
     --z-drag-clone: 105;

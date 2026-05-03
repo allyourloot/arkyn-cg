@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 import {
     useActiveDrag,
+    useShopDropZonePreview,
     registerShopDropZone,
     type ShopDropZoneKind,
 } from "../arkynStore";
@@ -32,15 +33,24 @@ interface ShopDropZoneProps {
  */
 export default function ShopDropZone({ kind }: ShopDropZoneProps) {
     const activeDrag = useActiveDrag();
+    const previewKind = useShopDropZonePreview();
     const ref = useRef<HTMLDivElement>(null);
-    const visible = activeDrag?.targetKind === kind;
+    // Two visibility paths:
+    //   1. activeDrag    — the player has actually engaged drag; this is
+    //                      the live "drop here" target.
+    //   2. previewKind   — the player tapped a buyable card to open its
+    //                      tooltip, but hasn't dragged yet. Showing the
+    //                      zone in this state surfaces the drag-to-buy
+    //                      affordance for players who don't intuit it
+    //                      from a tap alone.
+    const visible = activeDrag?.targetKind === kind || previewKind === kind;
 
     useLayoutEffect(() => {
         registerShopDropZone(kind, ref.current);
         return () => registerShopDropZone(kind, null);
     }, [kind]);
 
-    const label = kind === "sigil" ? "Drop sigil here to buy" : "Drop pack here to buy";
+    const label = kind === "sigil" ? "Drag sigil here to buy" : "Drag pack here to buy";
     const kindClass = kind === "sigil" ? styles.zoneSigil : styles.zonePack;
 
     return (

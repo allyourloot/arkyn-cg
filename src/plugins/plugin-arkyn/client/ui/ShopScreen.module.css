@@ -216,6 +216,22 @@
     z-index: var(--z-shop-section);
 }
 
+/* Lift the entire section above its sibling sections while one of its
+   cards has a tooltip showing. Both Items and Packs sections sit at
+   `--z-shop-section`, so a sigil tooltip extending downward into Packs
+   territory was getting painted under the Packs section's inner-frame
+   border-image chrome (later sibling, same z, wins). The card-level
+   `--z-shop-selected-slot` lift can't escape its own section's stacking
+   context — only lifting the section itself promotes the tooltip above
+   the next section. Covers both hover-revealed (desktop) and tap-toggled
+   (mobile) tooltips, plus the desktop click-selected state for
+   completeness. */
+.section:has(.itemCard:hover),
+.section:has(.itemCardTooltipOpen),
+.section:has(.itemCardSelected) {
+    z-index: var(--z-shop-section-elevated);
+}
+
 /* --- Item grid: 2 items side by side --- */
 .itemGrid {
     display: flex;
@@ -255,11 +271,6 @@
 .itemCard {
     position: relative;
     box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: clamp(4px, 0.6vh, 8px) clamp(2px, 0.4vw, 6px);
     font-family: inherit;
     color: #fff;
     cursor: pointer;
@@ -300,7 +311,25 @@
     will-change: opacity;
 }
 
-/* Hover pop-shake — one-shot scale-up + diminishing rotation that
+/* Inner wrapper that owns the visual layout (flex column + padding)
+   AND the hover pop-shake animation, so the Tooltip — which lives as
+   a sibling of .itemCardInner inside .itemCard — is not part of the
+   transformed subtree and stays still when the card pops. The price
+   chip's absolute positioning anchors here (this is its containing
+   block via position: relative). */
+.itemCardInner {
+    box-sizing: border-box;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(4px, 0.6vh, 8px) clamp(2px, 0.4vw, 6px);
+}
+
+/* Hover pop-shake - one-shot scale-up + diminishing rotation that
    fires once each time the cursor enters the card. Each hover
    restarts the animation from 0% (CSS re-applies the `animation`
    property on selector match), so leaving and re-entering re-pops
@@ -308,13 +337,14 @@
 
    Replaces the prior translateY(-4px) lift, which was reading as a
    "selected" state and conflicting with the actual selection lift
-   below. Gated to `(hover: hover)` so iOS Safari/Chrome — which
-   fires :hover on tap — doesn't pop the card on every touch.
+   below. Gated to `(hover: hover)` so iOS Safari/Chrome - which
+   fires :hover on tap - doesn't pop the card on every touch.
    Excluded for selected cards (they own the lift instead) and
    unaffordable cards (the pop would feel mocking on a card the
-   player can't buy). */
+   player can't buy). Targets .itemCardInner so the sibling Tooltip
+   isn't dragged through the scale+rotate keyframes. */
 @media (hover: hover) {
-    .itemCard:hover:not(.itemCardCantAfford):not(.itemCardSelected) {
+    .itemCard:hover:not(.itemCardCantAfford):not(.itemCardSelected) .itemCardInner {
         animation: arkyn-shop-item-pop-shake 0.36s ease-out 1;
     }
 }
@@ -337,6 +367,17 @@
     transform: translateY(-8px);
     z-index: var(--z-shop-selected-slot);
     animation: none;
+}
+
+/* Mobile tap-to-peek elevation. The tap-tooltip path doesn't go through
+   `.itemCardSelected` (no BUY button on touch, no translateY shift), so
+   a sigil tooltip would stay inside the Items `.section`'s stacking
+   context (z-index var(--z-shop-section)) and end up painted under the
+   Packs section's 9-slice border-image, which sits at the same z-index
+   later in the DOM. Lifting the card to the same selected-slot layer
+   keeps its tooltip visible above the next section's chrome. */
+.itemCardTooltipOpen {
+    z-index: var(--z-shop-selected-slot);
 }
 
 /* Dim only the gold price chip when the player can't afford the item —
@@ -812,7 +853,7 @@
         gap: clamp(8px, 1.4vw, 18px);
     }
 
-    .itemCard {
+    .itemCardInner {
         padding: clamp(2px, 0.4vh, 5px) clamp(1px, 0.2vw, 3px);
     }
 
