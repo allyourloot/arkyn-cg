@@ -11,6 +11,12 @@ const HEARTBEAT_BASE_URL = "https://prod.mvp.hytopia.com/Play/Matchmaking/Lobbie
 type RoomJoinOptions = {
     lobbyId?: string;
     sessionToken?: string;
+    // Backup-platform identity (e.g. gamesbyhammy.cloud): the host page
+    // injects the player's account ID via `localPlayerId` even when no
+    // HYTOPIA lobbyId/sessionToken is available. Plumbed through so the
+    // server can key saves by a stable ID instead of the indexed fallback.
+    localPlayerId?: string;
+    localUsername?: string;
 };
 
 type BrowserLocation = {
@@ -19,13 +25,16 @@ type BrowserLocation = {
 };
 
 function extractJoinOptions(searchParams: URLSearchParams): RoomJoinOptions {
-    const lobbyId = searchParams.get("lobbyId") ?? undefined;
-    const sessionToken = searchParams.get("sessionToken") ?? undefined;
-
     return {
-        lobbyId,
-        sessionToken,
+        lobbyId: searchParams.get("lobbyId") ?? undefined,
+        sessionToken: searchParams.get("sessionToken") ?? undefined,
+        localPlayerId: searchParams.get("localPlayerId") ?? undefined,
+        localUsername: searchParams.get("localUsername") ?? undefined,
     };
+}
+
+function hasResolvableIdentity(options: RoomJoinOptions): boolean {
+    return Boolean((options.lobbyId && options.sessionToken) || options.localPlayerId);
 }
 
 function getBrowserLocation(): BrowserLocation | null {
@@ -48,13 +57,13 @@ function resolveRoomJoinOptions(): RoomJoinOptions | null {
     }
 
     const fromSearch = extractJoinOptions(new URLSearchParams(location.search));
-    if (fromSearch.lobbyId && fromSearch.sessionToken) {
+    if (hasResolvableIdentity(fromSearch)) {
         return fromSearch;
     }
 
     const hash = location.hash.startsWith("#") ? location.hash.slice(1) : location.hash;
     const fromHash = extractJoinOptions(new URLSearchParams(hash));
-    if (fromHash.lobbyId && fromHash.sessionToken) {
+    if (hasResolvableIdentity(fromHash)) {
         return fromHash;
     }
 
@@ -66,7 +75,7 @@ function resolveRoomJoinOptions(): RoomJoinOptions | null {
     try {
         const nested = new URL(nestedClientUrl);
         const fromNestedClientUrl = extractJoinOptions(nested.searchParams);
-        if (fromNestedClientUrl.lobbyId && fromNestedClientUrl.sessionToken) {
+        if (hasResolvableIdentity(fromNestedClientUrl)) {
             return fromNestedClientUrl;
         }
     } catch {

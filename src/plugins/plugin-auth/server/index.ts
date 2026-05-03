@@ -91,6 +91,26 @@ function getIndexedAuthData(currentIdx: number): UserAuthData {
     };
 }
 
+// Backup-platform path: when no HYTOPIA validation is available, accept a
+// stable identity passed via join options (e.g. gamesbyhammy.cloud injects
+// `localPlayerId` from the host page). TODO: validate this token against
+// the backup platform's API once one exists — currently trusted as-is, so
+// any client can spoof another user's ID. Acceptable for the
+// HYTOPIA-shutdown stopgap; revisit before any open-internet exposure.
+function getBackupPlatformAuthData(options: unknown): UserAuthData | null {
+    if (!options || typeof options !== "object") return null;
+    const data = options as Record<string, unknown>;
+    const localPlayerId = data.localPlayerId;
+    if (typeof localPlayerId !== "string" || localPlayerId.length === 0) return null;
+    const localUsername = data.localUsername;
+    return {
+        userId: localPlayerId,
+        username: typeof localUsername === "string" && localUsername.length > 0
+            ? localUsername
+            : localPlayerId,
+    };
+}
+
 export function AuthPluginServer(): ServerPlugin {
     return {
         id: "auth",
@@ -120,12 +140,15 @@ export function AuthPluginServer(): ServerPlugin {
             runtime.setAuthHandler(async (client, options) => {
                 const productionAuthData = await validateSessionInProduction(options);
                 let authData: UserAuthData;
+                const backupAuthData = productionAuthData ? null : getBackupPlatformAuthData(options);
                 if (productionAuthData) {
                     authData = productionAuthData;
                 } else if (pinnedDevPlayerId) {
                     // Pinned identity in dev — every connection uses the
                     // same userId/username, so save state survives refreshes.
                     authData = { userId: pinnedDevPlayerId, username: pinnedDevPlayerId };
+                } else if (backupAuthData) {
+                    authData = backupAuthData;
                 } else {
                     authData = getIndexedAuthData(currentIdx);
                     currentIdx += 1;
