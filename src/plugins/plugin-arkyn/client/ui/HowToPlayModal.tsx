@@ -6,6 +6,7 @@ import {
     AUGURY_PACK_TAROT_CHOICES,
     BOSS_DEBUFFS,
     CASTS_PER_ROUND,
+    CODEX_PACK_CHOICES,
     DISCARDS_PER_ROUND,
     ELEMENT_TYPES,
     HAND_SIZE,
@@ -14,6 +15,7 @@ import {
     MAX_SIGILS,
     PACK_DEFINITIONS,
     PACK_TYPES,
+    RUNE_PACK_CHOICES,
     SCROLL_RUNE_BONUS,
     SIGIL_DEFINITIONS,
     TAROT_DEFINITIONS,
@@ -133,7 +135,7 @@ function BasicsTab() {
                 <p className={styles.sectionText}>
                     You're a runecaster facing a procession of foes. Each round,
                     draw runes from your pouch, build a cast, and unleash a spell.
-                    Survive long enough and the shop opens — buy <span className={styles.highlight}>Sigils</span>,
+                    Survive long enough and the shop opens - buy <span className={styles.highlight}>Sigils</span>,
                     <span className={styles.highlight}> packs</span>, and
                     <span className={styles.highlight}> scrolls</span> to grow stronger.
                 </p>
@@ -151,7 +153,7 @@ function BasicsTab() {
                     Each round you draw <span className={styles.highlight}>{HAND_SIZE} runes</span>.
                     Pick up to <span className={styles.highlight}>{MAX_PLAY}</span> and cast,
                     or discard runes you don't want and redraw. The round ends when you
-                    spend your last cast — kill the enemy before then or it's game over.
+                    spend your last cast - kill the enemy before then or it's game over.
                 </p>
             </div>
 
@@ -159,7 +161,7 @@ function BasicsTab() {
                 <div className={styles.sectionHeading}>The 13 Elements</div>
                 <p className={styles.sectionText}>
                     Every rune belongs to one of thirteen elements, split across two
-                    clusters. The clusters drive sigil interactions — synergy pairs
+                    clusters. The clusters drive sigil interactions - synergy pairs
                     (below) work independently of clusters.
                 </p>
 
@@ -167,7 +169,7 @@ function BasicsTab() {
                     Elemental Cluster
                 </div>
                 <p className={styles.sectionCaption}>
-                    Combinable elements — eligible for the <span className={styles.highlight}>Fuze</span> sigil's loose-duo combo spells.
+                    Combinable elements - eligible for the <span className={styles.highlight}>Fuze</span> sigil's loose-duo combo spells.
                 </p>
                 <div className={styles.elementGrid}>
                     {COMBINABLE_ELEMENTS.map(el => <ElementChip key={el} element={el} />)}
@@ -188,10 +190,10 @@ function BasicsTab() {
                 <div className={styles.sectionHeading}>Synergy Pairs</div>
                 <p className={styles.sectionText}>
                     Specific element pairs trigger unique combo spells when played in
-                    poker shapes — <span className={styles.highlight}>Two Pair</span> (2 + 2)
+                    poker shapes - <span className={styles.highlight}>Two Pair</span> (2 + 2)
                     or <span className={styles.highlight}>Full House</span> (3 + 2).
                     These are the <span className={styles.highlight}>{ALL_SYNERGY_PAIRS.length}</span> default
-                    synergies — they span both clusters:
+                    synergies - they span both clusters:
                 </p>
                 <div className={styles.pairList}>
                     {ALL_SYNERGY_PAIRS.map(([a, b]) => (
@@ -288,7 +290,7 @@ function ScoringTab() {
             <div className={styles.section}>
                 <div className={styles.sectionHeading}>xMult</div>
                 <p className={styles.sectionText}>
-                    Some sigils grant <span className={styles.xmultChip}>xMult</span> — a final multiplier
+                    Some sigils grant <span className={styles.xmultChip}>xMult</span> - a final multiplier
                     that runs AFTER everything else. A 200-damage cast at <span className={styles.xmultChip}>×2</span> xMult
                     deals <span className={styles.highlight}>400</span>. Stacking xMult is the highest-leverage scaling in the game.
                 </p>
@@ -303,20 +305,20 @@ function CombatTab() {
     return (
         <div className={styles.scrollArea}>
             <div className={styles.section}>
-                <div className={styles.sectionHeading}>Weakness &amp; Resistance</div>
+                <div className={styles.sectionHeading}>Vulnerability &amp; Resistance</div>
                 <p className={styles.sectionText}>
-                    Every enemy has a list of elements they're <span className={styles.weakLabel}>Weak</span> to
+                    Every enemy has a list of elements they're <span className={styles.weakLabel}>Vulnerable</span> to
                     and elements they <span className={styles.resistLabel}>Resist</span>. These are shown as
                     chips on the enemy panel before each round.
                 </p>
 
                 <div className={styles.statusRow}>
                     <div className={styles.weakChip}>
-                        <span className={styles.statusLabel}>Weak</span>
+                        <span className={styles.statusLabel}>Vulnerable</span>
                         <span className={styles.statusValue}>×2</span>
                     </div>
                     <p className={styles.statusDesc}>
-                        Runes of a weak element deal <span className={styles.weakLabel}>double</span> base damage.
+                        Runes of a vulnerable element deal <span className={styles.weakLabel}>double</span> base damage.
                     </p>
                 </div>
 
@@ -331,9 +333,9 @@ function CombatTab() {
                 </div>
 
                 <p className={styles.sectionNote}>
-                    Modifiers apply per-rune to <span className={styles.baseChip}>Base</span> only —
+                    Modifiers apply per-rune to <span className={styles.baseChip}>Base</span> only -
                     your <span className={styles.multChip}>Mult</span> is unaffected. Build hands that
-                    match weaknesses; lean on neutral or weakness-matching elements when fighting resistant foes.
+                    match vulnerabilities; lean on neutral or vulnerability-matching elements when fighting resistant foes.
                 </p>
             </div>
 
@@ -346,10 +348,10 @@ function CombatTab() {
                     </div>
                     <div className={styles.critBody}>
                         <p className={styles.sectionText}>
-                            When your cast contains a rune that the enemy is <span className={styles.weakLabel}>Weak</span> to,
-                            the hit lands as a <span className={styles.critLabel}>CRITICAL</span> — the
+                            When your cast contains a rune that the enemy is <span className={styles.weakLabel}>Vulnerable</span> to,
+                            the hit lands as a <span className={styles.critLabel}>CRITICAL</span> - the
                             damage number pops with a red burst and a louder hit sound. Stack as many
-                            weakness-matching runes as you can into a single cast for maximum payoff.
+                            vulnerability-matching runes as you can into a single cast for maximum payoff.
                         </p>
                     </div>
                 </div>
@@ -370,7 +372,7 @@ function CombatTab() {
                     ))}
                 </div>
                 <p className={styles.sectionNote}>
-                    The debuff is fixed by your run seed — replaying the same seed gives the
+                    The debuff is fixed by your run seed - replaying the same seed gives the
                     same boss debuff sequence.
                 </p>
             </div>
@@ -390,7 +392,7 @@ function ItemsTab() {
                     <span className={styles.sectionText}>
                         Permanent passive items bought from the shop. Some add flat <span className={styles.multChip}>Mult</span>,
                         some grant <span className={styles.xmultChip}>xMult</span>, others change your hand size, cast budget,
-                        or how runes are scored. Sigils stack — see the <span className={styles.highlight}>Sigils</span> sub-tab
+                        or how runes are scored. Sigils stack - see the <span className={styles.highlight}>Sigils</span> sub-tab
                         for the full list.
                     </span>
                 </p>
@@ -401,7 +403,7 @@ function ItemsTab() {
                 <p className={styles.sectionRow}>
                     <span className={styles.sectionPillMax}>Max {MAX_CONSUMABLES}</span>
                     <span className={styles.sectionText}>
-                        One-shot items you can use mid-round. They trigger instantly —
+                        One-shot items you can use mid-round. They trigger instantly -
                         good for finishing off a boss or rescuing a bad draw.
                     </span>
                 </p>
@@ -419,8 +421,8 @@ function ItemsTab() {
             <div className={styles.section}>
                 <div className={styles.sectionHeading}>Packs</div>
                 <p className={styles.sectionText}>
-                    Deferred-pick shop items — buy a pack and a picker opens with a randomized
-                    set, you keep one. Three pack types in play (Rune, Codex, <span className={styles.augury}>Augury</span>) —
+                    Deferred-pick shop items - buy a pack and a picker opens with a randomized
+                    set, you keep one. Three pack types in play (<span className={styles.runePack}>Rune</span>, <span className={styles.codex}>Codex</span>, <span className={styles.augury}>Augury</span>) -
                     see the <span className={styles.highlight}>Packs</span> sub-tab for what each one does.
                 </p>
             </div>
@@ -434,12 +436,13 @@ function TarotsTab() {
     return (
         <div className={styles.scrollArea}>
             <div className={styles.section}>
-                <div className={styles.sectionHeading}>Augury Pack Flow</div>
+                <div className={styles.sectionHeading}><span className={styles.augury}>Augury Pack</span> Flow</div>
                 <p className={styles.sectionText}>
                     An <span className={styles.augury}>Augury Pack</span> opens a special picker showing{" "}
                     <span className={styles.highlight}>{AUGURY_PACK_RUNE_CHOICES} runes</span> sampled from your pouch and{" "}
                     <span className={styles.highlight}>{AUGURY_PACK_TAROT_CHOICES} random Tarot cards</span>.
-                    Pick up to 3 runes, choose one Tarot, then Apply — the Tarot transforms your selected runes,
+                    Each Tarot has its own rune requirement, and some also ask for a chosen element.
+                    Select what the chosen Tarot needs, then Apply - the Tarot transforms your selection
                     and the other Tarots are discarded.
                 </p>
                 <p className={styles.sectionNote}>
@@ -450,13 +453,27 @@ function TarotsTab() {
 
             <div className={styles.section}>
                 <div className={styles.sectionHeading}>The 22 Major Arcana</div>
-                <p className={styles.sectionText}>
-                    Hover any card to read its effect.
-                </p>
                 <div className={styles.tarotGrid}>
                     {TAROT_ORDER.map((id, i) => (
                         <TarotCard key={id} id={id} index={i} />
                     ))}
+                </div>
+                <div className={styles.tarotList}>
+                    {TAROT_ORDER.map(id => {
+                        const def = TAROT_DEFINITIONS[id];
+                        if (!def) return null;
+                        const iconUrl = getTarotImageUrl(def.fileBasename);
+                        return (
+                            <div key={id} className={styles.tarotListRow}>
+                                {iconUrl
+                                    ? <img src={iconUrl} alt="" className={styles.tarotListIcon} draggable={false} />
+                                    : <span className={styles.tarotListIcon} aria-hidden />
+                                }
+                                <span className={styles.tarotListName}>{def.name}</span>
+                                <span className={styles.tarotListDesc}>{renderDescription(def.description)}</span>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>
@@ -492,7 +509,7 @@ function usePortalTipPosition() {
         if (!hovered) return;
         const handler = () => update();
         // Capture phase catches scrolls on the .scrollArea ancestor too,
-        // not just window — without it the tip stays anchored to the
+        // not just window - without it the tip stays anchored to the
         // card's old viewport position when the player scrolls the modal.
         window.addEventListener("scroll", handler, true);
         window.addEventListener("resize", handler);
@@ -507,7 +524,7 @@ function usePortalTipPosition() {
 
 // Per-card wrapper that renders the in-game ItemScene tilt shader and
 // portals its hover tooltip to <body>. Portaling fixes the previous
-// clipping problem — the .scrollArea ancestor uses `overflow-y: auto`,
+// clipping problem - the .scrollArea ancestor uses `overflow-y: auto`,
 // which clips any in-flow tooltip that extends past its bounds.
 interface TarotCardProps {
     id: string;
@@ -573,7 +590,7 @@ function SigilsTab() {
                     Sigils are <span className={styles.highlight}>permanent passive items</span> bought
                     from the shop. Some add flat <span className={styles.multChip}>Mult</span>, some grant{" "}
                     <span className={styles.xmultChip}>xMult</span>, others change your hand size, cast
-                    budget, or how runes are scored. Build them up — synergies between sigils are the
+                    budget, or how runes are scored. Build them up - synergies between sigils are the
                     core of every run.
                 </p>
                 <p className={styles.sectionNote}>
@@ -585,7 +602,7 @@ function SigilsTab() {
             <div className={styles.section}>
                 <div className={styles.sectionHeading}>All Sigils ({SIGIL_ORDER.length})</div>
                 <p className={styles.sectionCaption}>
-                    Sorted by rarity — Common, Uncommon, Rare, Legendary.
+                    Sorted by rarity - Common, Uncommon, Rare, Legendary.
                 </p>
                 <div className={styles.sigilGrid}>
                     {SIGIL_ORDER.map((id, i) => (
@@ -667,8 +684,17 @@ function PacksTab() {
                 <div className={styles.sectionHeading}>Packs</div>
                 <p className={styles.sectionText}>
                     Packs are <span className={styles.highlight}>deferred-pick</span> shop items.
-                    Buy a pack and a picker opens — pick one item from a randomized set, the rest
+                    Buy a pack and a picker opens - pick one item from a randomized set, the rest
                     are discarded. Packs always offer a choice; nothing is forced on you.
+                </p>
+                <p className={styles.sectionText}>
+                    <span className={styles.runePack}>Rune Pack</span> - opens {RUNE_PACK_CHOICES} random runes; pick one to add to your pouch.
+                </p>
+                <p className={styles.sectionText}>
+                    <span className={styles.codex}>Codex Pack</span> - opens {CODEX_PACK_CHOICES} random scrolls; pick one to upgrade that element.
+                </p>
+                <p className={styles.sectionText}>
+                    <span className={styles.augury}>Augury Pack</span> - reveals {AUGURY_PACK_TAROT_CHOICES} Tarot cards over {AUGURY_PACK_RUNE_CHOICES} of your runes; pick a Tarot to mutate your deck.
                 </p>
                 <p className={styles.sectionNote}>
                     Hover any pack for its full effect.
@@ -747,7 +773,7 @@ function PackCard({ id, index }: PackCardProps) {
 // Scrolls are per-element consumables. Description is synthesized here
 // so the {+N Base} marker picks up the BASE_HIGHLIGHT_COLOR treatment
 // from `renderDescription`, and the element name auto-colors via the
-// shared element registry — the tooltip ends up reading like every
+// shared element registry - the tooltip ends up reading like every
 // other in-game scroll/sigil tooltip.
 function buildScrollDescription(element: string): string {
     const cap = element.charAt(0).toUpperCase() + element.slice(1);
@@ -767,7 +793,7 @@ function ScrollsTab() {
                     rarity baseline.
                 </p>
                 <p className={styles.sectionNote}>
-                    Found in the shop and via Codex Packs. Hover any scroll for its effect.
+                    Found in the shop and via <span className={styles.codex}>Codex Packs</span>. Hover any scroll for its effect.
                 </p>
             </div>
 

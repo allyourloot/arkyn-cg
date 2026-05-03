@@ -952,7 +952,7 @@ export function useBestSingleCast() { return useSyncExternalStore(subscribe, () 
 // ============================================================
 
 export { subscribe } from "./arkynStoreCore";
-export { setConnection, joinGame, sendReady, sendCollectRoundGold, sendNewRun, sendBuyItem, sendSellSigil, sendReorderSigils, sendUseConsumable, sendPackChoice, sendCodexChoice, sendApplyTarot, sendRerollShop } from "./arkynNetwork";
+export { setConnection, joinGame, sendReady, sendCollectRoundGold, sendNewRun, sendReturnToMenu, sendBuyItem, sendSellSigil, sendReorderSigils, sendUseConsumable, sendPackChoice, sendCodexChoice, sendApplyTarot, sendRerollShop } from "./arkynNetwork";
 export {
     DISSOLVE_DURATION_MS,
     DISSOLVE_STAGGER_MS,

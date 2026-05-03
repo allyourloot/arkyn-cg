@@ -20,7 +20,7 @@
     border-style: solid;
     border-color: transparent;
     border-width: 10px;
-    border-image: var(--btn-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
+    border-image: var(--btn-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
     background-color: transparent;
     image-rendering: pixelated;
     padding: 14px 24px;
@@ -42,7 +42,8 @@
 }
 
 .button:not(:disabled):hover {
-    border-image: var(--btn-bg-hover) 10 10 10 10 fill / 10px 10px 10px 10px;
+    border-image: var(--btn-bg-hover) 24 24 24 24 fill / 10px 10px 10px 10px;
+    filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)) brightness(1.15);
 }
 
 .button:not(:disabled):active {
@@ -58,10 +59,11 @@
 }
 
 .button:disabled {
-    border-image: var(--btn-bg-disabled) 10 10 10 10 fill / 10px 10px 10px 10px;
+    border-image: var(--btn-bg-disabled) 24 24 24 24 fill / 10px 10px 10px 10px;
     cursor: not-allowed;
     color: #c8c8c8;
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+    filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)) brightness(0.55) saturate(0.55);
 }
 
 /* Slightly compact the action buttons on touch devices — they don't need
@@ -91,16 +93,16 @@
         font-size: var(--font-size-xs);
         letter-spacing: 1px;
         border-width: 8px;
-        border-image: var(--btn-bg) 10 10 10 10 fill / 8px 8px 8px 8px;
+        border-image: var(--btn-bg) 24 24 24 24 fill / 8px 8px 8px 8px;
         min-width: clamp(96px, 12vw, 140px);
     }
 
     .button:not(:disabled):hover {
-        border-image: var(--btn-bg-hover) 10 10 10 10 fill / 8px 8px 8px 8px;
+        border-image: var(--btn-bg-hover) 24 24 24 24 fill / 8px 8px 8px 8px;
     }
 
     .button:disabled {
-        border-image: var(--btn-bg-disabled) 10 10 10 10 fill / 8px 8px 8px 8px;
+        border-image: var(--btn-bg-disabled) 24 24 24 24 fill / 8px 8px 8px 8px;
     }
 
     .bar {

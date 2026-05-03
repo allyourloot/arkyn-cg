@@ -7,24 +7,19 @@ import {
     discardRunes,
 } from "../arkynStore";
 import { haptic, HAPTIC_MEDIUM } from "../haptics";
-import buttonGreenUrl from "/assets/ui/button-green.png?url";
-import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
-import buttonGreenDisabledUrl from "/assets/ui/button-green-disabled.png?url";
-import buttonOrangeUrl from "/assets/ui/button-orange.png?url";
-import buttonOrangeHoverUrl from "/assets/ui/button-orange-hover.png?url";
-import buttonOrangeDisabledUrl from "/assets/ui/button-orange-disabled.png?url";
+import { INNER_FRAME_BGS } from "./styles";
 import styles from "./ActionButtons.module.css";
 
 const castStateVars = {
-    "--btn-bg": `url(${buttonGreenUrl})`,
-    "--btn-bg-hover": `url(${buttonGreenHoverUrl})`,
-    "--btn-bg-disabled": `url(${buttonGreenDisabledUrl})`,
+    "--btn-bg": INNER_FRAME_BGS.green,
+    "--btn-bg-hover": INNER_FRAME_BGS.green,
+    "--btn-bg-disabled": INNER_FRAME_BGS.green,
 } as React.CSSProperties;
 
 const discardStateVars = {
-    "--btn-bg": `url(${buttonOrangeUrl})`,
-    "--btn-bg-hover": `url(${buttonOrangeHoverUrl})`,
-    "--btn-bg-disabled": `url(${buttonOrangeDisabledUrl})`,
+    "--btn-bg": INNER_FRAME_BGS.orange,
+    "--btn-bg-hover": INNER_FRAME_BGS.orange,
+    "--btn-bg-disabled": INNER_FRAME_BGS.orange,
 } as React.CSSProperties;
 
 export default function ActionButtons() {

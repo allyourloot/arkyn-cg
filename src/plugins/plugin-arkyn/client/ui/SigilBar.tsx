@@ -9,7 +9,7 @@ import { DISSOLVE_DURATION_MS, RUNE_SHAKE_FRAME_S } from "../arkynAnimations";
 import DissolveCanvas from "./DissolveCanvas";
 import { getSigilImageUrl } from "./sigilAssets";
 import { haptic, HAPTIC_LIGHT } from "../haptics";
-import { playDissolve, playPopLow } from "../sfx";
+import { playDissolve, playGold, playPopLow } from "../sfx";
 import ItemScene from "./ItemScene";
 import Tooltip from "./Tooltip";
 import goldIconUrl from "/assets/icons/gold-64x64.png?url";
@@ -384,6 +384,7 @@ export default function SigilBar() {
                                     onPointerDown={(e) => { e.stopPropagation(); }}
                                     onClick={(e) => {
                                         e.stopPropagation();
+                                        playGold();
                                         sendSellSigil(sigilId);
                                         setSelectedSigilId(null);
                                     }}

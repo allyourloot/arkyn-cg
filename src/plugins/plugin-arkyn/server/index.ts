@@ -9,6 +9,7 @@ import {
     ARKYN_READY,
     ARKYN_COLLECT_ROUND_GOLD,
     ARKYN_NEW_RUN,
+    ARKYN_RETURN_TO_MENU,
     ARKYN_BUY_ITEM,
     ARKYN_SELL_SIGIL,
     ARKYN_REORDER_SIGILS,
@@ -29,6 +30,7 @@ import { handleDiscard } from "./systems/handleDiscard";
 import { handleReady } from "./systems/handleReady";
 import { handleCollectRoundGold } from "./systems/handleCollectRoundGold";
 import { handleNewRun } from "./systems/handleNewRun";
+import { handleReturnToMenu } from "./systems/handleReturnToMenu";
 import { handleBuyItem } from "./systems/handleBuyItem";
 import { handleSellSigil } from "./systems/handleSellSigil";
 import { handleReorderSigils } from "./systems/handleReorderSigils";
@@ -114,6 +116,10 @@ export function PluginArkynServer(): ServerPlugin {
 
             runtime.onMessage(ARKYN_NEW_RUN, (client: ServerClientRef) => {
                 handleNewRun(state, client, ctx);
+            });
+
+            runtime.onMessage(ARKYN_RETURN_TO_MENU, (client: ServerClientRef) => {
+                handleReturnToMenu(state, client, ctx);
             });
 
             runtime.onMessage(ARKYN_DEBUG_GRANT_SIGIL, (client: ServerClientRef, payload: unknown) => {

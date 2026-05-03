@@ -1,4 +1,4 @@
-import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_REORDER_SIGILS, ARKYN_USE_CONSUMABLE, ARKYN_PICK_PACK_RUNE, ARKYN_PICK_CODEX_SCROLL, ARKYN_APPLY_TAROT, ARKYN_REROLL_SHOP, ARKYN_DEBUG_GRANT_SIGIL, ARKYN_DISMISS_ACHIEVEMENT_FLYOUT, ARKYN_LOAD_PROFILE } from "../shared";
+import { ARKYN_JOIN, ARKYN_READY, ARKYN_COLLECT_ROUND_GOLD, ARKYN_NEW_RUN, ARKYN_RETURN_TO_MENU, ARKYN_BUY_ITEM, ARKYN_SELL_SIGIL, ARKYN_REORDER_SIGILS, ARKYN_USE_CONSUMABLE, ARKYN_PICK_PACK_RUNE, ARKYN_PICK_CODEX_SCROLL, ARKYN_APPLY_TAROT, ARKYN_REROLL_SHOP, ARKYN_DEBUG_GRANT_SIGIL, ARKYN_DISMISS_ACHIEVEMENT_FLYOUT, ARKYN_LOAD_PROFILE } from "../shared";
 
 /**
  * Network layer for Arkyn. Owns the connection sender and exposes
@@ -40,6 +40,15 @@ export function sendCollectRoundGold(): void {
 
 export function sendNewRun(): void {
     sendArkynMessage(ARKYN_NEW_RUN, {});
+}
+
+/**
+ * Abandon the finished run and return the player to the main menu.
+ * Fired by the "Main Menu" button on the Game Over overlay. Server
+ * resets the player schema to `gamePhase = "menu"` (handleReturnToMenu).
+ */
+export function sendReturnToMenu(): void {
+    sendArkynMessage(ARKYN_RETURN_TO_MENU, {});
 }
 
 export function sendBuyItem(shopIndex: number): void {

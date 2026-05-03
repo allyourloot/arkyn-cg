@@ -124,6 +124,12 @@ export const ARKYN_DISCARD = "arkyn:discard";
 export const ARKYN_READY = "arkyn:ready";
 export const ARKYN_COLLECT_ROUND_GOLD = "arkyn:collect_round_gold";
 export const ARKYN_NEW_RUN = "arkyn:new_run";
+// Abandon the current game-over run and return the player to the main menu
+// (no fresh run started). Server cleans up run state, then re-creates the
+// player schema in `gamePhase = "menu"` with profile data reloaded —
+// equivalent to what handleLoadProfile sets up on a fresh connection.
+// Payload: {} (none).
+export const ARKYN_RETURN_TO_MENU = "arkyn:return_to_menu";
 export const ARKYN_BUY_ITEM = "arkyn:buy_item";
 export const ARKYN_SELL_SIGIL = "arkyn:sell_sigil";
 // Reorder owned sigils. Payload: { fromIndex: number; toIndex: number }

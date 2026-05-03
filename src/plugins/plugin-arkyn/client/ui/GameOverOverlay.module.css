@@ -129,15 +129,29 @@
     50% { opacity: 0.7; }
 }
 
-/* ----- New Run button ----- */
+/* ----- Action buttons ----- */
+
+/* Side-by-side row for the New Run + Main Menu buttons. Each button
+   takes an equal flex share with min-width: 0 so the row stays inline
+   even on narrow panels (clamp floor 320px) instead of wrapping the
+   second button onto its own line. */
+.buttonRow {
+    display: flex;
+    gap: clamp(8px, 1.2vw, 16px);
+    margin-top: clamp(4px, 0.6vh, 10px);
+    flex-wrap: nowrap;
+    justify-content: center;
+    width: 100%;
+}
 
 .button {
     box-sizing: border-box;
-    margin-top: clamp(4px, 0.6vh, 10px);
+    flex: 1 1 0;
+    min-width: 0;
     border-style: solid;
     border-color: transparent;
     border-width: 10px;
-    border-image: var(--btn-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
+    border-image: var(--btn-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
     background-color: transparent;
     color: #fff;
 
@@ -150,13 +164,21 @@
     cursor: pointer;
     image-rendering: pixelated;
     line-height: 1;
-    padding: clamp(8px, 1.2vh, 14px) clamp(24px, 3vw, 40px);
+    padding: clamp(8px, 1.2vh, 14px) clamp(12px, 3vw, 40px);
     pointer-events: auto;
-    transition: transform 0.1s ease;
+    transition: transform 0.1s ease, filter 0.12s ease;
+    white-space: nowrap;
+    /* Flex-center the label so the visible text bounding box is geometrically
+       centered regardless of letter-spacing trailing whitespace, which
+       previously skewed text-align: center to the left. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .button:hover {
-    border-image: var(--btn-bg-hover) 10 10 10 10 fill / 10px 10px 10px 10px;
+    border-image: var(--btn-bg-hover) 24 24 24 24 fill / 10px 10px 10px 10px;
+    filter: brightness(1.15);
 }
 
 .button:active {
@@ -210,8 +232,12 @@
         padding: 1px clamp(3px, 0.4vw, 6px);
     }
 
-    .button {
+    .buttonRow {
         margin-top: auto;
+        gap: clamp(6px, 1vw, 12px);
+    }
+
+    .button {
         font-size: var(--font-size-xs);
         padding: clamp(4px, 0.8vh, 8px) clamp(16px, 2vw, 28px);
     }

@@ -57,7 +57,7 @@
     border-style: solid;
     border-color: transparent;
     border-width: 10px;
-    border-image: var(--btn-bg) 10 10 10 10 fill / 10px 10px 10px 10px;
+    border-image: var(--btn-bg) 24 24 24 24 fill / 10px 10px 10px 10px;
     background-color: transparent;
     image-rendering: pixelated;
     padding: clamp(12px, 1.8vh, 20px) clamp(48px, 6vw, 80px);
@@ -81,7 +81,8 @@
 }
 
 .menuButton:hover {
-    border-image: var(--btn-bg-hover) 10 10 10 10 fill / 10px 10px 10px 10px;
+    border-image: var(--btn-bg-hover) 24 24 24 24 fill / 10px 10px 10px 10px;
+    filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35)) brightness(1.15);
 }
 
 .menuButton:active {

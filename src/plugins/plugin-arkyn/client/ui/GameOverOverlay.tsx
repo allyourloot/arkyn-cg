@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import {
     useCurrentRound,
     sendNewRun,
+    sendReturnToMenu,
     useRunTotalDamage,
     useRunTotalCasts,
     useRunTotalDiscards,
@@ -12,17 +13,19 @@ import {
     useBestRound,
     useBestSingleCast,
 } from "../arkynStore";
-import { playGameOver } from "../sfx";
+import { playButton, playGameOver } from "../sfx";
 import { setBgMusicPitch } from "./BackgroundMusic";
-import { createPanelStyleVars } from "./styles";
-import buttonGreenUrl from "/assets/ui/button-green.png?url";
-import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
+import { createPanelStyleVars, INNER_FRAME_BGS } from "./styles";
 import styles from "./GameOverOverlay.module.css";
 
 const panelStyleVars = createPanelStyleVars();
-const buttonStyleVars = {
-    "--btn-bg": `url(${buttonGreenUrl})`,
-    "--btn-bg-hover": `url(${buttonGreenHoverUrl})`,
+const newRunButtonStyleVars = {
+    "--btn-bg": INNER_FRAME_BGS.green,
+    "--btn-bg-hover": INNER_FRAME_BGS.green,
+} as React.CSSProperties;
+const mainMenuButtonStyleVars = {
+    "--btn-bg": INNER_FRAME_BGS.red,
+    "--btn-bg-hover": INNER_FRAME_BGS.red,
 } as React.CSSProperties;
 
 function NewBest() {
@@ -104,14 +107,24 @@ export default function GameOverOverlay() {
                     <span className={styles.statValue}>{goldEarned}</span>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={sendNewRun}
-                    className={styles.button}
-                    style={buttonStyleVars}
-                >
-                    New Run
-                </button>
+                <div className={styles.buttonRow}>
+                    <button
+                        type="button"
+                        onClick={sendNewRun}
+                        className={styles.button}
+                        style={newRunButtonStyleVars}
+                    >
+                        New Run
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => { playButton(); sendReturnToMenu(); }}
+                        className={styles.button}
+                        style={mainMenuButtonStyleVars}
+                    >
+                        Main Menu
+                    </button>
+                </div>
             </div>
         </div>
     );

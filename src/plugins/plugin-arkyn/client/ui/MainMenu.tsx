@@ -3,20 +3,22 @@ import { joinGame, setGamePhase } from "../arkynStore";
 import AchievementsModal from "./AchievementsModal";
 import HowToPlayModal from "./HowToPlayModal";
 import logoUrl from "/assets/logos/arkyn-logo.png?url";
-import buttonGreenUrl from "/assets/ui/button-green.png?url";
-import buttonGreenHoverUrl from "/assets/ui/button-green-hover.png?url";
-import buttonOrangeUrl from "/assets/ui/button-orange.png?url";
-import buttonOrangeHoverUrl from "/assets/ui/button-orange-hover.png?url";
+import { INNER_FRAME_BGS } from "./styles";
 import styles from "./MainMenu.module.css";
 
 const playButtonStyleVars = {
-    "--btn-bg": `url(${buttonGreenUrl})`,
-    "--btn-bg-hover": `url(${buttonGreenHoverUrl})`,
+    "--btn-bg": INNER_FRAME_BGS.green,
+    "--btn-bg-hover": INNER_FRAME_BGS.green,
 } as React.CSSProperties;
 
 const howToPlayButtonStyleVars = {
-    "--btn-bg": `url(${buttonOrangeUrl})`,
-    "--btn-bg-hover": `url(${buttonOrangeHoverUrl})`,
+    "--btn-bg": INNER_FRAME_BGS.blue,
+    "--btn-bg-hover": INNER_FRAME_BGS.blue,
+} as React.CSSProperties;
+
+const achievementsButtonStyleVars = {
+    "--btn-bg": INNER_FRAME_BGS.red,
+    "--btn-bg-hover": INNER_FRAME_BGS.red,
 } as React.CSSProperties;
 
 function handlePlay() {
@@ -51,7 +53,7 @@ export default function MainMenu() {
                 <button
                     type="button"
                     className={`${styles.menuButton} ${styles.howToPlayButton}`}
-                    style={howToPlayButtonStyleVars}
+                    style={achievementsButtonStyleVars}
                     onClick={() => setAchievementsOpen(true)}
                 >
                     Achievements
